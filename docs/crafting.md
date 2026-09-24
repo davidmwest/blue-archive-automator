@@ -44,7 +44,7 @@ a pending spend or collection is saved before its irreversible tap. an interrupt
 
 ## validation status
 
-the September 24, 2026 live inspection verified the existing Node 1 preset and a maximum batch of three crafts, consuming three keystones and 6,000 credits. the resulting timers were 90 minutes, three hours, and three hours. the empty inventory counter was also captured and recognized. natural completion, the actual collection receipt, and the automated refill path remain pending those timers; offline tests cover their orchestration and spending guards.
+the September 24, 2026 live inspection verified the existing Node 1 preset and a maximum batch of three crafts, consuming three keystones and 6,000 credits. the resulting timers were 90 minutes, three hours, and three hours. the empty inventory counter was also captured and recognized. The first natural completion was collected by the runner at 09:37 Pacific. It recognized the yellow Receive/Claim All controls, saved the reward receipt, verified the vacant slot, checked the zero-keystone inventory, and returned home. The other two crafts remain scheduled. Starting a new batch after collection still needs live validation when more keystones are available; offline tests cover that path and its spending guards.
 
 sanitized fixtures preserve the relevant UI controls and omit the account resource bar. raw traces and receipts stay in the ignored runtime directories.
 

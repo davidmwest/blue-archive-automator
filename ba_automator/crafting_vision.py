@@ -58,6 +58,13 @@ def cyan(frame, bounds):
                   & (hsv[:, :, 1] >= 70) & (hsv[:, :, 2] >= 180)).mean()) > .3
 
 
+def yellow(frame, bounds):
+    x1, y1, x2, y2 = bounds
+    hsv = cv2.cvtColor(frame[y1:y2, x1:x2], cv2.COLOR_BGR2HSV)
+    return float(((hsv[:, :, 0] >= 15) & (hsv[:, :, 0] <= 40)
+                  & (hsv[:, :, 1] >= 100) & (hsv[:, :, 2] >= 180)).mean()) > .3
+
+
 def classify_crafting(frame, words, *, keystone=False, home=False):
     # Confirmation is recognized before dimmed Quick Craft controls behind it.
     confirmation = number(words, (450, 285, 850, 400), r'Craft (\d) time\(s\)\?')
@@ -91,7 +98,7 @@ def classify_crafting(frame, words, *, keystone=False, home=False):
         if quantity and 1 <= quantity[0] <= 3 and required > 0 and credits:
             return CraftScreen('quick', quantity=quantity[0], owned=owned, required=required, credits=credits[0])
         return CraftScreen('unknown', reason='Quick Craft quantity or cost is unreadable')
-    if (has(words, 'crafting', (90, 0, 230, 50))
+    if (any(w.normalized in {'crafting', 'crafting 0'} for w in within(words, (90, 0, 250, 50)))
             and has(words, 'crafting list', (840, 140, 1080, 195))
             and bright(frame, (260, 5, 290, 35))):
         # The selected synthesis tab is yellow; Fusion must never authorize input.
@@ -106,9 +113,12 @@ def classify_crafting(frame, words, *, keystone=False, home=False):
             remaining = has(words, 'remaining time', region)
             instant = has(words, 'instantly', region)
             ready = has(words, 'crafting complete', region) or has(words, 'claim', region)
-            if empty and not (timer or remaining or ready or instant):
+            receive = has(words, 'receive', region) and yellow(frame, (1055, top + 25, 1200, top + 85))
+            if receive and timer == (0, 0, 0) and remaining and not (empty or instant):
+                slots.append(CraftSlot(i, 'ready'))
+            elif empty and not (timer or remaining or ready or instant or receive):
                 slots.append(CraftSlot(i, 'empty'))
-            elif timer and timer[0] <= 24 and timer[1] < 60 and timer[2] < 60 and remaining and not (empty or ready):
+            elif timer and any(timer) and timer[0] <= 24 and timer[1] < 60 and timer[2] < 60 and remaining and not (empty or ready or receive):
                 slots.append(CraftSlot(i, 'running', timer[0] * 3600 + timer[1] * 60 + timer[2]))
             elif ready and not (empty or instant or timer or remaining):
                 slots.append(CraftSlot(i, 'ready'))
@@ -116,11 +126,12 @@ def classify_crafting(frame, words, *, keystone=False, home=False):
                 return CraftScreen('unknown', reason=f'Craft slot {i} is not readable')
         target = (890, 618) if has(words, 'quick craft', (760, 575, 1010, 655)) and cyan(frame, (805, 590, 975, 645)) else None
         collect_target = ((1120, 618) if has(words, 'claim all', (1020, 575, 1230, 655))
-                          and cyan(frame, (1040, 590, 1210, 645)) else None)
+                          and any(slot.kind == 'ready' for slot in slots)
+                          and yellow(frame, (1040, 590, 1210, 645)) else None)
         return CraftScreen('list', slots=tuple(slots), target=target, collect_target=collect_target)
-    if has(words, 'reward acquired', (300, 30, 980, 220)):
-        # Final collection recognition must also be verified in the live reset-independent test.
-        return CraftScreen('receipt', target=(1110, 660))
+    if (has(words, 'reward acquired', (300, 30, 980, 220))
+            and has(words, 'touch to continue', (380, 590, 900, 665))):
+        return CraftScreen('receipt', target=(640, 631))
     if home:
         return CraftScreen('home', target=(660, 658))
     return CraftScreen('unknown')

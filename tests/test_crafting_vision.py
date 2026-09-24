@@ -65,3 +65,25 @@ def test_conflicting_empty_and_running_slot_labels_reject_the_frame(vision):
     words=vision.startup.read(frame)
     words.append(Word('Start Crafting',1,(870,270,1020,310)))
     assert classify_crafting(frame,words).kind=='unknown'
+
+
+def test_natural_completion_requires_zero_timer_and_yellow_receive(vision):
+    frame=decode_frame((FIXTURES/'craft-one-ready.png').read_bytes())
+    words=vision.startup.read(frame)
+    result=classify_crafting(frame,words)
+    assert [s.kind for s in result.slots]==['ready','running','running']
+    assert result.collect_target==(1120,618)
+    missing=[w for w in words if w.normalized!='receive']
+    assert classify_crafting(frame,missing).kind=='unknown'
+    not_zero=[replace(w,text='00:00:01') if w.text=='00:00:00' else w for w in words]
+    assert classify_crafting(frame,not_zero).kind=='unknown'
+    frame[590:645,1040:1210]=128
+    assert classify_crafting(frame,words).collect_target is None
+
+
+def test_live_craft_receipt_requires_continue_label(vision):
+    frame=decode_frame((FIXTURES/'craft-collected.png').read_bytes())
+    words=vision.startup.read(frame)
+    result=classify_crafting(frame,words)
+    assert result.kind=='receipt' and result.target==(640,631)
+    assert classify_crafting(frame,[w for w in words if w.normalized!='touch to continue']).kind=='unknown'
