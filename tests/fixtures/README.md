@@ -55,3 +55,7 @@ cover wrapped titles where tightly cropped OCR duplicated letter fragments. Thei
 the saved game screenshots themselves retain their original pixels.
 
 Crafting samples (`crafting-*.png`) were captured on 2026-09-24. They retain the synthesis slot list, configured Quick Craft preset, maximum batch, confirmation, running timers, and red zero-inventory counter. The account resource bar is removed. `craft_keystone.png` is a small matching crop of the keystone material icon. Collection fixtures will be added after the first natural completion; no live receipt validation is claimed yet.
+
+Pack/mail samples (`packs-*.png`) were captured on 2026-09-24. Store backgrounds and account identity are masked; mailbox resource balances are removed. Google Play fixtures retain only the product/price/button or the optional backup-payment prompt, with account/payment information and underlying game identity removed. Tests also remove OCR status words to ensure the remaining ownership shading still prevents a duplicate purchase.
+
+`craft-one-ready.png` and `craft-collected.png` cover the first natural craft completion and receipt; the account resource bar is masked.

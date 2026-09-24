@@ -38,6 +38,18 @@ enabled_in_daily = true
 # queues collection/refill visits when each slot finishes. No booster tickets.
 schedule_enabled = false
 
+[packs]
+# REAL MONEY. Enable each pack separately. Google Play payment must already be
+# configured in this emulator. Verification/setup prompts stop the job.
+# Checks once per Global game day; buys only when the previous pack is inactive.
+# Permanent English/USD products only; no limited-event packs or bulk Pyroxenes.
+monthly_enabled = false
+half_monthly_enabled = false
+ap_enabled = false
+monthly_max_cents = 699
+half_monthly_max_cents = 299
+ap_max_cents = 299
+
 # Paths are relative to this configuration file.
 [storage]
 run_dir = "../data/runs"

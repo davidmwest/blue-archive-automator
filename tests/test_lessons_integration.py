@@ -66,11 +66,11 @@ def test_default_plans_include_lessons_only_in_daily_or_explicit_lessons_job():
     assert config.lessons_strategy == "relationship"
     assert config.lessons_max_tickets == 0
     assert config.lessons_locations == ()
-    assert task_plan("daily", config) == ("restart", "club", "cafe", "lessons")
+    assert task_plan("daily", config) == ("restart", "club", "mail", "cafe", "lessons")
     assert task_plan("cafe", config) == ("restart", "club", "cafe")
     assert task_plan("lessons", config) == ("restart", "lessons")
     disabled = replace(config, lessons_enabled_in_daily=False)
-    assert task_plan("daily", disabled) == ("restart", "club", "cafe")
+    assert task_plan("daily", disabled) == ("restart", "club", "mail", "cafe")
     assert task_plan("lessons", disabled) == ("restart", "lessons")
 
 
@@ -83,14 +83,14 @@ class Result:
 
 
 @pytest.mark.parametrize(("command", "enabled", "expected"), [
-    ("daily", True, ["restart", "club", "cafe", "lessons"]),
-    ("daily", False, ["restart", "club", "cafe"]),
+    ("daily", True, ["restart", "club", "mail", "cafe", "lessons"]),
+    ("daily", False, ["restart", "club", "mail", "cafe"]),
     ("lessons", True, ["restart", "lessons"]),
     ("lessons", False, ["restart", "lessons"]),
     ("cafe", True, ["restart", "club", "cafe"]),
 ])
 def test_cli_dispatches_sequential_plan_and_passes_lesson_config(monkeypatch, tmp_path, command, enabled, expected):
-    from ba_automator import cafe, club, restart
+    from ba_automator import cafe, club, mail, restart
 
     config = selected(lessons_enabled_in_daily=enabled, lessons_strategy="school_rank", lessons_max_tickets=3)
     monkeypatch.setattr(cli.Config, "from_file", lambda _: config)
@@ -118,6 +118,7 @@ def test_cli_dispatches_sequential_plan_and_passes_lesson_config(monkeypatch, tm
     monkeypatch.setattr(restart, "run_restart", runner("restart"))
     monkeypatch.setattr(cafe, "run_cafe", runner("cafe"))
     monkeypatch.setattr(club, "run_club", runner("club"))
+    monkeypatch.setattr(mail, "run_mail", runner("mail"))
     assert cli.main([command, "--no-downloads"]) == 0
     assert calls == expected
 

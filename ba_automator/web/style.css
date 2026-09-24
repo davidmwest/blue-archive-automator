@@ -26,3 +26,10 @@
 @media(max-width:650px){.page-header{gap:9px}.mascot{flex-basis:76px;width:76px;height:79px;margin:0}.mascot img{width:100px;height:100px;left:-12px;top:-8px}.mascot figcaption{font-size:0;height:8px;padding:0}.eyebrow{letter-spacing:.9px}.brand small{font-size:6px;letter-spacing:.65px}}
 
 .crafting-summary{padding:16px 24px;border-top:1px solid var(--border)}.crafting-summary p+p{margin-top:6px}.crafting-jobs{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:7px;color:var(--muted);font-size:11px}.crafting-settings{border-top:1px solid var(--border);margin-top:18px;padding-top:18px}
+
+.packs-settings { border-top: 1px solid var(--border); padding-top: 20px; margin-top: 20px; }
+
+.failed-jobs-card { margin-bottom: 24px; border-color: #eaa06c; padding: 22px; }
+.failure-list { list-style: none; margin: 16px 0 0; padding: 0; }
+.failure-list li { padding: 16px 0; border-top: 1px solid #e6d1be; }
+.failure-list p { overflow-wrap: anywhere; }

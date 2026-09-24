@@ -6,6 +6,7 @@ import errno
 import os
 import re
 import socket
+import struct
 import subprocess
 import time
 from typing import Callable
@@ -171,6 +172,25 @@ class AdbDevice:
             r"([A-Za-z][A-Za-z0-9_.]*)/[^\s}]+", output,
         )
         return match.group(1) if match else None
+
+    def tap_billing(self, x: int, y: int, *, size: tuple[int, int], deadline: float,
+                    monotonic=time.monotonic) -> bool:
+        """Explicit Google Play input; ordinary game taps remain landscape-only."""
+        if (size != (720, 1280) or type(x) is not int or type(y) is not int
+                or not 0 <= x < size[0] or not 0 <= y < size[1]):
+            raise DeviceError('Unsupported Google Play checkout display or target')
+        if self.foreground_package() != 'com.android.vending':
+            raise DeviceError('Google Play is not the foreground checkout')
+        png = self.screenshot()
+        if len(png) < 24 or struct.unpack('>II', png[16:24]) != size:
+            raise DeviceError('Google Play orientation changed before input')
+        if self.foreground_package() != 'com.android.vending':
+            raise DeviceError('Google Play foreground changed before input')
+        self._check_shared_server()
+        if monotonic() > deadline:
+            return False
+        self._execute(self._command('shell', 'input', 'tap', str(x), str(y)), timeout=10)
+        return True
 
     def swipe(self, start: tuple[int, int], end: tuple[int, int], duration_ms=400,
               *, deadline=None, monotonic=time.monotonic) -> bool:

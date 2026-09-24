@@ -31,11 +31,16 @@ def main(argv=None) -> int:
                     "club": "Club placeholder: awaiting a fresh daily-reset test (no game input)",
                     "cafe": "Restart, collect cafe earnings, and greet students",
                     "crafting": "Collect finished crafts, fill Quick Craft slots, and save their timers",
+                    "packs": "Check optional paid pack renewals, then collect mail",
+                    "mail": "Collect ordinary and product mail and log rewards",
                     "lessons": "Restart and use lesson tickets with the configured strategy",
-                    "daily": "Run restart, the Club placeholder, cafe, and enabled lessons in order"}
+                    "daily": "Run restart, Club placeholder, enabled packs, mail, cafe, and enabled lessons"}
     for name, description in descriptions.items():
         command = commands.add_parser(name, help=description)
         command.add_argument("--no-downloads", action="store_true", help="Stop if game-data download consent is needed")
+        if name == 'packs':
+            command.add_argument('--retry-packs', action='store_true',
+                                 help='Explicitly retry a blocked pack check; unresolved charges still cannot be repeated')
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 
@@ -71,7 +76,15 @@ def main(argv=None) -> int:
                     continue
                 if vision is None:
                     vision = StartupVision()
-                if task == "crafting":
+                if task == "packs":
+                    from .packs import run_packs
+
+                    runner = run_packs
+                elif task == "mail":
+                    from .mail import run_mail
+
+                    runner = run_mail
+                elif task == "crafting":
                     from .crafting import run_crafting
 
                     runner = run_crafting
@@ -81,7 +94,8 @@ def main(argv=None) -> int:
                     runner = run_lessons
                 else:
                     runner = run_restart if task == "restart" else run_cafe
-                result = runner(config, device, vision)
+                options = ({'allow_retry': getattr(args, 'retry_packs', False)} if task == 'packs' else {})
+                result = runner(config, device, vision, **options)
                 print(json.dumps(asdict(result), default=str, indent=2))
             return 0
 

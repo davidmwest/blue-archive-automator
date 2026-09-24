@@ -1101,3 +1101,80 @@ def test_cancel_due_crafting_job_defers_without_losing_timers(config_path):
         assert not controller.status()['queue']
         assert len(factory.processes)==1
     finally:controller.close()
+
+
+def test_failed_job_notice_persists_until_dismissed_without_clearing_purchase_hold(controlled, config_path):
+    from ba_automator.packs_state import read_state, write_state
+    controller, factory = controlled
+    job = controller.enqueue('packs')
+    eventually(lambda: len(factory.processes) == 1)
+    factory.processes[0].finish(1)
+    eventually(lambda: controller.status()['state'] == 'failed')
+    state = read_state(controller.config)
+    assert state['blocked_reason']
+    assert controller.status()['failed_jobs'][0]['id'] == job['id']
+    controller.close()
+    restored = DashboardController(config_path, process_factory=ProcessFactory())
+    try:
+        assert restored.status()['failed_jobs'][0]['task'] == 'packs'
+        restored.dismiss_failure(job['id'])
+        assert restored.status()['failed_jobs'] == []
+        assert read_state(restored.config)['blocked_reason'] == state['blocked_reason']
+        restored.resume()
+        assert read_state(restored.config)['blocked_reason'] == state['blocked_reason']
+    finally:
+        restored.close()
+
+
+def test_pack_schedule_uses_saved_reset_and_never_dispatches_a_blocked_purchase(controlled):
+    from ba_automator.packs_state import read_state, write_state
+    controller, factory = controlled
+    controller.pause()
+    with controller._condition:
+        controller.config = replace(controller.config, packs_ap_enabled=True)
+        state = read_state(controller.config)
+        state['blocked_reason'] = 'payment failed'
+        write_state(controller.config, state)
+        controller._paused = False
+        controller._enqueue_packs()
+        assert not controller._queue
+        state['blocked_reason'] = None
+        state['pending'] = {'pack': 'ap', 'cents': 299}
+        write_state(controller.config, state)
+        controller._enqueue_packs()
+        assert not controller._queue
+        state['pending'] = None
+        state['next_check_at'] = (controller._wall_clock() + timedelta(hours=2)).isoformat()
+        write_state(controller.config, state)
+        controller._enqueue_packs()
+        assert not controller._queue
+        state['next_check_at'] = (controller._wall_clock() - timedelta(seconds=1)).isoformat()
+        write_state(controller.config, state)
+        controller._enqueue_packs()
+        controller._enqueue_packs()
+        assert len(controller._queue) == 1 and controller._queue[0]['task'] == 'packs'
+        controller._paused = True
+
+
+def test_pack_settings_roundtrip_and_defaults_are_off(controlled):
+    controller, _ = controlled
+    assert not controller.status()['schedule']['packs']['enabled']
+    assert all(controller.status()['config'][f'packs_{key}_enabled'] is False
+               for key in ('monthly', 'half_monthly', 'ap'))
+    controller.pause()
+    controller.update_settings({'packs_ap_enabled': True, 'packs_ap_max_cents': 299})
+    loaded = Config.from_file(controller.config_path)
+    assert loaded.packs_ap_enabled and loaded.packs_ap_max_cents == 299
+
+
+def test_only_explicit_pack_job_can_retry_a_payment_hold(controlled):
+    controller,factory=controlled
+    controller.enqueue('packs')
+    eventually(lambda:len(factory.processes)==1)
+    assert factory.processes[0].arguments[-2:]==['packs','--retry-packs']
+    factory.processes[0].finish()
+    eventually(lambda:controller.status()['current_job'] is None)
+    controller.enqueue('daily')
+    eventually(lambda:len(factory.processes)==2)
+    assert '--retry-packs' not in factory.processes[1].arguments
+    factory.processes[1].finish()

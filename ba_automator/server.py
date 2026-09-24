@@ -16,6 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
 import ipaddress
 import json
+import hashlib
 import logging
 import math
 import os
@@ -38,6 +39,7 @@ from .config import Config, ConfigError
 from .crafting_state import CraftStateError, read_state, scheduled_jobs, timestamp
 from .locking import InstanceLock
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS
+from . import packs_state
 from .vision import decode_frame
 
 
@@ -49,7 +51,9 @@ LESSONS_SETTINGS = {"lessons_strategy": "strategy", "lessons_max_tickets": "max_
                     "lessons_locations": "locations", "lessons_enabled_in_daily": "enabled_in_daily"}
 AUTOMATION_SETTINGS = {"close_app_when_idle"}
 CRAFTING_SETTINGS = {"crafting_schedule_enabled": "schedule_enabled"}
-SETTINGS = RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys()
+PACKS_SETTINGS = {f'packs_{key}_{suffix}': f'{key}_{suffix}'
+                  for key in packs_state.PACKS for suffix in ('enabled', 'max_cents')}
+SETTINGS = RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys()
 CAFE_INTERVAL = timedelta(hours=3, seconds=15)
 CAFE_RETRY_INTERVAL = timedelta(minutes=15)
 MAX_SCHEDULE_FAILURES = 3
@@ -101,6 +105,7 @@ def _config_document(config: Config) -> dict:
         "automation": {name: getattr(config, name) for name in AUTOMATION_SETTINGS},
         "lessons": {name: getattr(config, attribute) for attribute, name in LESSONS_SETTINGS.items()},
         "crafting": {"schedule_enabled": config.crafting_schedule_enabled},
+        "packs": {name: getattr(config, attribute) for attribute, name in PACKS_SETTINGS.items()},
     }
     if hasattr(config, "state_dir"):
         document["storage"]["state_dir"] = str(config.state_dir)
@@ -146,6 +151,8 @@ class DashboardController:
         self._job_roots: dict[str, Path] = {}
         self._popup_cache: dict[Path, tuple[tuple[int, int], list[dict]]] = {}
         self._schedule = self._load_schedule()
+        self._packs_not_before = None
+        self._failures = self._load_failures()
         self._worker = threading.Thread(target=self._work, name="blue-archive-queue", daemon=True)
         self._worker.start()
 
@@ -161,10 +168,39 @@ class DashboardController:
         values.update({name: getattr(self.config, name) for name in AUTOMATION_SETTINGS})
         values.update({name: getattr(self.config, name) for name in LESSONS_SETTINGS})
         values.update({name: getattr(self.config, name) for name in CRAFTING_SETTINGS})
+        values.update({name: getattr(self.config, name) for name in PACKS_SETTINGS})
         return values
 
     def _state_dir(self) -> Path:
         return getattr(self.config, "state_dir", self.config.run_dir.parent / "state")
+
+    def _failures_path(self):
+        identity = hashlib.sha256(f'{self.config.serial}\0{self.config.package}'.encode()).hexdigest()[:24]
+        return self._state_dir() / f'failed-jobs-{identity}.json'
+
+    def _load_failures(self):
+        try:
+            records = json.loads(self._failures_path().read_text())
+            if isinstance(records, list):
+                return [item for item in records[-50:] if isinstance(item, dict)
+                        and all(isinstance(item.get(key), str) for key in ('id', 'task', 'time', 'detail'))]
+        except (OSError, ValueError):
+            pass
+        return []
+
+    def _save_failures(self):
+        try:
+            _write_atomic(self._failures_path(), json.dumps(self._failures[-50:], indent=2))
+        except OSError as exc:
+            self._log(f'Could not save failed-job notices: {exc}', 'error')
+
+    def dismiss_failure(self, identifier):
+        with self._condition:
+            if not isinstance(identifier, str) or not re.fullmatch(r'[a-f0-9]{32}', identifier):
+                raise ApiError(400, 'A failed job id is required')
+            self._failures = [item for item in self._failures if item['id'] != identifier]
+            self._save_failures()
+            # Acknowledging a notice never clears schedules or purchase holds.
 
     def _load_schedule(self) -> dict:
         try:
@@ -188,6 +224,7 @@ class DashboardController:
 
     def _enqueue_scheduled(self) -> None:
         self._enqueue_crafting()
+        self._enqueue_packs()
         if (self._paused or self._shutdown or not getattr(self.config, "cafe_schedule_enabled", False)
                 or self._schedule["cafe"].get("retry_paused", False)):
             return
@@ -205,6 +242,32 @@ class DashboardController:
                 self._schedule["cafe"]["retry_paused"] = True
                 return
         self._queue.append({"id": uuid4().hex, "task": "cafe", "created_at": _timestamp(), "source": "schedule"})
+
+    def _packs_status(self):
+        try:
+            state = packs_state.read_state(self.config)
+            return {**state, 'enabled': bool(packs_state.enabled(self.config))}
+        except RuntimeError as exc:
+            return {'enabled': bool(packs_state.enabled(self.config)), 'blocked_reason': str(exc)}
+
+    def _enqueue_packs(self):
+        if self._paused or self._shutdown or not packs_state.enabled(self.config) or len(self._queue) >= 100:
+            return
+        if ((self._current and self._current['task'] in {'packs', 'daily'})
+                or any(job['task'] in {'packs', 'daily'} for job in self._queue)):
+            return
+        state = self._packs_status()
+        if state.get('blocked_reason') or state.get('pending'):
+            return
+        now = self._wall_clock()
+        if self._packs_not_before and now < self._packs_not_before:
+            return
+        due = state.get('next_check_at')
+        if due and now < datetime.fromisoformat(due):
+            return
+        self._queue.append({'id': uuid4().hex, 'task': 'packs', 'created_at': _timestamp(), 'source': 'schedule'})
+        # Also bounds failures that occur in restart before the pack handler runs.
+        self._packs_not_before = now + timedelta(minutes=15)
 
     def _crafting_status(self) -> dict:
         try:
@@ -398,6 +461,8 @@ class DashboardController:
                 snapshot = job_root / "config.toml"
                 _write_atomic(snapshot, _toml(_config_document(selected)))
                 arguments = [sys.executable, "-m", "ba_automator", "--config", str(snapshot), job["task"]]
+                if job['task'] == 'packs' and job.get('source') != 'schedule':
+                    arguments.append('--retry-packs')
                 options = {"stdout": subprocess.PIPE, "stderr": subprocess.STDOUT,
                            "stdin": subprocess.DEVNULL, "text": True, "encoding": "utf-8",
                            "errors": "replace", "bufsize": 1}
@@ -421,7 +486,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info")
-                            marker = next((prefix for prefix in ("restart:", "club:", "cafe:", "crafting:", "lessons:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -465,6 +530,17 @@ class DashboardController:
                         self._result = self._unfinished_result(run_root, self._state)
                     self._history.appendleft({"id": job["id"], "task": job["task"],
                                               "state": self._state, "completed_at": self._completed_at})
+                    if self._state == 'failed':
+                        detail = next((entry['message'] for entry in reversed(self._logs)
+                                       if entry['message'].startswith('Error:')), 'Task failed; check the runner log and screenshots')
+                        self._failures.append({'id': job['id'], 'task': job['task'],
+                                               'time': self._completed_at, 'detail': detail[:1500]})
+                        self._failures = self._failures[-50:]
+                        self._save_failures()
+                        try:
+                            record_action(selected, 'job_failed', detail[:1500], task=job['task'])
+                        except OSError as exc:
+                            self._log(f'Could not append failed-job action: {exc}', 'error')
                     cafe_result = (self._parse_result(output, run_root, task="cafe")
                                    if job["task"] in {"daily", "cafe"} else None)
                     # A later lesson failure or stop does not undo a verified cafe visit.
@@ -472,6 +548,14 @@ class DashboardController:
                                   else self._state)
                     self._record_schedule(job["task"], cafe_state)
                     self._record_crafting(job["task"], self._state)
+                    if job['task'] == 'packs' and self._state in {'failed', 'stopped'}:
+                        try:
+                            with InstanceLock(selected):
+                                pack_state = packs_state.read_state(selected)
+                                pack_state['blocked_reason'] = pack_state['blocked_reason'] or 'Pack job failed or stopped; review the log, then manually queue a pack check'
+                                packs_state.write_state(selected, pack_state)
+                        except (RuntimeError, OSError) as exc:
+                            self._log(f'Could not save pack failure hold: {exc}', 'error')
                     self._current = None
                     self._process = None
                     # Materialize any due scheduled job before deciding the queue is done.
@@ -629,8 +713,9 @@ class DashboardController:
                     "queue": [dict(job) for job in self._queue],
                     "current_job": dict(self._current) if self._current else None,
                     "history": list(self._history), "queue_paused": self._paused,
+                    "failed_jobs": list(reversed(self._failures)),
                     "app_closed": self._app_closed,
-                    "schedule": {"crafting": self._crafting_status(), "cafe": {**self._schedule["cafe"],
+                    "schedule": {"packs": self._packs_status(), "crafting": self._crafting_status(), "cafe": {**self._schedule["cafe"],
                                           "enabled": getattr(self.config, "cafe_schedule_enabled", False)}}}
 
     def actions(self) -> dict:
@@ -650,7 +735,8 @@ class DashboardController:
                     public = {name: value.get(name) for name in
                               ("id", "time", "task", "action", "detail", "student", "cafe", "status",
                                "location", "room", "owned_students", "student_count", "tickets_before", "tickets_after",
-                               "strategy", "rank_before", "rank_after", "xp_before", "xp_after", "slots", "count")}
+                               "strategy", "rank_before", "rank_after", "xp_before", "xp_after", "slots", "count",
+                               "items", "pyroxenes", "balance_gains", "pack", "currency", "price_cents")}
                     entries.append(public)
         except FileNotFoundError:
             pass
@@ -788,10 +874,11 @@ class DashboardController:
                     document = tomllib.load(stream)
                 for name, value in changes.items():
                     section = ("cafe" if name in CAFE_SETTINGS else
+                               "packs" if name in PACKS_SETTINGS else
                                "crafting" if name in CRAFTING_SETTINGS else
                                "lessons" if name in LESSONS_SETTINGS else
                                "automation" if name in AUTOMATION_SETTINGS else "restart")
-                    key = CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, CRAFTING_SETTINGS.get(name, name)))
+                    key = PACKS_SETTINGS.get(name, CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, CRAFTING_SETTINGS.get(name, name))))
                     document.setdefault(section, {})[key] = value
                 _write_atomic(self.config_path, _toml(document))
                 self.config = Config.from_file(self.config_path)
@@ -937,6 +1024,7 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     raise ApiError(400, "Mutation requests do not accept query parameters")
                 body = self._body()
                 expected = {"/api/run": {"task"}, "/api/cancel": {"id"}, "/api/pause": set(),
+                            "/api/dismiss-failure": {"id"},
                             "/api/resume": set(), "/api/stop": set(), "/api/capture": set(),
                             "/api/settings": SETTINGS}
                 if target.path not in expected:
@@ -952,6 +1040,8 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     controller.cancel(body["id"])
                 elif target.path == "/api/pause":
                     controller.pause()
+                elif target.path == "/api/dismiss-failure":
+                    controller.dismiss_failure(body.get('id'))
                 elif target.path == "/api/resume":
                     controller.resume()
                 elif target.path == "/api/stop":
