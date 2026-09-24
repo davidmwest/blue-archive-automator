@@ -19,6 +19,7 @@ LOGGER = logging.getLogger(__name__)
 LESSONS_TIMEOUT = 1800
 MAX_SCHOOLS = 50
 MAX_INPUTS = 2500
+INPUT_TIME_RESERVE = 1.0
 
 
 def identity(name: str) -> str:
@@ -109,7 +110,11 @@ class LessonsRunner:
         while self.clock() < end:
             last = self.capture()
             if (last.screen.kind in kinds and (predicate is None or predicate(last.screen))
-                    and last.capture.is_fresh(self.clock())):
+                    and last.capture.is_fresh(self.clock())
+                    and last.capture.deadline - self.clock() >= INPUT_TIME_RESERVE):
+                # Cold small-text OCR can finish just before the five-second
+                # deadline. Recapture with warm caches before journal/preflight
+                # work consumes that final fraction of a second.
                 return last
             self.sleep(.5)
         self.fail(f'Lessons expected {", ".join(sorted(kinds))}, but found '

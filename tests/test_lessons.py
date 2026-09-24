@@ -163,6 +163,39 @@ def test_ocr_that_makes_every_frame_stale_never_authorizes_input(harness):
     assert not harness.device.taps
 
 
+def test_almost_expired_ocr_frame_is_recaptured_before_input(harness):
+    runner = harness.make()
+    calls = 0
+
+    def cold_then_warm(png):
+        nonlocal calls
+        calls += 1
+        harness.clock.sleep(4.95 if calls == 1 else .4)
+        return map_screen()
+
+    harness.vision.analyze = cold_then_warm
+    frame = runner.wait('map')
+    assert calls == 2
+    assert frame.capture.deadline - harness.clock.now > 4
+    # Evidence persistence and ADB preflight still fit the capture's deadline.
+    harness.clock.sleep(.8)
+    runner.tap(frame, (40, 362), 'Inspect the previous school')
+    assert harness.device.taps == [(40, 362)]
+
+
+def test_recognition_with_no_time_reserve_times_out_without_input(harness):
+    runner = harness.make()
+
+    def always_near_expiry(png):
+        harness.clock.sleep(4.95)
+        return map_screen()
+
+    harness.vision.analyze = always_near_expiry
+    with pytest.raises(TaskError, match='expected map'):
+        runner.wait('map', timeout=12)
+    assert not harness.device.taps
+
+
 @pytest.mark.parametrize("count", [None, -1, True, 100, "2"])
 def test_ambiguous_ticket_count_is_never_assumed_zero(harness, count):
     runner = harness.make()
