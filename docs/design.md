@@ -69,7 +69,7 @@ One automation worker controls one configured game instance at a time. An OS loc
 
 ### Jobs and tasks
 
-A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, a deferred Club placeholder, optional paid-pack checks, Mail, and Cafe, with Bounties, Scrimmages, and Lessons included when their daily settings are enabled and Spend AP appended when automatic spending is enabled.
+A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, a deferred Club placeholder, optional paid-pack checks, Mail, and Cafe, with Bounties, Scrimmages, and Lessons included when their daily settings are enabled and Spend AP appended when automatic spending is enabled. Tasks collection finishes the daily plan, checking its home red dot and claiming completed rewards after the activities that earn them.
 
 `tasks.py` supplies a small catalog and ordered task plans shared by the CLI and dashboard. Grow a shared execution context when repeated orchestration needs it instead of extending command-specific conditionals indefinitely. Each task defines:
 

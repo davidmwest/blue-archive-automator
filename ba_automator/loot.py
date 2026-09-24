@@ -9,6 +9,7 @@ import os
 from uuid import uuid4
 
 RECEIVED = {
+    "task_rewards_received",
     "earnings_collected",
     "mail_received",
     "crafts_collected",
@@ -147,6 +148,7 @@ def snapshot(config):
         incomplete = (
             event["action"]
             in {"crafts_collected", "lesson_completed", "ap_spent", "tickets_spent"}
+            or event.get("items_complete") is False
             or not counts
         )
         if (

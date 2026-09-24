@@ -88,6 +88,10 @@ The pure planner defaults to the most owned students, then the highest sum of th
 
 Before spending, the runner reopens the selected room and checks its confirmation against the chosen observation. One ticket is confirmed at a time. Completion needs result evidence and the expected ticket decrement, with the location, room, strategy, counts, and readable rank/XP changes recorded in important actions. Ticket limits restrict existing tickets; there is no purchase path. See [Lessons](lessons.md) for the full policy, failure behavior, and current live-validation status.
 
+## Tasks rewards
+
+`tasks` runs restart → Tasks collection → home. It checks the fixed home notification badge, selects All, collects enabled Claim All and daily completion rewards, and rechecks for rewards unlocked by collection. Only a recognized receipt authorizes a received-reward log. Receipt scans retain overlapping panels and merge repeated cards without counting them again. Daily ends with this check; the existing AP schedule handles any AP received. See [Tasks rewards](task-rewards.md).
+
 ## Crafting
 
 `crafting` runs restart → Crafting → home. It checks all three synthesis slots, collects ready items with receipt verification, and refills empty slots from the existing keystone-only Quick Craft preset. Its atomic per-instance state records deadlines and pending irreversible actions. Setup problems disable further automatic visits; observed empty inventory schedules a later recheck. See [Crafting](crafting.md) for spending limits and live-validation status.

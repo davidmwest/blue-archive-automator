@@ -44,6 +44,7 @@ open [the dashboard](http://127.0.0.1:8765). `serve --port 8767` selects a diffe
 | command | what it does |
 | --- | --- |
 | `serve` | runs the local dashboard and one-job-at-a-time queue |
+| `tasks` | checks the home Tasks red dot and collects completed rewards, including the daily bonus |
 | `restart` | closes the game and reaches a clear home screen |
 | `club` | records “awaiting reset test”; no game input while stubbed |
 | `cafe` | runs restart, collects Cafe earnings, and checks students |

@@ -251,10 +251,10 @@
         "home",
         "tasks"
       ],
-      "verified": false,
-      "description": "Daily/weekly achievement rewards; distinct from playable missions",
+      "verified": true,
+      "description": "Home → Tasks → All; collect completed rewards only when the home red dot is visible",
       "visual_verified": true,
-      "route_verified": false
+      "route_verified": true
     },
     {
       "id": "momotalk",

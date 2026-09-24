@@ -60,3 +60,5 @@ Pack/mail samples (`packs-*.png`) were captured on 2026-09-24. Store backgrounds
 `craft-one-ready.png` and `craft-collected.png` cover the first natural craft completion and receipt; the account resource bar is masked.
 
 AP samples (`ap-*.png`) retain the AP counters needed to verify spending, while masking credit/Pyroxene balances and the receipt’s account nickname. They cover commission selection, Hard stars and remaining attempts, the confirmation, and the receipt. The helper-icon, small-index, and split-title samples preserve OCR failures found during live surveys and sweeps. Hard details retain both current and projected attempt counts, including a last-available-attempt case.
+
+Task reward samples (`task-rewards-*.png`) were captured on 2026-09-24 at 1280×720. They retain only the Tasks notification and home anchors, page controls, or reward header/cards/continue label. Account identity, balances, the mascot illustration, and unrelated background are masked. They cover active/absent badges, enabled Claim All, the separate daily completion reward, an empty page, and both ends of a scrolling receipt.

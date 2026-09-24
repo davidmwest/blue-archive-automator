@@ -6,6 +6,7 @@ from .config import Config
 
 
 TASK_LABELS = {
+    "tasks": "Task rewards collected",
     "bounties": "Bounty tickets swept",
     "scrimmages": "Scrimmage tickets swept",
     "restart": "Home screen ready",
@@ -20,7 +21,7 @@ TASK_LABELS = {
     "daily": "Daily tasks complete",
 }
 TASKS = frozenset(TASK_LABELS)
-RUN_PREFIXES = ("bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
+RUN_PREFIXES = ("tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
 
 
 def task_plan(command: str, config: Config) -> tuple[str, ...]:
@@ -31,7 +32,8 @@ def task_plan(command: str, config: Config) -> tuple[str, ...]:
         plan = (*plan, *(("bounties",) if config.bounties_enabled_in_daily else ()),
                 *(("scrimmages",) if config.scrimmages_enabled_in_daily else ()))
         plan = (*plan, "lessons") if config.lessons_enabled_in_daily else plan
-        return (*plan, "spend_ap") if config.ap_schedule_enabled else plan
+        plan = (*plan, "spend_ap") if config.ap_schedule_enabled else plan
+        return (*plan, "tasks")
     if command == "cafe":
         return ("restart", "club", "cafe", *(("spend_ap",) if config.ap_schedule_enabled else ()))
     if command == "club":
@@ -41,7 +43,7 @@ def task_plan(command: str, config: Config) -> tuple[str, ...]:
         return ("restart", "packs", "mail", *(("spend_ap",) if config.ap_schedule_enabled else ()))
     if command == 'mail':
         return ('restart', 'mail', *(("spend_ap",) if config.ap_schedule_enabled else ()))
-    if command in {"bounties", "scrimmages", "lessons", "crafting", "spend_ap", "scan_ap"}:
+    if command in {"tasks", "bounties", "scrimmages", "lessons", "crafting", "spend_ap", "scan_ap"}:
         return ("restart", command)
     if command == "restart":
         return ("restart",)

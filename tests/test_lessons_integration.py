@@ -66,11 +66,11 @@ def test_default_plans_include_lessons_only_in_daily_or_explicit_lessons_job():
     assert config.lessons_strategy == "relationship"
     assert config.lessons_max_tickets == 0
     assert config.lessons_locations == ()
-    assert task_plan("daily", config) == ("restart", "club", "mail", "cafe", "bounties", "scrimmages", "lessons")
+    assert task_plan("daily", config) == ("restart", "club", "mail", "cafe", "bounties", "scrimmages", "lessons", "tasks")
     assert task_plan("cafe", config) == ("restart", "club", "cafe")
     assert task_plan("lessons", config) == ("restart", "lessons")
     disabled = replace(config, lessons_enabled_in_daily=False)
-    assert task_plan("daily", disabled) == ("restart", "club", "mail", "cafe", "bounties", "scrimmages")
+    assert task_plan("daily", disabled) == ("restart", "club", "mail", "cafe", "bounties", "scrimmages", "tasks")
     assert task_plan("lessons", disabled) == ("restart", "lessons")
 
 
@@ -83,14 +83,14 @@ class Result:
 
 
 @pytest.mark.parametrize(("command", "enabled", "expected"), [
-    ("daily", True, ["restart", "club", "mail", "cafe", "bounties", "scrimmages", "lessons"]),
-    ("daily", False, ["restart", "club", "mail", "cafe", "bounties", "scrimmages"]),
+    ("daily", True, ["restart", "club", "mail", "cafe", "bounties", "scrimmages", "lessons", "tasks"]),
+    ("daily", False, ["restart", "club", "mail", "cafe", "bounties", "scrimmages", "tasks"]),
     ("lessons", True, ["restart", "lessons"]),
     ("lessons", False, ["restart", "lessons"]),
     ("cafe", True, ["restart", "club", "cafe"]),
 ])
 def test_cli_dispatches_sequential_plan_and_passes_lesson_config(monkeypatch, tmp_path, command, enabled, expected):
-    from ba_automator import cafe, club, mail, restart, tickets
+    from ba_automator import cafe, club, mail, restart, tickets, task_rewards
 
     config = selected(lessons_enabled_in_daily=enabled, lessons_strategy="school_rank", lessons_max_tickets=3)
     monkeypatch.setattr(cli.Config, "from_file", lambda _: config)
@@ -119,6 +119,7 @@ def test_cli_dispatches_sequential_plan_and_passes_lesson_config(monkeypatch, tm
     monkeypatch.setattr(cafe, "run_cafe", runner("cafe"))
     monkeypatch.setattr(club, "run_club", runner("club"))
     monkeypatch.setattr(mail, "run_mail", runner("mail"))
+    monkeypatch.setattr(task_rewards, "run_task_rewards", runner("tasks"))
     monkeypatch.setattr(tickets, "run_bounties", runner("bounties"))
     monkeypatch.setattr(tickets, "run_scrimmages", runner("scrimmages"))
     assert cli.main([command, "--no-downloads"]) == 0
