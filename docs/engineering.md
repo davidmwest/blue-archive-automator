@@ -36,6 +36,8 @@ recognition also needs to distinguish the interface from its artwork. pink hair 
 
 one live lesson returned a valid report and reduced the ticket count, then stopped because the grid-close tap ripple briefly covered the school name. the fix waits for the expected name to become readable; it does not loosen identity matching. each spend still needs a matching report, the expected one-ticket decrement, and a completed room. Start is never replayed when a result is uncertain. the failed run also exposed a dashboard bug: its result pointed to the successful restart step. failures now use the final task's journal, keeping the useful evidence attached to the actual failure.
 
+another completed lesson exposed a smaller OCR issue: the overview's visible `4/7` counter disappeared from the full-frame text. the fallback reads only the labeled ticket control at two enlarged scales and requires agreement. a missing count triggers bounded recapture; conflicting reads remain unknown. the actual frame and synthetic counters cover zero through four tickets without treating a missing digit as zero.
+
 ## evidence and its limits
 
 [camera tests](../tests/test_cafe_camera.py) exercise arbitrary generated layouts, moving sprites, occlusion, repeated patterns, perspective changes, and misleading fixed backgrounds. [scan tests](../tests/test_cafe_scan.py) check that unknown movement cannot certify an edge or silently skip an intermediate view. screenshot fixtures exercise actual OCR and template recognition; device and server tests cover stale input, protocol mismatches, locks, and serialized jobs.

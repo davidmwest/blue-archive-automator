@@ -126,7 +126,9 @@ def _ticket_count(words, bounds):
     text = _text(selected)
     matches = re.findall(r"tickets\s*owned\s*(\d+)\s*/\s*(\d+)", text, re.I)
     values = {(int(current), int(capacity)) for current, capacity in matches}
-    if len(values) != 1:
+    ratios = {(int(current), int(capacity))
+              for current, capacity in re.findall(r"(\d+)\s*/\s*(\d+)", text)}
+    if len(values) != 1 or ratios != values:
         return None, None
     current, capacity = next(iter(values))
     return (current, capacity) if 0 <= current <= 99 and 1 <= capacity <= 99 else (None, None)
@@ -155,6 +157,42 @@ class LessonVision:
         self.startup = startup
         self._bond_cache: dict[bytes, int | None] = {}
         self._header_cache: dict[bytes, str | None] = {}
+        self._ticket_cache: dict[bytes, tuple[int | None, int | None]] = {}
+
+    def _tickets(self, frame, words, bounds):
+        result = _ticket_count(words, bounds)
+        if result[0] is not None:
+            return result
+        # Small counters can disappear from whole-frame OCR after a ticket is
+        # spent. Recover only inside the identified screen's ticket control;
+        # resource and area-XP ratios elsewhere are never candidates.
+        selected = _text(_within(words, bounds))
+        if len(re.findall(r"tickets\s*owned", selected, re.I)) != 1:
+            return None, None
+        observed = {(int(current), int(capacity))
+                    for current, capacity in re.findall(r"(\d+)\s*/\s*(\d+)", selected)}
+        if len(observed) > 1:
+            return None, None
+        x1, y1, x2, y2 = bounds
+        crop = frame[y1:y2, x1:x2]
+        key = crop.tobytes()
+        if key not in self._ticket_cache:
+            candidates = []
+            for scale in (2, 3):
+                enlarged = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+                cropped_words = self.startup.read(enlarged)
+                text = _text(cropped_words)
+                if (not cropped_words or any(word.confidence < .9 for word in cropped_words)
+                        or len(re.findall(r"tickets\s*owned", text, re.I)) != 1):
+                    candidates.append((None, None))
+                else:
+                    candidates.append(_ticket_count(cropped_words, (0, 0, enlarged.shape[1], enlarged.shape[0])))
+            result = candidates[0] if candidates[0] == candidates[1] else (None, None)
+            if len(self._ticket_cache) >= 64:
+                self._ticket_cache.clear()
+            self._ticket_cache[key] = result
+        result = self._ticket_cache[key]
+        return result if not observed or result in observed else (None, None)
 
     def _room_name(self, frame, x, y, fallback):
         # Long/wrapped labels can lose a letter in full-screen OCR (Club/Cub).
@@ -359,7 +397,7 @@ class LessonVision:
                     and float(frame[171, 245:445].mean()) < 215):
                 return LessonScreen("unknown", words=words, inspection_complete=False,
                                     detail="The room grid is still moving or has an unsupported layout")
-            tickets, capacity = _ticket_count(words, (530, 132, 765, 170))
+            tickets, capacity = self._tickets(frame, words, (530, 132, 765, 170))
             cards = self._rooms(frame, words)
             return LessonScreen("rooms", tickets=tickets, ticket_capacity=capacity,
                                 room_cards=cards, words=words,
@@ -369,7 +407,7 @@ class LessonVision:
         if (_has(words, "lesson", (85, 0, 230, 47))
                 and _has(words, "location select", (620, 76, 900, 134))
                 and _bright(frame, (1020, 91, 1060, 117))):
-            tickets, capacity = _ticket_count(words, (40, 75, 290, 125))
+            tickets, capacity = self._tickets(frame, words, (40, 75, 290, 125))
             return LessonScreen("overview", tickets=tickets, ticket_capacity=capacity,
                                 total_rank=_rank(_within(words, (875, 110, 1010, 133))),
                                 location_rows=self._overview(words), words=words)
@@ -378,7 +416,7 @@ class LessonVision:
                 and _has(words, "all locations", (1050, 625, 1270, 705))
                 and _has(words, "area rewards", (920, 166, 1080, 208))
                 and _bright(frame, (1005, 91, 1200, 99))):
-            tickets, capacity = _ticket_count(words, (40, 75, 290, 125))
+            tickets, capacity = self._tickets(frame, words, (40, 75, 290, 125))
             rank, name = _header_name(_within(words, (924, 87, 1235, 131)))
             progress = _within(words, (928, 130, 1245, 165))
             xp, needed = _ratio(progress)

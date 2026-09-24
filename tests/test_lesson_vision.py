@@ -19,16 +19,18 @@ class RecordedOCR:
         self.words = [Word(item["text"], item["confidence"], tuple(item["box"]))
                       for item in metadata["words"]]
         self.crops = {}
-        for item in metadata["bond_crops"] + metadata.get("header_crops", []):
+        for item in metadata["bond_crops"] + metadata.get("header_crops", []) + metadata.get("ticket_crops", []):
             x1, y1, x2, y2 = item["box"]
             scale = item.get("scale", 5)
             image = cv2.resize(frame[y1:y2, x1:x2], None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-            self.crops[image.tobytes()] = item["text"]
+            self.crops[image.tobytes()] = item.get("text", item.get("words"))
 
     def read(self, frame):
         if frame.shape[:2] == (720, 1280):
             return self.words
         text = self.crops.get(frame.tobytes())
+        if isinstance(text, list):
+            return [Word(item["text"], item["confidence"], tuple(item["box"])) for item in text]
         return [Word(text, .99, (0, 0, frame.shape[1], frame.shape[0]))] if text else []
 
 
@@ -63,6 +65,73 @@ def test_exp_off_does_not_invent_zero_xp_or_maximum_rank():
     screen = analyze(vision, frame)
     assert len(screen.location_rows) == 5
     assert all(row.xp is None and row.capped is None for row in screen.location_rows)
+
+
+def test_scoped_crop_recovers_observed_four_tickets_omitted_by_full_frame_ocr():
+    frame, ocr, vision = replay("ticket-four")
+    assert not any("4/7" in word.text for word in ocr.words)
+    screen = analyze(vision, frame)
+    assert screen.kind == "overview"
+    assert (screen.tickets, screen.ticket_capacity) == (4, 7)
+
+
+@pytest.mark.parametrize("remaining", [0, 1, 2, 3])
+def test_ticket_crop_preserves_each_remaining_count_including_zero(remaining):
+    frame, ocr, vision = replay("ticket-four")
+    for key in ocr.crops:
+        ocr.crops[key] = f"Tickets Owned {remaining}/7"
+    # An unrelated account-resource ratio must not affect this control.
+    ocr.words.append(Word("188/218", .99, (615, 10, 700, 35)))
+    screen = analyze(vision, frame)
+    assert (screen.tickets, screen.ticket_capacity) == (remaining, 7)
+
+
+@pytest.mark.parametrize("readings", [
+    ("Tickets Owned 4/7", "Tickets Owned 3/7"),
+    ("Tickets Owned 4/7", "Tickets Owned"),
+    ("4/7", "4/7"),
+    ("Tickets Owned 4/7 3/7", "Tickets Owned 4/7 3/7"),
+    ("Tickets Owned 4/0", "Tickets Owned 4/0"),
+    ("Tickets Owned 4/7 Tickets Owned 4/7", "Tickets Owned 4/7 Tickets Owned 4/7"),
+])
+def test_ticket_crop_requires_a_label_and_unique_valid_ratio_at_both_scales(readings):
+    frame, ocr, vision = replay("ticket-four")
+    for key, text in zip(ocr.crops, readings):
+        ocr.crops[key] = text
+    screen = analyze(vision, frame)
+    assert (screen.tickets, screen.ticket_capacity) == (None, None)
+
+
+def test_ticket_crop_does_not_override_conflicting_full_frame_control_evidence():
+    frame, ocr, vision = replay("ticket-four")
+    ocr.words.extend([Word("4/7", .99, (230, 87, 280, 108)),
+                      Word("3/7", .99, (230, 108, 280, 122))])
+    assert analyze(vision, frame).tickets is None
+
+
+def test_ticket_crop_requires_the_full_frame_control_label_and_screen():
+    frame, ocr, vision = replay("ticket-four")
+    ocr.words = [word for word in ocr.words if "tickets" not in word.normalized]
+    assert analyze(vision, frame).tickets is None
+    frame, ocr, vision = replay("ticket-four")
+    ocr.words = [word for word in ocr.words if word.normalized != "location select"]
+    assert analyze(vision, frame).kind == "unknown"
+
+
+@pytest.mark.parametrize("name,bounds", [
+    ("schale-ready", (40, 75, 290, 125)),
+    ("schale-list", (530, 132, 765, 170)),
+])
+def test_ticket_fallback_also_uses_the_correct_map_and_room_control(name, bounds):
+    frame, ocr, vision = replay(name)
+    x1, y1, x2, y2 = bounds
+    ocr.words = [word for word in ocr.words
+                 if not (x1 <= word.center[0] <= x2 and y1 <= word.center[1] <= y2)]
+    ocr.words.append(Word("Tickets Owned", .99, bounds))
+    for scale in (2, 3):
+        crop = cv2.resize(frame[y1:y2, x1:x2], None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+        ocr.crops[crop.tobytes()] = "Tickets Owned 2/7"
+    assert analyze(vision, frame).tickets == 2
 
 
 def test_scrolled_overview_accepts_rank_bracket_and_excludes_clipped_rows():

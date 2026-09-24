@@ -176,6 +176,23 @@ def test_unexpected_ticket_change_blocks(harness):
         runner.tickets(harness.frame(LessonScreen("overview", tickets=1)), expected=2)
 
 
+@pytest.mark.parametrize("count", [0, 4])
+def test_overview_recaptures_a_missing_counter_without_assuming_zero(harness, count):
+    runner = harness.make()
+    harness.screens[:] = [LessonScreen("overview"), LessonScreen("overview", tickets=count)]
+    assert runner.overview().screen.tickets == count
+    assert not harness.device.taps
+
+
+def test_permanently_missing_overview_counter_times_out_without_input(harness):
+    runner = harness.make()
+    harness.screens[:] = [LessonScreen("overview")]
+    with pytest.raises(TaskError, match="expected overview"):
+        runner.overview()
+    assert harness.clock.now >= 30
+    assert not harness.device.taps
+
+
 class OrchestrationRunner(LessonsRunner):
     """Simulate observed game updates while using the real run loop and planner."""
 

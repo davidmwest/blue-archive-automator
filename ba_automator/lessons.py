@@ -26,6 +26,10 @@ def identity(name: str) -> str:
     return re.sub(r"[^a-z0-9]", "", name.casefold())
 
 
+def counter_visible(screen: LessonScreen) -> bool:
+    return type(screen.tickets) is int
+
+
 @dataclass(frozen=True)
 class LessonFrame:
     capture: Capture
@@ -124,13 +128,13 @@ class LessonsRunner:
             frame = self.capture()
             kind = frame.screen.kind
             if kind == 'overview':
-                return frame
+                return frame if counter_visible(frame.screen) else self.wait('overview', counter_visible)
             if kind == 'rooms':
                 self.tap(frame, (1138, 100), 'Close the recognized room grid')
                 self.wait('map')
             elif kind == 'map':
                 self.tap(frame, (54, 37), 'Return to Lesson location selection')
-                return self.wait('overview')
+                return self.wait('overview', counter_visible)
             elif kind == 'confirm':
                 self.tap(frame, (965, 114), 'Close the unstarted lesson preview')
                 self.wait('rooms')
@@ -139,7 +143,7 @@ class LessonsRunner:
                 if observation.state != 'home':
                     self.fail('Lessons requires a recognized Lesson screen or unobstructed home; run restart first')
                 self.tap(frame, (210, 660), 'Open Lessons from verified home')
-                return self.wait('overview')
+                return self.wait('overview', counter_visible)
         self.fail('Could not reach the Lesson overview within its navigation limit')
 
     def map_location(self, frame):
@@ -168,10 +172,10 @@ class LessonsRunner:
         # The opening modal slides a few pixels after its title is readable.
         # Fixed portrait crops are valid only after the panel has settled.
         self.sleep(1)
-        result = self.wait('rooms', lambda s: bool(s.room_cards))
+        result = self.wait('rooms', lambda s: bool(s.room_cards) and counter_visible(s))
         for _ in range(3):
             self.sleep(.7)
-            following = self.wait('rooms', lambda s: bool(s.room_cards))
+            following = self.wait('rooms', lambda s: bool(s.room_cards) and counter_visible(s))
             if following.screen.room_cards == result.screen.room_cards:
                 result = following
                 break
@@ -328,7 +332,7 @@ class LessonsRunner:
         self.tap(receipt, target, 'Dismiss the verified lesson receipt')
         expected_school = lambda s: identity(s.location_name or '') == location.id
         after = self.await_result({'rooms', 'map'},
-                                  predicate=lambda s: s.kind == 'rooms' or expected_school(s))
+                                  predicate=lambda s: counter_visible(s) and (s.kind == 'rooms' or expected_school(s)))
         after_count = self.tickets(after, expected=before - 1)
         self.journal.save_image(f'lesson-{self.confirmed + 1:02d}-after.png', after.capture.png)
         if after.screen.kind == 'rooms':

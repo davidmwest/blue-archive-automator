@@ -42,3 +42,8 @@ Lessons also includes an opening-animation rejection sample, a captured relation
 rank-up banner, loading/completed Lesson Report panels, and before/after room grids
 showing the completed portrait state. Area/school rank-up tests construct synthetic
 images in code; no screenshot or live validation is claimed for that popup.
+
+`lesson-ticket-four` preserves the actual 4/7 counter after a verified lesson.
+Whole-frame OCR omitted that ratio; `ticket_crops` record its independently matching
+2× and 3× local OCR readings. Other remaining counts are synthetic OCR cases in the
+tests, not additional claims of captured gameplay.
