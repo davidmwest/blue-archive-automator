@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
-from ba_automator.vision import VisionError, Word, classify, decode_frame
+from ba_automator.vision import StartupVision, VisionError, Word, classify, decode_frame, publisher_splash
 
 
 HOME_MATCHES = {"home_left": (74, 288), "home_right": (1160, 665)}
@@ -176,6 +176,51 @@ def test_malformed_screenshot_raises_vision_error(image):
 def test_wrong_resolution_screenshot_is_rejected(dimensions):
     with pytest.raises(VisionError, match="1280×720"):
         decode_frame(png(*dimensions))
+
+
+def splash_words():
+    return [word("NEXON", center=(250, 340)), word("NEXON", center=(545, 340)),
+            word("GAMES", center=(580, 375)), word("IODIVISION", center=(820, 350)),
+            word("mX", center=(1070, 350), confidence=.75)]
+
+
+def test_publisher_splash_accepts_split_or_merged_middle_logo():
+    frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+    assert publisher_splash(frame, splash_words())
+    merged = splash_words()
+    merged[1:3] = [word("NEXON GAMES", center=(545, 350))]
+    assert publisher_splash(frame, merged)
+
+
+@pytest.mark.parametrize("words", [
+    [], [word("NEXON", center=(250, 340))], splash_words()[:3],
+    [word("NEXON", center=(250, 340)), word("NEXON", center=(250, 340)),
+     word("GAMES", center=(580, 375)), word("IODIVISION", center=(820, 350))],
+    splash_words() + [word("Confirm", center=(640, 550))],
+    splash_words() + [word("Nexon announcement", center=(820, 350))],
+    [word(w.text, center=(w.center[0], 150), confidence=w.confidence) for w in splash_words()],
+    [word(w.text, center=w.center, confidence=.7) for w in splash_words()],
+])
+def test_publisher_mentions_without_all_positioned_logos_are_not_a_splash(words):
+    assert not publisher_splash(np.zeros((720, 1280, 3), dtype=np.uint8), words)
+
+
+def test_publisher_splash_requires_black_background_outside_the_logo_strip():
+    bright = np.full((720, 1280, 3), 240, dtype=np.uint8)
+    assert not publisher_splash(bright, splash_words())
+    dark_notice = np.zeros((720, 1280, 3), dtype=np.uint8)
+    dark_notice[470:560, 500:780] = 100
+    assert not publisher_splash(dark_notice, splash_words())
+
+
+def test_publisher_splash_keeps_blocked_and_unknown_dialog_precedence():
+    vision = StartupVision.__new__(StartupVision)
+    vision.assets = []
+    for extra, state in (("Server is under maintenance", "blocked"), ("Confirm", "unknown")):
+        vision.read = lambda frame, extra=extra: splash_words() + [word(extra, center=(640, 550))]
+        observation = vision.analyze(png(1280, 720))
+        assert observation.state == state
+        assert observation.target is None
 
 
 def test_native_screenshot_preserves_coordinate_grid():

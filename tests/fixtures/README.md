@@ -10,6 +10,8 @@ pipeline can be tested without a running game.
 
 - `download_prompt.png`: the actual 332.05 MB required-download confirmation.
 - `title.png`: the title-screen start control, including OCR's merged-word case.
+- `publisher_splash.png`: the publisher logos on black, classified as loading
+  without extending the overall startup timeout or sending input.
 - `banner_day.png`, `banner_night.png`: announcement close controls over different
   backgrounds, paired with the announcement footer.
 - `home_controls.png`: the two unobstructed home menu anchors.

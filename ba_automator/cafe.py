@@ -303,10 +303,17 @@ class CafeRunner:
                                  deadline=cap[0] + FRAME_MAX_AGE, monotonic=self.clock):
             self.fail("Cafe view expired before camera movement")
         self.sleep(.5)
-        after = self.wait_cafe()
-        displacement = measure_camera_displacement(cap[2], after[2])
+        displacement = None
+        diagnostics = {}
+        for attempt in range(3):
+            after = self.wait_cafe()
+            displacement = measure_camera_displacement(cap[2], after[2], diagnostics=diagnostics)
+            if displacement is not None:
+                break
+            if attempt < 2:
+                self.sleep(.8)  # Let a speech bubble or animation settle; no extra drag.
         self.journal.record("camera_motion", displacement=displacement,
-                            frame=self.last_frame)
+                            diagnostics=diagnostics, frame=self.last_frame)
         return displacement
 
     def pan_region(self, vector, *, to_edge=False):

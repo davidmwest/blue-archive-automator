@@ -124,6 +124,11 @@ class StartupVision:
         observation = classify(words, self.matches(frame))
         # Specific startup handlers retain priority over this narrow visual fallback.
         if observation.state == "unknown":
+            if publisher_splash(frame, words):
+                return Observation(
+                    "loading", "Waiting for the recognized publisher-logo startup splash", None,
+                    observation.text, detector="publisher_splash",
+                )
             target = shaded_overlay_close(frame, words, self.assets)
             if target is not None:
                 return Observation(
@@ -131,6 +136,39 @@ class StartupVision:
                     observation.text, detector="shaded_overlay",
                 )
         return observation
+
+
+def publisher_splash(frame: np.ndarray, words: list[Word]) -> bool:
+    """Recognize the black Nexon / Nexon Games / IO Division startup screen.
+
+    Logo text in another screen is insufficient. All OCR text must belong to the
+    reviewed logo strip, with three distinct publisher groups in their positions.
+    This is only a loading observation; it never extends the startup deadline.
+    """
+    if frame.shape != (720, 1280, 3):
+        return False
+    regions = ((100, 280, 370, 420), (390, 280, 670, 420),
+               (670, 280, 980, 420), (980, 280, 1180, 420))
+    allowed = ({"nexon"}, {"nexon", "games", "nexongames"},
+               {"iodivision"}, {"mx", "studio", "mxstudio"})
+    groups = [set() for _ in regions]
+    for word in words:
+        token = word.normalized.replace(" ", "")
+        x1, y1, x2, y2 = word.box
+        matching = [index for index, (left, top, right, bottom) in enumerate(regions)
+                    if token in allowed[index] and left <= x1 < x2 <= right
+                    and top <= y1 < y2 <= bottom]
+        if len(matching) != 1:
+            return False
+        if word.confidence >= .80:
+            groups[matching[0]].add(token)
+    if ("nexon" not in groups[0] or "iodivision" not in groups[2]
+            or not ({"nexon", "games"} <= groups[1] or "nexongames" in groups[1])):
+        return False
+    dark = np.max(frame, axis=2) <= 20
+    outside_strip = np.ones((720, 1280), dtype=bool)
+    outside_strip[280:420, 100:1180] = False
+    return bool(dark.mean() >= .94 and dark[outside_strip].mean() >= .995)
 
 
 def shaded_overlay_close(

@@ -75,9 +75,65 @@ def _spread(points: np.ndarray, displacement: np.ndarray, *, destination: bool =
     return cv2.contourArea(hull) >= width * height * 0.045
 
 
+def _affine_motion(source: np.ndarray, destination: np.ndarray, models: list,
+                   diagnostics: dict) -> tuple[float, float] | None:
+    """Recover a coherent pan whose small perspective change defeats translation.
+
+    Affine consensus can establish movement only. It cannot establish that the
+    camera stopped, so a weak/near-zero result remains unknown.
+    """
+    matrix, mask = cv2.estimateAffine2D(source, destination, method=cv2.RANSAC,
+                                      ransacReprojThreshold=4.0, maxIters=512,
+                                      confidence=.995, refineIters=10)
+    if matrix is None or mask is None or not np.isfinite(matrix).all():
+        diagnostics["reason"] = "affine_fit_failed"
+        return None
+    inliers = mask.ravel().astype(bool)
+    count = int(inliers.sum())
+    diagnostics.update(affine_inliers=count, affine_ratio=round(count / len(source), 3))
+    if count < 24 or count / len(source) < .65:
+        diagnostics["reason"] = "affine_consensus_too_weak"
+        return None
+    linear = matrix[:, :2]
+    scales = np.linalg.svd(linear, compute_uv=False)
+    # Permit mild perspective/shear from the game's camera, not an arbitrary
+    # transform that could join unrelated furniture or a changing screen.
+    if (np.linalg.det(linear) <= 0 or scales.min() < .85 or scales.max() > 1.15
+            or scales.max() / scales.min() > 1.25
+            or np.max(np.abs(linear - np.eye(2))) > .20):
+        diagnostics["reason"] = "affine_geometry_not_camera_pan"
+        return None
+    deltas = destination - source
+    center = np.median(deltas[inliers], axis=0)
+    magnitude = float(np.linalg.norm(center))
+    if magnitude <= 5:
+        diagnostics["reason"] = "affine_cannot_certify_stationary"
+        return None
+    forward = deltas[inliers] @ (center / magnitude)
+    if np.mean(forward > max(3.0, magnitude * .4)) < .90:
+        diagnostics["reason"] = "affine_motion_has_conflicting_directions"
+        return None
+    if (not _spread(source[inliers], center)
+            or not _spread(destination[inliers], center, destination=True)):
+        diagnostics["reason"] = "affine_support_too_localized"
+        return None
+    for _, _, alternative, alternative_inliers in models:
+        distinct = np.linalg.norm(alternative - center) > 2 * max(_tolerance(center), _tolerance(alternative))
+        unexplained = int((alternative_inliers & ~inliers).sum())
+        if distinct and unexplained >= max(8, count * .35):
+            diagnostics["reason"] = "affine_has_competing_motion"
+            return None
+    diagnostics.update(method="affine", reason="accepted", inliers=count,
+                       ratio=round(count / len(source), 3),
+                       displacement=[round(float(value), 3) for value in center])
+    return float(center[0]), float(center[1])
+
+
 def measure_camera_displacement(
     before: bytes | np.ndarray,
     after: bytes | np.ndarray,
+    *,
+    diagnostics: dict | None = None,
 ) -> tuple[float, float] | None:
     """Return scene (dx, dy), or None when camera movement is not established.
 
@@ -85,9 +141,14 @@ def measure_camera_displacement(
     outside SCENE_BOUNDS never participate. Sparse, localized, unrelated, and
     competing motion estimates fail closed. In particular, None is not (0, 0).
 
-    Work is bounded to 1,800 ORB descriptors per frame and 13 deterministic
-    translation hypotheses. No global OpenCV RNG/thread settings are modified.
+    Work is bounded to 1,800 ORB descriptors, 13 translation hypotheses, and a
+    512-iteration affine RANSAC fallback for moving scenes with perspective change.
+    The optional diagnostics dict receives compact counts/rejection reasons; it
+    never contains images or OCR. No global OpenCV RNG/thread settings are changed.
     """
+    diagnostics = diagnostics if diagnostics is not None else {}
+    diagnostics.clear()
+    diagnostics.update(method=None, reason="invalid_frame")
     first, second = _scene_gray(before), _scene_gray(after)
     if first is None or second is None:
         return None
@@ -95,15 +156,19 @@ def measure_camera_displacement(
                              edgeThreshold=19, fastThreshold=12)
     first_points, first_descriptors = detector.detectAndCompute(first, None)
     second_points, second_descriptors = detector.detectAndCompute(second, None)
+    diagnostics["features"] = [len(first_points), len(second_points)]
     if (first_descriptors is None or second_descriptors is None
             or len(first_points) < MIN_MATCHES or len(second_points) < MIN_MATCHES):
+        diagnostics["reason"] = "too_few_features"
         return None
     matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
     forward = _distinct_matches(matcher.knnMatch(first_descriptors, second_descriptors, k=2))
     backward = _distinct_matches(matcher.knnMatch(second_descriptors, first_descriptors, k=2))
     matches = [match for match in forward.values()
                if match.trainIdx in backward and backward[match.trainIdx].trainIdx == match.queryIdx]
+    diagnostics["matches"] = len(matches)
     if len(matches) < MIN_MATCHES:
+        diagnostics["reason"] = "too_few_distinct_matches"
         return None
     source = np.array([first_points[match.queryIdx].pt for match in matches], dtype=np.float32)
     destination = np.array([second_points[match.trainIdx].pt for match in matches], dtype=np.float32)
@@ -133,17 +198,30 @@ def measure_camera_displacement(
         residual = float(np.median(np.linalg.norm(deltas[inliers] - center, axis=1)))
         models.append((count, residual, center, inliers))
     if not models:
-        return None
+        diagnostics["reason"] = "no_translation_consensus"
+        return _affine_motion(source, destination, models, diagnostics)
     models.sort(key=lambda model: (-model[0], model[1]))
     count, _, center, inliers = models[0]
+    diagnostics.update(translation_inliers=count, translation_ratio=round(count / len(matches), 3))
     stationary = float(np.linalg.norm(center)) <= 4.0
+    rejection = None
     if count < MIN_MATCHES or count / len(matches) < (0.75 if stationary else 0.60):
-        return None
-    if (not _spread(source[inliers], center)
+        rejection = "translation_consensus_too_weak"
+    elif (not _spread(source[inliers], center)
             or not _spread(destination[inliers], center, destination=True)):
-        return None
-    for alternative_count, _, alternative, _ in models[1:]:
-        distinct = np.linalg.norm(alternative - center) > 2 * max(_tolerance(center), _tolerance(alternative))
-        if distinct and alternative_count >= max(8, count * (0.25 if stationary else 0.40)):
+        rejection = "translation_support_too_localized"
+    else:
+        for alternative_count, _, alternative, _ in models[1:]:
+            distinct = np.linalg.norm(alternative - center) > 2 * max(_tolerance(center), _tolerance(alternative))
+            if distinct and alternative_count >= max(8, count * (0.25 if stationary else 0.40)):
+                rejection = "competing_translation_motions"
+                break
+    if rejection:
+        diagnostics.update(reason=rejection, translation_rejection=rejection)
+        if stationary:
             return None
+        return _affine_motion(source, destination, models, diagnostics)
+    diagnostics.update(method="translation", reason="accepted", inliers=count,
+                       ratio=round(count / len(matches), 3),
+                       displacement=[round(float(value), 3) for value in center])
     return float(center[0]), float(center[1])

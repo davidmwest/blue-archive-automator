@@ -168,3 +168,69 @@ def test_measurement_is_deterministic_across_repeated_calls():
     results = [measure_camera_displacement(before, after) for _ in range(3)]
     assert results[0] is not None
     assert results[0] == results[1] == results[2]
+
+
+@pytest.mark.parametrize("seed", [11, 34, 91])
+@pytest.mark.parametrize("matrix", [
+    [[.975, .065, 100], [-.0002, .960, -15]],
+    [[.96, -.06, -75], [.02, 1.01, 35]],
+])
+def test_small_perspective_change_during_pan_is_not_unknown(seed, matrix):
+    before = room(seed)
+    matrix = np.asarray(matrix, dtype=np.float32)
+    after = cv2.warpAffine(before, matrix, (1280, 720), borderValue=(207, 221, 234))
+    diagnostics = {}
+    measured = measure_camera_displacement(hud(before), hud(after), diagnostics=diagnostics)
+    assert measured is not None, diagnostics
+    # Every point in the scene follows this known transform. The measured median
+    # must lie inside its true range, irrespective of where furniture sits.
+    corners = np.float32([[140, 135], [1150, 135], [140, 575], [1150, 575]])
+    flow = corners @ matrix[:, :2].T + matrix[:, 2] - corners
+    assert np.all(np.asarray(measured) >= flow.min(axis=0) - 2), diagnostics
+    assert np.all(np.asarray(measured) <= flow.max(axis=0) + 2), diagnostics
+    assert diagnostics["reason"] == "accepted"
+
+
+def test_affine_fallback_is_deterministic_and_reports_why_translation_failed():
+    before = room(11)
+    matrix = np.float32([[.96, -.06, -75], [.02, 1.01, 35]])
+    after = cv2.warpAffine(before, matrix, (1280, 720), borderValue=(207, 221, 234))
+    results = []
+    for _ in range(3):
+        diagnostics = {"stale": "must be replaced"}
+        results.append(measure_camera_displacement(hud(before), hud(after), diagnostics=diagnostics))
+        assert diagnostics["method"] == "affine"
+        assert diagnostics["translation_rejection"] == "translation_consensus_too_weak"
+        assert diagnostics["affine_ratio"] > .9
+        assert "stale" not in diagnostics
+    assert results[0] == results[1] == results[2]
+
+
+def test_large_scale_change_is_rejected_even_with_strong_affine_consensus():
+    before = room(11)
+    matrix = np.float32([[.62, 0, 180], [0, .62, 100]])
+    after = cv2.warpAffine(before, matrix, (1280, 720), borderValue=(207, 221, 234))
+    diagnostics = {}
+    assert measure_camera_displacement(hud(before), hud(after), diagnostics=diagnostics) is None
+    assert diagnostics["reason"] == "affine_geometry_not_camera_pan"
+    assert diagnostics["affine_ratio"] > .9
+
+
+def test_affine_zoom_about_scene_center_cannot_certify_stationary():
+    before = room(19)
+    matrix = np.float32([[.97, 0, 640 * .03], [0, .97, 355 * .03]])
+    after = cv2.warpAffine(before, matrix, (1280, 720), borderValue=(207, 221, 234))
+    diagnostics = {}
+    result = measure_camera_displacement(hud(before), hud(after), diagnostics=diagnostics)
+    assert result is None or np.linalg.norm(result) > 4, diagnostics
+
+
+def test_diagnostics_distinguish_missing_features_from_stationary_evidence():
+    diagnostics = {}
+    blank = np.full((720, 1280, 3), 190, dtype=np.uint8)
+    assert measure_camera_displacement(hud(blank), hud(blank), diagnostics=diagnostics) is None
+    assert diagnostics["reason"] == "too_few_features"
+    stationary = hud(room(31))
+    assert measure_camera_displacement(stationary, stationary, diagnostics=diagnostics) == (0, 0)
+    assert diagnostics["reason"] == "accepted"
+    assert diagnostics["method"] == "translation"

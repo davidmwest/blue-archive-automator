@@ -53,6 +53,26 @@ def test_vertical_step_is_smaller_than_visible_scene_height():
     assert runner_with_motion([(0, -120), (0, -110)]).pan_region(PAN_UP) is False
 
 
+def test_unmeasured_pan_retries_frames_without_additional_input(monkeypatch):
+    runner = CafeRunner.__new__(CafeRunner)
+    runner.clock = lambda: 0
+    runner.sleep = lambda seconds: None
+    runner.last_frame = "after.png"
+    runner.journal = SimpleNamespace(record=lambda *a, **kw: None)
+    swipes = []
+    runner.device = SimpleNamespace(swipe=lambda *a, **kw: (swipes.append(a), True)[1])
+    frames = iter(["before", "animated", "settled"])
+    runner.wait_cafe = lambda: (0, b"", next(frames), [])
+    comparisons = []
+    def measure(before, after, **kwargs):
+        comparisons.append((before, after))
+        return None if after == "animated" else (-100, 0)
+    monkeypatch.setattr(cafe_module, "measure_camera_displacement", measure)
+    assert runner.pan(PAN_LEFT) == (-100, 0)
+    assert swipes == [(PAN_LEFT[0], PAN_LEFT[1])]
+    assert comparisons == [("before", "animated"), ("before", "settled")]
+
+
 def test_sweep_covers_short_final_row_and_records_only_after_all_boundaries(monkeypatch):
     runner = CafeRunner.__new__(CafeRunner)
     runner.floor, runner.config = 1, object()
