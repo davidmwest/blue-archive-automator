@@ -92,8 +92,16 @@ def test_attendance_exact_calendar_and_negative_controls(vision):
     v = vision.startup
     assert v.analyze(png).target == (1190, 675)
     words = v.read(decode_frame(png))
-    for removed in ["Arona's Attendance!", "Daily", "Day 1", "Day 10"]:
+    for removed in ["Arona's Attendance!", "Daily"]:
         assert classify([w for w in words if w.text != removed], {}).state == "unknown"
+    for day in range(1, 11):
+        # The highlighted day's text can disappear, regardless of weekday.
+        other = [w for w in words if w.normalized.replace(" ", "") != f"day{day}"]
+        assert classify(other, {}).state == "popup"
+    partial = [
+        w for w in words if w.normalized.replace(" ", "") not in {"day1", "day2"}
+    ]
+    assert classify(partial, {}).state == "unknown"
 
 
 @pytest.fixture
