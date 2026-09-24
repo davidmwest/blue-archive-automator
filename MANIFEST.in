@@ -1,0 +1,7 @@
+include CONTRIBUTING.md
+include config/example.toml
+recursive-include config/events *.json
+graft docs
+graft tests
+graft scripts
+global-exclude __pycache__ *.py[cod] .DS_Store

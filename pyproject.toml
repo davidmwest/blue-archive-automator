@@ -1,13 +1,24 @@
 [build-system]
-requires = ["setuptools>=75"]
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "blue-archive-automator"
 version = "0.1.0"
-description = "Blue Archive startup automation through an explicitly selected ADB device"
+description = "Local Blue Archive automation with computer vision, a serial job queue, and a browser dashboard"
 readme = "README.md"
 requires-python = ">=3.11"
+authors = [{name = "David West"}]
+license = "MIT AND LicenseRef-Game-Assets"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+keywords = ["blue-archive", "automation", "adb", "computer-vision"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+]
 dependencies = [
     "numpy>=2,<3",
     "opencv-python>=4.10,<6",
@@ -17,6 +28,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<9"]
+
+[project.urls]
+Repository = "https://github.com/davidmwest/blue-archive-automator"
+Documentation = "https://github.com/davidmwest/blue-archive-automator/blob/main/docs/design.md"
+Issues = "https://github.com/davidmwest/blue-archive-automator/issues"
 
 [project.scripts]
 ba = "ba_automator.cli:main"

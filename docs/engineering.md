@@ -1,0 +1,37 @@
+# engineering notes
+
+the project automates a small, repetitive part of Blue Archive through its visible interface. the useful engineering problem is knowing when an action is justified, whether it worked, and when to stop. this retrospective covers the restart and Cafe implementation; the [high-level design](design.md) sets the forward plan. development uses AI assistance; runtime decisions use the rules described below.
+
+## constraints that shaped the design
+
+the game exposes screenshots and input through ADB, rather than a supported task API. screens arrive asynchronously, announcements change, students animate, and Cafe furniture can be arbitrary. another automator may already share the host's ADB server.
+
+the first version fixes the client to English, 1280×720, and 320 DPI. that makes coordinates and recognition crops reproducible, at the cost of supporting fewer configurations. coordinates are still useful after a screen has been recognized. sending a sequence of clicks without checking the intervening states would make one unexpected popup affect every later action.
+
+local OpenCV and OCR provide the observations. OCR uses a local model; there is no LLM making runtime decisions or cloud inference call. reviewed JSON profiles describe event recognition, although event navigation and farming are not implemented yet. [ALAS](https://github.com/LmeSzinc/AzurLaneAutoScript) informed the overall approach; [ArisuAutoSweeper](https://github.com/TheFunny/ArisuAutoSweeper) and [BAAH](https://github.com/BlueArchiveArisHelper/BAAH) informed Cafe research. more detail is in the [architecture](architecture.md) and [Cafe notes](cafe.md).
+
+## separate the responsibilities
+
+the dashboard dispatches task subprocesses through a FIFO queue. each task holds a per-instance OS lock; controllers targeting the same game must share `lock_dir`. ownership currently ends between tasks, so a separate CLI runner could run between restart and Cafe. uninterrupted plan ownership is a future extension. each job gets a config snapshot, and settings updates are rejected while work is active or queued. the queue is in memory; scheduling state and important-action history persist.
+
+every game command names its ADB device. the transport checks the existing server's protocol before a client operation could disrupt it, and refuses a mismatch without restarting the shared server. taps and swipes recheck their frame deadline after that preflight. startup and Cafe loops have time, repetition, and input bounds.
+
+the dashboard binds to loopback. Host and Origin checks plus a CSRF token protect mutating requests from unrelated browser pages. it is a local controller, with no remote deployment or multi-user authentication claim.
+
+## the camera bug
+
+an early Cafe sweep finished while a clickable student remained. the sweep assumed its planned drags covered the room. live inspection showed that short swipes could produce much less camera movement than expected. counting input commands was inadequate evidence of coverage, and recognizing a particular sofa or floor pattern would fail when the furniture changed.
+
+the current [camera module](../ba_automator/cafe_camera.py) measures displacement from features inside the room, excluding the fixed HUD. it rejects sparse, localized, or competing matches. a constrained affine fallback handles small perspective changes during movement; that fallback cannot certify a stationary camera.
+
+the runner uses slow drags and overlapping views, checking the final partial view at each edge. two separately observed stationary drags establish a boundary. when movement is unknown, it retries captures, checks that intermediate view for students, and resets movement evidence. unknown is never treated as zero. twelve unsuccessful drags toward a step or boundary stop the scan, and the complete Cafe task has a 15-minute limit.
+
+## evidence and its limits
+
+[camera tests](../tests/test_cafe_camera.py) exercise arbitrary generated layouts, moving sprites, occlusion, repeated patterns, perspective changes, and misleading fixed backgrounds. [scan tests](../tests/test_cafe_scan.py) check that unknown movement cannot certify an edge or silently skip an intermediate view. screenshot fixtures exercise actual OCR and template recognition; device and server tests cover stale input, protocol mismatches, locks, and serialized jobs.
+
+a documented live run on BlueStacks Air completed restart, measured scans of both unlocked Cafe floors, home verification, and idle closure in 425.5 seconds. it found empty earnings and verified zero new relationship increases. earlier calibration runs verified reward receipts and relationship hearts/rank-up feedback. another player's layout passed a separate camera-movement check. these are observed runs, not a benchmark or a guarantee of finding every obscured student.
+
+that distinction also appears in the product: a tap attempt, a verified relationship increase, and a completed camera scan are separate records. popup attempts retain before/after images. a failed run leaves evidence instead of claiming completion.
+
+live Windows operation, simultaneous operation with ALAS, and complete free invitations remain unverified. more layouts and repeat visits after cooldown are still useful validation. the [Cafe documentation](cafe.md) records the current boundary between implemented behavior and live evidence.

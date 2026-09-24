@@ -1,5 +1,11 @@
 # Build order
 
+The [high-level design](design.md) defines the intended direction and task contracts. This page records implementation progress and live evidence.
+
+## Portfolio foundation
+
+The repository includes a high-level design, an engineering case study, setup and contributor guides, and MIT licensing for original code with separate notices for game-derived images. A read-only demo on port 8766 runs from the standard library with fictional records and original illustrations. It shares the real dashboard frontend but has no device controls or access to local account data. CI checks the source tests and built distributions, including an installed-wheel demo smoke test.
+
 ## 1. Restart and diagnostics — live verified
 
 The private repository contains the CLI, explicit-target ADB transport, local TOML configuration, per-instance lock, OCR/template recognition, and bounded startup task. `probe`, `capture`, and `inspect` support diagnosis without game input. Popup dismissal records preserve before/after evidence.
@@ -30,7 +36,7 @@ Before farming, define playable-period checks, stage selection, resource limits,
 
 ## 4. Portability and coexistence
 
-All **339 offline tests pass on macOS, Windows, and Ubuntu** in GitHub Actions.
+Offline tests run on macOS, Windows, and Ubuntu in [GitHub Actions](https://github.com/davidmwest/blue-archive-automator/actions/workflows/tests.yml). They verify implementation behavior without an emulator; they do not establish live platform support.
 
 Smoke-test installation, screenshot capture, input, restart, cafe, and interruption on Windows with BlueStacks 5 at the same 1280×720 and 320 DPI profile.
 

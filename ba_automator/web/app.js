@@ -34,6 +34,7 @@
   const taskName = (task) => ({ restart: "Restart", daily: "Daily", cafe: "Café" }[task] || task || "—");
   const isRunning = () => Boolean(status && (status.state === "running" || status.current_job));
   const queue = () => (Array.isArray(status?.queue) ? status.queue : []);
+  const isDemo = () => status?.demo === true;
 
   function showError(message) {
     $("error-message").textContent = message;
@@ -115,7 +116,7 @@
   function renderControls() {
     const active = isRunning();
     const paused = Boolean(status?.queue_paused);
-    const unavailable = !connected || pending > 0;
+    const unavailable = !connected || pending > 0 || isDemo();
     const queued = queue().length > 0;
     $("run-restart").disabled = unavailable;
     $("run-daily").disabled = unavailable;
@@ -133,7 +134,7 @@
     $("settings-fields").disabled = unavailable || active || queued;
     $("settings-lock-note").hidden = !active && !queued;
     $("save-settings").disabled = unavailable || active || queued || !settingsDirty;
-    fields.cafe_invite_student.disabled = !fields.cafe_invite_enabled.checked;
+    fields.cafe_invite_student.disabled = unavailable || !fields.cafe_invite_enabled.checked;
     fields.cafe_invite_student.required = fields.cafe_invite_enabled.checked;
     $("map-toggle").disabled = !frameLoaded || !mapData;
     document.querySelectorAll("[data-cancel-job]").forEach((button) => { button.disabled = unavailable; });
@@ -146,7 +147,7 @@
       else fields[name].value = config[name] ?? "";
     });
     settingsLoaded = true;
-    $("settings-status").textContent = "saved on this machine";
+    $("settings-status").textContent = isDemo() ? "sample settings · read only" : "saved on this machine";
   }
 
   function renderQueue() {
@@ -259,7 +260,7 @@
       return;
     }
     const version = String(status.frame_version ?? "latest");
-    $("frame-caption").textContent = status.app_closed ? "last screenshot · game closed after the run" : "latest screenshot";
+    $("frame-caption").textContent = isDemo() ? "original schematic · no game screenshot" : status.app_closed ? "last screenshot · game closed after the run" : "latest screenshot";
     if (version === frameVersion) return;
     frameVersion = version;
     $("game-frame").src = `/api/frame?v=${encodeURIComponent(version)}`;
@@ -267,6 +268,13 @@
 
   function render() {
     if (!status) return;
+    $("demo-banner").hidden = !isDemo();
+    $("game-frame").alt = isDemo() ? "Original schematic of home navigation targets, with fictional demo data" : "Latest screenshot from the selected Blue Archive instance";
+    if (isDemo()) {
+      document.title = "Demo · Blue Archive Automator";
+      $("screen-title").textContent = "screen map preview";
+      $("settings-lock-note").textContent = "demo settings are read only. there’s no device connected.";
+    }
     const running = isRunning();
     stateBadge($("state-badge"), status.state, ({ idle: "Ready", running: "Running", success: status.task === "restart" && !status.app_closed ? "Home reached" : "Completed", failed: "Needs attention", stopped: "Stopped" }[status.state] || status.state));
     $("run-phase").textContent = status.phase || "close the game, open it again, get to home. deal with the popups on the way.";
@@ -297,7 +305,7 @@
         status = await readResponse(response);
         connected = true;
         $("connection").className = "connection connected";
-        $("connection-text").textContent = "local server connected";
+        $("connection-text").textContent = isDemo() ? "local demo · no device" : "local server connected";
         render();
         if (!mapData && !mapLoading) void loadMap();
         if (!popupsLoading) void loadPopups();
@@ -329,6 +337,10 @@
   }
 
   async function post(path, body, successMessage) {
+    if (isDemo()) {
+      showError("this is the demo. controls are read only, and no device is connected.");
+      return null;
+    }
     pending += 1;
     renderControls();
     try {

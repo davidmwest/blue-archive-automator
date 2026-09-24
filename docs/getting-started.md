@@ -1,0 +1,79 @@
+# setup and operation
+
+use Python 3.11 or newer and a running BlueStacks instance with ADB enabled. set it to **1280×720 landscape, 320 DPI**, install the global version of Blue Archive, and sign in once with the game language set to English. the automator reuses that login. Cafe currently expects both floors to be unlocked.
+
+for a dashboard preview without an emulator, use the [read-only demo](../README.md#have-a-look).
+
+## install
+
+clone the repository and run the following commands from its directory.
+
+on macOS:
+
+```sh
+python3.11 -m venv .venv
+.venv/bin/python -m pip install -e '.[dev]'
+cp config/example.toml config/local.toml
+```
+
+on Windows, in PowerShell:
+
+```powershell
+py -3.11 -m venv .venv
+.venv/Scripts/python.exe -m pip install -e '.[dev]'
+Copy-Item config/example.toml config/local.toml
+```
+
+edit `config/local.toml` with the ADB endpoint for the Blue Archive instance and your ADB executable. `adb_path = "adb"` uses your PATH. relative executable and storage paths resolve from the TOML file's directory. the game package is `com.nexon.bluearchive`.
+
+the development setup uses `127.0.0.1:5695` for Blue Archive and `127.0.0.1:5675` for Azur Lane. these are examples, not universal BlueStacks ports. they share the host ADB server on `5037`, with every game command targeting its own instance. use a compatible ADB executable for both. simultaneous operation and Windows still need live smoke tests.
+
+controllers targeting the same game instance must share the same `lock_dir`. leave the example storage paths alone unless you need to move the runtime data.
+
+## start the dashboard
+
+```sh
+.venv/bin/python -m ba_automator --config config/local.toml probe
+.venv/bin/python -m ba_automator --config config/local.toml serve
+```
+
+on Windows, replace `.venv/bin/python` with `.venv/Scripts/python.exe` in these and the following commands.
+
+open [the dashboard](http://127.0.0.1:8765). `serve --port 8767` selects a different dashboard port; this is separate from the emulator's ADB port. the account-free demo defaults to port 8766.
+
+| command | what it does |
+| --- | --- |
+| `serve` | runs the local dashboard and one-job-at-a-time queue |
+| `restart` | closes the game and reaches a clear home screen |
+| `cafe` | runs restart, collects Cafe earnings, and checks students |
+| `daily` | currently runs the same restart → Cafe sequence |
+| `probe` | checks the selected device, game, display size, and foreground app |
+| `capture --output data/capture.png` | saves a screenshot without game input |
+| `inspect --image data/capture.png` | classifies a saved screenshot without an emulator connection |
+| `inspect` | classifies the current game screen without game input |
+
+for example, `.venv/bin/python -m ba_automator --config config/local.toml restart` runs without the dashboard. the installed `ba` command is also available.
+
+required game-data downloads are accepted automatically. add `--no-downloads` to `restart`, `cafe`, or `daily` to stop at a download prompt, or turn off automatic downloads in settings. external sign-in, passwords, 2FA, maintenance, and store app updates stop for attention. after handling the screen, run the task again.
+
+## Cafe and scheduling
+
+Cafe scheduling and invitations are **off by default**. enable them in the dashboard or the `[cafe]` section of your local config. invitations need the exact English name, including variants such as `Yuuka (Track)`. only the free invitation path is supported. its full live flow still needs verification.
+
+collecting Cafe AP clears its storage. spending that AP still needs a mission/sweep job, which isn't built yet.
+
+a successful Cafe job schedules the next visit for three hours and 15 seconds later. failures retry after 15 minutes; three consecutive failures pause retries until you press resume. the schedule survives server restarts. queued jobs don't. no login service or operating-system schedule is installed, so keep `serve` running for scheduled visits.
+
+pause lets the current job finish. stop interrupts it and pauses the queue. resume allows queued and due work to run again. settings changes are rejected while any job is active or queued. press **Ctrl+C** to stop a CLI run or the server.
+
+to close the game between dashboard visits, enable the idle-close setting or set `close_app_when_idle = true` under `[automation]`. it closes the configured Blue Archive app once the queue has finished, including after a failed or stopped final job. it doesn't change standalone CLI runs or shut down BlueStacks. this setting is off by default.
+
+## inspect a run
+
+runs save an `events.jsonl` log and a ring of the latest 24 screenshots under `data/runs/`, plus retained evidence such as `home.png`, popup before/after pairs, and Cafe reward receipts. important actions and scheduling state live in `data/state/`. attempted taps and confirmed results are recorded separately.
+
+local config, logs, and full screenshots stay out of Git. use the dashboard to review the latest run; sanitize any evidence before sharing it. [Cafe behavior](cafe.md), [the home map](home-map.md), and [event profiles](event-profiles.md) describe the recognition rules. [the roadmap](roadmap.md) records live validation and what remains unfinished.
+
+## development
+
+run `.venv/bin/python -m pytest -q` for the offline suite. it uses fake devices and reviewed fixtures, with no emulator connection. see [contributing](../CONTRIBUTING.md) for Windows commands and fixture guidance.
