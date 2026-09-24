@@ -124,7 +124,7 @@ Cafe recognition follows attention icons rather than student or furniture artwor
 
 Lessons separates screen observation from a pure selection policy. Before spending, enumerate the unlocked locations and their eligible rooms, including visible student ownership, relationship ranks, and location rank/XP when the policy needs them. Unknown ownership or unreadable comparison data must not silently become zero. Use one ticket per action, verify its receipt and ticket decrement, then reread the relevant location state before selecting again. A plan records why a room won the comparison; issuing its confirmation is not proof of a relationship increase.
 
-Every wait, retry loop, repeated action, and complete task has a time or attempt limit. Authentication, unsupported layouts, ambiguous confirmations, and exhausted recovery stop with a useful reason and evidence. A restart after failure begins from a known entry state; it does not blindly replay the last tap.
+Every wait, retry loop, repeated action, and complete task has a time or attempt limit. Authentication, unsupported layouts, ambiguous confirmations, and exhausted recovery stop with a useful reason and evidence. If the startup budget expires, Restart saves the timeout frame and force-stops/relaunches the selected game once under the same instance lock. Only its startup budget resets; the original download deadline and total tap limit remain in force. Recovery and its outcome are important actions. Exhausting the second startup budget stops the plan. This retry is confined to startup, before resource tasks begin; a failed spending task is never replayed by it.
 
 ## 5. Configuration and game-specific policy
 

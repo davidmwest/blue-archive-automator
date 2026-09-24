@@ -30,7 +30,7 @@ on Windows: `py -3.11 -m ba_automator.demo`. open [localhost:8766](http://127.0.
 
 | piece | current behavior |
 | --- | --- |
-| restart | closes and relaunches the game, accepts required data downloads, dismisses startup popups, verifies a clear home screen |
+| restart | closes and relaunches the game, accepts required data downloads, dismisses startup popups, verifies a clear home screen; force-restarts once if startup times out |
 | club | placeholder after restart; awaiting a fresh-reset test before attendance input is enabled |
 | cafe | restarts first, collects available AP and credits, scans both unlocked floors for relationship icons, returns home |
 | loot gathered | clearable totals for recognized rewards, saved receipts for unnamed drops; clearing keeps the history |

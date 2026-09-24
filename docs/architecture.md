@@ -64,7 +64,7 @@ Known notice handlers run first. A generic X-close fallback requires matching di
 
 Both fixed home anchors must match with color agreement. Success requires repeated clear-home observations spanning at least five seconds; a dimmed home screen behind a modal does not qualify. Popup actions retain a before frame, the following frame, detector name, and observed result in the journal. These records distinguish a dismissal attempt from a changed or unchanged screen.
 
-Default timing is a 1.5-second poll, three-second tap cooldown, 300-second startup budget, and a separate 1,800-second download window. Later download prompts do not reset that deadline. Unknown screens time out after 60 seconds. Additional limits bound the full run, repeated identical actions, and total taps. Frames older than five seconds are not acted upon.
+Default timing is a 1.5-second poll, three-second tap cooldown, 300-second startup budget, and a separate 1,800-second download window. Later download prompts do not reset that deadline. A startup timeout saves the last frame, force-stops and relaunches the selected game once, and gives startup one fresh 300-second budget. The same instance lock and journal cover both attempts. The original download deadline and 40-tap limit carry across the retry. A second startup timeout stops the job; download, unknown-screen, authentication, and transport failures do not trigger this retry. Recovery attempts and their outcomes appear in important actions. Unknown screens time out after 60 seconds. Additional limits bound the full run, repeated identical actions, and total taps. Frames older than five seconds are not acted upon.
 
 ## Club placeholder
 

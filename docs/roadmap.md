@@ -12,6 +12,8 @@ The private repository contains the CLI, explicit-target ADB transport, local TO
 
 The development mac was updated to BlueStacks Air **5.21.790.7505**. A live startup automatically accepted a **332.05 MB** game-data download. Apple reauthentication was completed, and a subsequent restart reached a clear home screen in **44 seconds** with three actions, including the announcement and new-product overlays.
 
+On September 24, a force restart recovered a frozen publisher splash and verified home in 43 seconds. Startup now retries one force-stop/relaunch when its startup timer expires, preserving the instance lock, download deadline, and total tap limit. A live fault-injection check expired only the first attempt’s timer early; the automatic retry dismissed an announcement and verified home in 72 seconds total. Offline tests cover exhausted retries, interruption, preserved download deadlines, fresh-frame input, and preventing downstream spend replay.
+
 Continue adding reviewed fixtures for new startup screens and keep download, interruption, unknown-screen, and timeout cases bounded. Full raw screenshots stay local.
 
 ## 2. Dashboard and cafe — full visit live verified; invitations pending

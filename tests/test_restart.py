@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from ba_automator.adb import AdbDevice
 from ba_automator.config import Config
-from ba_automator.locking import InstanceLock
+from ba_automator.locking import InstanceLock, LockError
 from ba_automator.restart import MAX_ACTIONS, TRACE_LIMIT, RestartError, run_restart
 
 
@@ -113,6 +113,7 @@ class RestartTests(unittest.TestCase):
             "poll_interval": 1.0, "action_cooldown": 0.1,
             "startup_timeout": 30.0, "download_timeout": 60.0, "unknown_timeout": 5.0,
             "run_dir": self.root / "runs", "lock_dir": self.root / "locks",
+            "state_dir": self.root / "state",
         }
         values.update(overrides)
         return Config(**values)
@@ -207,13 +208,152 @@ class RestartTests(unittest.TestCase):
                  Observation("downloading")], selected=self.config(download_timeout=6),
             )
         self.assertEqual(self.clock.now, 6)
+        self.assertEqual(self.device.calls.count("launch"), 1)
         self.assertEqual(len(self.device.taps), 2)
 
     def test_loading_times_out_without_random_taps(self):
         with self.assertRaisesRegex(RestartError, "startup time limit"):
             self.run_task([Observation("loading")], selected=self.config(startup_timeout=7))
-        self.assertEqual(self.clock.now, 7)
+        self.assertEqual(self.clock.now, 14)
         self.assertEqual(self.device.taps, [])
+        self.assertEqual(self.device.calls.count("force_stop"), 2)
+        self.assertEqual(self.device.calls.count("launch"), 2)
+        self.assertEqual([a["action"] for a in self.actions()],
+                         ["startup_recovery", "startup_recovery_failed"])
+
+    def actions(self):
+        path = self.root / "state" / "important-actions.jsonl"
+        return [json.loads(line) for line in path.read_text().splitlines()]
+
+    def test_timeout_relaunches_once_and_continues_from_fresh_title(self):
+        result = self.run_task([Observation("loading")] * 7
+                               + [Observation("title", target=(640, 600)), Observation("home")],
+                               selected=self.config(startup_timeout=7))
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.duration, 13)
+        self.assertEqual(self.device.calls.count("force_stop"), 2)
+        self.assertEqual(self.device.calls.count("launch"), 2)
+        self.assertEqual(self.device.taps, [("tap", 640, 600)])
+        self.assertEqual(result.actions, 1)
+        self.assertEqual([a["action"] for a in self.actions()],
+                         ["startup_recovery", "startup_recovered"])
+        records = self.journal(result.run_dir)
+        recovery = [r for r in records if r["event"] == "startup_recovery"]
+        self.assertEqual(len(recovery), 1)
+        self.assertEqual((result.run_dir / recovery[0]["frame"]).read_bytes(), b"fake screenshot 7")
+        self.assertEqual([r["status"] for r in records if r["event"] == "finished"], ["success"])
+
+    def test_recovery_restarts_home_stability_count(self):
+        result = self.run_task([Observation("loading")] * 4 + [Observation("home")],
+                               selected=self.config(startup_timeout=7))
+        self.assertEqual(result.duration, 12)
+        self.assertEqual(self.device.calls.count("launch"), 2)
+
+    def test_timeout_during_analysis_discards_the_old_tap_target(self):
+        selected = self.config(startup_timeout=7)
+        vision = FakeVision([Observation("title", target=(640, 500)),
+                             Observation("title", target=(640, 610)), Observation("home")], self.clock)
+        analyze = vision.analyze
+        def slow_first_frame(png):
+            if vision.index == 0:
+                self.clock.now = 7
+            return analyze(png)
+        vision.analyze = slow_first_frame
+        result = run_restart(selected, self.device, vision,
+                             monotonic=self.clock.monotonic, sleep=self.clock.sleep)
+        self.assertEqual(result.status, "success")
+        self.assertEqual(self.device.taps, [("tap", 640, 610)])
+
+    def test_recovery_keeps_original_download_deadline(self):
+        with self.assertRaisesRegex(RestartError, "download exceeded"):
+            self.run_task([Observation("downloading")] * 5 + [Observation("loading")] * 8
+                          + [Observation("downloading")],
+                          selected=self.config(startup_timeout=8, download_timeout=20))
+        self.assertEqual(self.clock.now, 20)
+        self.assertEqual(self.device.calls.count("launch"), 2)
+
+    def test_total_tap_limit_is_not_reset_by_recovery(self):
+        observations = [Observation("title" if i % 2 else "popup", target=(600, 400))
+                        for i in range(MAX_ACTIONS + 2)]
+        with self.assertRaisesRegex(RestartError, "limit of 40 taps"):
+            self.run_task(observations, selected=self.config(startup_timeout=22))
+        self.assertEqual(self.device.calls.count("launch"), 2)
+        self.assertEqual(len(self.device.taps), MAX_ACTIONS)
+
+    def test_recovery_holds_instance_lock_and_releases_it_after_failure(self):
+        selected = self.config(startup_timeout=7)
+        stop = self.device.force_stop
+        def locked_stop():
+            with self.assertRaises(LockError), InstanceLock(selected):
+                pass
+            stop()
+        self.device.force_stop = locked_stop
+        with self.assertRaisesRegex(RestartError, "still stuck after one automatic force restart"):
+            self.run_task([Observation("loading")], selected=selected)
+        self.assertEqual(self.device.calls.count("force_stop"), 2)
+        with InstanceLock(selected):
+            pass
+
+    def test_relaunch_failure_is_not_retried_again(self):
+        launch = self.device.launch
+        def failing_relaunch():
+            launch()
+            if self.device.calls.count("launch") == 2:
+                raise RuntimeError("transport unavailable")
+        self.device.launch = failing_relaunch
+        with self.assertRaisesRegex(RestartError, "transport unavailable"):
+            self.run_task([Observation("loading")], selected=self.config(startup_timeout=7))
+        self.assertEqual(self.device.calls.count("force_stop"), 2)
+        self.assertEqual(self.actions()[-1]["action"], "startup_recovery_failed")
+
+    def test_interrupt_during_recovery_stops_without_further_launches(self):
+        selected = self.config(startup_timeout=7)
+        launch = self.device.launch
+        def interrupt_relaunch():
+            launch()
+            if self.device.calls.count("launch") == 2:
+                raise KeyboardInterrupt
+        self.device.launch = interrupt_relaunch
+        with self.assertRaises(KeyboardInterrupt):
+            self.run_task([Observation("loading")], selected=selected)
+        run_dir = next(selected.run_dir.iterdir())
+        self.assertEqual(self.journal(run_dir)[-1]["status"], "interrupted")
+        self.assertEqual(self.device.calls.count("launch"), 2)
+        with InstanceLock(selected):
+            pass
+
+    def run_recovery_plan(self, *, stuck=False, spend_error=None):
+        from ba_automator import cli
+        selected = self.config(startup_timeout=7)
+        observations = [Observation("loading")] * 7
+        if not stuck:
+            observations.append(Observation("home"))
+        vision = FakeVision(observations, self.clock)
+        def startup(config, device, vision):
+            return run_restart(config, device, vision,
+                               monotonic=self.clock.monotonic, sleep=self.clock.sleep)
+        with patch.object(cli.Config, "from_file", return_value=selected), \
+                patch.object(cli, "AdbDevice", return_value=self.device), \
+                patch.object(cli, "StartupVision", return_value=vision), \
+                patch("ba_automator.restart.run_restart", side_effect=startup), \
+                patch("ba_automator.spend_ap.run_spend_ap", side_effect=spend_error) as spend:
+            # A successful downstream result only needs to be serializable by CLI.
+            from ba_automator.runtime import RunResult
+            spend.return_value = RunResult("success", selected.run_dir, 0, 0)
+            code = cli.main(["spend_ap"])
+            return code, spend.call_count
+
+    def test_recovered_startup_runs_downstream_spending_only_once(self):
+        self.assertEqual(self.run_recovery_plan(), (0, 1))
+        self.assertEqual(self.device.calls.count("launch"), 2)
+
+    def test_exhausted_startup_never_runs_downstream_spending(self):
+        self.assertEqual(self.run_recovery_plan(stuck=True), (1, 0))
+        self.assertEqual(self.device.calls.count("launch"), 2)
+
+    def test_downstream_failure_never_replays_startup_or_spending(self):
+        self.assertEqual(self.run_recovery_plan(spend_error=RuntimeError("uncertain sweep")), (1, 1))
+        self.assertEqual(self.device.calls.count("launch"), 2)
 
     def test_unknown_screen_never_taps_and_leaves_diagnostics(self):
         with self.assertRaisesRegex(RestartError, "unknown-screen time limit") as raised:
@@ -222,11 +362,14 @@ class RestartTests(unittest.TestCase):
         self.assertEqual(self.device.taps, [])
         self.assertTrue((raised.exception.run_dir / records[-1]["frame"]).exists())
         self.assertEqual(records[-1]["status"], "failed")
+        self.assertEqual(self.device.calls.count("launch"), 1)
 
     def test_blocked_screen_never_taps(self):
         with self.assertRaisesRegex(RestartError, "Account sign-in required"):
             self.run_task([Observation("blocked", "Account sign-in required", (400, 300))])
         self.assertEqual(self.device.taps, [])
+
+        self.assertEqual(self.device.calls.count("launch"), 1)
 
     def test_external_credentials_or_store_blocks_any_screen_action(self):
         for state in ("home", "title", "popup", "download_prompt", "unknown"):
