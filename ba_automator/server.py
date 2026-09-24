@@ -836,13 +836,13 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     if parse_qs(target.query).keys() - {"v"}:
                         raise ApiError(400, "Popup images accept only a version parameter")
                     self._send(200, controller.popup_image(*match.groups()), "image/png")
-                elif target.path in {"/", "/index.html", "/app.js", "/style.css"}:
+                elif target.path in {"/", "/index.html", "/app.js", "/style.css", "/maid-arisu.png"}:
                     name = "index.html" if target.path == "/" else target.path[1:]
                     resource = files("ba_automator").joinpath("web", name)
                     if not resource.is_file():
                         raise ApiError(404, "Dashboard asset not found")
                     types = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8",
-                             "style.css": "text/css; charset=utf-8"}
+                             "style.css": "text/css; charset=utf-8", "maid-arisu.png": "image/png"}
                     self._send(200, resource.read_bytes(), types[name])
                 else:
                     raise ApiError(404, "Not found")

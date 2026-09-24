@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "blue-archive-automator"
 version = "0.1.0"
-description = "Local Blue Archive automation with computer vision, a serial job queue, and a browser dashboard"
+description = "Maid in Schale: local Blue Archive automation with computer vision, a serial job queue, and a browser dashboard"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{name = "David West"}]
@@ -41,7 +41,7 @@ ba = "ba_automator.cli:main"
 include = ["ba_automator*"]
 
 [tool.setuptools.package-data]
-ba_automator = ["assets/*.png", "assets/*.json", "web/*.html", "web/*.js", "web/*.css"]
+ba_automator = ["assets/*.png", "assets/*.json", "web/*.html", "web/*.js", "web/*.css", "web/*.png"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -4,17 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Blue Archive Automator</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23326be8'/%3E%3Cpath d='M8 24 16 7l8 17M11 19h10' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
+  <title>Maid in Schale · Blue Archive Automator</title>
+  <meta name="description" content="Maid in Schale is a local Blue Archive automator with a task queue, Cafe visits, Lessons, and a dashboard you can actually check afterward.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23326be8'/%3E%3Cpath d='M8 22V12l8 7 8-7v10M9 8h14' fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='2'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to controls</a>
   <aside class="sidebar" aria-label="Application navigation">
-    <a class="brand" href="#overview" aria-label="Blue Archive Automator overview">
-      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 5 34 14v13L20 35 6 27V14Z"/><path d="m12 23 8-14 8 14M15 19h10"/></svg></span>
-      <span><strong>Blue Archive</strong><small>AUTOMATOR</small></span>
+    <a class="brand" href="#overview" aria-label="Maid in Schale overview">
+      <span class="brand-mark" aria-hidden="true"><img src="/maid-arisu.png" alt=""></span>
+      <span><strong>Maid in Schale</strong><small>BLUE ARCHIVE AUTOMATOR</small></span>
     </a>
     <div class="sidebar-label">WORKSPACE</div>
     <nav class="nav-list">
@@ -32,7 +33,8 @@
   <main id="main" class="main">
     <div id="demo-banner" class="demo-banner" role="note" hidden><strong>demo · sample data · no device</strong><span>have a look around. these runs are made up, and the controls won’t touch anything.</span></div>
     <header class="page-header" id="overview">
-      <div><p class="eyebrow">LOCAL CONTROL</p><h1>blue archive, on autopilot.</h1><p class="page-subtitle">restart the game, clear the popups, get the daily stuff done.</p></div>
+      <div class="hero-copy"><p class="eyebrow">MAID IN SCHALE · BLUE ARCHIVE AUTOMATOR</p><h1>blue archive, on autopilot.</h1><p class="page-subtitle">restart the game, clear the popups, get the daily stuff done.</p></div>
+      <figure class="mascot"><img src="/maid-arisu.png" alt="Maid Arisu holding a mop"><figcaption>maid arisu · on duty</figcaption></figure>
       <div class="connection" id="connection"><span class="connection-dot"></span><span id="connection-text">Connecting to local server</span></div>
     </header>
 
@@ -101,7 +103,7 @@
         </div>
         <div class="settings-save"><button id="save-settings" class="button secondary small" type="submit" disabled>save settings</button><span id="settings-status" class="muted" role="status">Waiting for configuration</span></div></fieldset></form><p id="settings-lock-note" class="settings-note" hidden>finish or clear the queue before changing settings.</p><p class="settings-note">English, 1280 × 720. if it asks for your actual login, you’ll need to handle that.</p></section>
     </div>
-    <footer class="page-footer"><span>Blue Archive Automator</span><span>running on this machine.</span></footer>
+    <footer class="page-footer"><span>Maid in Schale <span class="footer-tagline">· Blue Archive Automator</span></span><span>running on this machine.</span></footer>
   </main>
 </body>
 </html>

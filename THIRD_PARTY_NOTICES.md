@@ -1,15 +1,22 @@
 # Third-party notices
 
 The [MIT license](LICENSE) applies to this project's original source code,
-documentation, dashboard, and original demo illustrations. It does not grant
-rights to third-party material listed below.
+documentation, dashboard UI, and original schematic demo illustration. It does
+not grant rights to the game-related material listed below.
 
-## Game-derived images — LicenseRef-Game-Assets
+## Game-derived images and fan character artwork — LicenseRef-Game-Assets
 
 `ba_automator/assets/*.png` contains recognition templates cropped from Blue
 Archive. `tests/fixtures/*.png` contains sanitized game screenshots and crops
 used for regression testing. Their provenance is recorded in
 [`tests/fixtures/README.md`](tests/fixtures/README.md).
+
+`ba_automator/web/maid-arisu.png` is newly generated fan artwork depicting
+Maid Arisu, a Blue Archive character. It is a dashboard mascot, not a game
+recognition template or an official illustration. Its character design remains
+the property of the game's rights holders. The character artwork is excluded
+from the MIT grant even though the surrounding dashboard code and layout are
+original. Screenshots containing the mascot inherit that same limitation.
 
 These images are excluded from the project's MIT grant. Blue Archive artwork,
 UI imagery, names, and trademarks belong to their respective rights holders.
@@ -34,5 +41,5 @@ model notices.
 inspired the screen-driven architecture. References to it do not extend this
 project's MIT license to ALAS code or assets.
 
-The account-free demo uses fictional data and original schematic artwork.
-Its screenshots in `docs/images/` are covered by the project's MIT license.
+The account-free demo uses fictional data and original schematic game-frame
+artwork. The mascot appears in the same dashboard and has the exclusion above.

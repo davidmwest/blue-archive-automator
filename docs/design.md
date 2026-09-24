@@ -1,6 +1,6 @@
 # High-level design
 
-**Project:** Blue Archive Automator  
+**Project:** Maid in Schale — Blue Archive Automator<br>
 **Status:** working design and implementation guide  
 **Last updated:** September 24, 2026
 

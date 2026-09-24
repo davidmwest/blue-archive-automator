@@ -153,11 +153,13 @@ def _routes(now: datetime) -> dict[str, tuple[str, bytes]]:
     page = (_ROOT / "web" / "index.html").read_text(encoding="utf-8")
     # Visible before JavaScript runs, including when scripts are disabled.
     page = page.replace('id="demo-banner" class="demo-banner" role="note" hidden', 'id="demo-banner" class="demo-banner" role="note"')
-    page = page.replace('<title>Blue Archive Automator</title>', '<title>Demo · Blue Archive Automator</title>')
+    page = page.replace('<title>Maid in Schale · Blue Archive Automator</title>',
+                        '<title>Demo · Maid in Schale · Blue Archive Automator</title>')
     routes = {
         "/": ("text/html; charset=utf-8", page.encode("utf-8")),
         "/app.js": ("text/javascript; charset=utf-8", (_ROOT / "web" / "app.js").read_bytes()),
         "/style.css": ("text/css; charset=utf-8", (_ROOT / "web" / "style.css").read_bytes()),
+        "/maid-arisu.png": ("image/png", (_ROOT / "web" / "maid-arisu.png").read_bytes()),
         "/api/frame": ("image/svg+xml; charset=utf-8", _schematic(home_map)),
         "/api/popups/sample-announcement/before": ("image/svg+xml; charset=utf-8", _schematic(home_map, popup=True)),
         "/api/popups/sample-announcement/after": ("image/svg+xml; charset=utf-8", _schematic(home_map)),

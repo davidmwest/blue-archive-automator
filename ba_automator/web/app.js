@@ -280,7 +280,7 @@
     $("demo-banner").hidden = !isDemo();
     $("game-frame").alt = isDemo() ? "Original schematic of home navigation targets, with fictional demo data" : "Latest screenshot from the selected Blue Archive instance";
     if (isDemo()) {
-      document.title = "Demo · Blue Archive Automator";
+      document.title = "Demo · Maid in Schale · Blue Archive Automator";
       $("screen-title").textContent = "screen map preview";
       $("settings-lock-note").textContent = "demo settings are read only. there’s no device connected.";
     }

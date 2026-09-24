@@ -292,6 +292,15 @@ def test_http_rejects_arbitrary_commands_settings_and_file_paths(http_server):
     assert request("GET", "/api/frame?v=anything")[0] == 404
 
 
+def test_dashboard_serves_branded_page_and_only_the_explicit_mascot_asset(http_server):
+    request, _, _, _ = http_server
+    code, page = request("GET", "/")
+    assert code == 200 and b"Maid in Schale" in page and b"Blue Archive Automator" in page
+    code, png = request("GET", "/maid-arisu.png")
+    assert code == 200 and png.startswith(b"\x89PNG\r\n\x1a\n")
+    assert request("GET", "/maid-arisu.png/../config/local.toml")[0] == 404
+
+
 def test_non_loopback_binding_is_rejected(controlled):
     controller, _ = controlled
     with pytest.raises(ValueError, match="loopback"):

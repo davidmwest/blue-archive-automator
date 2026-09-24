@@ -167,10 +167,13 @@ def test_ui_map_history_and_original_popup_schematics_are_self_contained(demo_se
     assert code == 200
     assert b'demo \xc2\xb7 sample data \xc2\xb7 no device' in page
     assert b'id="demo-banner" class="demo-banner" role="note" hidden' not in page
-    for path, content_type in [("/app.js", "text/javascript"), ("/style.css", "text/css"), ("/api/map", "application/json")]:
+    assert b'Maid in Schale' in page and b'Blue Archive Automator' in page
+    for path, content_type in [("/app.js", "text/javascript"), ("/style.css", "text/css"),
+                               ("/maid-arisu.png", "image/png"), ("/api/map", "application/json")]:
         code, headers, _ = request(demo_server, path)
         assert code == 200
         assert headers["Content-Type"].startswith(content_type)
+    assert request(demo_server, "/maid-arisu.png")[2].startswith(b"\x89PNG\r\n\x1a\n")
     home_map = json.loads(request(demo_server, "/api/map")[2])
     assert (home_map["width"], home_map["height"]) == (1280, 720)
     assert home_map["buttons"]

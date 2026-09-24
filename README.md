@@ -1,8 +1,12 @@
-# blue archive automator
+# maid in schale
+
+*blue archive automator · maid arisu is on duty*
 
 [![tests](https://github.com/davidmwest/blue-archive-automator/actions/workflows/tests.yml/badge.svg)](https://github.com/davidmwest/blue-archive-automator/actions/workflows/tests.yml)
 
 blue archive has a lot of daily clicking. i'd like the computer to handle it, leave a useful record of what happened, and close the game when it's done.
+
+<img src="ba_automator/web/maid-arisu.png" alt="Maid Arisu, the project's mascot" width="160">
 
 this is a local Python automator built around BlueStacks, ADB, OpenCV, and local OCR. jobs go into one queue and run one at a time. [ALAS](https://github.com/LmeSzinc/AzurLaneAutoScript) is the model: recognize the screen, do one thing, check what happened. no LLM calls in the runtime.
 
@@ -12,7 +16,7 @@ this is a local Python automator built around BlueStacks, ADB, OpenCV, and local
 
 ![read-only dashboard demo with fictional data and original schematic artwork](docs/images/dashboard-demo.png)
 
-*sample data, original artwork. this is the same dashboard frontend, with a separate read-only server behind it.*
+*sample data, an original game-screen schematic, and Maid Arisu fan art. this is the same dashboard frontend, with a separate read-only server behind it.*
 
 the demo needs Python 3.11+, but no packages, emulator, account, or local config. from the repo directory:
 
@@ -57,4 +61,4 @@ the queue is currently in memory. schedule state and important actions survive a
 
 ## license
 
-original code, docs, and demo artwork are [MIT licensed](LICENSE). use them, change them, build something with them. game-derived recognition images and test fixtures are excluded from that grant; [third-party notices](THIRD_PARTY_NOTICES.md) explain the boundary.
+original code, docs, and dashboard UI are [MIT licensed](LICENSE). use them, change them, build something with them. the Maid Arisu mascot is original fan artwork of a Blue Archive character; it, game recognition images, and test fixtures are outside that grant. [third-party notices](THIRD_PARTY_NOTICES.md) explain the boundary.

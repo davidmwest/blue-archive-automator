@@ -12,3 +12,15 @@
 .demo-banner{display:flex;align-items:center;gap:12px 22px;flex-wrap:wrap;padding:15px 18px;margin-bottom:22px;border:1px solid #c2d8ec;border-radius:10px;background:#eaf4ff;color:#315777;font-size:12px;line-height:1.6}.demo-banner strong{font-size:13px;color:#1e4568}.demo-banner span{color:#426585}@media(max-width:650px){.demo-banner{padding:12px 14px;gap:4px;font-size:11px}.demo-banner strong{font-size:12px}}
 
 .lessons-settings{border-top:1px solid #e9eff7;margin-top:20px;padding-top:18px}.lessons-settings>.section-kicker{font-size:8px;margin-bottom:13px;color:#91a5be}.lessons-settings .download-setting{padding-bottom:14px;margin-bottom:13px;border-bottom:0}.lesson-setting{display:grid;gap:6px;font-size:9px;color:#8a9ab1;margin-top:14px}.lesson-setting input,.lesson-setting select,.lesson-setting textarea{background:#fbfcff;border:1px solid #e0e7f2;border-radius:6px;min-width:0;width:100%;padding:9px 11px;font:inherit;font-size:11px;color:#5d7497}.lesson-setting textarea{resize:vertical;min-height:70px}.lesson-setting small{font-size:9px;line-height:1.7;color:#8a9ab1}.lesson-setting :disabled{opacity:.55;background:#f5f7fb}.lesson-setting textarea::placeholder{color:#a0aec3}
+
+/* The mascot is decoration; task controls and status stay in the same places. */
+.brand-mark{overflow:hidden;background:radial-gradient(circle at 50% 35%,#b9dcff,#3e75d8 72%)}
+.brand-mark img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 25%;transform:scale(1.75) translateY(8%)}
+.brand small{font-size:7px;letter-spacing:1.25px}
+.hero-copy{min-width:0;flex:1}
+.mascot{position:relative;display:grid;place-items:end center;flex:0 0 144px;width:144px;height:128px;margin:-18px 0 -7px;border:1px solid #deebf8;border-radius:19px;background:radial-gradient(circle at 54% 45%,#fff 5%,#e9f4ff 62%,#dcecff 100%);overflow:hidden}
+.mascot img{position:absolute;left:-9px;top:-12px;width:160px;height:160px;object-fit:contain}
+.mascot figcaption{z-index:1;width:100%;padding:5px 8px;background:#fffffff0;color:#58749b;text-align:center;font-size:9px;font-weight:650;letter-spacing:.15px}
+.footer-tagline{font-weight:400;color:#b0bccd}
+@media(max-width:900px){.mascot{flex-basis:108px;width:108px;height:106px;margin:-6px 0 -2px}.mascot img{width:125px;height:125px;left:-9px;top:-9px}.mascot figcaption{font-size:7px;padding:4px}}
+@media(max-width:650px){.page-header{gap:9px}.mascot{flex-basis:76px;width:76px;height:79px;margin:0}.mascot img{width:100px;height:100px;left:-12px;top:-8px}.mascot figcaption{font-size:0;height:8px;padding:0}.eyebrow{letter-spacing:.9px}.brand small{font-size:6px;letter-spacing:.65px}}
