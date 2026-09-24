@@ -1,0 +1,44 @@
+# Local workspace and generated deliverables
+/work/
+/outputs/
+
+# Local account, device, and runtime data
+/config/local.*
+/config/profiles/
+/data/
+/logs/
+/screenshots/
+/captures/
+/recordings/
+/artifacts/
+.env
+.env.*
+!.env.example
+adbkey
+adbkey.pub
+*.local.*
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite*
+
+# Python and editors
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
