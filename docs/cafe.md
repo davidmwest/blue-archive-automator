@@ -14,7 +14,7 @@ Use the dashboard's Run Cafe button for the same sequence. On Windows, replace `
 
 The routine:
 
-1. Opens Cafe from home and verifies the cafe HUD.
+1. Opens Cafe from home, dismisses a recognized Visiting Student List notice if present, and verifies the cafe HUD.
 2. Opens Earnings and collects available AP and credits first. A recognized Reward Acquired receipt verifies collection; OCR amounts are retained when readable.
 3. Scans for student attention markers and relationship feedback before optional invitations.
 4. Pans through overlapping views, measuring scene movement and checking camera boundaries while allowing transient bubbles and animations to settle.
@@ -23,6 +23,12 @@ The routine:
 7. Returns to a verified home screen and records the visit result.
 
 A visit has a 15-minute limit. Dialog waits, student attempts per view, and invitation-list scanning are bounded. An unexpected screen or expired frame stops input and leaves diagnostics.
+
+Cafe entry and floor changes verify the destination instead of assuming ADB accepted a tap. If the original, unobstructed home screen or the same verified floor stays visible for five seconds, the runner can retry, up to three total taps. Loading screens and unknown dialogs never authorize a retry. Recognized loading can take up to two minutes per transition; an unrecognized screen stops navigation after 30 seconds. Floor identity must still match the destination before any student scan begins. The visit's overall 15-minute limit remains in effect.
+
+This recovery addresses two observed scheduled failures: a floor change that was still on Now Loading at the old 30-second deadline, and Cafe entry taps that left the game on home. Navigation attempts and arrivals retain named screenshots so later camera captures do not overwrite that evidence in the trace ring.
+
+The Visiting Student List notice requires its exact English headings and Confirm control in the known panel, plus three Cafe HUD anchors with consistent dimming. Its dismissal is bounded to three attempts and uses the same before/after popup history as startup announcements. An arbitrary Guide or Confirm dialog does not qualify.
 
 ## Student interactions
 

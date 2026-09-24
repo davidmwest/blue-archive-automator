@@ -74,7 +74,7 @@ def cafe(tmp_path, monkeypatch):
     _, encoded = cv2.imencode(".png", image)
     png = encoded.tobytes()
     device = Device(selected.package, png)
-    vision = SimpleNamespace(is_cafe=lambda image: True, words=lambda image: [], markers=lambda image: [],
+    vision = SimpleNamespace(visitor_notice=lambda image, words: None, is_cafe=lambda image: True, words=lambda image: [], markers=lambda image: [],
                              relationship_feedback=lambda before, after, target: False)
     startup = SimpleNamespace(analyze=lambda png: Observation("home", "verified home"))
     monkeypatch.setattr(cafe_module, "CafeVision", lambda startup: vision)
@@ -82,6 +82,7 @@ def cafe(tmp_path, monkeypatch):
     runner.floor = 1
 
     def capture(words=()):
+        vision.words = lambda image: list(words)
         return clock.now, png, image, list(words)
 
     def script(*screens):
@@ -572,9 +573,138 @@ def test_floor_change_waits_for_the_destination_label_before_scanning(cafe, monk
     monkeypatch.setattr(cafe.runner, "sweep", lambda: scans.append(cafe.runner.floor))
     # Initial and pre-switch labels are valid, but the destination never appears.
     cafe.script([word("Move to Cafe No. 2")])
-    with pytest.raises(RestartError, match="floor availability could not be verified"):
+    with pytest.raises(RestartError, match="still on cafe_1 after 3 verified taps"):
         cafe.runner.run()
     assert scans == [1]
-    assert cafe.device.taps == [(132, 103)]
+    assert cafe.device.taps == [(132, 103)] * 3
     assert cafe.runner.floor == 1
     assert not any(record["action"] == "cafe_visit_completed" for record in action_records(cafe.config))
+
+
+def navigation_screen(cafe, monkeypatch, state):
+    """Render the selected state on each fresh fake capture."""
+    def capture(**kwargs):
+        current = state()
+        cafe.vision.is_cafe = lambda frame: current.startswith("cafe")
+        cafe.startup.analyze = lambda png: Observation(current, current)
+        floor = int(current[-1]) if current in {"cafe_1", "cafe_2"} else None
+        return cafe.capture([word(f"Move to Cafe No. {3 - floor}")] if floor else [])
+    monkeypatch.setattr(cafe.runner, "capture", capture)
+
+
+def test_entry_retries_a_missed_tap_only_while_home_stays_verified(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: "cafe_1" if len(cafe.device.taps) == 2 else "home")
+    cafe.runner.enter()
+    assert cafe.device.taps == [(100, 659)] * 2
+    assert cafe.clock.now >= 5
+    records = [json.loads(line) for line in (cafe.runner.run_dir / "events.jsonl").read_text().splitlines()]
+    assert records[-1]["event"] == "navigation_arrived"
+    assert records[-1]["attempts"] == 2
+    assert (cafe.runner.run_dir / records[-1]["frame"]).is_file()
+
+
+def test_entry_stops_after_three_unaccepted_taps(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: "home")
+    with pytest.raises(RestartError, match="still on home after 3 verified taps"):
+        cafe.runner.enter()
+    assert cafe.device.taps == [(100, 659)] * 3
+    assert cafe.clock.now < 30
+
+
+@pytest.mark.parametrize("during", ["popup", "unknown", "cafe_2"])
+def test_entry_never_retries_over_a_dialog_or_after_arrival(cafe, monkeypatch, during):
+    navigation_screen(cafe, monkeypatch, lambda: during if cafe.device.taps else "home")
+    if during == "cafe_2":
+        cafe.runner.enter()
+    else:
+        with pytest.raises(RestartError, match="unexpected"):
+            cafe.runner.enter()
+    assert cafe.device.taps == [(100, 659)]
+
+
+def test_floor_navigation_allows_loading_longer_than_thirty_seconds(cafe, monkeypatch):
+    def state():
+        if not cafe.device.taps:
+            return "cafe_1"
+        return "loading" if cafe.clock.now < 45 else "cafe_2"
+    navigation_screen(cafe, monkeypatch, state)
+    cafe.runner.move_to_floor(2)
+    assert cafe.runner.floor == 2
+    assert cafe.device.taps == [(132, 103)]
+    assert cafe.clock.now >= 45
+
+
+def test_floor_navigation_does_not_retap_an_indefinite_loading_screen(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: "loading" if cafe.device.taps else "cafe_1")
+    with pytest.raises(RestartError, match="within 120s.*last screen: loading"):
+        cafe.runner.move_to_floor(2)
+    assert cafe.runner.floor == 1
+    assert cafe.device.taps == [(132, 103)]
+    assert 120 <= cafe.clock.now < 121
+
+
+def test_floor_retry_requires_source_visible_continuously(cafe, monkeypatch):
+    # A loading interruption resets the five-second source-screen confirmation.
+    def state():
+        if len(cafe.device.taps) >= 2:
+            return "cafe_2"
+        return "loading" if 4 <= cafe.clock.now < 6 else "cafe_1"
+    navigation_screen(cafe, monkeypatch, state)
+    cafe.runner.move_to_floor(2)
+    assert cafe.device.taps == [(132, 103)] * 2
+    assert cafe.clock.now >= 11
+
+
+def test_floor_label_on_obstructed_screen_cannot_authorize_retry(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: "popup" if cafe.device.taps else "cafe_1")
+    cafe.vision.words = lambda frame: [word("Move to Cafe No. 2")]
+    with pytest.raises(RestartError, match="unexpected popup"):
+        cafe.runner.move_to_floor(2)
+    assert cafe.device.taps == [(132, 103)]
+    assert cafe.runner.floor == 1
+
+
+@pytest.mark.parametrize("dismissals", [1, 2])
+def test_visitor_notice_is_dismissed_with_popup_evidence_before_arrival(cafe, monkeypatch, dismissals):
+    def state():
+        if not cafe.device.taps:
+            return "home"
+        return "cafe_1" if len(cafe.device.taps) > dismissals else "unknown"
+    navigation_screen(cafe, monkeypatch, state)
+    cafe.vision.visitor_notice = lambda frame, words: (640, 458)
+    cafe.runner.enter()
+    assert cafe.device.taps == [(100, 659)] + [(640, 458)] * dismissals
+    records = [json.loads(line) for line in (cafe.runner.run_dir / "events.jsonl").read_text().splitlines()]
+    popups = [r for r in records if r['event'] == 'popup_dismissal']
+    assert popups[-1]['result'] == 'changed'
+    assert popups[-1]['after_state'] == 'cafe'
+    assert (cafe.runner.run_dir / popups[-1]['before']).is_file()
+    assert (cafe.runner.run_dir / popups[-1]['after']).is_file()
+    if dismissals == 2:
+        assert any(p['result'] == 'unchanged' for p in popups)
+    assert records[-1]['event'] == 'navigation_arrived'
+
+
+def test_visitor_notice_that_does_not_close_has_bounded_retries(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: "unknown" if cafe.device.taps else "home")
+    cafe.vision.visitor_notice = lambda frame, words: (640, 458)
+    with pytest.raises(RestartError, match="notice remained after three"):
+        cafe.runner.enter()
+    assert cafe.device.taps == [(100, 659)] + [(640, 458)] * 3
+
+
+def test_navigation_recaptures_slow_ocr_instead_of_retrying_on_old_frame(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: "home")
+    original = cafe.runner.capture
+    def capture(**kwargs):
+        result = original(**kwargs)
+        def analyze(png):
+            if cafe.device.taps:
+                cafe.clock.sleep(4.5)
+            return Observation("home", "home")
+        cafe.startup.analyze = analyze
+        return result
+    monkeypatch.setattr(cafe.runner, 'capture', capture)
+    with pytest.raises(RestartError, match="within 120s"):
+        cafe.runner.enter()
+    assert cafe.device.taps == [(100, 659)]

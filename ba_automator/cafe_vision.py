@@ -40,6 +40,39 @@ class CafeVision:
                 return False
         return True
 
+    def visitor_notice(self, frame, words):
+        """Recognize the English visiting-student notice over a dimmed Cafe HUD."""
+        panel = [w for w in words if 345 <= w.center[0] <= 935 and 170 <= w.center[1] <= 515]
+        required = (("guide", (550, 170, 735, 210)),
+                    ("visiting student list", (420, 230, 860, 280)),
+                    ("confirm", (525, 420, 755, 495)))
+        targets = []
+        for label, (x1, y1, x2, y2) in required:
+            hits = [w for w in panel if w.normalized == label
+                    and x1 <= w.center[0] <= x2 and y1 <= w.center[1] <= y2]
+            if len(hits) != 1:
+                return None
+            targets.append(hits[0].center)
+        # This notice has only a heading, list label, button, and bond numbers.
+        if any(w.normalized not in {item[0] for item in required}
+               and not w.normalized.isdecimal() for w in panel):
+            return None
+        gains = []
+        for name, bounds in (("title", (102, 6, 173, 40)),
+                             ("edit", (70, 658, 124, 691)),
+                             ("comfort", (964, 626, 1062, 660))):
+            x1, y1, x2, y2 = bounds
+            template = self.assets[name]
+            crop = frame[y1:y2, x1:x2]
+            _, score, _, (x, y) = cv2.minMaxLoc(cv2.matchTemplate(crop, template, cv2.TM_CCOEFF_NORMED))
+            reference = template.astype(float)
+            sample = crop[y:y + template.shape[0], x:x + template.shape[1]].astype(float)
+            gain = float((sample * reference).sum() / max((reference * reference).sum(), 1))
+            if score < .985 or not .25 <= gain <= .8 or np.abs(sample - gain * reference).mean() > 6:
+                return None
+            gains.append(gain)
+        return targets[-1] if max(gains) - min(gains) < .08 else None
+
     def markers(self, frame):
         mask = yellow_mask(frame)
         mask[:45] = 0

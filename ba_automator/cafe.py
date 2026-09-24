@@ -14,6 +14,10 @@ from .vision import decode_frame
 
 LOGGER = logging.getLogger(__name__)
 CAFE_TIMEOUT = 900
+NAVIGATION_TIMEOUT = 120
+NAVIGATION_UNKNOWN_TIMEOUT = 30
+NAVIGATION_RETRY_DELAY = 5
+NAVIGATION_ATTEMPTS = 3
 # Scene motion is measured after each slow drag; furniture is never classified.
 PAN_RIGHT = ((480, 350), (830, 350))
 PAN_LEFT = ((830, 350), (480, 350))
@@ -262,14 +266,131 @@ class CafeRunner:
                     "this routine requires both unlocked floors in the English client",
         )
 
+    def navigate(self, cap, target, detail, *, source, destination):
+        """Verify navigation, allowing slow loading and a bounded missed-tap retry.
+
+        A successful ADB command is not evidence that the game accepted a tap.
+        Retry only after the exact source screen stays visible for five seconds.
+        Loading, dialogs, unknown floors, and the destination never authorize input.
+        """
+        self.phase(detail)
+        end = self.clock() + NAVIGATION_TIMEOUT
+        evidence = f"navigation-{self.actions}"
+        attempts = 0
+
+        def send(screen):
+            nonlocal attempts
+            attempts += 1
+            name = f"{evidence}-attempt-{attempts}.png"
+            self.journal.save_image(name, screen[1])
+            self.journal.record("navigation_attempt", source=source, destination=destination,
+                                attempt=attempts, frame=name)
+            self.tap(screen, target, detail)
+
+        send(cap)
+        source_since = unknown_since = None
+        last_state = None
+        notice_attempts = 0
+        notice_retry_at = 0
+        pending_notice = None
+        while self.clock() < end:
+            cap = self.capture()
+            notice = None
+            if self.vision.is_cafe(cap[2]):
+                if destination == "cafe":
+                    state = "cafe"
+                else:
+                    words = self.vision.words(cap[2])
+                    floor = floor_from_switch(words)
+                    state = f"cafe_{floor}" if floor else "unknown"
+                    cap = (*cap[:3], words)
+            else:
+                state = self.startup.analyze(cap[1]).state
+                if state == "unknown":
+                    notice = self.vision.visitor_notice(cap[2], self.vision.words(cap[2]))
+                    if notice is not None:
+                        state = "visitor_notice"
+            now = self.clock()
+            if pending_notice is not None and state != "visitor_notice":
+                after = f"popups/{pending_notice['id']}-after.png"
+                self.journal.save_image(after, cap[1])
+                self.journal.record("popup_dismissal", **{
+                    **pending_notice, "after": after, "after_state": state, "result": "changed",
+                })
+                pending_notice = None
+            if state != last_state:
+                self.phase(f"{detail}: {state.replace('_', ' ')}")
+                last_state = state
+            if state == destination:
+                name = f"{evidence}-arrived.png"
+                self.journal.save_image(name, cap[1])
+                self.journal.record("navigation_arrived", destination=destination,
+                                    attempts=attempts, frame=name)
+                return cap
+            if state == "visitor_notice":
+                source_since = unknown_since = None
+                if now >= notice_retry_at:
+                    if notice_attempts >= NAVIGATION_ATTEMPTS:
+                        self.fail("Cafe visiting-student notice remained after three dismissal attempts")
+                    if now - cap[0] < FRAME_MAX_AGE - 1:
+                        if pending_notice is not None:
+                            after = f"popups/{pending_notice['id']}-after.png"
+                            self.journal.save_image(after, cap[1])
+                            self.journal.record("popup_dismissal", **{
+                                **pending_notice, "after": after, "after_state": state, "result": "unchanged",
+                            })
+                        popup_id = uuid4().hex
+                        before = f"popups/{popup_id}-before.png"
+                        self.journal.save_image(before, cap[1])
+                        self.tap(cap, notice, "Dismiss the verified Cafe visiting-student list")
+                        pending_notice = {
+                            "id": popup_id, "detail": "Dismiss the Cafe visiting-student list",
+                            "detector": "cafe_visitors", "time": datetime.now(timezone.utc).isoformat(),
+                            "before": before, "after": None, "result": "pending",
+                        }
+                        self.journal.record("popup_dismissal", **pending_notice)
+                        notice_attempts += 1
+                        notice_retry_at = self.clock() + NAVIGATION_RETRY_DELAY
+            elif state == source:
+                unknown_since = None
+                source_since = now if source_since is None else source_since
+                if now - source_since >= NAVIGATION_RETRY_DELAY:
+                    if attempts >= NAVIGATION_ATTEMPTS:
+                        self.fail(f"{detail}: still on {source} after {attempts} verified taps")
+                    # OCR can be slow on a busy emulator. Recapture instead of
+                    # passing a nearly expired frame into ADB's preflight.
+                    if now - cap[0] < FRAME_MAX_AGE - 1:
+                        send(cap)
+                        source_since = None
+            else:
+                source_since = None
+                if state == "loading":
+                    unknown_since = None
+                else:
+                    unknown_since = now if unknown_since is None else unknown_since
+                    if now - unknown_since >= NAVIGATION_UNKNOWN_TIMEOUT:
+                        self.fail(f"{detail}: unexpected {state} screen; no further navigation input sent")
+            self.sleep(.8)
+        self.fail(f"{detail}: {destination} did not appear within {NAVIGATION_TIMEOUT}s "
+                  f"(last screen: {last_state})")
+
     def enter(self):
         cap = self.capture()
-        if not self.vision.is_cafe(cap[2]):
-            observation = self.startup.analyze(cap[1])
-            if observation.state != "home":
-                self.fail("Cafe requires an unobstructed home screen; run restart first")
-            self.tap(cap, (100, 659), "Open Cafe from verified home")
-        self.wait_cafe()
+        if self.vision.is_cafe(cap[2]):
+            return
+        observation = self.startup.analyze(cap[1])
+        if observation.state != "home":
+            self.fail("Cafe requires an unobstructed home screen; run restart first")
+        self.navigate(cap, (100, 659), "Open Cafe from verified home",
+                      source="home", destination="cafe")
+
+    def move_to_floor(self, other):
+        if other == self.floor:
+            return
+        cap = self.wait_floor(expected=self.floor)
+        self.navigate(cap, (132, 103), f"Move to Cafe {other}",
+                      source=f"cafe_{self.floor}", destination=f"cafe_{other}")
+        self.floor = other
 
     def collect(self):
         self.phase("Collecting Cafe AP and credits")
@@ -569,14 +690,6 @@ class CafeRunner:
                 self.floor = floor_from_switch(cap[3])
                 self.collect()
 
-                def move_to_floor(other):
-                    if other == self.floor:
-                        return
-                    cap = self.wait_floor(expected=self.floor)
-                    self.tap(cap, (132, 103), f"Move to Cafe {other}")
-                    self.wait_floor(expected=other)
-                    self.floor = other
-
                 visited = []
                 for index in range(2):
                     self.sweep()
@@ -584,11 +697,11 @@ class CafeRunner:
                     if index == 1:
                         break
                     other = 1 if self.floor == 2 else 2
-                    move_to_floor(other)
+                    self.move_to_floor(other)
                 # Optional recognition cannot prevent required pats on either floor.
                 if self.config.cafe_invite_enabled:
                     for floor in reversed(visited):
-                        move_to_floor(floor)
+                        self.move_to_floor(floor)
                         if self.invite():
                             self.sweep()  # Include the newly invited student.
                             break  # One configured student needs only one invitation.
