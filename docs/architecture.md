@@ -1,5 +1,7 @@
 # Architecture
 
+See [the high-level design](design.md) for the project direction and planned contracts. This document describes the implementation that exists today.
+
 Status: restart and a complete two-floor Cafe visit verified live; local dashboard, scheduling, idle-close, and event-profile recognition implemented. Optional invitation completion remains unverified live. Development session: September 23–24, 2026.
 
 ## Runtime

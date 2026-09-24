@@ -1,5 +1,7 @@
 # blue archive automator
 
+start with [the high-level design](docs/design.md) for the project direction, execution rules, and build order.
+
 we're making a custom blue archive automator. it should do the daily stuff, use a reasonable amount of cpu, and run alongside the azur lane automator without getting in its way.
 
 we're using bluestacks + ADB, with [ALAS](https://github.com/LmeSzinc/AzurLaneAutoScript) as the model: recognize the screen, do one thing, check what happened. fixed resolution, Python, OpenCV, and local OCR. there's no cloud AI in the loop.
