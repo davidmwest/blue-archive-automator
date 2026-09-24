@@ -1221,3 +1221,18 @@ def test_ap_restart_failure_persists_hold_and_manual_retry_is_explicit(controlle
     assert read_state(controller.config)['blocked_reason']
     controller.resume()
     assert read_state(controller.config)['blocked_reason']
+
+
+@pytest.mark.parametrize('terminal_status', ['failed', 'stopped', None])
+def test_equal_journal_timestamps_do_not_hide_the_unfinished_task(tmp_path, terminal_status):
+    completed=tmp_path/'restart-done';completed.mkdir()
+    current=tmp_path/'lessons-latest';current.mkdir()
+    earlier=completed/'events.jsonl';latest=current/'events.jsonl'
+    earlier.write_text(json.dumps({'event':'finished','status':'success','elapsed':50,'actions':2}))
+    event=({'event':'finished','status':terminal_status,'elapsed':10,'actions':3}
+           if terminal_status else {'event':'started','task':'lessons'})
+    latest.write_text(json.dumps(event))
+    for path in (earlier,latest):os.utime(path,ns=(1_000_000_000,1_000_000_000))
+    result=DashboardController._unfinished_result(tmp_path,'stopped')
+    assert result['run_dir']==str(current.resolve())
+    assert result['actions']==(3 if terminal_status else None)

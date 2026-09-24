@@ -661,23 +661,31 @@ class DashboardController:
                 candidates.append((journal.stat().st_mtime_ns, run.name, journal))
             if not candidates:
                 return result
-            journal = max(candidates)[2]
-            # The terminal event is small even when the preceding survey is large.
-            with journal.open("rb") as stream:
-                stream.seek(0, os.SEEK_END)
-                stream.seek(max(0, stream.tell() - 65536))
-                tail = stream.read(65536).decode("utf-8", errors="replace")
-            events = []
-            for line in tail.splitlines():
-                try:
-                    event = json.loads(line)
-                except ValueError:
-                    continue
-                if isinstance(event, dict):
-                    events.append(event)
-            terminal = next((event for event in reversed(events) if event.get("event") == "finished"), None)
-            if terminal and terminal.get("status") == "success":
-                return result  # The child failed between tasks, without a failed task journal.
+            newest = max(candidates)[0]
+            # Filesystems can give adjacent tasks identical modification times.
+            # In a serial plan, prefer its unfinished/failed step over a tied
+            # successful predecessor; task-name alphabetical order is irrelevant.
+            for modified, _, journal in sorted(candidates, reverse=True):
+                if modified != newest:
+                    return result
+                # Read only a bounded tail, even after a large survey.
+                with journal.open("rb") as stream:
+                    stream.seek(0, os.SEEK_END)
+                    stream.seek(max(0, stream.tell() - 65536))
+                    tail = stream.read(65536).decode("utf-8", errors="replace")
+                events = []
+                for line in tail.splitlines():
+                    try:
+                        event = json.loads(line)
+                    except ValueError:
+                        continue
+                    if isinstance(event, dict):
+                        events.append(event)
+                terminal = next((event for event in reversed(events) if event.get("event") == "finished"), None)
+                if not terminal or terminal.get("status") != "success":
+                    break
+            else:
+                return result  # The child failed between tasks, after success.
             result["run_dir"] = str(journal.parent.resolve())
             if terminal and terminal.get("status") not in ("failed", "stopped", "interrupted"):
                 terminal = None
