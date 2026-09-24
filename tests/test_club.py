@@ -26,26 +26,3 @@ def test_global_game_day_uses_reset_instead_of_local_midnight(timestamp, expecte
 def test_game_day_rejects_ambiguous_local_time():
     with pytest.raises(ValueError, match="timezone-aware"):
         game_day(datetime(2026, 9, 24, 12))
-
-
-def test_stub_records_deferral_without_device_access_attendance_or_reward(tmp_path, monkeypatch, capsys):
-    config = Config(serial="127.0.0.1:5695", package="com.nexon.bluearchive",
-                    run_dir=tmp_path / "runs", state_dir=tmp_path / "state")
-
-    class Untouchable:
-        def __getattr__(self, name):
-            pytest.fail(f"Club stub accessed {name}")
-
-    result = run_club(config, Untouchable(), Untouchable())
-    assert result.status == "deferred" and result.actions == 0
-    events = [json.loads(line) for line in (result.run_dir / "events.jsonl").read_text().splitlines()]
-    assert events[-1]["status"] == "deferred"
-    assert events[-1]["attendance_recorded"] is False
-    assert not config.state_dir.exists()
-    assert task_plan("club", config) == ("club",)
-    monkeypatch.setattr(cli.Config, "from_file", lambda _: config)
-    monkeypatch.setattr(cli, "AdbDevice", lambda _: Untouchable())
-    monkeypatch.setattr(cli, "StartupVision", lambda: pytest.fail("stub initialized OCR"))
-    assert cli.main(["club"]) == 0
-    assert json.loads(capsys.readouterr().out)["status"] == "deferred"
-    assert not config.state_dir.exists()

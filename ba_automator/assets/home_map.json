@@ -113,10 +113,10 @@
         "home",
         "social"
       ],
-      "verified": false,
-      "description": "Home → Social",
+      "verified": true,
+      "description": "Home → Social → Club attendance; other Social actions are not automated",
       "visual_verified": true,
-      "route_verified": false
+      "route_verified": true
     },
     {
       "id": "crafting",

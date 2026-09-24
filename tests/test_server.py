@@ -935,56 +935,19 @@ def test_enqueue_waits_for_close_before_dispatch_and_clears_closed_status(close_
         thread.join(timeout=2)
 
 
-@pytest.mark.parametrize("command", ["club", "cafe", "daily"])
-def test_club_stub_is_deferred_and_keeps_other_tasks_and_cafe_schedule(config_path, command):
-    class StubOutput(FakeOutput):
-        def __iter__(self):
-            self.process.done.wait()
-            root = self.process.run_dir.parent
-            yield json.dumps({"status": "deferred", "run_dir": str(root / "club-pending"),
-                              "duration": 0, "actions": 0}) + "\n"
-            if command != "club":
-                yield json.dumps({"status": "success", "run_dir": str(root / "cafe-complete"),
-                                  "duration": 40, "actions": 3}) + "\n"
-            if command == "daily":
-                yield json.dumps({"status": "success", "run_dir": str(root / "lessons-complete"),
-                                  "duration": 40, "actions": 1}) + "\n"
 
-    class StubFactory(ProcessFactory):
-        def __call__(self, arguments, **options):
-            process = super().__call__(arguments, **options)
-            process.stdout = StubOutput(process)
-            return process
-
-    factory = StubFactory()
-    controller = DashboardController(config_path, process_factory=factory)
-    try:
-        controller.enqueue(command)
-        eventually(lambda: len(factory.processes) == 1)
-        factory.processes[0].finish()
-        eventually(lambda: controller.status()["state"] == "deferred")
-        status = controller.status()
-        assert "awaiting reset test" in status["phase"]
-        assert status["result"]["deferred_tasks"] == ["club"]
-        assert status["history"][0]["state"] == "deferred"
-        assert status["schedule"]["cafe"]["consecutive_failures"] == 0
-        assert bool(status["schedule"]["cafe"]["last_success_at"]) is (command != "club")
-    finally:
-        controller.close()
-
-
-def test_standalone_club_placeholder_does_not_close_game(close_controlled):
+def test_standalone_club_closes_idle_game(close_controlled):
     controller, processes, devices = close_controlled
     controller.update_settings({"close_app_when_idle": True})
     controller.enqueue("club")
     eventually(lambda: len(processes.processes) == 1)
     processes.processes[0].finish()
     eventually(lambda: controller.status()["state"] == "success")
-    assert not devices.calls
-    assert controller.actions()["actions"] == []
+    eventually(lambda: controller.status()["app_closed"])
+    assert [name for name, _ in devices.calls].count("force_stop") == 1
 
 
-def test_stub_at_end_of_game_queue_preserves_idle_close(close_controlled):
+def test_club_at_end_of_game_queue_preserves_idle_close(close_controlled):
     controller, processes, devices = close_controlled
     controller.update_settings({"close_app_when_idle": True})
     controller.pause()
@@ -1002,7 +965,7 @@ def test_stub_at_end_of_game_queue_preserves_idle_close(close_controlled):
     eventually(lambda: len(processes.processes) == 3)
     processes.processes[2].finish()
     eventually(lambda: controller.status()["state"] == "success")
-    assert [name for name, _ in devices.calls].count("force_stop") == 1
+    assert [name for name, _ in devices.calls].count("force_stop") == 2
 
 
 def test_crafting_timers_survive_restart_and_coalesce_due_slots(config_path):
@@ -1248,3 +1211,107 @@ def test_loot_http_clear_keeps_history_and_requires_csrf(http_server):
     assert request('GET', '/api/loot')[1]['receipt_count'] == 0
     assert any(a['id'] == action['id'] for a in request('GET', '/api/actions')[1]['actions'])
     assert not factory.processes
+
+
+def badge_output(process, tasks):
+    run = process.run_dir.parent / 'red_dots-test'
+    run.mkdir(exist_ok=True)
+    (run / 'requests.json').write_text(json.dumps({'version': 1, 'tasks': tasks}))
+    return json.dumps({'status':'success','run_dir':str(run),'duration':1,'actions':0})
+
+
+def test_badges_queue_serial_producers_then_mail_once_per_batch(controlled):
+    controller, factory = controlled
+    controller.enqueue('restart')
+    eventually(lambda: len(factory.processes) == 1)
+    process = factory.processes[0]
+    class Output(FakeOutput):
+        def __iter__(self):
+            yield from super().__iter__()
+            yield badge_output(self.process, ['free_pack','club','mail']) + '\n'
+    process.stdout = Output(process)
+    # The worker may already have entered stdout iteration; call the queue
+    # consumer under its production lock while dispatch is paused instead.
+    controller.pause()
+    with controller._condition:
+        controller._enqueue_badges(badge_output(process,['free_pack','club','mail']), process.run_dir.parent)
+        controller._enqueue_badges(badge_output(process,['free_pack','club','mail']), process.run_dir.parent)
+    assert [j['task'] for j in controller.status()['queue']] == ['free_pack','club']
+    assert all(j['source']=='red_dot' for j in controller.status()['queue'])
+    process.finish(); eventually(lambda: controller.status()['current_job'] is None)
+    controller.resume();eventually(lambda: len(factory.processes)==2)
+    with controller._condition:
+        controller._enqueue_badges(badge_output(factory.processes[1],['free_pack','club','mail']),factory.processes[1].run_dir.parent)
+    assert [j['task'] for j in controller.status()['queue']]==['club']
+    factory.processes[1].finish(); eventually(lambda: len(factory.processes)==3)
+    factory.processes[2].finish(); eventually(lambda: controller.status()['current_job'] is None)
+    assert factory.max_active==1 and not controller.status()['queue']
+    assert not controller._badge_attempted
+
+
+def test_badge_manifest_cannot_enqueue_arbitrary_or_external_work(controlled, tmp_path):
+    controller,factory=controlled
+    controller.enqueue('restart');eventually(lambda: len(factory.processes)==1)
+    process=factory.processes[0];controller.pause()
+    with controller._condition:
+        controller._enqueue_badges(badge_output(process,['packs','lessons']),process.run_dir.parent)
+        outside=tmp_path/'red_dots-outside';outside.mkdir();(outside/'requests.json').write_text('{"version":1,"tasks":["mail"]}')
+        forged=json.dumps({'status':'success','run_dir':str(outside),'duration':1,'actions':0})
+        controller._enqueue_badges(forged,process.run_dir.parent)
+    assert not controller.status()['queue']
+    process.finish()
+
+
+def test_scanner_does_not_replace_the_actual_job_result(controlled):
+    controller,factory=controlled
+    controller.enqueue('restart');eventually(lambda: len(factory.processes)==1)
+    process=factory.processes[0]
+    output=json.dumps({'status':'success','run_dir':str(process.run_dir),'duration':42,'actions':4})+'\n'+badge_output(process,[])
+    assert controller._parse_result(output,process.run_dir.parent,exclude_scan=True)['duration']==42
+    assert controller._parse_result(output,process.run_dir.parent,task='red_dots')['actions']==0
+    process.finish()
+
+
+@pytest.mark.parametrize('amount,blocked,expected', [(437,False,True),(119,False,False),(120,False,True),(437,True,False),(None,False,False),(True,False,False)])
+def test_fresh_home_ap_queues_spending_without_overriding_hold(controlled, amount, blocked, expected):
+    from ba_automator import ap_state
+    controller,factory=controlled
+    controller.pause()
+    controller.update_settings({'ap_schedule_enabled': True, 'ap_floor':100})
+    state=ap_state.empty_state();state['blocked_reason']='review' if blocked else None
+    ap_state.write_state(controller.config,state)
+    root=controller.config.run_dir/'scan-test';run=root/'red_dots-test';run.mkdir(parents=True)
+    path=run/'requests.json';path.write_text(json.dumps({'version':1,'tasks':[],'ap':amount}))
+    output=json.dumps({'status':'success','run_dir':str(run),'duration':1,'actions':0})
+    with controller._condition:
+        controller._enqueue_badges(output,root)
+        controller._enqueue_badges(output,root)
+    queue=controller.status()['queue']
+    assert [j['task'] for j in queue] == (['spend_ap'] if expected else [])
+    if expected:
+        assert queue[0]['source']=='ap_balance'
+        controller.resume();eventually(lambda:len(factory.processes)==1)
+        assert '--retry-ap' not in factory.processes[0].arguments
+        factory.processes[0].finish()
+
+
+def test_later_reward_can_trigger_another_ap_pass_but_unchanged_ap_cannot(controlled):
+    from ba_automator import ap_state
+    controller,_=controlled;controller.pause()
+    controller.update_settings({'ap_schedule_enabled':True,'ap_floor':100})
+    ap_state.write_state(controller.config,ap_state.empty_state())
+    root=controller.config.run_dir/'reward-test';run=root/'red_dots-test';run.mkdir(parents=True)
+    output=json.dumps({'status':'success','run_dir':str(run),'duration':1,'actions':0})
+    with controller._condition:
+        controller._badge_attempted.add('spend_ap')
+        for amount in (117,117):
+            (run/'requests.json').write_text(json.dumps({'version':1,'tasks':[],'ap':amount}))
+            controller._enqueue_badges(output,root)
+        assert not controller._queue
+        (run/'requests.json').write_text(json.dumps({'version':1,'tasks':[],'ap':417}))
+        controller._enqueue_badges(output,root)
+        controller._enqueue_badges(output,root)
+        assert [j['task'] for j in controller._queue]==['spend_ap']
+        controller._queue.clear() # Simulate an exhausted-stage pass returning with unchanged AP.
+        controller._enqueue_badges(output,root)
+        assert not controller._queue

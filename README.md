@@ -31,7 +31,9 @@ on Windows: `py -3.11 -m ba_automator.demo`. open [localhost:8766](http://127.0.
 | piece | current behavior |
 | --- | --- |
 | restart | closes and relaunches the game, accepts required data downloads, dismisses startup popups, verifies a clear home screen; force-restarts once if startup times out |
-| club | placeholder after restart; awaiting a fresh-reset test before attendance input is enabled |
+| club | checks Social → Club once per game day, then collects the attendance mail |
+| red_dots | queues free packs, Club, mail, and Tasks when their home dots appear; follows up on excess AP |
+| free_pack | claims the Free Daily Pack, verifies its receipt, then checks mail |
 | cafe | restarts first, collects available AP and credits, scans both unlocked floors for relationship icons, returns home |
 | tasks | checks the Tasks red dot, claims completed rewards and the daily bonus, saves item counts and receipts |
 | loot gathered | clearable totals for recognized rewards, saved receipts for unnamed drops; clearing keeps the history |
@@ -46,7 +48,7 @@ on Windows: `py -3.11 -m ba_automator.demo`. open [localhost:8766](http://127.0.
 
 restart, a complete two-floor Cafe visit, and the relationship-focused Lessons routine have passed live on the development Mac. seven lesson tickets were tested with verified receipts; the final run reached zero tickets, returned home, and closed the game. offline tests run on macOS, Windows, and Ubuntu. actual school rank-up popups, live Windows operation, running beside ALAS, and a complete free invitation still need verification. a completed scan and a verified relationship increase are different results; the logs keep them separate.
 
-`daily` runs restart → club → optional packs → mail → cafe → bounties → scrimmages → lessons → optional Spend AP → collect Tasks. club is currently a no-input placeholder, clearly marked “awaiting reset test.” the three-hour cafe schedule includes that same placeholder after restart and leaves lesson tickets alone. lessons can also be queued on their own, with a ticket limit and optional location list. it uses the tickets you already have; it never buys more. [task rewards →](docs/task-rewards.md) [ticket splitting and sweeps →](docs/tickets.md) [how the lesson strategies work →](docs/lessons.md) [club’s pending reset test →](docs/club.md) [crafting and saved timers →](docs/crafting.md) [paid packs and mail →](docs/packs-and-mail.md) [AP spending and rotation →](docs/spend-ap.md)
+`daily` runs restart → club → free pack → optional packs → mail → cafe → bounties → scrimmages → lessons → optional Spend AP → collect Tasks. Club is live: the three-hour cafe schedule checks attendance and mail after restart, leaving lesson tickets alone. home red dots queue their collection jobs after a successful run; excess AP can queue Spend AP immediately. [red-dot collection →](docs/red-dots.md) lessons can also be queued on their own, with a ticket limit and optional location list. it uses the tickets you already have; it never buys more. [task rewards →](docs/task-rewards.md) [ticket splitting and sweeps →](docs/tickets.md) [how the lesson strategies work →](docs/lessons.md) [Club attendance →](docs/club.md) [crafting and saved timers →](docs/crafting.md) [paid packs and mail →](docs/packs-and-mail.md) [AP spending and rotation →](docs/spend-ap.md)
 
 the first profile is the global English game at **1280×720, 320 DPI**. use a dedicated BlueStacks instance and sign in manually once. Blue Archive and Azur Lane get different ADB endpoints; they can share a compatible host ADB server. [setup and commands →](docs/getting-started.md)
 
@@ -62,7 +64,7 @@ the first profile is the global English game at **1280×720, 320 DPI**. use a de
 
 ## what's next
 
-capture an actual school rank-up, repeat Cafe visits after cooldown, and finish the free-invitation check. AP spending now has its own floor and rotation policy. Club validation, crafting refill checks, and event farming follow one verified routine at a time.
+capture an actual school rank-up, repeat Cafe visits after cooldown, and finish the free-invitation check. AP spending now has its own floor and rotation policy. crafting refill checks and event farming follow one verified routine at a time.
 
 the queue is currently in memory. schedule state and important actions survive a server restart, but queued jobs don't. durable recovery, emulator lifecycle management, and service installation are later work. see [the roadmap](docs/roadmap.md) for the live evidence and remaining limits.
 

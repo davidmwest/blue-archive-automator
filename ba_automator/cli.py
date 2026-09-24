@@ -27,11 +27,13 @@ def main(argv=None) -> int:
     capture.add_argument("--output", type=Path, default=Path("data/capture.png"))
     inspect = commands.add_parser("inspect", help="Classify a saved or live frame without game input")
     inspect.add_argument("--image", type=Path)
-    descriptions = {"tasks": "Collect completed Tasks rewards when the home red dot is visible",
+    descriptions = {"red_dots": "Queue collection jobs for home notifications",
+                    "free_pack": "Claim the Free daily pack when its home badge is visible, then collect mail",
+                    "tasks": "Collect completed Tasks rewards when the home red dot is visible",
                     "bounties": "Split available Bounty tickets across the three highest three-star clears",
                     "scrimmages": "Split Scrimmage tickets across three schools while respecting the AP floor",
                     "restart": "Restart Blue Archive and reach the home screen",
-                    "club": "Club placeholder: awaiting a fresh daily-reset test (no game input)",
+                    "club": "Check Social → Club attendance and collect its mail",
                     "cafe": "Restart, collect cafe earnings, and greet students",
                     "crafting": "Collect finished crafts, fill Quick Craft slots, and save their timers",
                     "packs": "Check optional paid pack renewals, then collect mail",
@@ -39,7 +41,7 @@ def main(argv=None) -> int:
                     "spend_ap": "Sweep selected Hard missions or commissions down to the AP floor",
                     "scan_ap": "Survey three-star Hard missions and commissions without spending AP",
                     "lessons": "Restart and use lesson tickets with the configured strategy",
-                    "daily": "Run restart, Club placeholder, enabled packs, mail, cafe, enabled ticket sweeps, lessons, AP spending and task rewards"}
+                    "daily": "Run restart, free package, Club, enabled packs, mail, cafe, enabled ticket sweeps, lessons, AP spending and task rewards"}
     for name, description in descriptions.items():
         command = commands.add_parser(name, help=description)
         command.add_argument("--no-downloads", action="store_true", help="Stop if game-data download consent is needed")
@@ -75,15 +77,18 @@ def main(argv=None) -> int:
                 device = AdbDevice(config)
             vision = None
             for task in task_plan(args.command, config):
-                if task == "club":
-                    from .club import run_club
-
-                    result = run_club(config)
-                    print(json.dumps(asdict(result), default=str, indent=2))
-                    continue
                 if vision is None:
                     vision = StartupVision()
-                if task == "tasks":
+                if task == "club":
+                    from .club import run_club
+                    runner = run_club
+                elif task == "red_dots":
+                    from .red_dots import run_red_dots
+                    runner = run_red_dots
+                elif task == "free_pack":
+                    from .free_pack import run_free_pack
+                    runner = run_free_pack
+                elif task == "tasks":
                     from .task_rewards import run_task_rewards
                     runner = run_task_rewards
                 elif task in {'spend_ap', 'scan_ap'}:
@@ -115,6 +120,8 @@ def main(argv=None) -> int:
                     options = {'allow_retry': getattr(args, 'retry_ap', False)}
                 result = runner(config, device, vision, **options)
                 print(json.dumps(asdict(result), default=str, indent=2))
+                if result.status != "success":
+                    break
             return 0
 
         with InstanceLock(config):

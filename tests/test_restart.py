@@ -336,10 +336,12 @@ class RestartTests(unittest.TestCase):
                 patch.object(cli, "AdbDevice", return_value=self.device), \
                 patch.object(cli, "StartupVision", return_value=vision), \
                 patch("ba_automator.restart.run_restart", side_effect=startup), \
+                patch("ba_automator.red_dots.run_red_dots") as scan, \
                 patch("ba_automator.spend_ap.run_spend_ap", side_effect=spend_error) as spend:
             # A successful downstream result only needs to be serializable by CLI.
             from ba_automator.runtime import RunResult
             spend.return_value = RunResult("success", selected.run_dir, 0, 0)
+            scan.return_value = RunResult("success", selected.run_dir, 0, 0)
             code = cli.main(["spend_ap"])
             return code, spend.call_count
 

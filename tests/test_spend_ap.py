@@ -136,14 +136,14 @@ def test_missing_receipt_blocks_replay_and_retains_old_cursor(runner):
 
 def test_jobs_share_queue_plans_and_only_scan_has_no_spend(runner):
     c = runner.config
-    assert task_plan("scan_ap", c) == ("restart", "scan_ap")
-    assert task_plan("spend_ap", c) == ("restart", "spend_ap")
+    assert task_plan("scan_ap", c) == ("restart", "scan_ap", "red_dots")
+    assert task_plan("spend_ap", c) == ("restart", "spend_ap", "red_dots")
     assert "spend_ap" not in task_plan("cafe", c)
     enabled = replace(c, ap_schedule_enabled=True)
     for task in ("cafe", "mail", "packs"):
-        assert task_plan(task, enabled)[-1] == "spend_ap"
-    assert task_plan("daily", enabled)[-2:] == ("spend_ap", "tasks")
-    assert task_plan("scan_ap", enabled) == ("restart", "scan_ap")
+        assert task_plan(task, enabled)[-2:] == ("spend_ap", "red_dots")
+    assert task_plan("daily", enabled)[-3:] == ("spend_ap", "tasks", "red_dots")
+    assert task_plan("scan_ap", enabled) == ("restart", "scan_ap", "red_dots")
 
 
 def test_commission_survey_rejects_a_gap_instead_of_guessing_highest(runner):

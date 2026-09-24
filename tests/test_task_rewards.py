@@ -319,11 +319,12 @@ def test_inconsistent_or_disjoint_receipt_pages_do_not_invent_rewards(config, ba
 
 
 def test_task_plans_and_daily_order(config):
-    assert task_plan("tasks", config) == ("restart", "tasks")
-    assert task_plan("daily", config)[-1] == "tasks"
-    assert task_plan("daily", replace(config, ap_schedule_enabled=True))[-2:] == (
+    assert task_plan("tasks", config) == ("restart", "tasks", "red_dots")
+    assert task_plan("daily", config)[-2:] == ("tasks", "red_dots")
+    assert task_plan("daily", replace(config, ap_schedule_enabled=True))[-3:] == (
         "spend_ap",
         "tasks",
+        "red_dots",
     )
 
 

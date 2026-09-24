@@ -69,7 +69,7 @@ One automation worker controls one configured game instance at a time. An OS loc
 
 ### Jobs and tasks
 
-A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, a deferred Club placeholder, optional paid-pack checks, Mail, and Cafe, with Bounties, Scrimmages, and Lessons included when their daily settings are enabled and Spend AP appended when automatic spending is enabled. Tasks collection finishes the daily plan, checking its home red dot and claiming completed rewards after the activities that earn them.
+A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, Club attendance, the free daily pack, optional paid-pack checks, Mail, and Cafe, with Bounties, Scrimmages, and Lessons included when their daily settings are enabled and Spend AP appended when automatic spending is enabled. Tasks collection finishes the daily activities, checking its home red dot and claiming completed rewards after the activities that earn them.
 
 `tasks.py` supplies a small catalog and ordered task plans shared by the CLI and dashboard. Grow a shared execution context when repeated orchestration needs it instead of extending command-specific conditionals indefinitely. Each task defines:
 
@@ -173,7 +173,7 @@ Use a permissive license for the project's original code and documentation, whil
 
 - Event-specific stage priorities, repetition limits, and reward-claim order. The ordinary AP floor and Hard rotation are configured on the Spend AP page.
 - Invitation selection beyond one named student and one successful invitation per visit.
-- Club uses the global 19:00 UTC reset policy; live attendance evidence and durable per-day suppression remain pending the fresh-reset test. See [Club](club.md).
+- Club uses the global 19:00 UTC reset policy; live attendance and its mailbox AP receipt are verified, with durable per-instance suppression after an observed Club visit. See [Club](club.md).
 - Recovery semantics and migrations when durable job storage is introduced.
 - Platform-specific emulator discovery and service installation after live portability checks.
 - Whether optional AI assistance adds value; the deterministic execution path remains usable without it.
@@ -186,3 +186,5 @@ These are implementation inputs for later increments, not reasons to expand the 
 The dashboard has a durable, clearable reward view over confirmed important actions. It totals recognized item quantities, using mail currency deltas only when the receipt did not already name that currency. It never counts spending intents, failed claims, resource costs, or AP regeneration as loot. Receipts with unnamed drops remain visible and explicitly unquantified; icon identities are not guessed.
 
 Clearing saves a cursor at the last complete JSONL record and a timestamp. It does not remove action history or receipt files, and concurrent later appends belong to the fresh view. Totals include all records since that cursor; the gallery shows the latest 100. Receipt endpoints accept a validated action ID and serve only the recorded PNG beneath the configured run directory. Existing older actions without receipt paths retain their known totals and text. New Cafe, Mail, Crafting, Lesson, AP and ticket jobs attach their saved reward receipts.
+
+Home notifications are checked after successful task plans. Two stable home frames produce a bounded queue request for free packs, Club, Mail, and Tasks; dispatch deduplicates tasks across the busy batch before optional idle closure. Fresh AP at least 20 above the configured floor can enqueue automatic Spend AP without overriding failure holds. No idle polling or AI is involved. See [red-dot collection](red-dots.md).

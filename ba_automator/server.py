@@ -38,7 +38,8 @@ from .actions import record_action
 from .config import Config, ConfigError
 from .crafting_state import CraftStateError, read_state, scheduled_jobs, timestamp
 from .locking import InstanceLock
-from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS
+from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS, task_plan
+from .home_badges import PRIORITY
 from . import packs_state
 from . import ap_state, loot
 from .vision import decode_frame
@@ -155,6 +156,8 @@ class DashboardController:
         self._capture_frame: Path | None = None
         self._app_closed = False
         self._batch_has_game_job = False
+        self._badge_attempted = set()
+        self._ap_batch_observed = None
         self._job_roots: dict[str, Path] = {}
         self._popup_cache: dict[Path, tuple[tuple[int, int], list[dict]]] = {}
         self._schedule = self._load_schedule()
@@ -269,7 +272,7 @@ class DashboardController:
     def _enqueue_ap(self):
         if self._paused or self._shutdown or not self.config.ap_schedule_enabled or len(self._queue) >= 100:
             return
-        related = {'spend_ap', 'scan_ap', 'cafe', 'mail', 'packs', 'daily'}
+        related = {'spend_ap', 'scan_ap', 'cafe', 'mail', 'packs', 'daily', 'free_pack', 'club', 'red_dots', 'tasks'}
         if ((self._current and self._current['task'] in related)
                 or any(job['task'] in related for job in self._queue)):
             return
@@ -470,7 +473,8 @@ class DashboardController:
                 self._started_at = _timestamp()
                 self._current = {"id": job["id"], "task": job["task"], "started_at": self._started_at}
                 self._task = job["task"]
-                self._batch_has_game_job |= job["task"] != "club"
+                self._batch_has_game_job = True
+                self._badge_attempted.update(task_plan(job["task"], self.config))
                 self._state = "running"
                 self._phase = "Starting"
                 self._completed_at = None
@@ -499,7 +503,7 @@ class DashboardController:
                 arguments = [sys.executable, "-m", "ba_automator", "--config", str(snapshot), job["task"]]
                 if job['task'] == 'packs' and job.get('source') != 'schedule':
                     arguments.append('--retry-packs')
-                if job['task'] == 'spend_ap' and job.get('source') != 'schedule':
+                if job['task'] == 'spend_ap' and job.get('source') not in {'schedule', 'red_dot', 'ap_balance'}:
                     arguments.append('--retry-ap')
                 options = {"stdout": subprocess.PIPE, "stderr": subprocess.STDOUT,
                            "stdin": subprocess.DEVNULL, "text": True, "encoding": "utf-8",
@@ -524,7 +528,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info")
-                            marker = next((prefix for prefix in ("tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -547,21 +551,14 @@ class DashboardController:
                 with self._condition:
                     self._duration = max(0.0, time.monotonic() - self._started_clock)
                     self._completed_at = _timestamp()
-                    self._result = self._parse_result(output, run_root)
+                    self._result = self._parse_result(output, run_root, exclude_scan=job["task"] != "red_dots")
                     if self._stop_requested or self._shutdown:
                         self._state, self._phase = "stopped", "Stopped"
                     elif exit_code == 0 and self._result and self._result.get("status") == "disabled":
                         self._state, self._phase = "disabled", "Crafting disabled; check Quick Craft setup"
                     elif exit_code == 0 and self._result and self._result.get("status") in {"success", "deferred"}:
-                        club_result = self._parse_result(output, run_root, task="club")
-                        if club_result and club_result.get("status") == "deferred":
-                            self._state = "deferred"
-                            self._phase = ("Club awaiting reset test" if job["task"] == "club"
-                                           else "Other tasks complete; Club awaiting reset test")
-                            self._result["deferred_tasks"] = ["club"]
-                        else:
-                            self._state = "success"
-                            self._phase = TASK_LABELS[job["task"]]
+                        self._state = "success"
+                        self._phase = TASK_LABELS[job["task"]]
                     else:
                         self._state, self._phase = "failed", "Task failed; check the log"
                     if self._state in {"failed", "stopped"}:
@@ -602,6 +599,8 @@ class DashboardController:
                                 packs_state.write_state(selected, pack_state)
                         except (RuntimeError, OSError) as exc:
                             self._log(f'Could not save pack failure hold: {exc}', 'error')
+                    if self._state == "success":
+                        self._enqueue_badges(output, run_root)
                     self._current = None
                     self._process = None
                     # Materialize any due scheduled job before deciding the queue is done.
@@ -609,7 +608,54 @@ class DashboardController:
                     self._close_app_after_queue(selected, process)
                     if not self._queue:
                         self._batch_has_game_job = False
+                        self._badge_attempted.clear()
+                        self._ap_batch_observed = None
                     self._condition.notify_all()
+
+    def _enqueue_badges(self, output, run_root):
+        """Called under the queue lock. One attempt per task per busy batch."""
+        scan = self._parse_result(output, run_root, task='red_dots')
+        if not scan or scan['status'] != 'success':
+            return
+        root = Path(scan['run_dir'])
+        path = root / 'requests.json'
+        try:
+            if (root.is_symlink() or path.is_symlink()
+                    or not path.resolve().is_relative_to(run_root.resolve())
+                    or path.stat().st_size > 4096):
+                raise ValueError('Invalid badge request path')
+            value = json.loads(path.read_text())
+            tasks = value['tasks']
+            if (value.get('version') != 1 or not isinstance(tasks, list)
+                    or any(not isinstance(task, str) or task not in PRIORITY for task in tasks)):
+                raise ValueError('Invalid badge request tasks')
+        except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+            self._log(f'Could not read home notification requests: {exc}', 'error')
+            return
+        covered = set(self._badge_attempted)
+        for queued in self._queue:
+            covered.update(task_plan(queued['task'], self.config))
+        for task in PRIORITY:
+            if task not in tasks or task in covered:
+                continue
+            self._queue.append({'id': uuid4().hex, 'task': task,
+                                'created_at': _timestamp(), 'source': 'red_dot'})
+            covered.update(task_plan(task, self.config))
+            self._log(f'Queued {task}: home notification detected')
+        ap = value.get('ap')
+        valid_ap = type(ap) is int and 0 <= ap <= 9999
+        pending_ap = any('spend_ap' in task_plan(j['task'], self.config) for j in self._queue)
+        new_ap = (self._ap_batch_observed is not None and valid_ap and ap >= self._ap_batch_observed + 20)
+        if (self.config.ap_schedule_enabled and valid_ap and not pending_ap
+                and ap >= self.config.ap_floor + 20
+                and ('spend_ap' not in self._badge_attempted or new_ap)):
+            state = self._ap_status()
+            if not state.get('blocked_reason') and not state.get('pending'):
+                self._queue.append({'id': uuid4().hex, 'task': 'spend_ap',
+                                    'created_at': _timestamp(), 'source': 'ap_balance'})
+                self._log(f'Queued Spend AP: {ap} AP observed, floor {self.config.ap_floor}')
+        if valid_ap:
+            self._ap_batch_observed = ap
 
     def _close_app_after_queue(self, selected: Config, process) -> None:
         """Called once per completed job, under the dispatch/enqueue condition lock.
@@ -619,7 +665,7 @@ class DashboardController:
         a separately launched CLI runner. No idle timer repeats this action.
         """
         if (not selected.close_app_when_idle or self._queue or self._current is not None
-                or not self._batch_has_game_job  # A standalone placeholder leaves the game alone.
+                or not self._batch_has_game_job
                 or self._capturing or (process is not None and process.poll() is None)):
             return
         try:
@@ -706,7 +752,7 @@ class DashboardController:
             return result
 
     @staticmethod
-    def _parse_result(output: str, run_root: Path, *, task: str | None = None) -> dict | None:
+    def _parse_result(output: str, run_root: Path, *, task: str | None = None, exclude_scan=False) -> dict | None:
         decoder = json.JSONDecoder()
         for index in range(len(output) - 1, -1, -1):
             if output[index] != "{":
@@ -717,6 +763,8 @@ class DashboardController:
                     continue
                 result_path = Path(value["run_dir"]).resolve()
                 if not result_path.is_relative_to(run_root.resolve()):
+                    continue
+                if exclude_scan and result_path.name.startswith("red_dots-"):
                     continue
                 if task is not None and not result_path.name.startswith(f"{task}-"):
                     continue

@@ -256,8 +256,8 @@ def test_pending_blocks_even_after_reset(runner):
 
 
 def test_daily_ticket_plan_and_optional_toggles(runner):
-    assert task_plan("bounties", runner.config) == ("restart", "bounties")
-    assert task_plan("scrimmages", runner.config) == ("restart", "scrimmages")
+    assert task_plan("bounties", runner.config) == ("restart", "bounties", "red_dots")
+    assert task_plan("scrimmages", runner.config) == ("restart", "scrimmages", "red_dots")
     plan = task_plan("daily", runner.config)
     assert plan.index("bounties") < plan.index("scrimmages") < plan.index("lessons")
     disabled = replace(

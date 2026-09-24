@@ -25,7 +25,13 @@ class MailRunner(ShopRunner):
         self.phase(detail)
 
     def run(self):
-        self.wait('home')
+        frame = self.wait('home')
+        if not frame.screen.red_dot:
+            self.sleep(1)
+            frame = self.wait('home')
+            if not frame.screen.red_dot:
+                self.phase('No mailbox notification; mail skipped')
+                return self.finish()
         # Entering the mailbox can initially show a black/loading frame.
         for _ in range(3):
             frame = self.wait({'home', 'mail', 'mail_empty'})
@@ -34,6 +40,9 @@ class MailRunner(ShopRunner):
             self.tap(frame, (1156, 35), 'Open mailbox')
             self.sleep(2)
         frame = self.wait({'mail', 'mail_empty'})
+        return self.collect_from_mail(frame)
+
+    def collect_from_mail(self, frame):
         # Purchased packs must be claimed to start their duration. Then revisit
         # ordinary mail in case activating a product delivered another gift.
         for tab, target in (('product', (105, 218)), ('unclaimed', (105, 138))):

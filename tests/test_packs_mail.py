@@ -62,10 +62,10 @@ def config(tmp_path):
 
 def test_paid_options_default_off_and_mail_follows_packs(config):
     assert enabled(config)==()
-    assert task_plan('packs',config)==('restart','packs','mail')
-    assert task_plan('mail',config)==('restart','mail')
+    assert task_plan('packs',config)==('restart','packs','mail','red_dots')
+    assert task_plan('mail',config)==('restart','mail','red_dots')
     assert 'packs' not in task_plan('daily',config)
-    assert task_plan('daily',replace(config,packs_ap_enabled=True))[:4]==('restart','club','packs','mail')
+    assert task_plan('daily',replace(config,packs_ap_enabled=True))[:5]==('restart','club','free_pack','packs','mail')
     for key,bad in [('packs_ap_enabled',1),('packs_ap_max_cents',True),('packs_monthly_max_cents',0),('packs_half_monthly_max_cents',10001)]:
         with pytest.raises(ConfigError): replace(config,**{key:bad})
 

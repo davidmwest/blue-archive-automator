@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 import re
-import cv2
+from .home_badges import notification_dot
 
 from .crafting_vision import bright, has, yellow, within
 from .shop_vision import text_in
@@ -22,25 +22,6 @@ class TaskRewardsScreen:
     items: tuple = ()
     positions: tuple = ()
 
-
-def notification_dot(frame, bounds=(66, 246, 82, 263)):
-    """A compact saturated red/orange component at the Tasks badge position."""
-    x1, y1, x2, y2 = bounds
-    hsv = cv2.cvtColor(frame[y1:y2, x1:x2], cv2.COLOR_BGR2HSV)
-    mask = (
-        ((hsv[:, :, 0] <= 18) | (hsv[:, :, 0] >= 172))
-        & (hsv[:, :, 1] >= 180)
-        & (hsv[:, :, 2] >= 190)
-    ).astype("uint8")
-    count, _, stats, centers = cv2.connectedComponentsWithStats(mask)
-    return any(
-        12 <= stats[i, cv2.CC_STAT_AREA] <= 90
-        and 4 <= stats[i, cv2.CC_STAT_WIDTH] <= 11
-        and 4 <= stats[i, cv2.CC_STAT_HEIGHT] <= 11
-        and 4 <= centers[i][0] <= 11
-        and 4 <= centers[i][1] <= 12
-        for i in range(1, count)
-    )
 
 
 def classify_task_rewards(frame, words, *, home=False):

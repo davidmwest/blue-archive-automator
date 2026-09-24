@@ -5,9 +5,10 @@ import re
 import cv2
 import numpy as np
 
-from .crafting_vision import bright, cyan, has as _has, within, number
+from .crafting_vision import bright, cyan, yellow, has as _has, within, number
 from .packs_state import PACKS
-from .vision import VisionError
+from .vision import VisionError, classify
+from .home_badges import badges
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,7 @@ class ShopScreen:
     balances: dict = field(default_factory=dict)
     tab: str | None = None
     size: tuple[int, int] = (1280, 720)
+    red_dot: bool = False
 
 
 def text_in(words, box):
@@ -54,7 +56,8 @@ def receipt_items(words):
         if not match:
             continue
         x, y = word.center
-        name = text_in(words, (x - 72, y - 170, x + 72, y - 100)).strip()
+        name_box = (x - 74, 249, x + 74, 306) if 427 <= y <= 468 else (x - 72, y - 170, x + 72, y - 100)
+        name = text_in(words, name_box).strip()
         if name:
             items.append({'name': name, 'quantity': int(match[1].replace(',', ''))})
     return tuple(items)
@@ -93,8 +96,9 @@ def classify_shop(frame, words, *, home=False, billing=False):
     ap = number(words, (495, 0, 615, 48), r'(\d+)/(\d+)')
     if ap:
         balances['ap'] = ap[0]
-    header = re.sub(r'[^a-z]', '', text_in(words, (300, 100, 980, 205)).lower())
-    if (header == 'rewardacquired' and has(words, 'touch to continue', (380, 590, 900, 665))):
+    if (any(w.normalized.replace(' ', '') == 'rewardacquired' for w in within(words, (300, 120, 980, 210)))
+            and has(words, 'touch to continue', (380, 590, 900, 665))
+            and yellow(frame, (375, 134, 901, 182))):
         return ShopScreen('receipt', (640, 631), items=receipt_items(words), balances=balances)
     if (has(words, 'notice', (500, 130, 780, 200)) and cyan(frame, (660, 475, 860, 535))
             and has(words, 'would you like to claim the item?', (390, 290, 880, 395))):
@@ -158,7 +162,7 @@ def classify_shop(frame, words, *, home=False, billing=False):
                 return ShopScreen('mail_empty', balances=balances, tab=tab)
         return ShopScreen('unknown')
     if home:
-        return ShopScreen('home')
+        return ShopScreen('home', red_dot='mail' in badges(frame))
     return ShopScreen('unknown')
 
 
@@ -172,5 +176,5 @@ class ShopVision:
             raise VisionError('Invalid shop screenshot')
         words = self.startup.read(frame)
         home = (not billing and frame.shape[:2] == (720, 1280)
-                and {'home_left', 'home_right'} <= self.startup.matches(frame).keys())
+                and classify(words, self.startup.matches(frame)).state == 'home')
         return classify_shop(frame, words, home=home, billing=billing)

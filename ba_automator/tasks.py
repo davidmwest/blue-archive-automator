@@ -6,6 +6,8 @@ from .config import Config
 
 
 TASK_LABELS = {
+    "red_dots": "Home notifications checked",
+    "free_pack": "Free package checked and mail collected",
     "tasks": "Task rewards collected",
     "bounties": "Bounty tickets swept",
     "scrimmages": "Scrimmage tickets swept",
@@ -21,24 +23,25 @@ TASK_LABELS = {
     "daily": "Daily tasks complete",
 }
 TASKS = frozenset(TASK_LABELS)
-RUN_PREFIXES = ("tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
+RUN_PREFIXES = ("red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
 
 
-def task_plan(command: str, config: Config) -> tuple[str, ...]:
-    """Club has a reserved step after restart; its current stub sends no input."""
+def _task_plan(command: str, config: Config) -> tuple[str, ...]:
+    """Producer jobs collect mail after their game actions."""
     if command == "daily":
         from .packs_state import enabled
-        plan = ("restart", "club", *(("packs",) if enabled(config) else ()), "mail", "cafe")
+        plan = ("restart", "club", "free_pack", *(("packs",) if enabled(config) else ()), "mail", "cafe")
         plan = (*plan, *(("bounties",) if config.bounties_enabled_in_daily else ()),
                 *(("scrimmages",) if config.scrimmages_enabled_in_daily else ()))
         plan = (*plan, "lessons") if config.lessons_enabled_in_daily else plan
         plan = (*plan, "spend_ap") if config.ap_schedule_enabled else plan
         return (*plan, "tasks")
     if command == "cafe":
-        return ("restart", "club", "cafe", *(("spend_ap",) if config.ap_schedule_enabled else ()))
-    if command == "club":
-        # A placeholder does not need to launch the game. Add restart when live.
-        return ("club",)
+        return ("restart", "club", "mail", "cafe", *(("spend_ap",) if config.ap_schedule_enabled else ()))
+    if command in {"club", "free_pack"}:
+        return ("restart", command, "mail")
+    if command == "red_dots":
+        return ("restart",)
     if command == "packs":
         return ("restart", "packs", "mail", *(("spend_ap",) if config.ap_schedule_enabled else ()))
     if command == 'mail':
@@ -48,3 +51,8 @@ def task_plan(command: str, config: Config) -> tuple[str, ...]:
     if command == "restart":
         return ("restart",)
     raise ValueError(f"Unknown job: {command}")
+
+
+def task_plan(command: str, config: Config) -> tuple[str, ...]:
+    """Check badges once after successful game work, before closing an idle app."""
+    return (*_task_plan(command, config), "red_dots")
