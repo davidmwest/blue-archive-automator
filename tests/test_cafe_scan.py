@@ -10,7 +10,15 @@ from ba_automator.cafe import CafeRunner, PAN_DOWN, PAN_LEFT, PAN_RIGHT, PAN_UP
 def runner_with_motion(motions):
     runner = CafeRunner.__new__(CafeRunner)
     iterator = iter(motions)
-    runner.pan = lambda vector: next(iterator)
+    runner.motions_seen, runner.scanned_after = [], []
+
+    def pan(vector):
+        motion = next(iterator)
+        runner.motions_seen.append(motion)
+        return motion
+
+    runner.pan = pan
+    runner.pet_visible = lambda: runner.scanned_after.append(len(runner.motions_seen))
     runner.fail = lambda message: (_ for _ in ()).throw(RuntimeError(message))
     return runner
 
@@ -27,20 +35,39 @@ def test_boundary_needs_two_separately_stationary_drags():
 
 def test_unknown_motion_never_proves_boundary():
     runner = runner_with_motion([None] * 12)
-    with pytest.raises(RuntimeError, match="could not be measured"):
+    with pytest.raises(RuntimeError, match="could not be verified after twelve drags"):
         runner.pan_region(PAN_LEFT)
+    assert runner.scanned_after == list(range(1, 13))
+    assert len(runner.motions_seen) == 12
 
 
-def test_unknown_motion_cannot_be_recovered_by_a_later_stationary_edge():
+def test_each_unknown_movement_is_scanned_before_a_later_verified_edge():
     runner = runner_with_motion([None, None, (0, 0), (0, 0)])
-    with pytest.raises(RuntimeError, match="could not be measured"):
-        runner.pan_region(PAN_LEFT)
+    assert runner.pan_region(PAN_LEFT) is True
+    assert runner.scanned_after == [1, 2]
+    assert len(runner.motions_seen) == 4
 
 
-def test_unknown_motion_between_stationary_frames_stops_coverage():
+def test_unknown_motion_requires_two_new_stationary_frames_to_prove_edge():
     runner = runner_with_motion([(0, 0), None, (0, 0), (0, 0)])
-    with pytest.raises(RuntimeError, match="could not be measured"):
+    assert runner.pan_region(PAN_LEFT) is True
+    assert runner.scanned_after == [2]
+    assert len(runner.motions_seen) == 4
+
+
+def test_unknown_motion_restarts_distance_from_its_newly_scanned_view():
+    runner = runner_with_motion([(-200, 0), None, (-200, 0), (-200, 0), (-60, 0)])
+    assert runner.pan_region(PAN_LEFT) is False
+    assert runner.scanned_after == [2]
+    assert len(runner.motions_seen) == 5
+
+
+def test_failed_scan_after_unknown_motion_sends_no_further_drag():
+    runner = runner_with_motion([None, (0, 0), (0, 0)])
+    runner.pet_visible = lambda: runner.fail("Student view could not be verified")
+    with pytest.raises(RuntimeError, match="Student view could not be verified"):
         runner.pan_region(PAN_LEFT)
+    assert len(runner.motions_seen) == 1
 
 
 @pytest.mark.parametrize("motion", [(100, 0), (-100, 70)])

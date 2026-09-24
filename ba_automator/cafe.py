@@ -319,8 +319,9 @@ class CafeRunner:
     def pan_region(self, vector, *, to_edge=False):
         """Move one overlapping view, or normalize to a verified camera edge.
 
-        Two separately observed stationary drags establish an edge. Unknown
-        motion never counts as an edge, and all attempts have a hard bound.
+        Two separately observed stationary drags establish an edge. An unknown
+        short drag triggers a student scan and resets movement evidence; it never
+        counts as distance or an edge. All attempts have a hard bound.
         """
         axis = 0 if vector[0][0] != vector[1][0] else 1
         direction = 1 if vector[1][axis] > vector[0][axis] else -1
@@ -331,7 +332,12 @@ class CafeRunner:
         for _ in range(12):
             motion = self.pan(vector)
             if motion is None:
-                self.fail("Cafe camera movement could not be measured; inspect the saved view")
+                # The fixed-profile drags are short enough to check this view
+                # before moving again, even when animation hides scene matches.
+                self.pet_visible()
+                distance = 0.0
+                stationary = 0
+                continue
             movement = motion[axis] * direction
             if abs(motion[1-axis]) > max(12, abs(movement) * .3) or movement < -5:
                 self.fail("Cafe camera moved unexpectedly; inspect the saved view")
