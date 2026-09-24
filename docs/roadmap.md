@@ -26,7 +26,7 @@ Continue validation with repeat visits after the relationship cooldown, occluded
 
 The runner measures scene displacement, scans overlapping views, and requires two observed stationary drags to establish camera bounds, within a 15-minute visit budget. Unmeasurable movement triggers an intermediate student scan and resets distance/boundary evidence before another short drag. Camera movement also passed a separate check in another player's furniture layout. The runner has no zoom dependency. A free-invitation cooldown has prevented the complete live invitation flow; exact-name row selection and confirmation remain to be checked when available. The Gift panel was inspected, and no bulk relationship-collection button was verified.
 
-## 3. Lessons — implemented; live validation in progress
+## 3. Lessons — relationship routine live verified; school rank-up pending
 
 The default relationship strategy compares rooms across all unlocked locations and maximizes owned-student opportunities. The alternative school-rank strategy selects the lowest rank and XP progress, then the fullest room, breaking ties with owned relationship ranks. The planner operates on observed data without device access or runtime AI.
 
@@ -34,7 +34,9 @@ The runner surveys every unlocked school and reconciles the observed ranks with 
 
 `lessons` runs restart → Lessons; `daily` defaults to restart → Cafe → Lessons. The existing three-hour timer remains Cafe-only. A completed Cafe visit still updates its schedule if later Lessons work fails or is interrupted. No daily-reset timer or ticket-purchase flow has been added.
 
-Offline coverage includes planner selection, incomplete evidence, config validation, job sequencing, stop/pause behavior, and preserving Cafe scheduling after later task failure. Live screen calibration and a complete ticket-spending run are underway; the [Lessons validation section](lessons.md#validation-status) records the evidence when available.
+Seven authorized tickets were used across calibration and guarded runs, with seven matching receipts and ticket decrements, in rooms containing two owned students each. The final uninterrupted job used the remaining two tickets, returned to a verified home screen, and closed the game in 475.3 seconds including restart. Every ticket compared 94 room cards across 12 unlocked locations with Total Area Rank 80. The [Lessons validation section](lessons.md#validation-status) records the limits and evidence.
+
+Offline coverage includes both policies, incomplete evidence, config validation, job sequencing, stop/pause behavior, and preserving Cafe scheduling after later task failure. The school-rank policy is tested with changing rank/XP observations; its actual in-game rank-up interruption still needs a captured live case. Recognition of an explicit rank-up title with an active Confirm button has synthetic coverage, and unsupported variants stop.
 
 ## 4. Event navigation
 

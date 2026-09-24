@@ -71,7 +71,7 @@ to close the game between dashboard visits, enable the idle-close setting or set
 
 ## lessons
 
-queue **lessons** for restart → Lessons, or **daily** for restart → Cafe → Lessons. the lesson task is implemented and undergoing live validation; check [the validation status](lessons.md#validation-status) before relying on unattended use.
+queue **lessons** for restart → Lessons, or **daily** for restart → Cafe → Lessons. the relationship strategy has passed live; [the validation notes](lessons.md#validation-status) cover the tested run and the remaining school rank-up case.
 
 the default is to check every unlocked location, then choose rooms with the most owned students. ties go to the highest sum of owned students' relationship ranks. the alternate strategy picks the lowest school rank, then the lowest XP progress, and chooses its fullest room. tied rooms favor higher owned relationships. it rechecks after every ticket; no ticket purchases are allowed.
 

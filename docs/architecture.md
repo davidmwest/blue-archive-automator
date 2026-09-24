@@ -2,7 +2,7 @@
 
 See [the high-level design](design.md) for the project direction and planned contracts. This document describes the implementation that exists today.
 
-Status: restart and a complete two-floor Cafe visit verified live; local dashboard, scheduling, idle-close, and event-profile recognition implemented. Lessons runner, planner, settings, and queue integration are implemented with live validation in progress. Optional invitation completion remains unverified live. Development session: September 23–24, 2026.
+Status: restart, a complete two-floor Cafe visit, and the relationship-focused Lessons routine verified live; local dashboard, scheduling, idle-close, and event-profile recognition implemented. Both Lesson policies, settings, and queue integration are implemented. Actual school rank-up handling and optional invitation completion remain unverified live. Development session: September 23–24, 2026.
 
 ## Runtime
 

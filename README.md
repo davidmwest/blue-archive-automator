@@ -28,12 +28,12 @@ on Windows: `py -3.11 -m ba_automator.demo`. open [localhost:8766](http://127.0.
 | --- | --- |
 | restart | closes and relaunches the game, accepts required data downloads, dismisses startup popups, verifies a clear home screen |
 | cafe | restarts first, collects available AP and credits, scans both unlocked floors for relationship icons, returns home |
-| lessons | surveys locations before spending tickets; defaults to the most owned students, with lowest-school-rank leveling as an option; live validation is in progress |
+| lessons | surveys locations before each ticket; defaults to the most owned students, with lowest-school-rank leveling as an option |
 | dashboard | serial queue, pause/stop controls, settings, screenshots, and persistent important-action history |
 | scheduling | optional Cafe visits every three hours plus 15 seconds, bounded failure retries, optional game closure between visits |
 | event profiles | reviewed JSON and recognition helpers; navigation and farming are still to come |
 
-restart and a complete two-floor Cafe visit have passed live on the development Mac. offline tests run on macOS, Windows, and Ubuntu. live Windows operation, running beside ALAS, and a complete free invitation still need verification. a completed scan and a verified relationship increase are different results; the logs keep them separate.
+restart, a complete two-floor Cafe visit, and the relationship-focused Lessons routine have passed live on the development Mac. seven lesson tickets were tested with verified receipts; the final run reached zero tickets, returned home, and closed the game. offline tests run on macOS, Windows, and Ubuntu. actual school rank-up popups, live Windows operation, running beside ALAS, and a complete free invitation still need verification. a completed scan and a verified relationship increase are different results; the logs keep them separate.
 
 `daily` runs restart → cafe → lessons. the three-hour cafe schedule stays cafe-only. lessons can also be queued on their own, with a ticket limit and optional location list. it uses the tickets you already have; it never buys more. [how the lesson strategies work →](docs/lessons.md)
 
@@ -51,7 +51,7 @@ the first profile is the global English game at **1280×720, 320 DPI**. use a de
 
 ## what's next
 
-finish live lesson validation, repeat Cafe visits after cooldown, and finish the free-invitation check. configured mission sweeps are a useful next job: collecting Cafe AP clears its storage, but spending it needs its own policy. social, crafting, and event farming follow one verified routine at a time.
+capture an actual school rank-up, repeat Cafe visits after cooldown, and finish the free-invitation check. configured mission sweeps are a useful next job: collecting Cafe AP clears its storage, but spending it needs its own policy. social, crafting, and event farming follow one verified routine at a time.
 
 the queue is currently in memory. schedule state and important actions survive a server restart, but queued jobs don't. durable recovery, emulator lifecycle management, and service installation are later work. see [the roadmap](docs/roadmap.md) for the live evidence and remaining limits.
 

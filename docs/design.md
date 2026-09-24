@@ -138,7 +138,7 @@ The real dashboard remains bound to loopback, with Host/Origin validation and CS
 
 ## 7. Delivery and validation
 
-The current foundation is implemented: restart, a serial dashboard queue, Cafe, scheduling, idle-close, important-action history, and event-profile recognition. A full two-floor Cafe visit passed on the development Mac. Optional invitation completion, live Windows operation, and simultaneous operation with ALAS still need live verification. Cross-platform offline tests are evidence about the software, not proof of those live behaviors.
+The current foundation is implemented: restart, a serial dashboard queue, Cafe, Lessons, scheduling, idle-close, important-action history, and event-profile recognition. A full two-floor Cafe visit and a relationship-focused Lessons visit passed on the development Mac. Actual school rank-up handling, optional invitation completion, live Windows operation, and simultaneous operation with ALAS still need live verification. Cross-platform offline tests are evidence about the software, not proof of those live behaviors.
 
 | Next increment | Exit condition |
 | --- | --- |

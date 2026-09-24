@@ -1,6 +1,6 @@
 # Lessons
 
-Lessons is the third game task, following restart and Cafe. Its first version is being implemented against the global English client at 1280×720. This document defines its policy and verification contract; live results belong in the validation section below rather than being inferred from passing planner tests.
+Lessons is the third game task, following restart and Cafe. Its first version supports the global English client at 1280×720 and 320 DPI. This document defines its policy and verification contract; the validation section records the observed results and remaining limits.
 
 ## What a visit does
 
@@ -52,7 +52,7 @@ The shared `runtime.py` provides a bounded screenshot ring, journal, task error,
 
 ### Recognition details and rank-up limits
 
-The room grid must finish its opening animation before the fixed portrait coordinates can be used. Ownership requires a pink border and a relationship heart protruding beyond the portrait; red or pink hair inside a blue border is unowned. Small relationship numbers use enlarged local crops. Long room names use agreeing cropped reads, and OCR fragments on one line remain in left-to-right order. These crops are cached, but a slow initial read still requires a fresh capture before input.
+The room grid must finish its opening animation before the fixed portrait coordinates can be used. Ownership requires a pink border and a relationship heart protruding beyond the portrait; red or pink hair inside a blue border is unowned. Small relationship numbers use enlarged local crops. Long room names use agreeing reads with a white crop margin, and OCR fragments on one line remain in left-to-right order. A missing ticket count uses agreeing enlarged reads of its labeled control. These crops are cached; the runner recaptures when recognition leaves less than one second for evidence persistence and device preflight within the five-second input deadline.
 
 Completed rooms retain white headings while every portrait's standard border becomes dim. The detector checks that consistent dimming, rather than student artwork or green check marks alone. Lesson Report recognition requires the loaded location, relationship, and reward sections with one visible Confirm control. Its blank loading state is not a receipt.
 
@@ -82,7 +82,17 @@ Daily ticket availability is read from the game. A later daily scheduler must id
 
 ## Validation status
 
-The shared-runtime extraction passes the existing restart and Cafe regression tests. Planner tests, screen recognition, resource-use confirmation, and a complete live Lessons run are being developed. Do not treat this section as a live-success claim until the run evidence is recorded here.
+On September 24, 2026 UTC, the authorized BlueStacks Air staging instance completed the following checks:
+
+- Surveys covered all 12 unlocked locations and 94 room cards, reconciling to Total Area Rank 80 before each ticket.
+- All seven available tickets were used on seven distinct rooms with two owned students each, for 14 owned-student lesson opportunities. Every ticket has a matching report and an observed one-ticket decrement; each selected school gained 100 XP.
+- This total includes calibration and stopped runs. The final uninterrupted dashboard job consumed the remaining two tickets, repeated the full survey between them, reached zero tickets, returned to a clear home screen, and closed the app. Lessons took 419.8 seconds; the complete job including restart took 475.3 seconds.
+- Relationship rank-up interruptions, completed-room exclusion, wrapped room names, the small ticket counter, transient tap effects, and slow recognition were exercised. Captured regressions and timing tests cover the issues found during calibration. A rejected stale tap sent no input and left its ticket available.
+- The 593-test offline suite passes on macOS, Windows, and Ubuntu. Wheel/source packaging, included fixtures, license notices, and the dependency-free installed demo pass their checks.
+
+The final local run is `lessons-20260924T064611-02b9e014`. Full screenshots, survey JSON, receipt evidence, and important-action history remain local; the repository contains sanitized replay fixtures.
+
+All live spending used the relationship policy. The school-rank policy is covered by observed-data and multi-ticket rank/XP tests, including switching schools after each ticket, but a real school rank-up popup remains unverified as described above. Live Windows execution and broader account/layout coverage remain future checks.
 
 ## Mechanics references
 
