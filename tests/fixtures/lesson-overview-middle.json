@@ -1,0 +1,296 @@
+{
+  "source": "Development Mac capture, September 24, 2026; masked outside recognition controls. OCR is recorded local output.",
+  "words": [
+    {
+      "text": "Lesson",
+      "box": [
+        100,
+        8,
+        203,
+        40
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "?",
+      "box": [
+        210,
+        13,
+        231,
+        34
+      ],
+      "confidence": 0.97
+    },
+    {
+      "text": "Tickets Owned 7/7",
+      "box": [
+        85,
+        89,
+        278,
+        114
+      ],
+      "confidence": 0.996
+    },
+    {
+      "text": "Exp",
+      "box": [
+        297,
+        90,
+        340,
+        116
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "On",
+      "box": [
+        340,
+        90,
+        380,
+        117
+      ],
+      "confidence": 0.983
+    },
+    {
+      "text": "Location Select",
+      "box": [
+        653,
+        94,
+        882,
+        126
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Total Area Rank",
+      "box": [
+        885,
+        91,
+        1004,
+        113
+      ],
+      "confidence": 0.998
+    },
+    {
+      "text": "Rank 80",
+      "box": [
+        885,
+        108,
+        955,
+        131
+      ],
+      "confidence": 0.998
+    },
+    {
+      "text": "Ticket Info",
+      "box": [
+        1094,
+        96,
+        1218,
+        119
+      ],
+      "confidence": 0.995
+    },
+    {
+      "text": "100/2100",
+      "box": [
+        857,
+        156,
+        931,
+        176
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Rank7",
+      "box": [
+        660,
+        197,
+        730,
+        224
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Red Winter Federal Academy",
+      "box": [
+        737,
+        197,
+        1032,
+        224
+      ],
+      "confidence": 0.983
+    },
+    {
+      "text": "REWARD",
+      "box": [
+        1147,
+        197,
+        1218,
+        217
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "0/2100",
+      "box": [
+        863,
+        260,
+        923,
+        285
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "[Rank 6",
+      "box": [
+        661,
+        304,
+        729,
+        328
+      ],
+      "confidence": 0.897
+    },
+    {
+      "text": "Hyakkiyako Central Area",
+      "box": [
+        739,
+        304,
+        994,
+        330
+      ],
+      "confidence": 0.998
+    },
+    {
+      "text": "REWARD",
+      "box": [
+        1147,
+        302,
+        1218,
+        323
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "600/1600",
+      "box": [
+        853,
+        366,
+        932,
+        389
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Rank6",
+      "box": [
+        660,
+        409,
+        730,
+        436
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "D.U. Shiratori City",
+      "box": [
+        738,
+        410,
+        924,
+        435
+      ],
+      "confidence": 0.987
+    },
+    {
+      "text": "REWARD",
+      "box": [
+        1147,
+        408,
+        1218,
+        428
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "700/1600",
+      "box": [
+        856,
+        473,
+        931,
+        494
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Rank7",
+      "box": [
+        662,
+        517,
+        729,
+        541
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Shanhaijing Main Special Zone",
+      "box": [
+        735,
+        512,
+        1047,
+        543
+      ],
+      "confidence": 0.985
+    },
+    {
+      "text": "REWARD",
+      "box": [
+        1146,
+        513,
+        1219,
+        536
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "0/2100",
+      "box": [
+        862,
+        578,
+        923,
+        602
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Rank 6",
+      "box": [
+        662,
+        622,
+        728,
+        647
+      ],
+      "confidence": 0.992
+    },
+    {
+      "text": "Haruhabara Electric Town",
+      "box": [
+        737,
+        620,
+        1049,
+        648
+      ],
+      "confidence": 0.988
+    },
+    {
+      "text": "REWARD",
+      "box": [
+        1147,
+        620,
+        1218,
+        641
+      ],
+      "confidence": 1.0
+    }
+  ],
+  "bond_crops": []
+}

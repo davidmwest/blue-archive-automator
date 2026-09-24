@@ -1,4 +1,4 @@
-"""Validated, machine-local configuration for the restart runner."""
+"""Validated, machine-local configuration for tasks and the dashboard."""
 
 from __future__ import annotations
 
@@ -31,6 +31,10 @@ class Config:
     cafe_schedule_enabled: bool = False
     cafe_invite_enabled: bool = False
     cafe_invite_student: str = ""
+    lessons_strategy: str = "relationship"
+    lessons_max_tickets: int = 0
+    lessons_locations: tuple[str, ...] = ()
+    lessons_enabled_in_daily: bool = True
     close_app_when_idle: bool = False
     auto_download: bool = True
     expected_width: int = 1280
@@ -78,7 +82,8 @@ class Config:
             raise ConfigError("restart.home_confirmations must be an integer from 1 to 10")
         if type(self.auto_download) is not bool:
             raise ConfigError("restart.auto_download must be true or false")
-        for name in ("cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle"):
+        for name in ("cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle",
+                     "lessons_enabled_in_daily"):
             if type(getattr(self, name)) is not bool:
                 raise ConfigError(f"{name} must be true or false")
         if (not isinstance(self.cafe_invite_student, str) or len(self.cafe_invite_student) > 100
@@ -89,6 +94,18 @@ class Config:
             raise ConfigError("Choose cafe.invite_student before enabling invitations")
         if self.cafe_invite_enabled and not re.search(r"[A-Za-z]", self.cafe_invite_student):
             raise ConfigError("cafe.invite_student must use the English in-game name")
+        if self.lessons_strategy not in ("relationship", "school_rank"):
+            raise ConfigError("lessons.strategy must be relationship or school_rank")
+        if type(self.lessons_max_tickets) is not int or not 0 <= self.lessons_max_tickets <= 99:
+            raise ConfigError("lessons.max_tickets must be an integer from 0 to 99 (0 uses available tickets)")
+        if (not isinstance(self.lessons_locations, (list, tuple)) or len(self.lessons_locations) > 50
+                or any(not isinstance(name, str) or not name.strip() or len(name) > 100
+                       or any(ord(c) < 32 for c in name) for name in self.lessons_locations)):
+            raise ConfigError("lessons.locations must be a list of up to 50 nonempty location names")
+        locations = tuple(name.strip() for name in self.lessons_locations)
+        if len({name.casefold() for name in locations}) != len(locations):
+            raise ConfigError("lessons.locations must not contain duplicate names")
+        object.__setattr__(self, "lessons_locations", locations)
         if (type(self.expected_width) is not int or self.expected_width != 1280
                 or type(self.expected_height) is not int or self.expected_height != 720):
             raise ConfigError("The supported display is fixed at 1280×720")
@@ -114,6 +131,7 @@ class Config:
                         "home_confirmations", "action_cooldown", "auto_download"},
             "storage": {"run_dir", "lock_dir", "state_dir"},
             "cafe": {"schedule_enabled", "invite_enabled", "invite_student"},
+            "lessons": {"strategy", "max_tickets", "locations", "enabled_in_daily"},
             "automation": {"close_app_when_idle"},
         }
         unexpected_sections = document.keys() - allowed.keys()
@@ -127,7 +145,7 @@ class Config:
             unexpected_keys = entries.keys() - keys
             if unexpected_keys:
                 raise ConfigError(f"Unknown {section} settings: {', '.join(sorted(unexpected_keys))}")
-            values.update({f"cafe_{key}" if section == "cafe" else key: value
+            values.update({f"{section}_{key}" if section in {"cafe", "lessons"} else key: value
                            for key, value in entries.items()})
         for required in ("serial", "package"):
             if required not in values:

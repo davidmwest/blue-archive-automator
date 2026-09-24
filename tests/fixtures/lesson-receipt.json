@@ -1,0 +1,76 @@
+{
+  "source": "Authorized development Mac capture, September 24, 2026 UTC; only Lesson Report panel retained.",
+  "words": [
+    {
+      "text": "Lesson Report",
+      "box": [
+        538,
+        121,
+        742,
+        160
+      ],
+      "confidence": 0.987
+    },
+    {
+      "text": "Lesson Location",
+      "box": [
+        561,
+        184,
+        717,
+        210
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Black Tortoise Promenade",
+      "box": [
+        499,
+        224,
+        780,
+        250
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Relationship Points",
+      "box": [
+        546,
+        265,
+        734,
+        297
+      ],
+      "confidence": 0.993
+    },
+    {
+      "text": "Lesson Reward",
+      "box": [
+        566,
+        389,
+        714,
+        416
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "x100",
+      "box": [
+        460,
+        473,
+        502,
+        494
+      ],
+      "confidence": 0.904
+    },
+    {
+      "text": "Confirm",
+      "box": [
+        572,
+        535,
+        708,
+        574
+      ],
+      "confidence": 1.0
+    }
+  ],
+  "bond_crops": []
+}

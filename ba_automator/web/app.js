@@ -3,8 +3,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const SVG_NS = "http://www.w3.org/2000/svg";
-  const booleanSettings = new Set(["auto_download", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle"]);
-  const settingNames = ["auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student"];
+  const booleanSettings = new Set(["auto_download", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle", "lessons_enabled_in_daily"]);
+  const stringSettings = new Set(["cafe_invite_student", "lessons_strategy"]);
+  const settingNames = ["auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
   const fields = Object.fromEntries(settingNames.map((name) => [name, $(name.replaceAll("_", "-"))]));
   let status = null;
   let connected = false;
@@ -31,7 +32,7 @@
   let actionsLimit = 15;
   let noticeTimer = null;
 
-  const taskName = (task) => ({ restart: "Restart", daily: "Daily", cafe: "Café" }[task] || task || "—");
+  const taskName = (task) => ({ restart: "Restart", daily: "Daily", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
   const isRunning = () => Boolean(status && (status.state === "running" || status.current_job));
   const queue = () => (Array.isArray(status?.queue) ? status.queue : []);
   const isDemo = () => status?.demo === true;
@@ -121,6 +122,7 @@
     $("run-restart").disabled = unavailable;
     $("run-daily").disabled = unavailable;
     $("run-cafe").disabled = unavailable;
+    $("run-lessons").disabled = unavailable;
     $("run-restart").querySelector("span").textContent = "queue restart";
     $("run-daily").textContent = "queue daily";
     $("run-cafe").textContent = "queue café";
@@ -136,6 +138,12 @@
     $("save-settings").disabled = unavailable || active || queued || !settingsDirty;
     fields.cafe_invite_student.disabled = unavailable || !fields.cafe_invite_enabled.checked;
     fields.cafe_invite_student.required = fields.cafe_invite_enabled.checked;
+    $("lessons-strategy-description").textContent = fields.lessons_strategy.value === "school_rank"
+      ? "lowest rank first, then lowest XP. recheck after each ticket. pick the room with the most students; higher owned relationships break ties."
+      : "check every location first. use tickets on rooms with the most owned students; higher relationships break ties.";
+    $("daily-plan").textContent = status?.config?.lessons_enabled_in_daily === false
+      ? "daily does restart → café. lessons are off for daily, but you can still queue them yourself."
+      : "daily does restart → café → lessons. grab the AP, pat the students, then make the tickets count.";
     $("map-toggle").disabled = !frameLoaded || !mapData;
     document.querySelectorAll("[data-cancel-job]").forEach((button) => { button.disabled = unavailable; });
   }
@@ -143,8 +151,9 @@
   function renderSettings(config) {
     if (!config || (settingsLoaded && settingsDirty)) return;
     settingNames.forEach((name) => {
-      if (booleanSettings.has(name)) fields[name].checked = Boolean(config[name]);
-      else fields[name].value = config[name] ?? "";
+      if (booleanSettings.has(name)) fields[name].checked = Boolean(config[name] ?? (name === "lessons_enabled_in_daily"));
+      else if (name === "lessons_locations") fields[name].value = Array.isArray(config[name]) ? config[name].join("\n") : "";
+      else fields[name].value = config[name] ?? ({ lessons_strategy: "relationship", lessons_max_tickets: 0 }[name] ?? "");
     });
     settingsLoaded = true;
     $("settings-status").textContent = isDemo() ? "sample settings · read only" : "saved on this machine";
@@ -556,7 +565,7 @@
       const time = dateValue(action.time);
       const when = time ? `${time.toLocaleDateString([], { month: "short", day: "numeric" })} · ${shortTime(action.time)}` : "—";
       const name = String(action.action || "Action").replaceAll("_", " ");
-      const place = [action.student, action.cafe ? `Café ${action.cafe}` : null].filter(Boolean).join(" · ") || "—";
+      const place = [action.student, action.cafe ? `Café ${action.cafe}` : null, action.location, action.room].filter(Boolean).join(" · ") || "—";
       [when, taskName(action.task), name, action.detail || "—", place].forEach((value) => {
         const cell = document.createElement("td");
         cell.textContent = value;
@@ -587,6 +596,7 @@
   $("run-restart").addEventListener("click", () => void post("/api/run", { task: "restart" }, "restart’s in the queue."));
   $("run-daily").addEventListener("click", () => void post("/api/run", { task: "daily" }, "daily’s in the queue."));
   $("run-cafe").addEventListener("click", () => void post("/api/run", { task: "cafe" }, "café’s in the queue."));
+  $("run-lessons").addEventListener("click", () => void post("/api/run", { task: "lessons" }, "lessons are in the queue."));
   $("stop-run").addEventListener("click", () => void post("/api/stop", {}, "stopping this task and pausing the queue. everything waiting stays there."));
   $("pause-queue").addEventListener("click", () => void post("/api/pause", {}, "queue paused. the current task can finish."));
   $("resume-queue").addEventListener("click", () => void post("/api/resume", {}, "queue’s running again."));
@@ -610,7 +620,12 @@
       fields.cafe_invite_student.setCustomValidity("Enter the student’s exact English name to enable invitations.");
     }
     if (!$("settings-form").reportValidity()) return;
-    const values = Object.fromEntries(settingNames.map((name) => [name, booleanSettings.has(name) ? fields[name].checked : name === "cafe_invite_student" ? fields[name].value.trim() : Number(fields[name].value)]));
+    const values = Object.fromEntries(settingNames.map((name) => {
+      const value = booleanSettings.has(name) ? fields[name].checked
+        : name === "lessons_locations" ? fields[name].value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+        : stringSettings.has(name) ? fields[name].value.trim() : Number(fields[name].value);
+      return [name, value];
+    }));
     const result = await post("/api/settings", values, "settings saved.");
     if (result !== null) {
       settingsDirty = false;

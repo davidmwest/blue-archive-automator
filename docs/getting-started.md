@@ -46,7 +46,8 @@ open [the dashboard](http://127.0.0.1:8765). `serve --port 8767` selects a diffe
 | `serve` | runs the local dashboard and one-job-at-a-time queue |
 | `restart` | closes the game and reaches a clear home screen |
 | `cafe` | runs restart, collects Cafe earnings, and checks students |
-| `daily` | currently runs the same restart → Cafe sequence |
+| `lessons` | runs restart, surveys locations, and uses existing tickets with the configured strategy |
+| `daily` | runs restart → Cafe → Lessons; the Lessons step can be disabled |
 | `probe` | checks the selected device, game, display size, and foreground app |
 | `capture --output data/capture.png` | saves a screenshot without game input |
 | `inspect --image data/capture.png` | classifies a saved screenshot without an emulator connection |
@@ -54,7 +55,7 @@ open [the dashboard](http://127.0.0.1:8765). `serve --port 8767` selects a diffe
 
 for example, `.venv/bin/python -m ba_automator --config config/local.toml restart` runs without the dashboard. the installed `ba` command is also available.
 
-required game-data downloads are accepted automatically. add `--no-downloads` to `restart`, `cafe`, or `daily` to stop at a download prompt, or turn off automatic downloads in settings. external sign-in, passwords, 2FA, maintenance, and store app updates stop for attention. after handling the screen, run the task again.
+required game-data downloads are accepted automatically. add `--no-downloads` to `restart`, `cafe`, `lessons`, or `daily` to stop at a download prompt, or turn off automatic downloads in settings. external sign-in, passwords, 2FA, maintenance, and store app updates stop for attention. after handling the screen, run the task again.
 
 ## Cafe and scheduling
 
@@ -68,9 +69,29 @@ pause lets the current job finish. stop interrupts it and pauses the queue. resu
 
 to close the game between dashboard visits, enable the idle-close setting or set `close_app_when_idle = true` under `[automation]`. it closes the configured Blue Archive app once the queue has finished, including after a failed or stopped final job. it doesn't change standalone CLI runs or shut down BlueStacks. this setting is off by default.
 
+## lessons
+
+queue **lessons** for restart → Lessons, or **daily** for restart → Cafe → Lessons. the lesson task is implemented and undergoing live validation; check [the validation status](lessons.md#validation-status) before relying on unattended use.
+
+the default is to check every unlocked location, then choose rooms with the most owned students. ties go to the highest sum of owned students' relationship ranks. the alternate strategy picks the lowest school rank, then the lowest XP progress, and chooses its fullest room. tied rooms favor higher owned relationships. it rechecks after every ticket; no ticket purchases are allowed.
+
+these options are in the dashboard's Lessons settings or your local config:
+
+```toml
+[lessons]
+strategy = "relationship"  # or "school_rank"
+max_tickets = 0             # all existing tickets; use 1–99 to limit a visit
+locations = []              # empty = all; otherwise exact English location names
+enabled_in_daily = true
+```
+
+the dashboard's location list takes one name per line. an unknown name stops the job so a typo cannot redirect tickets somewhere else. a configured limit applies per run, not per day. the game counter and already-completed rooms determine what remains available.
+
+`enabled_in_daily = false` removes lessons from the daily plan; the standalone lessons button still works. this does **not** add a daily timer. the existing automatic schedule only runs Cafe every three hours. see [Lessons](lessons.md) for scoring, coverage checks, and receipt verification.
+
 ## inspect a run
 
-runs save an `events.jsonl` log and a ring of the latest 24 screenshots under `data/runs/`, plus retained evidence such as `home.png`, popup before/after pairs, and Cafe reward receipts. important actions and scheduling state live in `data/state/`. attempted taps and confirmed results are recorded separately.
+runs save an `events.jsonl` log and a ring of the latest 24 screenshots under `data/runs/`, plus retained evidence such as `home.png`, popup before/after pairs, Cafe reward receipts, and lesson surveys and receipts. important actions and scheduling state live in `data/state/`. attempted taps and confirmed results are recorded separately.
 
 local config, logs, and full screenshots stay out of Git. use the dashboard to review the latest run; sanitize any evidence before sharing it. [Cafe behavior](cafe.md), [the home map](home-map.md), and [event profiles](event-profiles.md) describe the recognition rules. [the roadmap](roadmap.md) records live validation and what remains unfinished.
 

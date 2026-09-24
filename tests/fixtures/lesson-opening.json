@@ -1,0 +1,166 @@
+{
+  "source": "Authorized development Mac capture, September 24, 2026 UTC; everything outside the relevant modal is black. OCR is recorded local output.",
+  "words": [
+    {
+      "text": "All Locations",
+      "confidence": 0.99827,
+      "box": [
+        538,
+        89,
+        743,
+        122
+      ]
+    },
+    {
+      "text": "Tickets Owned7/7",
+      "confidence": 0.99989,
+      "box": [
+        565,
+        140,
+        726,
+        168
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99946,
+      "box": [
+        151,
+        205,
+        204,
+        231
+      ]
+    },
+    {
+      "text": "Theater Room",
+      "confidence": 0.99911,
+      "box": [
+        212,
+        203,
+        369,
+        232
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99975,
+      "box": [
+        495,
+        204,
+        550,
+        233
+      ]
+    },
+    {
+      "text": "Gym",
+      "confidence": 0.99992,
+      "box": [
+        556,
+        205,
+        615,
+        235
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99974,
+      "box": [
+        839,
+        204,
+        895,
+        233
+      ]
+    },
+    {
+      "text": "Library",
+      "confidence": 0.99998,
+      "box": [
+        897,
+        201,
+        985,
+        236
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.9997,
+      "box": [
+        151,
+        358,
+        204,
+        383
+      ]
+    },
+    {
+      "text": "Classroom",
+      "confidence": 0.99994,
+      "box": [
+        212,
+        355,
+        330,
+        384
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99969,
+      "box": [
+        496,
+        358,
+        548,
+        383
+      ]
+    },
+    {
+      "text": "Laboratory",
+      "confidence": 0.99999,
+      "box": [
+        554,
+        354,
+        681,
+        387
+      ]
+    },
+    {
+      "text": "Lv.3 Shootina Range",
+      "confidence": 0.93018,
+      "box": [
+        837,
+        352,
+        1075,
+        390
+      ]
+    },
+    {
+      "text": "Rank 8 required",
+      "confidence": 0.97814,
+      "box": [
+        900,
+        410,
+        1071,
+        439
+      ]
+    },
+    {
+      "text": "Lv.3 Hangar",
+      "confidence": 0.9685,
+      "box": [
+        149,
+        506,
+        309,
+        538
+      ]
+    },
+    {
+      "text": "Rank 9 required",
+      "confidence": 0.99687,
+      "box": [
+        213,
+        562,
+        381,
+        589
+      ]
+    }
+  ],
+  "bond_crops": []
+}

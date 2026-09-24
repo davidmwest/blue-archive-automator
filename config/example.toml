@@ -23,6 +23,16 @@ invite_enabled = false
 # Exact English in-game name, including variant, e.g. "Yuuka (Track)".
 invite_student = ""
 
+[lessons]
+# Scan every available location before choosing the rooms with the most owned students.
+# school_rank instead levels the lowest rank + XP location, rechecking each ticket.
+strategy = "relationship"
+# 0 uses all tickets already available; the runner never purchases more.
+max_tickets = 0
+# Empty means all unlocked locations; otherwise use exact English location names.
+locations = []
+enabled_in_daily = true
+
 # Paths are relative to this configuration file.
 [storage]
 run_dir = "../data/runs"

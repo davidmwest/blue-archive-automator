@@ -2,78 +2,28 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime, timezone
-import json
 import logging
-import os
-from pathlib import Path
 import time
 from typing import Callable
 from uuid import uuid4
 
 from .config import Config
 from .locking import InstanceLock
+from .runtime import Capture, FRAME_MAX_AGE, HOME_STABLE_SECONDS, TRACE_LIMIT
+from .runtime import Journal, RunResult, TaskError
+
+# Compatibility for existing task callers and saved integrations.
+_Journal = Journal
+RestartError = TaskError
 
 
 LOGGER = logging.getLogger(__name__)
-HOME_STABLE_SECONDS = 5.0
-FRAME_MAX_AGE = 5.0
-TRACE_LIMIT = 24
 MAX_REPEATED_ACTIONS = 5
 MAX_ACTIONS = 40
 ACTION_STATES = {"title", "download_prompt", "popup"}
 DOWNLOAD_STATES = {"download_prompt", "downloading"}
 KNOWN_STATES = ACTION_STATES | DOWNLOAD_STATES | {"home", "loading", "blocked", "unknown"}
-
-
-@dataclass(frozen=True)
-class RunResult:
-    status: str
-    run_dir: Path
-    duration: float
-    actions: int
-
-
-class RestartError(RuntimeError):
-    """Startup stopped safely; local diagnostics are available in run_dir."""
-
-    def __init__(self, message: str, run_dir: Path):
-        super().__init__(message)
-        self.run_dir = run_dir
-
-
-class _Journal:
-    def __init__(self, directory: Path, monotonic: Callable[[], float], started: float):
-        directory.mkdir(parents=True, exist_ok=False)
-        self.directory = directory
-        self.clock = monotonic
-        self.started = started
-        self.stream = (directory / "events.jsonl").open("a", encoding="utf-8")
-        self.frame_count = 0
-
-    def record(self, event: str, **fields) -> None:
-        record = {"event": event, "elapsed": round(self.clock() - self.started, 3), **fields}
-        self.stream.write(json.dumps(record, ensure_ascii=False) + "\n")
-        self.stream.flush()
-        os.fsync(self.stream.fileno())
-
-    def screenshot(self, png: bytes) -> str:
-        # A fixed-size ring retains the latest frames without growing during downloads.
-        name = f"trace-{self.frame_count % TRACE_LIMIT:02d}.png"
-        self.frame_count += 1
-        self.save_image(name, png)
-        return name
-
-    def save_image(self, name: str, png: bytes) -> None:
-        destination = self.directory / name
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        temporary = destination.with_name(f".{destination.name}.tmp")
-        temporary.write_bytes(png)
-        temporary.replace(destination)
-
-    def close(self) -> None:
-        self.stream.close()
 
 
 class _Budget:
@@ -181,6 +131,7 @@ def run_restart(
                 last_frame = journal.screenshot(png)
                 observation = vision.analyze(png)
                 foreground = device.foreground_package()
+                capture = Capture(png, captured_at, foreground)
                 now = check_deadlines()
                 if foreground != config.package:
                     fail("Expected Blue Archive in the foreground; "
@@ -202,7 +153,7 @@ def run_restart(
                 state = observation.state
                 if state not in KNOWN_STATES:
                     fail(f"Vision returned an unsupported state: {state!r}")
-                stale = now - captured_at > FRAME_MAX_AGE
+                stale = not capture.is_fresh(now)
                 if stale:
                     # Recapture instead of acting on slow OCR or a slow foreground query.
                     state = "unknown"
@@ -261,11 +212,11 @@ def run_restart(
 
                     def verified_tap() -> bool:
                         # Intent persistence can take time on a busy disk; include it in freshness.
-                        if monotonic() - captured_at > FRAME_MAX_AGE:
+                        if not capture.is_fresh(monotonic()):
                             return False
                         # Transport rechecks after its shared-server preflight, which can block.
                         return device.tap(
-                            *target, deadline=captured_at + FRAME_MAX_AGE, monotonic=monotonic,
+                            *target, deadline=capture.deadline, monotonic=monotonic,
                         )
 
                     evidence = None

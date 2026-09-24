@@ -9,7 +9,7 @@ from .actions import record_action
 from .cafe_vision import CafeVision
 from .cafe_camera import measure_camera_displacement
 from .locking import InstanceLock
-from .restart import _Journal, RunResult, RestartError, FRAME_MAX_AGE, HOME_STABLE_SECONDS
+from .runtime import Journal, RunResult, TaskError, FRAME_MAX_AGE, HOME_STABLE_SECONDS
 from .vision import decode_frame
 
 LOGGER = logging.getLogger(__name__)
@@ -199,14 +199,14 @@ class CafeRunner:
         self.started = self.clock()
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
         self.run_dir = config.run_dir / f"cafe-{stamp}-{uuid4().hex[:8]}"
-        self.journal = _Journal(self.run_dir, monotonic, self.started)
+        self.journal = Journal(self.run_dir, monotonic, self.started)
         self.actions = 0
         self.confirmed = 0
         self.floor = None
         self.last_frame = None
 
     def fail(self, message):
-        raise RestartError(message, self.run_dir)
+        raise TaskError(message, self.run_dir)
 
     def capture(self, *, ocr=False):
         if self.clock() - self.started >= CAFE_TIMEOUT:
@@ -620,9 +620,9 @@ class CafeRunner:
             raise
         except Exception as exc:
             self.journal.record("finished", status="failed", reason=str(exc), actions=self.actions, frame=self.last_frame)
-            if isinstance(exc, RestartError):
+            if isinstance(exc, TaskError):
                 raise
-            raise RestartError(f"Cafe stopped: {exc}", self.run_dir) from exc
+            raise TaskError(f"Cafe stopped: {exc}", self.run_dir) from exc
         finally:
             self.journal.close()
 

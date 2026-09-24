@@ -2,13 +2,13 @@
 
 See [the high-level design](design.md) for the project direction and planned contracts. This document describes the implementation that exists today.
 
-Status: restart and a complete two-floor Cafe visit verified live; local dashboard, scheduling, idle-close, and event-profile recognition implemented. Optional invitation completion remains unverified live. Development session: September 23–24, 2026.
+Status: restart and a complete two-floor Cafe visit verified live; local dashboard, scheduling, idle-close, and event-profile recognition implemented. Lessons runner, planner, settings, and queue integration are implemented with live validation in progress. Optional invitation completion remains unverified live. Development session: September 23–24, 2026.
 
 ## Runtime
 
 The Python 3.11+ core controls one explicit ADB endpoint. The initial profile is global English Blue Archive (`com.nexon.bluearchive`) at 1280×720 landscape and 320 DPI, running in BlueStacks Air on Apple Silicon macOS. BlueStacks 5 on Windows is the portability target; its live smoke test remains outstanding. The emulator instance must already be running.
 
-`restart` force-stops and launches Blue Archive, reuses its existing session, handles recognized startup states, and verifies a clear home screen. `cafe` and `daily` both run `restart` followed by the cafe routine. Failure stops the sequence.
+`restart` force-stops and launches Blue Archive, reuses its existing session, handles recognized startup states, and verifies a clear home screen. `cafe` runs restart → Cafe; `lessons` runs restart → Lessons. The default `daily` plan runs restart → Cafe → Lessons, with the last step configurable. `tasks.py` owns these plans. Failure stops the sequence.
 
 `serve` provides a loopback dashboard at `127.0.0.1:8765`. It dispatches the same CLI tasks through a serial queue, with an optional cafe schedule. There is no installed operating-system service, emulator start/stop manager, or cloud inference dependency.
 
@@ -16,12 +16,13 @@ The Python 3.11+ core controls one explicit ADB endpoint. The initial profile is
 flowchart TD
     UI[Local dashboard] --> Server[Serial queue and cafe schedule]
     Server --> CLI[Task subprocess]
-    Manual[Manual CLI] --> Tasks[Restart then cafe]
+    Manual[Manual CLI] --> Tasks[Ordered restart / cafe / lessons plan]
     CLI --> Tasks
     Config[Local TOML] --> Server
     Config --> Tasks
     Tasks --> Lock[Per-instance process lock]
     Tasks --> Vision[Local OCR and OpenCV]
+    Tasks --> Planner[Pure lesson selection]
     Tasks --> ADB[Explicit-target ADB]
     ADB --> Game[Running BlueStacks instance]
     Tasks --> Trace[Run journals and screenshot evidence]
@@ -35,12 +36,15 @@ flowchart TD
 
 | Module | Responsibility |
 | --- | --- |
-| `cli.py` | Diagnostics, restart/cafe/daily task sequencing, local server, and interruption handling |
-| `config.py` | Validate the explicit loopback endpoint, timing settings, cafe preferences, and storage paths |
+| `cli.py`, `tasks.py` | Diagnostics, supported job plans, sequential dispatch, local server, and interruption handling |
+| `config.py` | Validate the explicit loopback endpoint, timing settings, cafe/lesson preferences, and storage paths |
 | `adb.py` | Shared-server compatibility, targeted connection, package and foreground checks, force-stop/launch, screenshots, taps, and swipes |
 | `vision.py` | Fixed-size frame decoding, local RapidOCR/ONNX inference, startup classification, templates, and conservative overlay recognition |
 | `restart.py` | Bounded startup loop, fresh-frame input, popup evidence, and stable-home verification |
 | `cafe.py`, `cafe_vision.py` | Earnings receipts, unlocked floor navigation, attention-marker scans, relationship feedback, and optional free invitations |
+| `lessons.py`, `lesson_vision.py` | Complete location surveys, rank/XP and room observations, guarded one-ticket confirmation, and result reconciliation |
+| `lesson_planner.py` | Pure relationship and school-rank policy over observed locations, rooms, ownership, and relationship ranks |
+| `runtime.py` | Shared fresh-capture contract, task result/error, screenshot ring, and durable run journal |
 | `events.py` | Strict event-profile validation and read-only entrance/destination matching; no event task |
 | `server.py`, `web/` | Loopback dashboard, serial subprocess queue, schedule, settings, evidence views, and visual home map |
 | `actions.py` | Durable JSONL history of important attempts and confirmed outcomes |
@@ -70,13 +74,23 @@ Camera coverage uses short 1,800 ms drags followed by local feature matching to 
 
 The invitation handler matches an exact name to its row's Invite control, handles wrapped variants, scrolls inside the list, and guards the confirmation. A cooldown skips the action; a recognized cooldown notice is dismissed. New cooldown evidence is required before recording a successful invitation. The current account's active cooldown has prevented a complete live invitation test. No bulk relationship-collection control has been verified; the Gift panel's portrait shortcut is for gifting.
 
+## Lessons routine
+
+Lessons begins at verified home, reads the ticket counter, and cycles through unlocked locations. It records rank and XP, inspects available room cards and ownership/relationship indicators, and checks that the surveyed ranks add up to the game's Total Area Rank. A configured location allowlist limits eligible rooms; unknown names or incomplete coverage stop the run. The runner repeats the survey before each ticket instead of assuming previous rank, room, or student observations remain valid.
+
+The pure planner defaults to the most owned students, then the highest sum of their relationship ranks. The alternate school-rank strategy chooses the lowest rank and fractional XP progress, then the most total students and highest owned relationship-rank sum. Stable identity resolves equal scores. It excludes completed rooms and distinguishes missing evidence from zero. If every eligible school is capped, the school-rank strategy falls back to relationship selection.
+
+Before spending, the runner reopens the selected room and checks its confirmation against the chosen observation. One ticket is confirmed at a time. Completion needs result evidence and the expected ticket decrement, with the location, room, strategy, counts, and readable rank/XP changes recorded in important actions. Ticket limits restrict existing tickets; there is no purchase path. See [Lessons](lessons.md) for the full policy, failure behavior, and current live-validation status.
+
 ## Dashboard and schedule
 
 The dashboard binds to loopback and launches one task subprocess at a time. Each job gets a configuration snapshot and its own diagnostic directory. The same per-instance lock also protects against a separately launched CLI runner.
 
 Pause allows the current job to finish and blocks dispatch. Stop interrupts the current job and pauses the queue. Resume permits queued work and clears the scheduler's retry pause. Waiting jobs can be canceled. Settings cannot be changed while jobs are active or queued.
 
-Cafe scheduling is explicitly enabled and off by default. A successful cafe/daily job records the next due time three hours and 15 seconds later. A failed job sets a 15-minute retry; three consecutive failures pause retries until Resume. Pending cafe/daily work prevents a duplicate scheduled cafe job. Canceling a scheduled occurrence skips that occurrence instead of immediately recreating it.
+Cafe scheduling is explicitly enabled and off by default. A successful cafe job or verified Cafe step within daily records the next due time three hours and 15 seconds later. A later Lessons failure or interruption does not undo the completed Cafe visit. A Cafe failure sets a 15-minute retry; three consecutive failures pause retries until Resume. Pending cafe/daily work prevents a duplicate scheduled cafe job. Canceling a scheduled occurrence skips that occurrence instead of immediately recreating it.
+
+The timer enqueues `cafe`, not `daily`, so recurring Cafe visits do not spend lesson tickets. Lessons can be queued directly or included in a manually queued daily plan. A daily-reset-aware Lessons scheduler is not implemented.
 
 Schedule state persists in `data/state/schedule.json`. The FIFO job queue and dashboard's recent job list are in memory and disappear at shutdown. `serve` must remain running for schedules to execute; no system service or login item is installed.
 
@@ -94,7 +108,7 @@ Storage paths are relative to the TOML file. With the example configuration:
 | `data/state/schedule.json` | Cafe due time, last success, failure count, and retry pause |
 | `data/locks/` | Shared per-instance process locks |
 
-Ctrl+C and task failure record the result and release the lock. A restart starts a new force-stop/launch sequence; there is no resume checkpoint. Cafe receipts and relationship evidence are retained separately from the rotating screenshot ring.
+Ctrl+C and task failure record the result and release the lock. A restart starts a new force-stop/launch sequence; there is no resume checkpoint. Cafe receipts and relationship evidence, plus lesson survey and receipt evidence, are retained separately from the rotating screenshot ring.
 
 JSONL is the current history format; SQLite and resumable task checkpoints are deferred. Local config, raw screenshots, and logs remain outside Git. Only reviewed recognition crops and sanitized fixtures belong in the repository.
 

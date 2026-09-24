@@ -1,0 +1,216 @@
+{
+  "source": "Authorized development Mac capture, September 24, 2026 UTC; only the room modal is retained. Before/after one verified Lesson Report.",
+  "words": [
+    {
+      "text": "All Locations",
+      "confidence": 0.99983,
+      "box": [
+        537,
+        85,
+        742,
+        117
+      ]
+    },
+    {
+      "text": "Tickets Owned6/7",
+      "confidence": 0.9999,
+      "box": [
+        565,
+        136,
+        726,
+        164
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99968,
+      "box": [
+        151,
+        202,
+        204,
+        227
+      ]
+    },
+    {
+      "text": "Rikkagaku",
+      "confidence": 0.99991,
+      "box": [
+        212,
+        200,
+        333,
+        229
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99917,
+      "box": [
+        495,
+        201,
+        550,
+        229
+      ]
+    },
+    {
+      "text": "White Tiger Park",
+      "confidence": 0.99969,
+      "box": [
+        556,
+        200,
+        740,
+        229
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99972,
+      "box": [
+        840,
+        202,
+        895,
+        227
+      ]
+    },
+    {
+      "text": "Peach Blossom Spring",
+      "confidence": 0.99995,
+      "box": [
+        897,
+        199,
+        1138,
+        230
+      ]
+    },
+    {
+      "text": "Black Tortoise",
+      "confidence": 0.99985,
+      "box": [
+        213,
+        338,
+        368,
+        365
+      ]
+    },
+    {
+      "text": "Plum Blossom Garden",
+      "confidence": 0.99757,
+      "box": [
+        557,
+        339,
+        795,
+        365
+      ]
+    },
+    {
+      "text": "Eastern Alchemy",
+      "confidence": 0.99992,
+      "box": [
+        899,
+        336,
+        1085,
+        368
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99963,
+      "box": [
+        149,
+        350,
+        205,
+        382
+      ]
+    },
+    {
+      "text": "Promenade",
+      "confidence": 0.99997,
+      "box": [
+        213,
+        365,
+        341,
+        388
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99956,
+      "box": [
+        495,
+        351,
+        549,
+        381
+      ]
+    },
+    {
+      "text": "Main Building",
+      "confidence": 0.99993,
+      "box": [
+        555,
+        361,
+        709,
+        393
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99943,
+      "box": [
+        839,
+        351,
+        894,
+        381
+      ]
+    },
+    {
+      "text": "Society Laboratory",
+      "confidence": 0.99953,
+      "box": [
+        899,
+        362,
+        1105,
+        395
+      ]
+    },
+    {
+      "text": "Lv.3 Tea Garden",
+      "confidence": 0.99259,
+      "box": [
+        151,
+        504,
+        340,
+        530
+      ]
+    },
+    {
+      "text": "Lv.3 BamboForest",
+      "confidence": 0.99472,
+      "box": [
+        496,
+        504,
+        724,
+        530
+      ]
+    },
+    {
+      "text": "Rank 8 required",
+      "confidence": 0.99359,
+      "box": [
+        213,
+        558,
+        381,
+        587
+      ]
+    },
+    {
+      "text": "Rank 9 required",
+      "confidence": 0.99961,
+      "box": [
+        558,
+        559,
+        725,
+        585
+      ]
+    }
+  ],
+  "bond_crops": []
+}

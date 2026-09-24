@@ -4,6 +4,7 @@ import http.client
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 import json
+import os
 from pathlib import Path
 import subprocess
 import threading
@@ -647,6 +648,214 @@ def test_paused_pending_queue_keeps_app_open_after_current_job(close_controlled)
     assert len(controller.status()["queue"]) == 1
     assert controller.status()["app_closed"] is False
     assert devices.calls == []
+
+
+def test_lesson_settings_validate_persist_and_snapshot_before_dispatch(controlled, config_path):
+    controller, factory = controlled
+    controller.pause()
+    original = config_path.read_bytes()
+    for invalid in ({"lessons_strategy": "anything"}, {"lessons_max_tickets": True},
+                    {"lessons_locations": ["Gehenna", "gehenna"]},
+                    {"lessons_enabled_in_daily": "true"}):
+        with pytest.raises(ApiError) as error:
+            controller.update_settings(invalid)
+        assert error.value.status == 400
+        assert config_path.read_bytes() == original
+    changes = {"lessons_strategy": "school_rank", "lessons_max_tickets": 2,
+               "lessons_locations": ["Gehenna Academy"], "lessons_enabled_in_daily": False}
+    controller.update_settings(changes)
+    document = tomllib.loads(config_path.read_text())
+    assert document["lessons"] == {"strategy": "school_rank", "max_tickets": 2,
+                                   "locations": ["Gehenna Academy"], "enabled_in_daily": False}
+    controller.enqueue("lessons")
+    with pytest.raises(ApiError) as error:
+        controller.update_settings({"lessons_max_tickets": 1})
+    assert error.value.status == 409
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    snapshot = Config.from_file(factory.processes[0].arguments[4])
+    assert snapshot.lessons_strategy == "school_rank"
+    assert snapshot.lessons_max_tickets == 2
+    assert snapshot.lessons_locations == ("Gehenna Academy",)
+    assert snapshot.lessons_enabled_in_daily is False
+    factory.processes[0].finish()
+    eventually(lambda: controller.status()["state"] == "success")
+    assert controller.status()["phase"] == "Lessons complete"
+
+
+def test_lessons_obeys_fifo_stop_and_closes_only_after_remaining_job(close_controlled):
+    controller, factory, devices = close_controlled
+    controller.update_settings({"close_app_when_idle": True})
+    controller.pause()
+    controller.enqueue("lessons")
+    remaining = controller.enqueue("cafe")
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    assert factory.processes[0].arguments[-1] == "lessons"
+    controller.stop()
+    eventually(lambda: controller.status()["state"] == "stopped")
+    assert controller.status()["queue"][0]["id"] == remaining["id"]
+    assert devices.calls == []
+    assert controller.status()["queue_paused"]
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 2)
+    assert factory.processes[1].arguments[-1] == "cafe"
+    factory.processes[1].finish()
+    eventually(lambda: controller.status()["app_closed"])
+    assert factory.max_active == 1
+    assert len([call for call in devices.calls if call[0] == "force_stop"]) == 1
+
+
+def test_lesson_frame_and_action_metadata_are_visible_without_private_paths(controlled):
+    controller, factory = controlled
+    controller.enqueue("lessons")
+    eventually(lambda: len(factory.processes) == 1)
+    folder = factory.processes[0].run_dir.parent / "lessons-test"
+    folder.mkdir()
+    (folder / "trace-0001.png").write_bytes(b"lesson frame")
+    assert controller.frame_bytes() == b"lesson frame"
+    state = controller.config.state_dir
+    state.mkdir(parents=True)
+    action = {"task": "lessons", "action": "lesson_completed", "location": "Gehenna Academy",
+              "room": "Classroom", "owned_students": 3, "student_count": 4,
+              "tickets_before": 7, "tickets_after": 6, "strategy": "relationship",
+              "rank_before": 5, "rank_after": 6, "xp_before": 80, "xp_after": 10,
+              "evidence_path": "/private/lesson.png"}
+    (state / "important-actions.jsonl").write_text(json.dumps(action) + "\n")
+    public = controller.actions()["actions"][0]
+    assert all(public[key] == value for key, value in action.items() if key != "evidence_path")
+    assert "evidence_path" not in public
+    factory.processes[0].finish()
+    eventually(lambda: controller.status()["state"] == "success")
+
+
+@pytest.mark.parametrize("interrupted", [False, True])
+def test_later_lesson_failure_or_stop_keeps_verified_daily_cafe_success(config_path, interrupted):
+    class DailyOutput(FakeOutput):
+        def __iter__(self):
+            yield "12:00:00 cafe: visit completed\n"
+            yield json.dumps({"status": "success", "run_dir": str(self.process.run_dir.parent / "cafe-complete"),
+                              "duration": 40, "actions": 3}) + "\n"
+            self.process.done.wait()
+            yield "Error: lesson receipt was not recognized\n"
+
+    class DailyFactory(ProcessFactory):
+        def __call__(self, arguments, **options):
+            process = super().__call__(arguments, **options)
+            process.stdout = DailyOutput(process)
+            return process
+
+    factory = DailyFactory()
+    now = datetime(2026, 9, 24, 2, 0, tzinfo=timezone.utc)
+    controller = DashboardController(config_path, process_factory=factory, wall_clock=lambda: now)
+    try:
+        controller.enqueue("daily")
+        eventually(lambda: len(factory.processes) == 1)
+        if interrupted:
+            controller.stop()
+        else:
+            factory.processes[0].finish(1)
+        eventually(lambda: controller.status()["state"] in {"failed", "stopped"})
+        schedule = controller.status()["schedule"]["cafe"]
+        assert schedule["last_success_at"] == now.isoformat()
+        assert schedule["next_due_at"] == (now + CAFE_INTERVAL).isoformat()
+        assert schedule["consecutive_failures"] == 0
+    finally:
+        controller.close()
+
+
+@pytest.mark.parametrize("interrupted", [False, True])
+def test_failed_or_stopped_lesson_result_uses_its_journal_not_successful_restart(config_path, interrupted):
+    class MultiStepOutput(FakeOutput):
+        def __iter__(self):
+            (self.process.run_dir / "events.jsonl").write_text(json.dumps({
+                "event": "finished", "status": "success", "elapsed": 50.0, "actions": 2}) + "\n")
+            yield json.dumps({"status": "success", "run_dir": str(self.process.run_dir),
+                              "duration": 50.0, "actions": 2}) + "\n"
+            self.process.done.wait()
+            lessons = self.process.run_dir.parent / "lessons-failed"
+            lessons.mkdir()
+            (lessons / "events.jsonl").write_text(json.dumps({
+                "event": "finished", "status": "stopped" if interrupted else "failed",
+                "elapsed": 224.059, "actions": 46, "reason": "receipt could not be verified"}) + "\n")
+            yield "Error: receipt could not be verified\n"
+
+    class MultiStepFactory(ProcessFactory):
+        def __call__(self, arguments, **options):
+            process = super().__call__(arguments, **options)
+            process.stdout = MultiStepOutput(process)
+            return process
+
+    factory = MultiStepFactory()
+    controller = DashboardController(config_path, process_factory=factory)
+    try:
+        controller.enqueue("lessons")
+        eventually(lambda: len(factory.processes) == 1)
+        if interrupted:
+            controller.stop()
+        else:
+            factory.processes[0].finish(1)
+        expected = "stopped" if interrupted else "failed"
+        eventually(lambda: controller.status()["state"] == expected)
+        result = controller.status()["result"]
+        assert result["status"] == expected
+        assert Path(result["run_dir"]).name == "lessons-failed"
+        assert result["duration"] == 224.059
+        assert result["actions"] == 46
+        assert result["reason"] == "receipt could not be verified"
+    finally:
+        controller.close()
+
+
+def test_incomplete_failed_task_journal_keeps_unknown_counters_null(tmp_path):
+    completed = tmp_path / "restart-done"
+    completed.mkdir()
+    earlier = completed / "events.jsonl"
+    earlier.write_text(json.dumps({"event": "finished", "status": "success", "elapsed": 10, "actions": 2}))
+    current = tmp_path / "lessons-killed"
+    current.mkdir()
+    latest = current / "events.jsonl"
+    latest.write_text(json.dumps({"event": "started", "task": "lessons", "elapsed": 0}) + '\n{"event": "fin')
+    os.utime(earlier, ns=(1_000_000_000, 1_000_000_000))
+    os.utime(latest, ns=(2_000_000_000, 2_000_000_000))
+    result = DashboardController._unfinished_result(tmp_path, "failed")
+    assert result == {"status": "failed", "run_dir": str(current.resolve()), "duration": None, "actions": None}
+
+
+def test_failure_between_tasks_does_not_relabel_last_successful_task(tmp_path):
+    run = tmp_path / "restart-done"
+    run.mkdir()
+    (run / "events.jsonl").write_text(json.dumps({
+        "event": "finished", "status": "success", "elapsed": 50, "actions": 2}))
+    assert DashboardController._unfinished_result(tmp_path, "failed") == {
+        "status": "failed", "run_dir": None, "duration": None, "actions": None}
+
+
+def test_failed_result_reads_only_a_bounded_journal_tail_and_does_not_invent_bad_counters(tmp_path):
+    run = tmp_path / "lessons-failed"
+    run.mkdir()
+    (run / "events.jsonl").write_text('x' * 100_000 + '\n' + json.dumps({
+        "event": "finished", "status": "failed", "elapsed": float("nan"), "actions": True,
+        "reason": "lesson verification failed"}) + '\n')
+    result = DashboardController._unfinished_result(tmp_path, "failed")
+    assert result["run_dir"] == str(run.resolve())
+    assert result["duration"] is None and result["actions"] is None
+    assert result["reason"] == "lesson verification failed"
+
+
+def test_failed_result_does_not_read_a_journal_outside_current_job(tmp_path):
+    root = tmp_path / "current"
+    root.mkdir()
+    outside = tmp_path / "outside.jsonl"
+    outside.write_text(json.dumps({"event": "finished", "status": "failed", "elapsed": 1, "actions": 99}))
+    run = root / "lessons-link"
+    run.mkdir()
+    try:
+        (run / "events.jsonl").symlink_to(outside)
+    except OSError:
+        pytest.skip("symlinks are unavailable on this platform")
+    assert DashboardController._unfinished_result(root, "failed") == {
+        "status": "failed", "run_dir": None, "duration": None, "actions": None}
 
 
 def test_instance_lock_conflict_sends_no_close_input_and_preserves_job_success(close_controlled):

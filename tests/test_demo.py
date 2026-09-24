@@ -107,6 +107,10 @@ def test_status_is_explicitly_fictional_and_cannot_schedule_jobs(demo_server):
     assert status["current_job"] is None
     assert status["queue_paused"] is True
     assert status["config"]["serial"] == "no device · demo"
+    assert status["config"]["lessons_strategy"] == "relationship"
+    assert status["config"]["lessons_max_tickets"] == 0
+    assert status["config"]["lessons_locations"] == []
+    assert status["config"]["lessons_enabled_in_daily"] is True
     assert not status["schedule"]["cafe"]["enabled"]
     assert "csrf_token" not in status
     assert all(job["id"].startswith("sample-") for job in status["queue"] + status["history"])
@@ -172,6 +176,10 @@ def test_ui_map_history_and_original_popup_schematics_are_self_contained(demo_se
     assert home_map["buttons"]
     actions = json.loads(request(demo_server, "/api/actions")[2])["actions"]
     assert actions and all(action["detail"].startswith("Sample:") for action in actions)
+    lesson = next(action for action in actions if action["action"] == "lesson_completed")
+    assert lesson["id"].startswith("sample-")
+    assert lesson["location"] == "Sample Academy"
+    assert lesson["tickets_before"] - lesson["tickets_after"] == 1
     popups = json.loads(request(demo_server, "/api/popups")[2])["popups"]
     assert len(popups) == 1
     urls = ["/api/frame?v=demo-schematic-v1", popups[0]["before_url"], popups[0]["after_url"]]

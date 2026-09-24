@@ -20,13 +20,23 @@ The loopback dashboard provides a serial job queue, settings, stop/pause control
 
 An optional setting closes Blue Archive after the last dashboard job exits and the queue is empty. It leaves the emulator and server running; the next task starts through restart. It defaults to off and does not affect standalone CLI runs.
 
-`daily` and `cafe` run restart first, then collect cafe earnings, check students across both unlocked floors, and return home. A live full run completed in **425.5 seconds**, recognized empty earnings, verified measured scans and camera boundaries on both floors, returned home, and closed the game. Earlier receipts verified **81 AP and 73,957 credits**, then **16 AP and 14,791 credits**; relationship hearts and rank-up screens were also verified. The full passing run recorded zero new relationship increases.
+`cafe` runs restart first, then collects cafe earnings, checks students across both unlocked floors, and returns home. The Cafe step of `daily` uses the same routine, before its optional Lessons step. A live full run completed in **425.5 seconds**, recognized empty earnings, verified measured scans and camera boundaries on both floors, returned home, and closed the game. Earlier receipts verified **81 AP and 73,957 credits**, then **16 AP and 14,791 credits**; relationship hearts and rank-up screens were also verified. The full passing run recorded zero new relationship increases.
 
 Continue validation with repeat visits after the relationship cooldown, occluded/disappearing attention markers across more layouts, invitation selection and confirmation, and interruption. Report scan completion separately from confirmed student interactions. Keep invitations and scheduling off by default until explicitly enabled.
 
 The runner measures scene displacement, scans overlapping views, and requires two observed stationary drags to establish camera bounds, within a 15-minute visit budget. Unmeasurable movement triggers an intermediate student scan and resets distance/boundary evidence before another short drag. Camera movement also passed a separate check in another player's furniture layout. The runner has no zoom dependency. A free-invitation cooldown has prevented the complete live invitation flow; exact-name row selection and confirmation remain to be checked when available. The Gift panel was inspected, and no bulk relationship-collection button was verified.
 
-## 3. Event navigation
+## 3. Lessons — implemented; live validation in progress
+
+The default relationship strategy compares rooms across all unlocked locations and maximizes owned-student opportunities. The alternative school-rank strategy selects the lowest rank and XP progress, then the fullest room, breaking ties with owned relationship ranks. The planner operates on observed data without device access or runtime AI.
+
+The runner surveys every unlocked school and reconciles the observed ranks with Total Area Rank before each ticket. It verifies the selected room, confirms one existing ticket, then checks the result and ticket decrement. Configurable ticket limits, eligible location names, and daily inclusion are available in TOML and the dashboard. Missing comparison evidence or an unknown configured location stops spending.
+
+`lessons` runs restart → Lessons; `daily` defaults to restart → Cafe → Lessons. The existing three-hour timer remains Cafe-only. A completed Cafe visit still updates its schedule if later Lessons work fails or is interrupted. No daily-reset timer or ticket-purchase flow has been added.
+
+Offline coverage includes planner selection, incomplete evidence, config validation, job sequencing, stop/pause behavior, and preserving Cafe scheduling after later task failure. Live screen calibration and a complete ticket-spending run are underway; the [Lessons validation section](lessons.md#validation-status) records the evidence when available.
+
+## 4. Event navigation
 
 Live inspection verified Home → Campaign → the upper-left Lore Pursuit entry → spoiler notice → play guide → the event page with Quest/Challenge controls. Event Recap remains a separate permanent archive. The entry position alone does not identify the rotating card.
 
@@ -34,15 +44,15 @@ Local version-1 event JSON and strict read-only recognition helpers are implemen
 
 Before farming, define playable-period checks, stage selection, resource limits, and observable sweep completion. Main Story, Mission, Event Recap, event shops, and timed event stages need separate destinations.
 
-## 4. Portability and coexistence
+## 5. Portability and coexistence
 
 Offline tests run on macOS, Windows, and Ubuntu in [GitHub Actions](https://github.com/davidmwest/blue-archive-automator/actions/workflows/tests.yml). They verify implementation behavior without an emulator; they do not establish live platform support.
 
-Smoke-test installation, screenshot capture, input, restart, cafe, and interruption on Windows with BlueStacks 5 at the same 1280×720 and 320 DPI profile.
+Smoke-test installation, screenshot capture, input, restart, cafe, lessons, and interruption on Windows with BlueStacks 5 at the same 1280×720 and 320 DPI profile.
 
 Run Blue Archive while the Azur Lane daemon is active on a different endpoint with a compatible shared ADB server. Confirm startup and recovery leave the other game connected. Measure OCR/capture latency and combined CPU, GPU, and memory use before choosing resource presets.
 
-## 5. Additional daily tasks and durable execution
+## 6. Additional daily tasks and durable execution
 
 Add one routine at a time after restart, with recognized entry/exit states, bounded actions, and replay coverage. Reward collection and configured mission sweeps are candidates. Introduce spending/resource budgets only as needed for an implemented task.
 

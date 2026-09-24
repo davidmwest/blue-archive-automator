@@ -27,3 +27,18 @@ contains the Cafe HUD and yellow attention rays; `cafe_heart_before/after` conta
 the student and newly visible relationship heart. `cafe_earnings` and `cafe_receipt`
 retain the earnings dialog and the verified 81 AP / 73,957 credit receipt. The
 account's top bar, name, total balances, and other personal information are removed.
+
+Lessons samples (`lesson-*.png`) were captured on 2026-09-24 UTC from the same
+authorized instance. They retain only the location headers, ticket/XP controls,
+room grid, or lesson confirmation needed for recognition. The top account resource
+bar is removed. Paired JSON files record local OCR output; `bond_crops` identify
+small heart labels checked against the capture. Tests replay these observations
+without loading an OCR model. The room grids include unowned students with pink
+hair so ownership cannot be inferred from artwork, and both single-line and wrapped
+room names. These game-derived fixtures remain outside the project's MIT grant;
+see `THIRD_PARTY_NOTICES.md` at the repository root.
+
+Lessons also includes an opening-animation rejection sample, a captured relationship
+rank-up banner, loading/completed Lesson Report panels, and before/after room grids
+showing the completed portrait state. Area/school rank-up tests construct synthetic
+images in code; no screenshot or live validation is claimed for that popup.

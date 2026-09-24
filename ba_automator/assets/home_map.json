@@ -44,10 +44,10 @@
         "home",
         "lesson"
       ],
-      "verified": false,
+      "verified": true,
       "description": "Home → Lesson",
       "visual_verified": true,
-      "route_verified": false
+      "route_verified": true
     },
     {
       "id": "students",

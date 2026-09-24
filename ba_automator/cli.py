@@ -12,14 +12,12 @@ import sys
 from .adb import AdbDevice
 from .config import Config
 from .locking import InstanceLock
+from .tasks import TASKS, task_plan
 from .vision import StartupVision, decode_frame
 
 
-DAILY_TASKS = ("restart", "cafe")
-
-
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(prog="ba", description="Blue Archive startup automation")
+    parser = argparse.ArgumentParser(prog="ba", description="Blue Archive local task automation")
     parser.add_argument("--config", type=Path, default=Path("config/local.toml"))
     commands = parser.add_subparsers(dest="command", required=True)
     serve = commands.add_parser("serve", help="Open the local control server and serial job queue")
@@ -29,8 +27,12 @@ def main(argv=None) -> int:
     capture.add_argument("--output", type=Path, default=Path("data/capture.png"))
     inspect = commands.add_parser("inspect", help="Classify a saved or live frame without game input")
     inspect.add_argument("--image", type=Path)
-    for name in ("restart", "cafe", "daily"):
-        command = commands.add_parser(name, help="Restart Blue Archive and reach an unobstructed home screen")
+    descriptions = {"restart": "Restart Blue Archive and reach the home screen",
+                    "cafe": "Restart, collect cafe earnings, and greet students",
+                    "lessons": "Restart and use lesson tickets with the configured strategy",
+                    "daily": "Run restart, cafe, and enabled lessons in order"}
+    for name, description in descriptions.items():
+        command = commands.add_parser(name, help=description)
         command.add_argument("--no-downloads", action="store_true", help="Stop if game-data download consent is needed")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
@@ -50,7 +52,7 @@ def main(argv=None) -> int:
 
         config = Config.from_file(args.config)
         device = AdbDevice(config)
-        if args.command in {"restart", "cafe", "daily"}:
+        if args.command in TASKS:
             from .restart import run_restart
             from .cafe import run_cafe
 
@@ -58,9 +60,14 @@ def main(argv=None) -> int:
                 config = replace(config, auto_download=False)
                 device = AdbDevice(config)
             vision = StartupVision()
-            # Future daily tasks are appended after restart, whose failure stops the plan.
-            for task in DAILY_TASKS if args.command in {"daily", "cafe"} else ("restart",):
-                result = (run_restart if task == "restart" else run_cafe)(config, device, vision)
+            for task in task_plan(args.command, config):
+                if task == "lessons":
+                    from .lessons import run_lessons
+
+                    runner = run_lessons
+                else:
+                    runner = run_restart if task == "restart" else run_cafe
+                result = runner(config, device, vision)
                 print(json.dumps(asdict(result), default=str, indent=2))
             return 0
 

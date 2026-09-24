@@ -2,12 +2,12 @@
 
 Coordinates refer to the global English 1280×720, 320 DPI profile. The map is stored in [`ba_automator/assets/home_map.json`](../ba_automator/assets/home_map.json) and displayed by the local dashboard. It is a reviewed navigation reference, not a generic click script.
 
-All listed home controls were visually checked against a clear staging screenshot during the September 23–24, 2026 session. Only Cafe and Campaign were then opened and verified. `visual_verified` means the control and position were seen; `route_verified` means its destination was exercised. The existing `verified` flag follows route verification for the dashboard badge.
+All listed home controls were visually checked against a clear staging screenshot during the September 23–24, 2026 session. Cafe, Lesson, and Campaign were opened and their destinations verified. Lesson navigation was exercised during the Lessons implementation; this verifies the route independently of full task completion. `visual_verified` means the control and position were seen; `route_verified` means its destination was exercised. The existing `verified` flag follows route verification for the dashboard badge.
 
 | Home control | Center | Navigation status |
 | --- | --- | --- |
 | Cafe | `(100,659)` | Destination verified |
-| Lesson | `(210,659)` | Position verified |
+| Lesson | `(210,659)` | Destination verified |
 | Students | `(323,659)` | Position verified |
 | Formation | `(436,659)` | Position verified |
 | Social | `(548,659)` | Position verified |

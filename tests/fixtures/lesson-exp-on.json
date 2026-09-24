@@ -1,0 +1,296 @@
+{
+  "source": "Development Mac capture, September 24, 2026; masked outside recognition controls. OCR is recorded local output.",
+  "words": [
+    {
+      "text": "Lesson",
+      "box": [
+        100,
+        8,
+        203,
+        40
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "?",
+      "box": [
+        210,
+        13,
+        232,
+        34
+      ],
+      "confidence": 0.957
+    },
+    {
+      "text": "Tickets Owned 7/7",
+      "box": [
+        85,
+        89,
+        278,
+        114
+      ],
+      "confidence": 0.996
+    },
+    {
+      "text": "Exp",
+      "box": [
+        297,
+        90,
+        339,
+        116
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "On",
+      "box": [
+        340,
+        90,
+        380,
+        117
+      ],
+      "confidence": 0.983
+    },
+    {
+      "text": "Location Select",
+      "box": [
+        653,
+        94,
+        882,
+        126
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Total Area Rank",
+      "box": [
+        884,
+        90,
+        1003,
+        113
+      ],
+      "confidence": 0.992
+    },
+    {
+      "text": "Rank 80",
+      "box": [
+        886,
+        109,
+        954,
+        129
+      ],
+      "confidence": 0.987
+    },
+    {
+      "text": "Ticket Info",
+      "box": [
+        1095,
+        96,
+        1219,
+        119
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "Rank7",
+      "box": [
+        660,
+        147,
+        729,
+        174
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Schale Office",
+      "box": [
+        737,
+        147,
+        872,
+        170
+      ],
+      "confidence": 0.995
+    },
+    {
+      "text": "REWARD",
+      "box": [
+        1146,
+        145,
+        1219,
+        168
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "300/2100",
+      "box": [
+        854,
+        210,
+        932,
+        234
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Rank 7",
+      "box": [
+        661,
+        254,
+        727,
+        279
+      ],
+      "confidence": 0.935
+    },
+    {
+      "text": "Schale Residence Hall",
+      "box": [
+        737,
+        253,
+        960,
+        279
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "REWARD",
+      "box": [
+        1147,
+        252,
+        1218,
+        273
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "100/2100",
+      "box": [
+        855,
+        315,
+        932,
+        338
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Rank7",
+      "box": [
+        660,
+        359,
+        729,
+        386
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Gehenna Hub",
+      "box": [
+        739,
+        360,
+        882,
+        383
+      ],
+      "confidence": 0.994
+    },
+    {
+      "text": "REWARD",
+      "box": [
+        1147,
+        359,
+        1218,
+        380
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "300/2100",
+      "box": [
+        855,
+        424,
+        931,
+        444
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Rank7",
+      "box": [
+        661,
+        467,
+        729,
+        491
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Abydos Main Building",
+      "box": [
+        735,
+        465,
+        962,
+        494
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "REWARD",
+      "box": [
+        1147,
+        465,
+        1218,
+        485
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "600/2100",
+      "box": [
+        854,
+        527,
+        932,
+        551
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Rank 7",
+      "box": [
+        661,
+        572,
+        728,
+        597
+      ],
+      "confidence": 0.918
+    },
+    {
+      "text": "Millennium Study Center",
+      "box": [
+        738,
+        572,
+        997,
+        598
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "REWARD",
+      "box": [
+        1147,
+        570,
+        1218,
+        591
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "300/2100",
+      "box": [
+        854,
+        634,
+        932,
+        657
+      ],
+      "confidence": 1.0
+    }
+  ],
+  "bond_crops": []
+}

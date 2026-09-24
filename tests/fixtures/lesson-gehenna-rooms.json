@@ -1,0 +1,301 @@
+{
+  "source": "Authorized development Mac capture, September 24, 2026 UTC; everything outside the relevant modal is black. OCR is recorded local output.",
+  "words": [
+    {
+      "text": "All Locations",
+      "confidence": 0.99986,
+      "box": [
+        536,
+        83,
+        742,
+        116
+      ]
+    },
+    {
+      "text": "X",
+      "confidence": 0.91503,
+      "box": [
+        1119,
+        81,
+        1158,
+        119
+      ]
+    },
+    {
+      "text": "Tickets Owned7/7",
+      "confidence": 0.99965,
+      "box": [
+        567,
+        139,
+        725,
+        162
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.9996,
+      "box": [
+        151,
+        202,
+        204,
+        227
+      ]
+    },
+    {
+      "text": "Gehenna Institute 1",
+      "confidence": 0.99966,
+      "box": [
+        213,
+        201,
+        428,
+        226
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99944,
+      "box": [
+        496,
+        202,
+        549,
+        227
+      ]
+    },
+    {
+      "text": "Gehenna Clubhouse",
+      "confidence": 0.99994,
+      "box": [
+        557,
+        201,
+        775,
+        227
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99938,
+      "box": [
+        840,
+        202,
+        894,
+        227
+      ]
+    },
+    {
+      "text": "Gehenna Campus",
+      "confidence": 0.99679,
+      "box": [
+        900,
+        202,
+        1093,
+        228
+      ]
+    },
+    {
+      "text": "Gehenna Student",
+      "confidence": 0.99994,
+      "box": [
+        900,
+        337,
+        1093,
+        366
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99974,
+      "box": [
+        149,
+        350,
+        206,
+        381
+      ]
+    },
+    {
+      "text": "Gehenna Playing Field",
+      "confidence": 0.98956,
+      "box": [
+        212,
+        351,
+        452,
+        381
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99979,
+      "box": [
+        496,
+        354,
+        549,
+        379
+      ]
+    },
+    {
+      "text": "Gehenna Institute 2",
+      "confidence": 0.97876,
+      "box": [
+        558,
+        354,
+        773,
+        377
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99961,
+      "box": [
+        839,
+        352,
+        894,
+        381
+      ]
+    },
+    {
+      "text": "Square",
+      "confidence": 0.99992,
+      "box": [
+        900,
+        364,
+        983,
+        395
+      ]
+    },
+    {
+      "text": "Gehenna Prefect",
+      "confidence": 0.99994,
+      "box": [
+        213,
+        491,
+        396,
+        517
+      ]
+    },
+    {
+      "text": "Closed Gehenna",
+      "confidence": 0.9996,
+      "box": [
+        558,
+        491,
+        733,
+        518
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99533,
+      "box": [
+        149,
+        501,
+        205,
+        534
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99884,
+      "box": [
+        492,
+        501,
+        550,
+        534
+      ]
+    },
+    {
+      "text": "Team",
+      "confidence": 0.99996,
+      "box": [
+        212,
+        516,
+        283,
+        543
+      ]
+    },
+    {
+      "text": "Institu",
+      "confidence": 0.99985,
+      "box": [
+        554,
+        516,
+        637,
+        543
+      ]
+    },
+    {
+      "text": "Rank 8 required",
+      "confidence": 0.97357,
+      "box": [
+        213,
+        558,
+        382,
+        587
+      ]
+    },
+    {
+      "text": "Rank 9 required",
+      "confidence": 0.99893,
+      "box": [
+        558,
+        559,
+        725,
+        585
+      ]
+    }
+  ],
+  "bond_crops": [
+    {
+      "box": [
+        257,
+        288,
+        291,
+        310
+      ],
+      "text": "8"
+    },
+    {
+      "box": [
+        946,
+        288,
+        980,
+        310
+      ],
+      "text": "6"
+    },
+    {
+      "box": [
+        189,
+        443,
+        216,
+        464
+      ],
+      "text": "4"
+    },
+    {
+      "box": [
+        257,
+        439,
+        291,
+        461
+      ],
+      "text": "7"
+    },
+    {
+      "box": [
+        530,
+        439,
+        564,
+        461
+      ],
+      "text": "6"
+    },
+    {
+      "box": [
+        950,
+        443,
+        977,
+        464
+      ],
+      "text": "3"
+    }
+  ]
+}

@@ -69,16 +69,16 @@ One automation worker controls one configured game instance at a time. An OS loc
 
 ### Jobs and tasks
 
-A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart or Cafe. A **plan** orders tasks; today, `daily` means restart followed by Cafe.
+A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart and Cafe, with Lessons included when its daily setting is enabled.
 
-As the next jobs are added, introduce a small task registry and shared execution context instead of extending command-specific conditionals indefinitely. Each task defines:
+`tasks.py` supplies a small catalog and ordered task plans shared by the CLI and dashboard. Grow a shared execution context when repeated orchestration needs it instead of extending command-specific conditionals indefinitely. Each task defines:
 
 - Preconditions and a recognized entry route.
 - A bounded action sequence, allowed resource use, and cancellation points.
 - A verified completion condition and any cooldown or next-eligible time.
 - A structured result with a summary, failure reason when applicable, and evidence references.
 
-The execution context supplies the device, recognizer, immutable run configuration, clock, cancellation signal, and evidence writer. A shared capture object should carry its pixels, monotonic timestamp, and foreground evidence so freshness checks cannot be lost between layers. When the third task needs these interfaces, promote the existing shared journal/result/error code into a small runtime/evidence module. Task code does not reach into HTTP state or start another worker.
+The execution context supplies the device, recognizer, immutable run configuration, clock, cancellation signal, and evidence writer. `runtime.py` now owns the shared journal, task error, result, and capture contracts used as Lessons becomes the third task. A capture carries its PNG pixels, monotonic timestamp, and foreground evidence; its input deadline includes capture, recognition, and journal time. Restart uses this shared capture; Cafe retains its existing capture tuple while sharing the journal/error/result implementation. Task code does not reach into HTTP state or start another worker. A fuller execution context can follow when it removes repeated orchestration, without adding a general plugin framework.
 
 Restart is the first task in each daily plan. It also restores a known entry state when the game has been closed or a standalone routine begins. Today, both `cafe` and `daily` explicitly run restart first. Later plans may reuse a recently verified home screen between adjacent tasks; they must not infer readiness from the previous task's exit code alone.
 
@@ -112,6 +112,8 @@ Known popups have explicit handlers. A generic dismissal needs supporting eviden
 
 Cafe recognition follows attention icons rather than student or furniture artwork. Camera views overlap, and two independently observed stationary drags establish a boundary. If motion cannot be measured after a short drag, scan that intermediate view and reset movement evidence before proceeding. Unknown motion never proves an edge. A scan's completion and a verified relationship increase are separate outcomes.
 
+Lessons separates screen observation from a pure selection policy. Before spending, enumerate the unlocked locations and their eligible rooms, including visible student ownership, relationship ranks, and location rank/XP when the policy needs them. Unknown ownership or unreadable comparison data must not silently become zero. Use one ticket per action, verify its receipt and ticket decrement, then reread the relevant location state before selecting again. A plan records why a room won the comparison; issuing its confirmation is not proof of a relationship increase.
+
 Every wait, retry loop, repeated action, and complete task has a time or attempt limit. Authentication, unsupported layouts, ambiguous confirmations, and exhausted recovery stop with a useful reason and evidence. A restart after failure begins from a known entry state; it does not blindly replay the last tap.
 
 ## 5. Configuration and game-specific policy
@@ -123,6 +125,8 @@ Use **versioned JSON** for event profiles researched before execution. A profile
 New resource-consuming routines require explicit policies: configured stage, maximum repetitions or AP budget, a reserve if needed, and recognizable completion. Collecting Cafe AP clears Cafe storage; preventing the account's AP from sitting at its regeneration cap also requires a mission/sweep job. An issued tap is not proof that resources were spent or rewards received.
 
 Free invitations remain optional and require an exact configured student name. The game cooldown is authoritative. Paid invitations and premium-currency refills are not part of the current routine.
+
+Lessons has two configurable policies. **Relationship** is the default: compare every eligible room across all unlocked locations by owned-student count, then the sum of those students' visible relationship ranks, with a stable final tie-break. **School rank** first chooses the lowest uncapped location rank and fractional XP progress, then the room with the most students, favoring higher owned-student relationship ranks on a tie. Recheck rank and XP after every ticket; when all locations are capped, use the relationship policy. This balances location progression according to the user's preference; it does not claim to minimize the number of tickets until the next aggregate-rank reward. Optional exact location names restrict the comparison scope; an empty list means all locations. A configurable ticket limit caps each visit, with zero meaning all existing tickets. The first version never buys refills. [Lessons](lessons.md) defines the detailed selection and evidence contract.
 
 ## 6. Evidence, persistence, and the dashboard
 
@@ -140,8 +144,9 @@ The current foundation is implemented: restart, a serial dashboard queue, Cafe, 
 | --- | --- |
 | Portfolio foundation | This design, clear setup/status docs, permissive licensing with third-party asset boundaries, and an isolated account-free demo |
 | Cafe repeatability | Scheduled visits after cooldown, named free invitation when available, and useful evidence for any missed/obscured markers |
-| Next gameplay job | Prefer configured mission sweeps to address AP accumulation; choose the stage/resource policy before implementation |
-| Other daily routines | Add lesson, social, crafting, and reward routines individually through the task contract, with observable entry and exit states |
+| Lessons | Inspect all unlocked locations, choose rooms with the configured relationship or school-rank policy, verify each ticket, and return home; live completion is recorded in [Lessons](lessons.md) |
+| Next gameplay job after Lessons | Prefer configured mission sweeps to address AP accumulation; choose the stage/resource policy before implementation |
+| Other daily routines | Add social, crafting, and reward routines individually through the task contract, with observable entry and exit states |
 | Active events | Guarded navigation from reviewed profiles, then configured stage farming with availability and resource checks |
 | Unattended distribution | Durable queue/recovery, evidence retention controls, Windows/emulator smoke tests, ALAS coexistence, then optional OS service installation |
 

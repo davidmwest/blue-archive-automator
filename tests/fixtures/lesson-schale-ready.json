@@ -1,0 +1,76 @@
+{
+  "source": "Development Mac capture, September 24, 2026; masked outside recognition controls. OCR is recorded local output.",
+  "words": [
+    {
+      "text": "Select Location",
+      "box": [
+        100,
+        6,
+        307,
+        42
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Tickets Owned 7/7",
+      "box": [
+        84,
+        88,
+        279,
+        117
+      ],
+      "confidence": 0.987
+    },
+    {
+      "text": "Rank7]",
+      "box": [
+        931,
+        102,
+        1002,
+        126
+      ],
+      "confidence": 0.99
+    },
+    {
+      "text": "Schale Office",
+      "box": [
+        989,
+        100,
+        1151,
+        126
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "300/2100",
+      "box": [
+        1052,
+        137,
+        1121,
+        158
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Area Rewards",
+      "box": [
+        928,
+        174,
+        1043,
+        197
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "All Locations",
+      "box": [
+        1083,
+        647,
+        1246,
+        679
+      ],
+      "confidence": 1.0
+    }
+  ],
+  "bond_crops": []
+}

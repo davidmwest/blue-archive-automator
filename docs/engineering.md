@@ -1,6 +1,6 @@
 # engineering notes
 
-the project automates a small, repetitive part of Blue Archive through its visible interface. the useful engineering problem is knowing when an action is justified, whether it worked, and when to stop. this retrospective covers the restart and Cafe implementation; the [high-level design](design.md) sets the forward plan. development uses AI assistance; runtime decisions use the rules described below.
+the project automates a small, repetitive part of Blue Archive through its visible interface. the useful engineering problem is knowing when an action is justified, whether it worked, and when to stop. this retrospective covers restart, Cafe, and Lessons; the [high-level design](design.md) sets the forward plan. development uses AI assistance; runtime decisions use the rules described below.
 
 ## constraints that shaped the design
 
@@ -25,6 +25,16 @@ an early Cafe sweep finished while a clickable student remained. the sweep assum
 the current [camera module](../ba_automator/cafe_camera.py) measures displacement from features inside the room, excluding the fixed HUD. it rejects sparse, localized, or competing matches. a constrained affine fallback handles small perspective changes during movement; that fallback cannot certify a stationary camera.
 
 the runner uses slow drags and overlapping views, checking the final partial view at each edge. two separately observed stationary drags establish a boundary. when movement is unknown, it retries captures, checks that intermediate view for students, and resets movement evidence. unknown is never treated as zero. twelve unsuccessful drags toward a step or boundary stop the scan, and the complete Cafe task has a 15-minute limit.
+
+## choosing lessons before spending tickets
+
+Lessons separates observation, selection, and execution. the [planner](../ba_automator/lesson_planner.py) receives school ranks, XP, available rooms, ownership, and relationship ranks as data. the default maximizes owned-student opportunities per ticket; an alternate policy balances the lowest school rank and XP. relationship ranks break ties, and stable identities resolve equal scores. missing evidence stays unknown instead of becoming zero.
+
+the runner cycles through every unlocked school and checks that the observed ranks add up to the game's Total Area Rank. it repeats the survey before each ticket, including changes to relationship ranks and completed rooms. this takes longer than selecting a batch from one screenshot, but gives every decision a current, inspectable basis. a school allowlist and ticket budget make the scope explicit.
+
+recognition also needs to distinguish the interface from its artwork. pink hair is not an ownership marker; the portrait border and protruding relationship heart must agree. a completed room keeps its white header, so availability uses the dimmed standard portrait borders. the tests include both cases using sanitized game captures.
+
+one live lesson returned a valid report and reduced the ticket count, then stopped because the grid-close tap ripple briefly covered the school name. the fix waits for the expected name to become readable; it does not loosen identity matching. each spend still needs a matching report, the expected one-ticket decrement, and a completed room. Start is never replayed when a result is uncertain. the failed run also exposed a dashboard bug: its result pointed to the successful restart step. failures now use the final task's journal, keeping the useful evidence attached to the actual failure.
 
 ## evidence and its limits
 

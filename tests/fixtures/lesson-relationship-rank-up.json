@@ -1,0 +1,26 @@
+{
+  "source": "Authorized development Mac capture, September 24, 2026 UTC; only the relationship rank-up banner/stat line remain visible.",
+  "words": [
+    {
+      "text": "Relationship rank up!",
+      "box": [
+        388,
+        591,
+        890,
+        657
+      ],
+      "confidence": 0.98855
+    },
+    {
+      "text": "ATK +20",
+      "box": [
+        585,
+        662,
+        697,
+        697
+      ],
+      "confidence": 0.99149
+    }
+  ],
+  "bond_crops": []
+}

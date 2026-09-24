@@ -1,0 +1,243 @@
+{
+  "source": "Development Mac capture, September 24, 2026; masked outside recognition controls. OCR is recorded local output.",
+  "words": [
+    {
+      "text": "All Locations",
+      "box": [
+        536,
+        83,
+        742,
+        116
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Tickets Owned7/7",
+      "box": [
+        567,
+        140,
+        725,
+        162
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Wildhunt Central",
+      "box": [
+        212,
+        188,
+        399,
+        214
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Lv.2",
+      "box": [
+        150,
+        201,
+        205,
+        229
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "Office",
+      "box": [
+        212,
+        211,
+        283,
+        240
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Lv.2",
+      "box": [
+        495,
+        202,
+        552,
+        229
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Epiphany Plaza",
+      "box": [
+        556,
+        201,
+        721,
+        230
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "Lv.2",
+      "box": [
+        840,
+        202,
+        895,
+        228
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Dormitory 3",
+      "box": [
+        900,
+        202,
+        1035,
+        228
+      ],
+      "confidence": 0.998
+    },
+    {
+      "text": "Lv.2",
+      "box": [
+        150,
+        352,
+        205,
+        381
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "Center",
+      "box": [
+        210,
+        362,
+        292,
+        392
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Arts Information",
+      "box": [
+        212,
+        337,
+        397,
+        366
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Lv.2",
+      "box": [
+        496,
+        354,
+        549,
+        379
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Iris of Art",
+      "box": [
+        554,
+        352,
+        664,
+        379
+      ],
+      "confidence": 0.997
+    },
+    {
+      "text": "Lv.2",
+      "box": [
+        841,
+        354,
+        895,
+        380
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Nemo Gallery",
+      "box": [
+        897,
+        349,
+        1053,
+        382
+      ],
+      "confidence": 0.998
+    },
+    {
+      "text": "Lv. 2 Apicere Bell Tower",
+      "box": [
+        149,
+        501,
+        416,
+        532
+      ],
+      "confidence": 0.972
+    },
+    {
+      "text": "Lv. 2 Oculus Studio",
+      "box": [
+        495,
+        502,
+        708,
+        530
+      ],
+      "confidence": 0.955
+    },
+    {
+      "text": "Rank 8 required",
+      "box": [
+        214,
+        559,
+        380,
+        585
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "Rank 9 required",
+      "box": [
+        558,
+        559,
+        725,
+        585
+      ],
+      "confidence": 1.0
+    }
+  ],
+  "bond_crops": [
+    {
+      "box": [
+        329,
+        288,
+        363,
+        310
+      ],
+      "text": "11"
+    },
+    {
+      "box": [
+        602,
+        288,
+        636,
+        310
+      ],
+      "text": "8"
+    },
+    {
+      "box": [
+        1018,
+        288,
+        1052,
+        310
+      ],
+      "text": "6"
+    },
+    {
+      "box": [
+        185,
+        439,
+        219,
+        461
+      ],
+      "text": "8"
+    }
+  ]
+}

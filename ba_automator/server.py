@@ -17,6 +17,7 @@ from importlib.resources import files
 import ipaddress
 import json
 import logging
+import math
 import os
 from pathlib import Path
 import re
@@ -35,16 +36,18 @@ from .adb import AdbDevice
 from .actions import record_action
 from .config import Config, ConfigError
 from .locking import InstanceLock
+from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS
 from .vision import decode_frame
 
 
 LOGGER = logging.getLogger(__name__)
-TASKS = {"restart", "daily", "cafe"}
 RESTART_SETTINGS = {"auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout"}
 CAFE_SETTINGS = {"cafe_schedule_enabled": "schedule_enabled", "cafe_invite_enabled": "invite_enabled",
                  "cafe_invite_student": "invite_student"}
+LESSONS_SETTINGS = {"lessons_strategy": "strategy", "lessons_max_tickets": "max_tickets",
+                    "lessons_locations": "locations", "lessons_enabled_in_daily": "enabled_in_daily"}
 AUTOMATION_SETTINGS = {"close_app_when_idle"}
-SETTINGS = RESTART_SETTINGS | CAFE_SETTINGS.keys() | AUTOMATION_SETTINGS
+SETTINGS = RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS
 CAFE_INTERVAL = timedelta(hours=3, seconds=15)
 CAFE_RETRY_INTERVAL = timedelta(minutes=15)
 MAX_SCHEDULE_FAILURES = 3
@@ -94,6 +97,7 @@ def _config_document(config: Config) -> dict:
         )},
         "storage": {"run_dir": str(config.run_dir), "lock_dir": str(config.lock_dir)},
         "automation": {name: getattr(config, name) for name in AUTOMATION_SETTINGS},
+        "lessons": {name: getattr(config, attribute) for attribute, name in LESSONS_SETTINGS.items()},
     }
     if hasattr(config, "state_dir"):
         document["storage"]["state_dir"] = str(config.state_dir)
@@ -151,6 +155,7 @@ class DashboardController:
         values.update({name: getattr(self.config, name, "" if name.endswith("student") else False)
                        for name in CAFE_SETTINGS})
         values.update({name: getattr(self.config, name) for name in AUTOMATION_SETTINGS})
+        values.update({name: getattr(self.config, name) for name in LESSONS_SETTINGS})
         return values
 
     def _state_dir(self) -> Path:
@@ -210,7 +215,7 @@ class DashboardController:
 
     def enqueue(self, task: str) -> dict:
         if not isinstance(task, str) or task not in TASKS:
-            raise ApiError(400, "Task must be restart, cafe, or daily")
+            raise ApiError(400, "Task must be restart, cafe, lessons, or daily")
         with self._condition:
             if self._shutdown:
                 raise ApiError(409, "The server is shutting down")
@@ -353,7 +358,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info")
-                            marker = next((prefix for prefix in ("restart:", "cafe:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("restart:", "cafe:", "lessons:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -381,13 +386,19 @@ class DashboardController:
                         self._state, self._phase = "stopped", "Stopped"
                     elif exit_code == 0 and self._result and self._result.get("status") == "success":
                         self._state = "success"
-                        self._phase = {"restart": "Home screen ready", "cafe": "Cafe task complete",
-                                       "daily": "Daily tasks complete"}[job["task"]]
+                        self._phase = TASK_LABELS[job["task"]]
                     else:
                         self._state, self._phase = "failed", "Task failed; check the log"
+                    if self._state != "success":
+                        self._result = self._unfinished_result(run_root, self._state)
                     self._history.appendleft({"id": job["id"], "task": job["task"],
                                               "state": self._state, "completed_at": self._completed_at})
-                    self._record_schedule(job["task"], self._state)
+                    cafe_result = (self._parse_result(output, run_root, task="cafe")
+                                   if job["task"] == "daily" else None)
+                    # A later lesson failure or stop does not undo a verified cafe visit.
+                    cafe_state = ("success" if cafe_result and cafe_result.get("status") == "success"
+                                  else self._state)
+                    self._record_schedule(job["task"], cafe_state)
                     self._current = None
                     self._process = None
                     # Materialize any due scheduled job before deciding the queue is done.
@@ -424,7 +435,64 @@ class DashboardController:
             self._log(f"Blue Archive closed, but its action history could not be saved: {exc}", "error")
 
     @staticmethod
-    def _parse_result(output: str, run_root: Path) -> dict | None:
+    def _unfinished_result(run_root: Path, status: str) -> dict:
+        """Use the last task's journal, never an earlier successful step's result.
+
+        A killed child may not have written its final record. Unknown counters stay
+        null, and a successful earlier task is not relabeled as the failed task.
+        Only owned, nonsymlink journals directly inside this job are inspected.
+        """
+        result = {"status": status, "run_dir": None, "duration": None, "actions": None}
+        try:
+            if run_root.is_symlink() or not run_root.is_dir():
+                return result
+            candidates = []
+            for run in run_root.iterdir():
+                if not run.name.startswith(RUN_PREFIXES) or run.is_symlink() or not run.is_dir():
+                    continue
+                journal = run / "events.jsonl"
+                if journal.is_symlink() or not journal.is_file():
+                    continue
+                if not journal.resolve().is_relative_to(run_root.resolve()):
+                    continue
+                candidates.append((journal.stat().st_mtime_ns, run.name, journal))
+            if not candidates:
+                return result
+            journal = max(candidates)[2]
+            # The terminal event is small even when the preceding survey is large.
+            with journal.open("rb") as stream:
+                stream.seek(0, os.SEEK_END)
+                stream.seek(max(0, stream.tell() - 65536))
+                tail = stream.read(65536).decode("utf-8", errors="replace")
+            events = []
+            for line in tail.splitlines():
+                try:
+                    event = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(event, dict):
+                    events.append(event)
+            terminal = next((event for event in reversed(events) if event.get("event") == "finished"), None)
+            if terminal and terminal.get("status") == "success":
+                return result  # The child failed between tasks, without a failed task journal.
+            result["run_dir"] = str(journal.parent.resolve())
+            if terminal and terminal.get("status") not in ("failed", "stopped", "interrupted"):
+                terminal = None
+            if terminal:
+                elapsed = terminal.get("elapsed")
+                actions = terminal.get("actions")
+                if type(elapsed) in (int, float) and 0 <= elapsed < math.inf:
+                    result["duration"] = elapsed
+                if type(actions) is int and actions >= 0:
+                    result["actions"] = actions
+                if isinstance(terminal.get("reason"), str):
+                    result["reason"] = terminal["reason"][:2000]
+            return result
+        except OSError:
+            return result
+
+    @staticmethod
+    def _parse_result(output: str, run_root: Path, *, task: str | None = None) -> dict | None:
         decoder = json.JSONDecoder()
         for index in range(len(output) - 1, -1, -1):
             if output[index] != "{":
@@ -435,6 +503,8 @@ class DashboardController:
                     continue
                 result_path = Path(value["run_dir"]).resolve()
                 if not result_path.is_relative_to(run_root.resolve()):
+                    continue
+                if task is not None and not result_path.name.startswith(f"{task}-"):
                     continue
                 return {name: value[name] for name in ("status", "run_dir", "duration", "actions")}
             except (ValueError, TypeError, OSError):
@@ -451,7 +521,7 @@ class DashboardController:
         candidates = []
         try:
             for run in root.iterdir():
-                if not run.name.startswith(("restart-", "cafe-")) or not run.is_dir() or run.is_symlink():
+                if not run.name.startswith(RUN_PREFIXES) or not run.is_dir() or run.is_symlink():
                     continue
                 for frame in run.iterdir():
                     if (frame.name == "home.png" or
@@ -502,7 +572,9 @@ class DashboardController:
                     if not isinstance(value, dict):
                         continue
                     public = {name: value.get(name) for name in
-                              ("id", "time", "task", "action", "detail", "student", "cafe", "status")}
+                              ("id", "time", "task", "action", "detail", "student", "cafe", "status",
+                               "location", "room", "owned_students", "student_count", "tickets_before", "tickets_after",
+                               "strategy", "rank_before", "rank_after", "xp_before", "xp_after")}
                     entries.append(public)
         except FileNotFoundError:
             pass
@@ -523,7 +595,7 @@ class DashboardController:
             if not root.is_dir() or root.is_symlink():
                 continue
             for run in root.iterdir():
-                if not run.name.startswith(("restart-", "cafe-")) or not run.is_dir() or run.is_symlink():
+                if not run.name.startswith(RUN_PREFIXES) or not run.is_dir() or run.is_symlink():
                     continue
                 journal = run / "events.jsonl"
                 if not journal.is_file() or journal.is_symlink():
@@ -640,8 +712,9 @@ class DashboardController:
                     document = tomllib.load(stream)
                 for name, value in changes.items():
                     section = ("cafe" if name in CAFE_SETTINGS else
+                               "lessons" if name in LESSONS_SETTINGS else
                                "automation" if name in AUTOMATION_SETTINGS else "restart")
-                    key = CAFE_SETTINGS.get(name, name)
+                    key = CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, name))
                     document.setdefault(section, {})[key] = value
                 _write_atomic(self.config_path, _toml(document))
                 self.config = Config.from_file(self.config_path)

@@ -1,0 +1,135 @@
+{
+  "source": "Development Mac capture, September 24, 2026; masked outside recognition controls. OCR is recorded local output.",
+  "words": [
+    {
+      "text": "Location Info",
+      "box": [
+        534,
+        99,
+        745,
+        132
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "X",
+      "box": [
+        948,
+        97,
+        982,
+        131
+      ],
+      "confidence": 0.979
+    },
+    {
+      "text": "Lv. 3|Theater Room",
+      "box": [
+        314,
+        166,
+        586,
+        199
+      ],
+      "confidence": 0.952
+    },
+    {
+      "text": "A theater equipped with a large screen for watching videos.",
+      "box": [
+        313,
+        215,
+        806,
+        243
+      ],
+      "confidence": 0.997
+    },
+    {
+      "text": "You can enjoy various shows, movies, and popular anime here.",
+      "box": [
+        315,
+        242,
+        831,
+        267
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "Lesson Rewards",
+      "box": [
+        558,
+        312,
+        722,
+        338
+      ],
+      "confidence": 1.0
+    },
+    {
+      "text": "X100",
+      "box": [
+        341,
+        394,
+        383,
+        414
+      ],
+      "confidence": 0.878
+    },
+    {
+      "text": "Tips",
+      "box": [
+        375,
+        432,
+        434,
+        460
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "Only currently recruited students can earn Relationship Points.",
+      "box": [
+        433,
+        434,
+        923,
+        460
+      ],
+      "confidence": 0.999
+    },
+    {
+      "text": "7\u21926",
+      "box": [
+        688,
+        485,
+        776,
+        518
+      ],
+      "confidence": 0.996
+    },
+    {
+      "text": "Start Lesson",
+      "box": [
+        539,
+        532,
+        740,
+        568
+      ],
+      "confidence": 1.0
+    }
+  ],
+  "bond_crops": [
+    {
+      "box": [
+        879,
+        185,
+        913,
+        207
+      ],
+      "text": "21"
+    },
+    {
+      "box": [
+        948,
+        185,
+        982,
+        207
+      ],
+      "text": "4"
+    }
+  ]
+}
