@@ -109,6 +109,8 @@ def _routes(now: datetime) -> dict[str, tuple[str, bytes]]:
             "cafe_schedule_enabled": False,
             "cafe_invite_enabled": False,
             "cafe_invite_student": "",
+            "bounties_enabled_in_daily": True,
+            "scrimmages_enabled_in_daily": True,
             "lessons_strategy": "relationship",
             "lessons_max_tickets": 0,
             "lessons_locations": [],
@@ -175,6 +177,9 @@ def _routes(now: datetime) -> dict[str, tuple[str, bytes]]:
             data=data.replace(b'<main class="ap-main">',b'<main class="ap-main"><p class="demo-banner">demo \xc2\xb7 fictional stages \xc2\xb7 no device</p>')
         routes['/'+asset]=(kind+'; charset=utf-8',data)
     routes['/ap']=routes['/ap.html']
+    sample_loot = {"cleared_at": None, "items": [{"name":"AP","quantity":60},{"name":"Credits","quantity":45000}],
+                   "receipt_count":1,"unidentified_receipts":0,"receipts":[],"older_receipts":0}
+    routes["/api/loot"] = ("application/json; charset=utf-8", _json(sample_loot))
     for path, value in (("/api/status", status), ("/api/map", home_map), ("/api/actions", actions), ("/api/popups", popups)):
         routes[path] = ("application/json; charset=utf-8", _json(value))
     return routes

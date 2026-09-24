@@ -1236,3 +1236,15 @@ def test_equal_journal_timestamps_do_not_hide_the_unfinished_task(tmp_path, term
     result=DashboardController._unfinished_result(tmp_path,'stopped')
     assert result['run_dir']==str(current.resolve())
     assert result['actions']==(3 if terminal_status else None)
+
+
+def test_loot_http_clear_keeps_history_and_requires_csrf(http_server):
+    from ba_automator.actions import record_action
+    request, controller, factory, _ = http_server
+    action = record_action(controller.config, 'earnings_collected', 'verified', ap=20, credits=100)
+    assert request('GET', '/api/loot')[1]['receipt_count'] == 1
+    assert request('POST', '/api/clear-loot', {})[0] == 403
+    assert request('POST', '/api/clear-loot', {}, {'X-CSRF-Token': controller.csrf_token})[0] == 200
+    assert request('GET', '/api/loot')[1]['receipt_count'] == 0
+    assert any(a['id'] == action['id'] for a in request('GET', '/api/actions')[1]['actions'])
+    assert not factory.processes

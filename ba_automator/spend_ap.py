@@ -338,9 +338,8 @@ class APRunner(ShopRunner):
             confirmation, confirmation.screen.target, "Confirm the verified AP cost"
         )
         receipt = self.wait("receipt", timeout=90, predicate=lambda s: s.ap is not None)
-        self.journal.save_image(
-            f"sweep-receipt-{self.actions:04d}.png", receipt.capture.png
-        )
+        receipt_name = f"sweep-receipt-{self.actions:04d}.png"
+        self.journal.save_image(receipt_name, receipt.capture.png)
         if not screen.after <= receipt.screen.ap <= screen.after + 1:
             self.fail(
                 "Sweep receipt AP differs from its projection; inspect possible level-up or interrupted results"
@@ -375,6 +374,7 @@ class APRunner(ShopRunner):
             ap_before=screen.ap,
             ap_after=result.screen.ap,
             rewards=list(rewards),
+            evidence=str(self.run_dir / receipt_name),
         )
         return result
 

@@ -189,7 +189,7 @@ class CraftingRunner:
         self.journal.save_image('collection-receipt.png', receipt.capture.png)
         self.tap(receipt, receipt.screen.target, 'Dismiss craft receipt')
         result = self.wait('list', predicate=lambda screen: all(slot.kind == 'empty' for slot in screen.slots if slot.number in ready))
-        self.important('crafts_collected', f'Collected {len(ready)} completed craft(s); reward receipt and empty slots verified.', status='confirmed', slots=ready, count=len(ready))
+        self.important('crafts_collected', f'Collected {len(ready)} completed craft(s); reward receipt and empty slots verified.', status='confirmed', slots=ready, count=len(ready), evidence=str(self.run_dir / 'collection-receipt.png'))
         self.state['pending_action'] = None
         self.observe_slots(result)
         return result

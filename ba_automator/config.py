@@ -43,6 +43,8 @@ class Config:
     packs_monthly_max_cents: int = 699
     packs_half_monthly_max_cents: int = 299
     packs_ap_max_cents: int = 299
+    bounties_enabled_in_daily: bool = True
+    scrimmages_enabled_in_daily: bool = True
     lessons_strategy: str = "relationship"
     lessons_max_tickets: int = 0
     lessons_locations: tuple[str, ...] = ()
@@ -95,7 +97,7 @@ class Config:
         if type(self.auto_download) is not bool:
             raise ConfigError("restart.auto_download must be true or false")
         for name in ("cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle",
-                     "lessons_enabled_in_daily", "crafting_schedule_enabled",
+                     "lessons_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "crafting_schedule_enabled",
                      "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled",
                      "ap_schedule_enabled", "ap_hard_default_order"):
             if type(getattr(self, name)) is not bool:
@@ -166,6 +168,8 @@ class Config:
             "ap": {"schedule_enabled", "floor", "strategy", "hard_default_order", "hard_order"},
             "packs": {"monthly_enabled", "half_monthly_enabled", "ap_enabled",
                       "monthly_max_cents", "half_monthly_max_cents", "ap_max_cents"},
+            "bounties": {"enabled_in_daily"},
+            "scrimmages": {"enabled_in_daily"},
             "lessons": {"strategy", "max_tickets", "locations", "enabled_in_daily"},
             "automation": {"close_app_when_idle"},
         }
@@ -180,7 +184,7 @@ class Config:
             unexpected_keys = entries.keys() - keys
             if unexpected_keys:
                 raise ConfigError(f"Unknown {section} settings: {', '.join(sorted(unexpected_keys))}")
-            values.update({f"{section}_{key}" if section in {"cafe", "lessons", "crafting", "packs", "ap"} else key: value
+            values.update({f"{section}_{key}" if section in {"cafe", "lessons", "crafting", "packs", "ap", "bounties", "scrimmages"} else key: value
                            for key, value in entries.items()})
         for required in ("serial", "package"):
             if required not in values:

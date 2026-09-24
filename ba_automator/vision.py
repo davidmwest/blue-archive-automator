@@ -346,6 +346,18 @@ def classify(words: list[Word], matches: dict[str, tuple[int, int]]) -> Observat
         if compact in {"touchtocontinue", "taptocontinue"}:
             return result("popup", "Dismiss startup reward screen", word.center)
 
+    # Arona's calendar has no X or Continue label. Its fixed ten-day grid and
+    # exact heading authorize a tap on the empty floor, outside reward cells.
+    def at(label, bounds):
+        x1, y1, x2, y2 = bounds
+        return any(w.normalized.replace(" ", "") == label and
+                   x1 <= w.center[0] <= x2 and y1 <= w.center[1] <= y2 for w in words)
+    if (at("aronasattendance", (580, 105, 1120, 177)) and
+        at("daily", (690, 75, 810, 130)) and
+        all(at(f"day{n}", (480+(n-1)%5*154, 174+(n-1)//5*218,
+                            590+(n-1)%5*154, 218+(n-1)//5*218)) for n in (1,2,3,5,6,7,8,9,10))):
+        return result("popup", "Advance Arona's daily attendance calendar", (1190, 675))
+
     if any(phrase in text for phrase in ("attendance", "daily login", "login bonus", "reward acquired",
                                          "rewards acquired", "items have expired", "expired items")):
         target = button({"confirm", "ok", "close"})

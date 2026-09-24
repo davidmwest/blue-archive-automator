@@ -411,7 +411,7 @@ class CafeRunner:
             detail = "Cafe reward receipt verified"
             if receipt:
                 detail += ": " + ", ".join(f"{amount:,} {name.upper() if name == 'ap' else name}" for name, amount in receipt.items())
-            record_action(self.config, "earnings_collected", detail + ".", cafe=self.floor, **receipt)
+            record_action(self.config, "earnings_collected", detail + ".", cafe=self.floor, evidence=str(self.run_dir / f"earnings-{self.floor}.png"), **receipt)
             self.tap(cap, (640, 630), "Dismiss verified Cafe reward receipt")
             cap = self.wait_words(lambda w: "cafe earnings" in text_of(w) and "reward acquired" not in text_of(w))
         self.tap(cap, (982, 145), "Close verified Cafe earnings dialog")

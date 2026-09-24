@@ -3,9 +3,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const SVG_NS = "http://www.w3.org/2000/svg";
-  const booleanSettings = new Set(["packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "auto_download", "crafting_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle", "lessons_enabled_in_daily"]);
+  const booleanSettings = new Set(["bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "auto_download", "crafting_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle", "lessons_enabled_in_daily"]);
   const stringSettings = new Set(["cafe_invite_student", "lessons_strategy"]);
-  const settingNames = ["ap_floor","packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "packs_monthly_max_cents", "packs_half_monthly_max_cents", "packs_ap_max_cents", "auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "crafting_schedule_enabled", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
+  const settingNames = ["bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "ap_floor","packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "packs_monthly_max_cents", "packs_half_monthly_max_cents", "packs_ap_max_cents", "auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "crafting_schedule_enabled", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
   const fields = Object.fromEntries(settingNames.map((name) => [name, $(name.replaceAll("_", "-"))]));
   let status = null;
   let connected = false;
@@ -28,11 +28,13 @@
   let popupLimit = 6;
   let actionsSignature = "";
   let actionsLoading = false;
+  let lootLoading = false;
+  let lootSignature = "";
   let importantActions = [];
   let actionsLimit = 15;
   let noticeTimer = null;
 
-  const taskName = (task) => ({ spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
+  const taskName = (task) => ({ bounties: "Bounties", scrimmages: "Scrimmages", spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
   const isRunning = () => Boolean(status && (status.state === "running" || status.current_job));
   const queue = () => (Array.isArray(status?.queue) ? status.queue : []);
   const isDemo = () => status?.demo === true;
@@ -139,6 +141,7 @@
     const unavailable = !connected || pending > 0 || isDemo();
     const queued = queue().length > 0;
     $("run-restart").disabled = unavailable;
+    $("clear-loot").disabled = unavailable;
     $("run-daily").disabled = unavailable;
     $("run-cafe").disabled = unavailable;
     $("run-club").disabled = unavailable;
@@ -146,6 +149,8 @@
     $("run-mail").disabled = unavailable;
     $("run-ap").disabled = unavailable;
     $("run-packs").disabled = unavailable;
+    $("run-bounties").disabled = unavailable;
+    $("run-scrimmages").disabled = unavailable;
     $("run-lessons").disabled = unavailable;
     $("run-restart").querySelector("span").textContent = "queue restart";
     $("run-daily").textContent = "queue daily";
@@ -166,7 +171,7 @@
       ? "lowest rank first, then lowest XP. recheck after each ticket. pick the room with the most students; higher owned relationships break ties."
       : "check every location first. use tickets on rooms with the most owned students; higher relationships break ties.";
     const packEnabled = ["monthly", "half_monthly", "ap"].some((key) => status?.config?.[`packs_${key}_enabled`]);
-    $("daily-plan").textContent = `daily does restart → club → ${packEnabled ? "packs → " : ""}mail → café${status?.config?.lessons_enabled_in_daily === false ? "" : " → lessons"}${status?.config?.ap_schedule_enabled ? " → spend AP" : ""}. club is stubbed for now.`;
+    $("daily-plan").textContent = `daily does restart → club → ${packEnabled ? "packs → " : ""}mail → café${status?.config?.bounties_enabled_in_daily === false ? "" : " → bounties"}${status?.config?.scrimmages_enabled_in_daily === false ? "" : " → scrimmages"}${status?.config?.lessons_enabled_in_daily === false ? "" : " → lessons"}${status?.config?.ap_schedule_enabled ? " → spend AP" : ""}. club is stubbed for now.`;
     const packs = status?.schedule?.packs;
     $("packs-status").textContent = packs?.blocked_reason
       ? `paused: ${packs.blocked_reason}. check the game, then queue a pack check.`
@@ -180,7 +185,7 @@
   function renderSettings(config) {
     if (!config || (settingsLoaded && settingsDirty)) return;
     settingNames.forEach((name) => {
-      if (booleanSettings.has(name)) fields[name].checked = Boolean(config[name] ?? (name === "lessons_enabled_in_daily"));
+      if (booleanSettings.has(name)) fields[name].checked = Boolean(config[name] ?? (["lessons_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily"].includes(name)));
       else if (name.endsWith("_max_cents")) fields[name].value = ((config[name] ?? (name.includes("half_monthly") || name.includes("_ap_") ? 299 : 699)) / 100).toFixed(2);
       else if (name === "lessons_locations") fields[name].value = Array.isArray(config[name]) ? config[name].join("\n") : "";
       else fields[name].value = config[name] ?? ({ ap_floor: 100, lessons_strategy: "relationship", lessons_max_tickets: 0 }[name] ?? "");
@@ -369,6 +374,7 @@
         if (!mapData && !mapLoading) void loadMap();
         if (!popupsLoading) void loadPopups();
         if (!actionsLoading) void loadActions();
+        if (!lootLoading) void loadLoot();
         return status;
       } catch (error) {
         connected = false;
@@ -626,6 +632,47 @@
     $("actions-list").replaceChildren(rows);
   }
 
+  async function loadLoot() {
+    lootLoading = true;
+    try {
+      const response = await fetch("/api/loot", { cache: "no-store", signal: AbortSignal.timeout(10000) });
+      const data = await readResponse(response);
+      if (!Array.isArray(data.items) || !Array.isArray(data.receipts)) throw new Error("Invalid loot response");
+      const signature = JSON.stringify(data);
+      if (signature === lootSignature) return;
+      lootSignature = signature;
+      $("loot-since").textContent = data.cleared_at ? `since ${new Date(data.cleared_at).toLocaleString()}` : "all saved rewards · clear whenever you want a fresh count";
+      $("loot-empty").hidden = data.receipt_count > 0;
+      const totals = document.createDocumentFragment();
+      data.items.forEach((item) => {
+        const card = document.createElement("div"); card.className = "loot-item";
+        const quantity = document.createElement("strong"); quantity.textContent = Number(item.quantity).toLocaleString();
+        const label = document.createElement("span"); label.textContent = item.name;
+        card.append(quantity, label); totals.append(card);
+      });
+      $("loot-totals").replaceChildren(totals);
+      $("loot-unidentified").hidden = !data.unidentified_receipts;
+      $("loot-unidentified").textContent = `${data.unidentified_receipts} receipt(s) still have unnamed drops. check the receipts below; older runs may only have a text log.`;
+      $("loot-receipts-wrap").hidden = !data.receipt_count;
+      $("loot-receipts-label").textContent = `${data.receipt_count} reward receipts${data.older_receipts ? " · showing the latest 100" : ""}`;
+      const rows = document.createDocumentFragment();
+      data.receipts.forEach((receipt) => {
+        const row = document.createElement("article"); row.className = "loot-receipt";
+        const heading = document.createElement("strong"); heading.textContent = `${taskName(receipt.task)} · ${new Date(receipt.time).toLocaleString()}`;
+        const detail = document.createElement("p"); detail.textContent = receipt.detail;
+        row.append(heading, detail);
+        if (/^\/api\/loot\/[a-f0-9]{32}\/receipt$/.test(receipt.receipt_url || "")) {
+          const link = document.createElement("a"); link.href = receipt.receipt_url; link.target = "_blank"; link.rel = "noopener";
+          const img = document.createElement("img"); img.src = receipt.receipt_url; img.alt = "Saved reward receipt"; img.loading = "lazy";
+          link.append(img); row.append(link);
+        }
+        rows.append(row);
+      });
+      $("loot-receipts").replaceChildren(rows);
+    } catch { $("loot-since").textContent = "couldn't read the loot totals. trying again shortly."; }
+    finally { lootLoading = false; }
+  }
+
   async function loadActions() {
     actionsLoading = true;
     try {
@@ -651,12 +698,17 @@
   $("run-mail").addEventListener("click", () => void post("/api/run", { task: "mail" }, "mail’s in the queue."));
   $("run-packs").addEventListener("click", () => void post("/api/run", { task: "packs" }, "pack check and mail are in the queue."));
   $("run-crafting").addEventListener("click", () => void post("/api/run", { task: "crafting" }, "crafting’s in the queue."));
+  $("run-bounties").addEventListener("click", () => void post("/api/run", { task: "bounties" }, "bounties are in the queue."));
+  $("run-scrimmages").addEventListener("click", () => void post("/api/run", { task: "scrimmages" }, "scrimmages are in the queue."));
   $("run-lessons").addEventListener("click", () => void post("/api/run", { task: "lessons" }, "lessons are in the queue."));
   $("stop-run").addEventListener("click", () => void post("/api/stop", {}, "stopping this task and pausing the queue. everything waiting stays there."));
   $("pause-queue").addEventListener("click", () => void post("/api/pause", {}, "queue paused. the current task can finish."));
   $("resume-queue").addEventListener("click", () => void post("/api/resume", {}, "queue’s running again."));
   $("capture").addEventListener("click", () => void post("/api/capture", {}));
   $("popup-show-more").addEventListener("click", () => { popupLimit += 6; renderPopups(); });
+  $("clear-loot").addEventListener("click", async () => {
+    if (await post("/api/clear-loot", {}, "fresh count. the history and receipts are still there.")) await loadLoot();
+  });
   $("actions-show-more").addEventListener("click", () => { actionsLimit += 15; renderActions(); });
   $("dismiss-error").addEventListener("click", () => { $("error-banner").hidden = true; });
   $("queue-list").addEventListener("click", (event) => {

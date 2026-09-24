@@ -40,7 +40,7 @@ from .crafting_state import CraftStateError, read_state, scheduled_jobs, timesta
 from .locking import InstanceLock
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS
 from . import packs_state
-from . import ap_state
+from . import ap_state, loot
 from .vision import decode_frame
 
 
@@ -56,7 +56,8 @@ PACKS_SETTINGS = {f'packs_{key}_{suffix}': f'{key}_{suffix}'
                   for key in packs_state.PACKS for suffix in ('enabled', 'max_cents')}
 AP_SETTINGS = {f'ap_{key}': key for key in
                ('schedule_enabled', 'floor', 'strategy', 'hard_default_order', 'hard_order')}
-SETTINGS = RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
+TICKET_SETTINGS = {"bounties_enabled_in_daily", "scrimmages_enabled_in_daily"}
+SETTINGS = TICKET_SETTINGS | RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
 CAFE_INTERVAL = timedelta(hours=3, seconds=15)
 CAFE_RETRY_INTERVAL = timedelta(minutes=15)
 MAX_SCHEDULE_FAILURES = 3
@@ -109,6 +110,8 @@ def _config_document(config: Config) -> dict:
         "lessons": {name: getattr(config, attribute) for attribute, name in LESSONS_SETTINGS.items()},
         "crafting": {"schedule_enabled": config.crafting_schedule_enabled},
         "packs": {name: getattr(config, attribute) for attribute, name in PACKS_SETTINGS.items()},
+        "bounties": {"enabled_in_daily": config.bounties_enabled_in_daily},
+        "scrimmages": {"enabled_in_daily": config.scrimmages_enabled_in_daily},
         "ap": {name: getattr(config, attribute) for attribute, name in AP_SETTINGS.items()},
     }
     if hasattr(config, "state_dir"):
@@ -174,7 +177,7 @@ class DashboardController:
         values.update({name: getattr(self.config, name) for name in LESSONS_SETTINGS})
         values.update({name: getattr(self.config, name) for name in CRAFTING_SETTINGS})
         values.update({name: getattr(self.config, name) for name in PACKS_SETTINGS})
-        values.update({name: getattr(self.config, name) for name in AP_SETTINGS})
+        values.update({name: getattr(self.config, name) for name in AP_SETTINGS.keys() | TICKET_SETTINGS})
         return values
 
     def _state_dir(self) -> Path:
@@ -366,7 +369,7 @@ class DashboardController:
 
     def enqueue(self, task: str) -> dict:
         if not isinstance(task, str) or task not in TASKS:
-            raise ApiError(400, "Task must be restart, club, cafe, crafting, lessons, or daily")
+            raise ApiError(400, "Task must be one of the supported queue jobs")
         with self._condition:
             if self._shutdown:
                 raise ApiError(409, "The server is shutting down")
@@ -521,7 +524,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info")
-                            marker = next((prefix for prefix in ("restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -794,6 +797,20 @@ class DashboardController:
             pass
         return {"actions": list(reversed(entries))}
 
+    def loot(self) -> dict:
+        with self._condition:
+            return loot.snapshot(self.config)
+
+    def clear_loot(self) -> dict:
+        with self._condition:
+            return loot.clear(self.config)
+
+    def loot_image(self, identifier) -> bytes:
+        with self._condition:
+            path = loot.image_path(self.config, identifier)
+            if path is None: raise ApiError(404, "Receipt unavailable")
+            return path.read_bytes()
+
     def frame_bytes(self) -> bytes:
         with self._condition:
             frame = self._frame()
@@ -932,13 +949,15 @@ class DashboardController:
                 with self.config_path.open("rb") as stream:
                     document = tomllib.load(stream)
                 for name, value in changes.items():
-                    section = ("cafe" if name in CAFE_SETTINGS else
+                    section = (name.split("_")[0] if name in TICKET_SETTINGS else
+                               "cafe" if name in CAFE_SETTINGS else
                                "ap" if name in AP_SETTINGS else
                                "packs" if name in PACKS_SETTINGS else
                                "crafting" if name in CRAFTING_SETTINGS else
                                "lessons" if name in LESSONS_SETTINGS else
                                "automation" if name in AUTOMATION_SETTINGS else "restart")
                     key = AP_SETTINGS.get(name, PACKS_SETTINGS.get(name, CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, CRAFTING_SETTINGS.get(name, name)))))
+                    if name in TICKET_SETTINGS: key = "enabled_in_daily"
                     document.setdefault(section, {})[key] = value
                 _write_atomic(self.config_path, _toml(document))
                 self.config = Config.from_file(self.config_path)
@@ -1054,6 +1073,10 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                                if resource.is_file() else {"width": 1280, "height": 720, "buttons": []})
                 elif target.path == "/api/popups":
                     self._json(200, controller.popups())
+                elif target.path == "/api/loot":
+                    self._json(200, controller.loot())
+                elif match := re.fullmatch(r"/api/loot/([a-f0-9]{32})/receipt", target.path):
+                    self._send(200, controller.loot_image(match[1]), "image/png")
                 elif target.path == "/api/actions":
                     self._json(200, controller.actions())
                 elif match := re.fullmatch(r"/api/popups/([a-f0-9]{32})/(before|after)", target.path):
@@ -1085,7 +1108,7 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     raise ApiError(400, "Mutation requests do not accept query parameters")
                 body = self._body()
                 expected = {"/api/run": {"task"}, "/api/cancel": {"id"}, "/api/pause": set(),
-                            "/api/dismiss-failure": {"id"},
+                            "/api/dismiss-failure": {"id"}, "/api/clear-loot": set(),
                             "/api/resume": set(), "/api/stop": set(), "/api/capture": set(),
                             "/api/settings": SETTINGS}
                 if target.path not in expected:
@@ -1109,6 +1132,8 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     controller.stop()
                 elif target.path == "/api/capture":
                     result = controller.capture()
+                elif target.path == "/api/clear-loot":
+                    result = controller.clear_loot()
                 elif target.path == "/api/settings":
                     result = controller.update_settings(body)
                 self._json(200, result)

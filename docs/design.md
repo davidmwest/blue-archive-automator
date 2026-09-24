@@ -69,7 +69,7 @@ One automation worker controls one configured game instance at a time. An OS loc
 
 ### Jobs and tasks
 
-A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, a deferred Club placeholder, optional paid-pack checks, Mail, and Cafe, with Lessons included when its daily setting is enabled and Spend AP appended when automatic spending is enabled.
+A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, a deferred Club placeholder, optional paid-pack checks, Mail, and Cafe, with Bounties, Scrimmages, and Lessons included when their daily settings are enabled and Spend AP appended when automatic spending is enabled.
 
 `tasks.py` supplies a small catalog and ordered task plans shared by the CLI and dashboard. Grow a shared execution context when repeated orchestration needs it instead of extending command-specific conditionals indefinitely. Each task defines:
 
@@ -103,6 +103,8 @@ The Cafe schedule runs three hours and 15 seconds after a successful visit. Dupl
 After the final worker exits, an optional idle policy closes only Blue Archive if the queue is empty. It leaves the emulator, dashboard, and shared ADB server running. This is a once-per-finished-queue action, not a timer that repeatedly closes a manually opened game.
 
 ### AP spending
+
+Bounties and Scrimmages split the first observed available ticket count equally across their three areas, rotating remainder tickets by the Global game day's weekday modulo three. Each area uses its highest surveyed three-star clear. Per-instance allocation and completed counts persist across retries; an intent is saved before spending and cleared only after receipt and balance verification. Scrimmages also respects the AP floor. These jobs are optional steps in Daily, with explicit standalone queue commands. See [ticket jobs](tickets.md).
 
 Spend AP is a separate queued job with an integer reserve floor (default 100). Automatic operation is opt-in: check hourly and append a visit after Cafe/mail or at the end of Daily. Survey is a separate read-only job. The dedicated AP page presents only scanned three-star Hard stages, supports drag-and-drop plus keyboard/text editing, and validates saved orders on the server.
 
@@ -177,3 +179,10 @@ Use a permissive license for the project's original code and documentation, whil
 - Whether optional AI assistance adds value; the deterministic execution path remains usable without it.
 
 These are implementation inputs for later increments, not reasons to expand the current MVP automatically.
+
+
+### Loot gathered
+
+The dashboard has a durable, clearable reward view over confirmed important actions. It totals recognized item quantities, using mail currency deltas only when the receipt did not already name that currency. It never counts spending intents, failed claims, resource costs, or AP regeneration as loot. Receipts with unnamed drops remain visible and explicitly unquantified; icon identities are not guessed.
+
+Clearing saves a cursor at the last complete JSONL record and a timestamp. It does not remove action history or receipt files, and concurrent later appends belong to the fresh view. Totals include all records since that cursor; the gallery shows the latest 100. Receipt endpoints accept a validated action ID and serve only the recorded PNG beneath the configured run directory. Existing older actions without receipt paths retain their known totals and text. New Cafe, Mail, Crafting, Lesson, AP and ticket jobs attach their saved reward receipts.

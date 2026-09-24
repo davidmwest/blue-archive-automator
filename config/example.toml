@@ -64,3 +64,9 @@ hard_order = []
 run_dir = "../data/runs"
 lock_dir = "../data/locks"
 state_dir = "../data/state"
+
+[bounties]
+enabled_in_daily = true
+
+[scrimmages]
+enabled_in_daily = true

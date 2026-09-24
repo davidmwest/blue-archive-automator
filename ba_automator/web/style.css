@@ -33,3 +33,16 @@
 .failure-list { list-style: none; margin: 16px 0 0; padding: 0; }
 .failure-list li { padding: 16px 0; border-top: 1px solid #e6d1be; }
 .failure-list p { overflow-wrap: anywhere; }
+
+.loot-card { margin-bottom: 24px; }
+.loot-totals { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+.loot-item { display: grid; gap: 4px; min-width: 130px; padding: 16px 20px; background: #edf5ff; border: 1px solid #dbe8fa; border-radius: 12px; }
+.loot-item strong { font-size: 24px; color: #244c8c; font-variant-numeric: tabular-nums; }
+.loot-item span { font-size: 13px; color: #4b5e79; }
+.loot-card summary { cursor: pointer; color: #326be8; padding: 10px 0; font-weight: 600; }
+.loot-receipts { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,320px),1fr)); gap: 16px; max-height: 650px; overflow: auto; padding: 8px 2px; }
+.loot-receipt { min-width: 0; border: 1px solid #e0e6ef; border-radius: 12px; padding: 14px; font-size: 13px; }
+.loot-receipt p { overflow-wrap: anywhere; color: #58677d; }
+.loot-receipt img { display: block; width: 100%; height: auto; border-radius: 6px; }
+.loot-card > .microcopy, .loot-card > .loot-totals, .loot-card > .logs-empty, .loot-card > details { margin-left: 24px; margin-right: 24px; }
+.loot-card > .microcopy:last-child { margin-bottom: 20px; }

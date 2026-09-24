@@ -27,7 +27,9 @@ def main(argv=None) -> int:
     capture.add_argument("--output", type=Path, default=Path("data/capture.png"))
     inspect = commands.add_parser("inspect", help="Classify a saved or live frame without game input")
     inspect.add_argument("--image", type=Path)
-    descriptions = {"restart": "Restart Blue Archive and reach the home screen",
+    descriptions = {"bounties": "Split available Bounty tickets across the three highest three-star clears",
+                    "scrimmages": "Split Scrimmage tickets across three schools while respecting the AP floor",
+                    "restart": "Restart Blue Archive and reach the home screen",
                     "club": "Club placeholder: awaiting a fresh daily-reset test (no game input)",
                     "cafe": "Restart, collect cafe earnings, and greet students",
                     "crafting": "Collect finished crafts, fill Quick Craft slots, and save their timers",
@@ -36,7 +38,7 @@ def main(argv=None) -> int:
                     "spend_ap": "Sweep selected Hard missions or commissions down to the AP floor",
                     "scan_ap": "Survey three-star Hard missions and commissions without spending AP",
                     "lessons": "Restart and use lesson tickets with the configured strategy",
-                    "daily": "Run restart, Club placeholder, enabled packs, mail, cafe, enabled lessons and AP spending"}
+                    "daily": "Run restart, Club placeholder, enabled packs, mail, cafe, enabled ticket sweeps, lessons and AP spending"}
     for name, description in descriptions.items():
         command = commands.add_parser(name, help=description)
         command.add_argument("--no-downloads", action="store_true", help="Stop if game-data download consent is needed")
@@ -83,6 +85,9 @@ def main(argv=None) -> int:
                 if task in {'spend_ap', 'scan_ap'}:
                     from .spend_ap import run_spend_ap, run_scan_ap
                     runner = run_spend_ap if task == 'spend_ap' else run_scan_ap
+                elif task in {'bounties', 'scrimmages'}:
+                    from .tickets import run_bounties, run_scrimmages
+                    runner = run_bounties if task == 'bounties' else run_scrimmages
                 elif task == "packs":
                     from .packs import run_packs
 
