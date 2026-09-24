@@ -1,0 +1,78 @@
+[
+  {
+    "name": "startup_close",
+    "file": "startup_close.png",
+    "region": [
+      1180,
+      0,
+      1280,
+      110
+    ],
+    "mode": "white_mask",
+    "max_error": 0.2,
+    "max_mae": 12,
+    "white_threshold": 120
+  },
+  {
+    "name": "notice_close",
+    "file": "notice_close.png",
+    "region": [
+      300,
+      60,
+      1250,
+      400
+    ],
+    "max_error": 0.015,
+    "max_mae": 10
+  },
+  {
+    "name": "home_left",
+    "file": "home_left.png",
+    "region": [
+      71,
+      678,
+      123,
+      704
+    ],
+    "max_error": 0.025,
+    "max_mae": 12
+  },
+  {
+    "name": "home_right",
+    "file": "home_right.png",
+    "region": [
+      1140,
+      664,
+      1262,
+      697
+    ],
+    "max_error": 0.025,
+    "max_mae": 12
+  },
+  {
+    "name": "news_close",
+    "file": "news_close.png",
+    "region": [
+      1145,
+      0,
+      1240,
+      95
+    ],
+    "max_error": 0.08,
+    "max_mae": 12,
+    "mode": "white_mask",
+    "white_threshold": 120
+  },
+  {
+    "name": "news_sidebar",
+    "file": "news_sidebar.png",
+    "region": [
+      62,
+      117,
+      127,
+      174
+    ],
+    "max_error": 0.03,
+    "max_mae": 12
+  }
+]

@@ -1,0 +1,401 @@
+{
+  "width": 1280,
+  "height": 720,
+  "profile": "global-en-1280x720",
+  "buttons": [
+    {
+      "id": "cafe",
+      "label": "Cafe",
+      "center": [
+        100,
+        659
+      ],
+      "bounds": [
+        60,
+        620,
+        145,
+        705
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "cafe"
+      ],
+      "verified": true,
+      "description": "Home → Cafe",
+      "visual_verified": true,
+      "route_verified": true
+    },
+    {
+      "id": "lesson",
+      "label": "Lesson",
+      "center": [
+        210,
+        659
+      ],
+      "bounds": [
+        167,
+        620,
+        257,
+        705
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "lesson"
+      ],
+      "verified": false,
+      "description": "Home → Lesson",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "students",
+      "label": "Students",
+      "center": [
+        323,
+        659
+      ],
+      "bounds": [
+        277,
+        620,
+        373,
+        705
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "students"
+      ],
+      "verified": false,
+      "description": "Home → Students",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "formation",
+      "label": "Formation",
+      "center": [
+        436,
+        659
+      ],
+      "bounds": [
+        387,
+        620,
+        483,
+        705
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "formation"
+      ],
+      "verified": false,
+      "description": "Home → Formation",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "social",
+      "label": "Social",
+      "center": [
+        548,
+        659
+      ],
+      "bounds": [
+        499,
+        620,
+        599,
+        705
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "social"
+      ],
+      "verified": false,
+      "description": "Home → Social",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "crafting",
+      "label": "Crafting",
+      "center": [
+        659,
+        659
+      ],
+      "bounds": [
+        610,
+        620,
+        711,
+        705
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "crafting"
+      ],
+      "verified": false,
+      "description": "Home → Crafting",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "shop",
+      "label": "Shop",
+      "center": [
+        769,
+        659
+      ],
+      "bounds": [
+        720,
+        620,
+        818,
+        705
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "shop"
+      ],
+      "verified": false,
+      "description": "Home → Shop; no purchases are automated",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "recruit",
+      "label": "Recruit",
+      "center": [
+        877,
+        659
+      ],
+      "bounds": [
+        824,
+        620,
+        930,
+        705
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "recruit"
+      ],
+      "verified": false,
+      "description": "Home → Recruit; recruitment is outside the MVP",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "event_recap",
+      "label": "Event Recap",
+      "center": [
+        1063,
+        617
+      ],
+      "bounds": [
+        1008,
+        577,
+        1124,
+        657
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "event_recap"
+      ],
+      "verified": false,
+      "description": "Permanent event-story archive; distinct from the active event",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "campaign",
+      "label": "Campaign",
+      "center": [
+        1200,
+        641
+      ],
+      "bounds": [
+        1126,
+        573,
+        1277,
+        705
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "campaign"
+      ],
+      "verified": true,
+      "description": "Home → Campaign; combat modes and mission selection",
+      "visual_verified": true,
+      "route_verified": true
+    },
+    {
+      "id": "tasks",
+      "label": "Tasks",
+      "center": [
+        50,
+        234
+      ],
+      "bounds": [
+        24,
+        191,
+        83,
+        275
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "tasks"
+      ],
+      "verified": false,
+      "description": "Daily/weekly achievement rewards; distinct from playable missions",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "momotalk",
+      "label": "MomoTalk",
+      "center": [
+        135,
+        142
+      ],
+      "bounds": [
+        97,
+        98,
+        174,
+        180
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "momotalk"
+      ],
+      "verified": false,
+      "description": "Home → MomoTalk",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "notice",
+      "label": "Notice",
+      "center": [
+        51,
+        143
+      ],
+      "bounds": [
+        20,
+        110,
+        83,
+        180
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "notice"
+      ],
+      "verified": false,
+      "description": "Opens the announcement overlay that restart dismisses",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "mail",
+      "label": "Mail",
+      "center": [
+        1155,
+        36
+      ],
+      "bounds": [
+        1120,
+        13,
+        1187,
+        60
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "mail"
+      ],
+      "verified": false,
+      "description": "Home → Mail",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "menu",
+      "label": "Menu",
+      "center": [
+        1226,
+        36
+      ],
+      "bounds": [
+        1192,
+        13,
+        1263,
+        60
+      ],
+      "kind": "fixed",
+      "route": [
+        "home",
+        "menu"
+      ],
+      "verified": false,
+      "description": "Home → Menu",
+      "visual_verified": true,
+      "route_verified": false
+    },
+    {
+      "id": "active_event",
+      "label": "Rotating event banner",
+      "center": [
+        1193,
+        207
+      ],
+      "bounds": [
+        1120,
+        112,
+        1272,
+        282
+      ],
+      "kind": "carousel",
+      "route": [
+        "home",
+        "active_event"
+      ],
+      "verified": false,
+      "description": "Identify the desired event card and verify the destination; a fixed tap alone is not deterministic",
+      "visual_verified": true,
+      "route_verified": false
+    }
+  ],
+  "verification_note": "Visual positions checked against the staging home screenshot; route verification is separate from visual verification.",
+  "verified_routes": [
+    {
+      "id": "lore_pursuit_via_campaign",
+      "route": [
+        "home",
+        "campaign",
+        "lore_pursuit"
+      ],
+      "entry_screen": "campaign",
+      "entry_center": [
+        100,
+        162
+      ],
+      "observed_notices": [
+        "spoiler_notice",
+        "play_guide"
+      ],
+      "destination_labels": [
+        "Lore Pursuit",
+        "Quest",
+        "Challenge"
+      ],
+      "note": "Verified for the observed Lore Pursuit card. Identify the current card before selecting it; the home carousel route was not exercised."
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+# Copy to local.toml. Use the port assigned to your Blue Archive instance.
+[device]
+serial = "127.0.0.1:5695"
+package = "com.nexon.bluearchive"
+adb_path = "adb"
+
+[restart]
+auto_download = true
+poll_interval = 1.5
+startup_timeout = 300
+download_timeout = 1800
+unknown_timeout = 60
+home_confirmations = 3
+action_cooldown = 3.0
+
+[automation]
+# Close only Blue Archive after the final queued task; the emulator stays open.
+close_app_when_idle = false
+
+[cafe]
+schedule_enabled = false
+invite_enabled = false
+# Exact English in-game name, including variant, e.g. "Yuuka (Track)".
+invite_student = ""
+
+# Paths are relative to this configuration file.
+[storage]
+run_dir = "../data/runs"
+lock_dir = "../data/locks"
+state_dir = "../data/state"

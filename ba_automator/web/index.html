@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Blue Archive Automator</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23326be8'/%3E%3Cpath d='M8 24 16 7l8 17M11 19h10' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to controls</a>
+  <aside class="sidebar" aria-label="Application navigation">
+    <a class="brand" href="#overview" aria-label="Blue Archive Automator overview">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 5 34 14v13L20 35 6 27V14Z"/><path d="m12 23 8-14 8 14M15 19h10"/></svg></span>
+      <span><strong>Blue Archive</strong><small>AUTOMATOR</small></span>
+    </a>
+    <div class="sidebar-label">WORKSPACE</div>
+    <nav class="nav-list">
+      <a class="nav-link active" href="#overview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10 12 3l9 7v10H3Z M9 20v-7h6v7"/></svg>Overview</a>
+      <a class="nav-link" href="#queue"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Task queue<span id="nav-queue-count" class="nav-count" hidden>0</span></a>
+      <a class="nav-link" href="#game-screen"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>game screen</a>
+      <a class="nav-link" href="#settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/><circle cx="8" cy="7" r="2"/><circle cx="16" cy="17" r="2"/></svg>Settings</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="instance-card"><span class="instance-label"><span class="tiny-dot"></span>DEDICATED INSTANCE</span><strong>Blue Archive</strong><code id="sidebar-serial">Waiting for configuration</code></div>
+      <div class="local-caption"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Local control · your machine</div>
+    </div>
+  </aside>
+
+  <main id="main" class="main">
+    <header class="page-header" id="overview">
+      <div><p class="eyebrow">LOCAL CONTROL</p><h1>blue archive, on autopilot.</h1><p class="page-subtitle">restart the game, clear the popups, get the daily stuff done.</p></div>
+      <div class="connection" id="connection"><span class="connection-dot"></span><span id="connection-text">Connecting to local server</span></div>
+    </header>
+
+    <div id="error-banner" class="error-banner" role="alert" hidden><span id="error-message"></span><button id="dismiss-error" class="icon-button" type="button" aria-label="Dismiss error">×</button></div>
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+
+    <section class="run-card card" aria-labelledby="run-title">
+      <div class="run-main">
+        <div class="section-heading compact"><span class="section-kicker">START HERE</span><span id="state-badge" class="badge neutral">Connecting</span></div>
+        <h2 id="run-title">the daily stuff</h2>
+        <p id="run-phase" class="run-description">close the game, open it again, get to home. deal with the popups on the way.</p>
+        <div class="run-actions"><button id="run-restart" class="button primary" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z"/></svg><span>queue restart</span></button><button id="run-daily" class="button secondary" type="button" disabled>queue daily</button><button id="run-cafe" class="button secondary" type="button" disabled>queue café</button><button id="stop-run" class="button danger" type="button" disabled><span class="stop-icon" aria-hidden="true"></span>stop + pause queue</button></div>
+        <p class="microcopy">daily does restart → café. café grabs the AP and credits first, then pats the students.</p>
+      </div>
+      <dl class="run-facts"><div><dt>CURRENT TASK</dt><dd id="current-task">—</dd></div><div><dt>ELAPSED</dt><dd id="elapsed">—</dd></div><div><dt>INSTANCE</dt><dd id="device-serial" class="mono">—</dd></div><div><dt>DISPLAY</dt><dd>1280 × 720<span class="fact-note">required · English</span></dd></div></dl>
+    </section>
+
+    <div class="workspace-grid">
+      <section class="screen-card card" id="game-screen" aria-labelledby="screen-title">
+        <div class="card-header"><div><p class="section-kicker">CURRENT SCREEN</p><h2 id="screen-title">game screen</h2></div><button id="capture" class="button secondary small" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 8a8 8 0 1 0 0 8M20 3v5h-5"/></svg>refresh screen</button></div>
+        <div class="screen-stage" id="screen-stage">
+          <img id="game-frame" alt="Latest screenshot from the selected Blue Archive instance" hidden>
+          <svg id="map-overlay" class="map-overlay" viewBox="0 0 1280 720" role="group" aria-label="Home screen button map" hidden></svg>
+          <div id="frame-placeholder" class="frame-placeholder"><span class="screen-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8M12 18v4M7 11h10M12 7v8"/></svg></span><strong id="frame-placeholder-title">nothing to look at yet.</strong><p id="frame-placeholder-text">grab a screenshot, or queue something.</p><span class="frame-format">1280 × 720 · ADB CAPTURE</span></div>
+        </div>
+        <div class="screen-toolbar"><span id="frame-caption" class="muted">no screenshot yet</span><label class="toggle-row map-toggle"><input id="map-toggle" type="checkbox" disabled><span class="switch" aria-hidden="true"></span><span>home button map</span></label></div>
+        <div id="map-hint" class="map-hint" hidden>home screen positions. click a label to see where it goes.</div>
+        <div id="map-detail" class="map-detail" role="region" aria-label="Selected button details" hidden><div class="map-detail-heading"><div><span class="section-kicker">HOME BUTTON</span><h3 id="map-detail-title"></h3></div><span id="map-detail-status" class="badge neutral"></span><button id="close-map-detail" class="icon-button" type="button" aria-label="Close button details">×</button></div><p id="map-detail-description"></p><dl class="map-metadata"><div><dt>Route</dt><dd id="map-detail-route"></dd></div><div><dt>Position</dt><dd id="map-detail-position"></dd></div><div><dt>Type</dt><dd id="map-detail-kind"></dd></div></dl><p class="microcopy">this is just the map. clicking here won’t tap the game.</p></div>
+      </section>
+
+      <section class="queue-card card" id="queue" aria-labelledby="queue-title">
+        <div class="card-header"><div><p class="section-kicker">IN ORDER</p><h2 id="queue-title">the queue <span id="queue-count" class="count">0</span></h2></div><span id="queue-state" class="badge neutral">—</span></div>
+        <div id="current-job" class="current-job" hidden><span class="job-indicator" aria-hidden="true"></span><div><span class="section-kicker">RUNNING NOW</span><strong id="current-job-title"></strong><span id="current-job-phase" class="muted"></span></div></div>
+        <ol id="queue-list" class="queue-list" aria-label="Pending tasks"></ol>
+        <div id="queue-empty" class="empty-state"><span class="empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6M4 21h16"/></svg></span><strong>nothing queued.</strong><p>add a task above. they run one at a time, in order.</p></div>
+        <div class="queue-controls"><button id="pause-queue" class="button secondary small" type="button" disabled>pause queue</button><button id="resume-queue" class="button primary small" type="button" hidden disabled>resume queue</button></div>
+        <div class="schedule-summary"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><strong id="cafe-schedule-title">Café schedule</strong><span id="cafe-schedule-status">Waiting for schedule</span></div></div>
+        <div class="planned-tasks"><p class="section-kicker">NOT BUILT YET</p><div><span>Lessons &amp; rewards</span><span class="planned-label">PLANNED</span></div><div><span>Missions &amp; sweeps</span><span class="planned-label">PLANNED</span></div><p class="microcopy">restart and café work now. the rest comes later.</p></div>
+      </section>
+    </div>
+
+    <section class="actions-card card" aria-labelledby="actions-title">
+      <div class="card-header"><div><p class="section-kicker">SAVED BETWEEN RUNS</p><h2 id="actions-title">important actions</h2></div><span id="actions-count" class="muted">No actions yet</span></div>
+      <div id="actions-empty" class="logs-empty">the useful stuff gets saved here. come back later and see what it did.</div>
+      <div id="actions-table-wrap" class="actions-table-wrap" hidden><table class="actions-table"><thead><tr><th scope="col">When</th><th scope="col">Task</th><th scope="col">Action</th><th scope="col">Details</th><th scope="col">Student / Café</th></tr></thead><tbody id="actions-list"></tbody></table></div>
+      <div id="actions-more-row" class="popup-more-row" hidden><button id="actions-show-more" class="button secondary small" type="button">Show older actions</button></div>
+    </section>
+
+    <section class="popup-card card" aria-labelledby="popup-title">
+      <div class="card-header"><div><p class="section-kicker">BEFORE / AFTER</p><h2 id="popup-title">popup log</h2></div><span id="popup-count" class="muted">No attempts yet</span></div>
+      <div id="popups-empty" class="logs-empty">when it tries to close a popup, the before and after shots go here.</div>
+      <div id="popup-list" class="popup-list"></div>
+      <div id="popup-more-row" class="popup-more-row" hidden><button id="popup-show-more" class="button secondary small" type="button">Show older attempts</button></div>
+    </section>
+
+    <div class="bottom-grid">
+      <section class="activity-card card" aria-labelledby="activity-title"><div class="card-header"><div><p class="section-kicker">LIVE PROGRESS</p><h2 id="activity-title">runner log</h2></div><span id="log-count" class="muted">No events yet</span></div><div id="logs-empty" class="logs-empty">what it’s doing, as it does it.</div><ol id="activity-list" class="activity-list" aria-label="Recent task activity"></ol><div id="history-section" class="history-section" hidden><p class="section-kicker">RECENT RUNS</p><ul id="history-list" class="history-list"></ul></div></section>
+
+      <section class="settings-card card" id="settings" aria-labelledby="settings-title"><div class="card-header"><div><p class="section-kicker">YOUR CALL</p><h2 id="settings-title">settings</h2></div><span class="settings-scope">LOCAL</span></div><form id="settings-form"><fieldset id="settings-fields" disabled><legend class="sr-only">Task behavior</legend><label class="download-setting"><span><strong>download game updates</strong><small>if the game needs more data, just download it.</small></span><span class="toggle-row"><input id="auto-download" name="auto_download" type="checkbox"><span class="switch" aria-hidden="true"></span><span class="sr-only">download game updates automatically</span></span></label><label class="download-setting idle-close-setting"><span><strong>close the game between runs</strong><small>once the queue is done, close Blue Archive to cut idle CPU use. the emulator stays open.</small></span><span class="toggle-row"><input id="close-app-when-idle" name="close_app_when_idle" type="checkbox"><span class="switch" aria-hidden="true"></span><span class="sr-only">Close Blue Archive after the task queue finishes</span></span></label><div class="settings-grid"><label>Startup timeout<span class="input-unit"><input id="startup-timeout" name="startup_timeout" type="number" min="5" max="3600" step="1" required><span>sec</span></span></label><label>Download timeout<span class="input-unit"><input id="download-timeout" name="download_timeout" type="number" min="5" max="14400" step="1" required><span>sec</span></span></label><label>Unknown screen timeout<span class="input-unit"><input id="unknown-timeout" name="unknown_timeout" type="number" min="5" max="1800" step="1" required><span>sec</span></span></label><label>Screen check interval<span class="input-unit"><input id="poll-interval" name="poll_interval" type="number" min="0.1" max="30" step="0.1" required><span>sec</span></span></label></div>
+        <div class="cafe-settings"><p class="section-kicker">CAFÉ VISITS</p><label class="download-setting"><span><strong>run café every 3 hours</strong><small>AP and credits first. then pat the students. every visit.</small></span><span class="toggle-row"><input id="cafe-schedule-enabled" name="cafe_schedule_enabled" type="checkbox"><span class="switch" aria-hidden="true"></span><span class="sr-only">Run Café every three hours</span></span></label><label class="download-setting"><span><strong>invite a student</strong><small>use the free invitation when it’s ready. 20-hour cooldown.</small></span><span class="toggle-row"><input id="cafe-invite-enabled" name="cafe_invite_enabled" type="checkbox"><span class="switch" aria-hidden="true"></span><span class="sr-only">Enable optional student invitations</span></span></label><label class="student-setting" for="cafe-invite-student">student’s exact English name<input id="cafe-invite-student" name="cafe_invite_student" type="text" maxlength="120" placeholder="e.g. Hoshino" autocomplete="off" disabled><small>pick a name if you want invites. they’re off by default.</small></label></div>
+        <div class="settings-save"><button id="save-settings" class="button secondary small" type="submit" disabled>save settings</button><span id="settings-status" class="muted" role="status">Waiting for configuration</span></div></fieldset></form><p id="settings-lock-note" class="settings-note" hidden>finish or clear the queue before changing settings.</p><p class="settings-note">English, 1280 × 720. if it asks for your actual login, you’ll need to handle that.</p></section>
+    </div>
+    <footer class="page-footer"><span>Blue Archive Automator</span><span>running on this machine.</span></footer>
+  </main>
+</body>
+</html>

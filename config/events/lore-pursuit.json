@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "lore-pursuit",
+  "title": "Special Mission: Lore Pursuit",
+  "server": "global-en",
+  "availability": {
+    "playable_until": "2026-09-29T01:59:00Z",
+    "rewards_until": "2026-10-06T01:59:00Z"
+  },
+  "entries": [
+    {
+      "id": "home_banner",
+      "screen": "home",
+      "region": [1080, 120, 1280, 290],
+      "tap": [1193, 207],
+      "ocr_keywords": ["lore pursuit"],
+      "template_refs": []
+    },
+    {
+      "id": "campaign_banner",
+      "screen": "campaign",
+      "region": [20, 80, 240, 265],
+      "tap": [100, 162],
+      "ocr_keywords": ["lore pursuit"],
+      "template_refs": []
+    }
+  ],
+  "route_checks": [
+    {
+      "id": "spoiler_notice",
+      "kind": "optional_notice",
+      "region": [250, 100, 1030, 620],
+      "required_ocr": ["spoiler"],
+      "dismiss_control": "confirm"
+    },
+    {
+      "id": "play_guide",
+      "kind": "optional_notice",
+      "region": [0, 0, 1280, 720],
+      "required_ocr": ["play guide"],
+      "dismiss_control": "recognized_close"
+    },
+    {
+      "id": "event_page",
+      "kind": "destination",
+      "region": [0, 0, 1280, 720],
+      "required_ocr": ["lore pursuit"],
+      "any_ocr": ["quest", "challenge"]
+    }
+  ],
+  "sources": [
+    "https://forum.nexon.com/bluearchive-en/board_view?board=3217&thread=3541757",
+    "https://www.reddit.com/r/BlueArchive/comments/1wgqui0/event_thread_main_story_act_2_ex_lore_pursuit/"
+  ]
+}

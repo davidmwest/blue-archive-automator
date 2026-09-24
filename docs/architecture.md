@@ -1,126 +1,109 @@
 # Architecture
 
-Status: initial design, 2026-09-23. No runtime has been implemented.
+Status: restart verified live; local dashboard, scheduling, cafe runner, and event-profile recognition implemented. Cafe validation is in progress. Development session: September 23–24, 2026.
 
-## Decision
+## Runtime
 
-Use BlueStacks Air on Apple Silicon macOS and BlueStacks 5 on Windows. Build a portable Python automation core around standard ADB. Use ALAS as a design reference, with Blue Archive task logic implemented independently.
+The Python 3.11+ core controls one explicit ADB endpoint. The initial profile is global English Blue Archive (`com.nexon.bluearchive`) at 1280×720 landscape and 320 DPI, running in BlueStacks Air on Apple Silicon macOS. BlueStacks 5 on Windows is the portability target; its live smoke test remains outstanding. The emulator instance must already be running.
 
-Require a fixed 1280×720 landscape game display on both platforms. Templates, OCR regions, and input coordinates use that pixel grid directly; arbitrary-resolution support is outside the initial design.
+`restart` force-stops and launches Blue Archive, reuses its existing session, handles recognized startup states, and verifies a clear home screen. `cafe` and `daily` both run `restart` followed by the cafe routine. Failure stops the sequence.
 
-The portability boundary is ADB plus a small emulator-management interface. BlueStacks Air and BlueStacks 5 have different host integrations; choosing the same vendor does not make instance discovery, launch commands, installation, or resource settings identical.
-
-## Components
+`serve` provides a loopback dashboard at `127.0.0.1:8765`. It dispatches the same CLI tasks through a serial queue, with an optional cafe schedule. There is no installed operating-system service, emulator start/stop manager, or cloud inference dependency.
 
 ```mermaid
 flowchart TD
-    UI[CLI first / local dashboard later] --> Runner[Scheduler and task runner]
-    Runner --> Tasks[Blue Archive task state machines]
-    Tasks --> Vision[Screen recognition and navigation]
-    Tasks --> Gate[Action policy and verification]
-    Vision --> Device[Device interface]
-    Gate --> Device
-    Device --> ADB[ADB transport]
-    Device --> Replay[Screenshot replay]
-    ADB --> Game[Selected BlueStacks instance]
-    Host[Mac / Windows instance adapter] --> Game
-    Runner <--> DB[SQLite run history and checkpoints]
-    Tasks --> Trace[Logs and bounded screenshot history]
+    UI[Local dashboard] --> Server[Serial queue and cafe schedule]
+    Server --> CLI[Task subprocess]
+    Manual[Manual CLI] --> Tasks[Restart then cafe]
+    CLI --> Tasks
+    Config[Local TOML] --> Server
+    Config --> Tasks
+    Tasks --> Lock[Per-instance process lock]
+    Tasks --> Vision[Local OCR and OpenCV]
+    Tasks --> ADB[Explicit-target ADB]
+    ADB --> Game[Running BlueStacks instance]
+    Tasks --> Trace[Run journals and screenshot evidence]
+    Tasks --> Actions[Persistent important actions]
+    Server --> Schedule[Persistent schedule state]
+    Profiles[Reviewed event JSON] --> Recognition[Read-only event recognition]
+    Recognition --> Vision
 ```
 
-| Layer | Responsibility |
+## Components
+
+| Module | Responsibility |
 | --- | --- |
-| Host adapter | Discover and select an instance, resolve its ADB endpoint, inspect supported resource settings, and eventually start/stop that instance. Separate macOS and Windows implementations. |
-| Device | Capture frames, tap, swipe, send key events, and inspect/control the game process through an explicit ADB serial. Expose timeouts and connection failures through a stable interface. |
-| Perception | Validate the fixed 1280×720 frame and expected layout, match templates, identify pages and popups, and OCR small regions for counters or labels. Return evidence, confidence, and the frame timestamp. |
-| Navigation | Maintain a graph of recognized pages and verified transitions. Account for popups and loading states without assuming every screen has a working Back button. |
-| Tasks | Small state machines for individual chores. Each declares prerequisites, allowed actions, completion evidence, resource limits, and recovery behavior. |
-| Action policy | Check the selected target, current screen, frame freshness, execution mode, and task budget before input. Verify the result after input. |
-| Runner | Run one task at a time per instance, coordinate dependencies, enforce deadlines, and schedule work using the selected game server's reset rules. |
-| Storage and diagnostics | Save run status, checkpoints, task outcomes, timings, and bounded local failure traces. Support replay tests without a live emulator. |
+| `cli.py` | Diagnostics, restart/cafe/daily task sequencing, local server, and interruption handling |
+| `config.py` | Validate the explicit loopback endpoint, timing settings, cafe preferences, and storage paths |
+| `adb.py` | Shared-server compatibility, targeted connection, package and foreground checks, force-stop/launch, screenshots, taps, and swipes |
+| `vision.py` | Fixed-size frame decoding, local RapidOCR/ONNX inference, startup classification, templates, and conservative overlay recognition |
+| `restart.py` | Bounded startup loop, fresh-frame input, popup evidence, and stable-home verification |
+| `cafe.py`, `cafe_vision.py` | Earnings receipts, unlocked floor navigation, attention-marker scans, relationship feedback, and optional free invitations |
+| `events.py` | Strict event-profile validation and read-only entrance/destination matching; no event task |
+| `server.py`, `web/` | Loopback dashboard, serial subprocess queue, schedule, settings, evidence views, and visual home map |
+| `actions.py` | Durable JSONL history of important attempts and confirmed outcomes |
+| `locking.py` | OS process lock scoped to the endpoint and game package |
 
-These are modules in one local application, not separately deployed services.
+Device and vision interfaces are injectable for offline tests. `inspect --image` classifies a saved screenshot without device configuration or an emulator connection.
 
-## Running alongside Azur Lane
+## Startup recognition
 
-Simultaneous operation with the existing Azur Lane daemon is a core requirement. Each daemon owns a different emulator instance and uses that instance's ADB endpoint explicitly for every device operation.
+The runner acquires the instance lock, verifies the selected game and display, force-stops the game, resolves its launcher, and starts it. It then captures a fresh frame, confirms the foreground package, recognizes the state, performs at most one action, and checks the next frame.
 
-For the current development setup, Azur Lane is connected at `127.0.0.1:5675` and Blue Archive is configured at `127.0.0.1:5695`. These are device endpoints, distinct from the host ADB server's usual port `5037`. Both clients can share that server. Keep endpoint values in ignored local configuration and rediscover them when instances change; never assume these port numbers on another machine. Android documents the shared server and explicit target selection in its [ADB guide](https://developer.android.com/tools/adb).
+Blocked states and startup overlays take priority over home recognition. Bare Yes/OK/Confirm text is insufficient to authorize a tap. A data-download prompt needs download context and an affirmative control. Store binary updates, external sign-in, passwords, 2FA, and maintenance require attention; credentials are not managed by the runner.
 
-Keep each daemon's configuration, task state, locks, logs, and eventual dashboard port separate. Instance/account locks are scoped to the corresponding game and profile, so Blue Archive does not block Azur Lane. Recovery must affect only the selected instance: no global `adb kill-server`, `adb disconnect` without a serial, broad process termination, or restart-all operation. On a shared-server problem, report it and pause rather than resetting the other daemon's connection.
+Known notice handlers run first. A generic X-close fallback requires matching dimmed home anchors, a plausible bright modal, and one unambiguous geometric X near its upper-right corner. Shading alone is insufficient. Sensitive dialog text and ambiguous close candidates suppress the fallback. This intentionally supports a limited class of overlays, not every popup shape.
 
-Where configurable, use the same compatible Platform Tools ADB version in both daemons. Different client/server versions can disrupt a shared server; inspect the existing ALAS setup before wiring in automatic connection recovery. Separate ADB servers are a fallback if an existing client's behavior requires isolation, not a requirement just to use different devices.
+Both fixed home anchors must match with color agreement. Success requires repeated clear-home observations spanning at least five seconds; a dimmed home screen behind a modal does not qualify. Popup actions retain a before frame, the following frame, detector name, and observed result in the journal. These records distinguish a dismissal attempt from a changed or unchanged screen.
 
-Budget emulator CPU/RAM/FPS and recognition workers across both processes. Add a coexistence check that runs Blue Archive captures while ALAS remains active and confirms neither connection is interrupted. Concurrent operation is designed for, but has not yet been tested locally.
+Default timing is a 1.5-second poll, three-second tap cooldown, 300-second startup budget, and a separate 1,800-second download window. Later download prompts do not reset that deadline. Unknown screens time out after 60 seconds. Additional limits bound the full run, repeated identical actions, and total taps. Frames older than five seconds are not acted upon.
 
-## Stack and interfaces
+## Cafe routine
 
-- Modern Python, with the exact supported version selected when the macOS ARM64 and Windows dependency smoke tests pass.
-- OpenCV and NumPy for deterministic image matching and crops at fixed pixel coordinates.
-- A replaceable OCR provider selected against real English/Japanese/etc. screenshots for the chosen game client. Avoid committing to a large OCR stack before that check.
-- Android Platform Tools ADB for the first transport. Invoke commands using argument arrays, explicit device serials, and bounded timeouts.
-- Validated configuration for device selection, server, language, enabled tasks, budgets, and scheduling. Keep machine-specific configuration outside Git.
-- SQLite for local run history and task checkpoints. Begin with a CLI; add a browser dashboard bound to localhost later, using the same runner API.
+After restart, cafe enters from verified home, collects available AP and credits first, and verifies the Reward Acquired receipt. It scans the current floor, visits the other floor when its switch is recognized and unlocked, then returns to verified home. Optional configured free invitations are checked during each floor visit. See [cafe behavior](cafe.md) for cooldowns and validation limits.
 
-Start capture with `adb -s <serial> exec-out screencap -p` and input with standard ADB shell input commands. Benchmark capture latency and reliability before adding a streaming capture or persistent input helper. Android documents the screenshot transport in its [ADB guide](https://developer.android.com/tools/adb).
+Student detection uses local yellow attention-marker templates, fresh frames, settling waits, and bounded slow camera pans through overlapping views. A successful tap is recorded separately from relationship-heart feedback. Missing markers can mean cooldown, occlusion, or a student outside the current view; they do not prove every student was petted. The runner has a 15-minute limit and bounded camera, marker, and invitation-list scans.
 
-## Recognition and execution loop
+Camera coverage uses 1,800 ms drags followed by local feature matching to measure scene displacement. The runner accumulates movement toward overlapping views and verifies a boundary through two independently observed stationary drags. Unmeasurable motion never counts as a boundary. It traverses alternating rows with limits on drags, rows, columns, and total time, checking partial edge views too. The approach does not require a furniture template or zoom gesture. Full live validation across layouts is still in progress.
 
-1. Capture a fresh frame from the explicitly selected device.
-2. Verify the expected app, 1280×720 frame, page layout, and popup state.
-3. Choose one action whose preconditions and budget are satisfied.
-4. Send the action once.
-5. Wait for observable progress, with a deadline and adaptive capture interval.
-6. Record the observed outcome and continue, recover, or stop for inspection.
+The invitation handler matches an exact name to its row's Invite control, handles wrapped variants, scrolls inside the list, and guards the confirmation. A cooldown skips the action; a recognized cooldown notice is dismissed. New cooldown evidence is required before recording a successful invitation. The current account's active cooldown has prevented a complete live invitation test. No bulk relationship-collection control has been verified; the Gift panel's portrait shortcut is for gifting.
 
-Require decoded ADB screenshots to be exactly 1280×720 in landscape orientation. Store template locations, OCR crops, and tap/swipe coordinates directly in that space. Validate frame dimensions at startup and on every captured frame; a mismatch blocks input and reports the required emulator setting. No image rescaling or coordinate transform is needed for supported frames.
+## Dashboard and schedule
 
-Use 320 DPI for the initial emulator display profile, matching the configured staging instance, and confirm the game layout when live captures are available. Keep game UI scale consistent with the captured asset profile. Host window dimensions and macOS Retina scaling are not coordinate inputs: the contract is the actual ADB frame. Unexpected system bars, letterboxing, or shifted page anchors fail layout checks even if the frame dimensions match. Treat game region, language, UI scale, and client version as part of the asset profile.
+The dashboard binds to loopback and launches one task subprocess at a time. Each job gets a configuration snapshot and its own diagnostic directory. The same per-instance lock also protects against a separately launched CLI runner.
 
-Template matching handles stable icons and buttons. OCR handles changing values in cropped regions. Multiple anchors should identify a screen before consequential actions. Ordinary execution should work locally without a language-model call per frame.
+Pause allows the current job to finish and blocks dispatch. Stop interrupts the current job and pauses the queue. Resume permits queued work and clears the scheduler's retry pause. Waiting jobs can be canceled. Settings cannot be changed while jobs are active or queued.
 
-Navigation retries need a limit. Unknown popups, repeated identical clicks, expired frames, and lack of progress produce a trace and stop the task. Recovery may reconnect ADB or return to a recognized page; app restarts belong to an explicit bounded recovery policy.
+Cafe scheduling is explicitly enabled and off by default. A successful cafe/daily job records the next due time three hours and 15 seconds later. A failed job sets a 15-minute retry; three consecutive failures pause retries until Resume. Pending cafe/daily work prevents a duplicate scheduled cafe job. Canceling a scheduled occurrence skips that occurrence instead of immediately recreating it.
 
-## Account state and staging
+Schedule state persists in `data/state/schedule.json`. The FIFO job queue and dashboard's recent job list are in memory and disappear at shutdown. `serve` must remain running for schedules to execute; no system service or login item is installed.
 
-A dedicated emulator separates configuration and processes. It does not create a separate game account or roll back server-side actions. The staging instance uses an existing account, so most perception and navigation development should run against recorded frames.
+`[automation] close_app_when_idle` is optional and defaults to false. Once the final dashboard task subprocess has exited, the controller checks for due/queued work and, if the queue is empty, force-stops the configured game under the instance lock. It performs this once after a job, including a failed or interrupted final job; it is not a recurring idle timer. BlueStacks and the dashboard remain open. Standalone CLI runs are unaffected, and closure does not change the task result. The important-action history records successful app closure.
 
-Support three execution modes:
+## Storage and evidence
 
-- **Observe:** capture and classify frames; issue no game input.
-- **Replay:** use curated frames and scripted transitions; test decisions, coordinates, and failures offline.
-- **Live:** run only enabled tasks and actions against the validated target, with budgets and a stop control.
+Storage paths are relative to the TOML file. With the example configuration:
 
-For v1, exclude recruitment, premium-currency spending, item destruction, and account changes. Start with observation, then navigation, then a deliberately selected daily task. Normal AP or ticket consumption becomes available only as part of a task with an explicit configured budget.
+| Location | Contents |
+| --- | --- |
+| `data/runs/` | Per-run durable `events.jsonl`, a 24-frame screenshot ring, and retained completion/evidence images |
+| `data/runs/dashboard-*/` | Dashboard job snapshots and the subprocess's run directories |
+| `data/state/important-actions.jsonl` | Persistent important actions, including separate attempts and verified results |
+| `data/state/schedule.json` | Cafe due time, last success, failure count, and retry pause |
+| `data/locks/` | Shared per-instance process locks |
 
-Record an action's intent before sending a consequential input and record the observed result afterward. A crash between those steps leaves the outcome uncertain: inspect current game state before retrying. A local checkpoint alone cannot guarantee exactly-once behavior against the game server.
+Ctrl+C and task failure record the result and release the lock. A restart starts a new force-stop/launch sequence; there is no resume checkpoint. Cafe receipts and relationship evidence are retained separately from the rotating screenshot ring.
 
-Use one runner lock per instance and, where profiles share a game account, one account-level lock. Provide an explicit pause/resume control for manual handoff in v1, and pause automatically on unexpected observable screen state. Standard ADB does not reliably identify every human input, so automatic manual-input detection is not assumed. On resume, discard stale assumptions and recognize the current screen again.
+JSONL is the current history format; SQLite and resumable task checkpoints are deferred. Local config, raw screenshots, and logs remain outside Git. Only reviewed recognition crops and sanitized fixtures belong in the repository.
 
-Raw screenshots, account identifiers, emulator configuration, ADB keys, logs, and checkpoints remain local. Only reviewed, sanitized fixtures should be committed.
+## Resource use and coexistence
 
-## Resource usage
+All coordinates refer to the 1280×720 ADB screenshot; host window size and Retina scaling do not change them. The runner rejects other pixel dimensions. Keep 320 DPI and the English layout consistent with the assets; pixel size is validated, density is a setup requirement.
 
-BlueStacks documents CPU/memory allocation, display resolution, and graphics settings for Air, and per-instance settings in its multi-instance manager. Those are workload controls, not guaranteed host CPU/GPU percentage caps. [Air settings](https://support.bluestacks.com/hc/en-us/articles/32272893259533-How-to-use-the-Settings-Menu-on-BlueStacks-Air), [Air instance manager](https://support.bluestacks.com/hc/en-us/articles/34711762593037-How-to-create-and-manage-instances-using-the-Multi-instance-Manager-on-BlueStacks-Air).
+OCR uses CPU inference with two worker threads and one inter-operation thread; OpenCV uses two threads. Recognition is deterministic and local. Event research happens ahead of time and becomes reviewed JSON rules. Optional future AI assistance is not active in the runtime.
 
-Keep the display fixed at 1280×720 and 320 DPI. An initial resource candidate to benchmark is 4 virtual CPU cores, 4 GB RAM, and 30 FPS where the emulator/game exposes it. The resource allocation is a starting experiment, not a tested recommendation. Increase memory or cores if startup or task stability suffers.
+BlueStacks CPU/RAM allocation, FPS, and graphics settings remain the resource controls. The idle server does not run continuous game recognition. Resource presets still need measurements on both platforms.
 
-Keep emulator rendering FPS separate from automation capture frequency. Begin around 1–2 captures per second for menu work, capture faster briefly when verifying transitions, and back off during loading or idle periods. Reuse a frame across detectors, crop OCR, and limit OpenCV/OCR worker counts. Sleeping between scheduled runs should eliminate continuous recognition work. Emulator stop/start can be added after lifecycle behavior is validated.
+Blue Archive uses `127.0.0.1:5695`; Azur Lane uses `127.0.0.1:5675`. Both may share the host ADB server on `5037`, with explicit serials on game commands. The transport checks server/client protocol compatibility and stops on a mismatch rather than killing the shared server. Use the same compatible ADB executable and separate configs, logs, and instance locks. Processes controlling the same Blue Archive instance must share its lock directory. Live simultaneous operation with ALAS remains unverified. [Android's ADB guide](https://developer.android.com/tools/adb) describes this server and explicit-device model.
 
-Measure host CPU and memory, capture latency, recognition latency, task completion time, and failures on both operating systems. GPU demand is tuned indirectly through rendering load; this design does not promise a hard GPU quota.
-
-## ALAS and existing Blue Archive projects
-
-Retain ALAS's separation of device transport, screenshot recognition, page navigation, tasks, and scheduling. Its [device abstraction](https://github.com/LmeSzinc/AzurLaneAutoScript/blob/master/module/device/device.py), [page navigation](https://github.com/LmeSzinc/AzurLaneAutoScript/blob/master/module/ui/ui.py), and [runner](https://github.com/LmeSzinc/AzurLaneAutoScript/blob/master/alas.py) are useful references.
-
-A full fork brings game-specific assumptions and dependency/platform work. Review its [requirements](https://github.com/LmeSzinc/AzurLaneAutoScript/blob/master/requirements.txt) when evaluating reuse. Keep the initial implementation small and use standard ADB before adopting helper services.
-
-Other domain references include [BAAS](https://github.com/pur1fying/blue_archive_auto_script) and [ArisuAutoSweeper](https://github.com/TheFunny/ArisuAutoSweeper). Study task flows, recovery cases, and asset organization before deciding whether a component is worth reusing. ALAS, BAAS, and ArisuAutoSweeper identify GPL-3.0 licenses; this initial repository includes links and original design notes, with no imported upstream code or assets.
-
-## Open decisions
-
-- Confirm the installed game's server/region and UI language before building assets or reset schedules.
-- Choose the first daily task and its intended resource budget.
-- Verify screenshot capture and input on the selected Blue Archive instance, including background/minimized behavior and reconnects.
-- Run a Windows smoke test before claiming cross-platform support.
-- Select the OCR runtime and Python version after dependency and recognition benchmarks.
+[ALAS](https://github.com/LmeSzinc/AzurLaneAutoScript), [ArisuAutoSweeper](https://github.com/TheFunny/ArisuAutoSweeper), and [BAAS](https://github.com/pur1fying/blue_archive_auto_script) informed the architecture and recognized cases. This implementation is original; their source and assets are not imported.

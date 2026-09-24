@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blue-archive-automator"
+version = "0.1.0"
+description = "Blue Archive startup automation through an explicitly selected ADB device"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2,<3",
+    "opencv-python>=4.10,<6",
+    "rapidocr==3.9.2",
+    "onnxruntime>=1.20,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9"]
+
+[project.scripts]
+ba = "ba_automator.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["ba_automator*"]
+
+[tool.setuptools.package-data]
+ba_automator = ["assets/*.png", "assets/*.json", "web/*.html", "web/*.js", "web/*.css"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -5,6 +5,7 @@
 # Local account, device, and runtime data
 /config/local.*
 /config/profiles/
+/config/data/
 /data/
 /logs/
 /screenshots/
