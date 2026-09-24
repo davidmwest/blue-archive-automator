@@ -8,7 +8,7 @@ Status: restart, a complete two-floor Cafe visit, and the relationship-focused L
 
 The Python 3.11+ core controls one explicit ADB endpoint. The initial profile is global English Blue Archive (`com.nexon.bluearchive`) at 1280×720 landscape and 320 DPI, running in BlueStacks Air on Apple Silicon macOS. BlueStacks 5 on Windows is the portability target; its live smoke test remains outstanding. The emulator instance must already be running.
 
-`restart` force-stops and launches Blue Archive, reuses its existing session, handles recognized startup states, and verifies a clear home screen. `cafe` runs restart → Cafe; `lessons` runs restart → Lessons. The default `daily` plan runs restart → Cafe → Lessons, with the last step configurable. `tasks.py` owns these plans. Failure stops the sequence.
+`restart` force-stops and launches Blue Archive, reuses its existing session, handles recognized startup states, and verifies a clear home screen. `cafe` runs restart → Club placeholder → Cafe; `lessons` runs restart → Lessons. The default `daily` plan runs restart → Club placeholder → Cafe → Lessons, with the last step configurable. `tasks.py` owns these plans. Failure stops the sequence.
 
 `serve` provides a loopback dashboard at `127.0.0.1:8765`. It dispatches the same CLI tasks through a serial queue, with an optional cafe schedule. There is no installed operating-system service, emulator start/stop manager, or cloud inference dependency.
 
@@ -16,7 +16,7 @@ The Python 3.11+ core controls one explicit ADB endpoint. The initial profile is
 flowchart TD
     UI[Local dashboard] --> Server[Serial queue and cafe schedule]
     Server --> CLI[Task subprocess]
-    Manual[Manual CLI] --> Tasks[Ordered restart / cafe / lessons plan]
+    Manual[Manual CLI] --> Tasks[Ordered restart / club / cafe / lessons plan]
     CLI --> Tasks
     Config[Local TOML] --> Server
     Config --> Tasks
@@ -41,6 +41,7 @@ flowchart TD
 | `adb.py` | Shared-server compatibility, targeted connection, package and foreground checks, force-stop/launch, screenshots, taps, and swipes |
 | `vision.py` | Fixed-size frame decoding, local RapidOCR/ONNX inference, startup classification, templates, and conservative overlay recognition |
 | `restart.py` | Bounded startup loop, fresh-frame input, popup evidence, and stable-home verification |
+| `club.py` | No-input attendance placeholder and UTC server-day calculation; live completion and checkpointing remain pending |
 | `cafe.py`, `cafe_vision.py` | Earnings receipts, unlocked floor navigation, attention-marker scans, relationship feedback, and optional free invitations |
 | `lessons.py`, `lesson_vision.py` | Complete location surveys, rank/XP and room observations, guarded one-ticket confirmation, and result reconciliation |
 | `lesson_planner.py` | Pure relationship and school-rank policy over observed locations, rooms, ownership, and relationship ranks |
@@ -63,6 +64,10 @@ Known notice handlers run first. A generic X-close fallback requires matching di
 Both fixed home anchors must match with color agreement. Success requires repeated clear-home observations spanning at least five seconds; a dimmed home screen behind a modal does not qualify. Popup actions retain a before frame, the following frame, detector name, and observed result in the journal. These records distinguish a dismissal attempt from a changed or unchanged screen.
 
 Default timing is a 1.5-second poll, three-second tap cooldown, 300-second startup budget, and a separate 1,800-second download window. Later download prompts do not reset that deadline. Unknown screens time out after 60 seconds. Additional limits bound the full run, repeated identical actions, and total taps. Frames older than five seconds are not acted upon.
+
+## Club placeholder
+
+Club is reserved immediately after restart in Daily and Cafe plans. Its stub emits a `deferred` result, zero inputs, and no attendance checkpoint or reward claim. Standalone `club` runs only that stub, without restart or idle app closure. The dashboard marks the job as awaiting a reset test; completed Cafe work still updates its timer. The intended routine and activation criteria are in [Club](club.md).
 
 ## Cafe routine
 

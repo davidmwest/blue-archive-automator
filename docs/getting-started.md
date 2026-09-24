@@ -45,13 +45,16 @@ open [the dashboard](http://127.0.0.1:8765). `serve --port 8767` selects a diffe
 | --- | --- |
 | `serve` | runs the local dashboard and one-job-at-a-time queue |
 | `restart` | closes the game and reaches a clear home screen |
+| `club` | records “awaiting reset test”; no game input while stubbed |
 | `cafe` | runs restart, collects Cafe earnings, and checks students |
 | `lessons` | runs restart, surveys locations, and uses existing tickets with the configured strategy |
-| `daily` | runs restart → Cafe → Lessons; the Lessons step can be disabled |
+| `daily` | runs restart → Club placeholder → Cafe → Lessons; the Lessons step can be disabled |
 | `probe` | checks the selected device, game, display size, and foreground app |
 | `capture --output data/capture.png` | saves a screenshot without game input |
 | `inspect --image data/capture.png` | classifies a saved screenshot without an emulator connection |
 | `inspect` | classifies the current game screen without game input |
+
+Club is currently a stub. Its step reports “awaiting reset test” and saves no attendance or reward claim; other steps continue. [The planned check-in flow](club.md) resets at 19:00 UTC.
 
 for example, `.venv/bin/python -m ba_automator --config config/local.toml restart` runs without the dashboard. the installed `ba` command is also available.
 
@@ -71,7 +74,7 @@ to close the game between dashboard visits, enable the idle-close setting or set
 
 ## lessons
 
-queue **lessons** for restart → Lessons, or **daily** for restart → Cafe → Lessons. the relationship strategy has passed live; [the validation notes](lessons.md#validation-status) cover the tested run and the remaining school rank-up case.
+queue **lessons** for restart → Lessons, or **daily** for restart → Club placeholder → Cafe → Lessons. the relationship strategy has passed live; [the validation notes](lessons.md#validation-status) cover the tested run and the remaining school rank-up case.
 
 the default is to check every unlocked location, then choose rooms with the most owned students. ties go to the highest sum of owned students' relationship ranks. the alternate strategy picks the lowest school rank, then the lowest XP progress, and chooses its fullest room. tied rooms favor higher owned relationships. it rechecks after every ticket; no ticket purchases are allowed.
 

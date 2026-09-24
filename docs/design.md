@@ -69,7 +69,7 @@ One automation worker controls one configured game instance at a time. An OS loc
 
 ### Jobs and tasks
 
-A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart and Cafe, with Lessons included when its daily setting is enabled.
+A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, a deferred Club placeholder, and Cafe, with Lessons included when its daily setting is enabled.
 
 `tasks.py` supplies a small catalog and ordered task plans shared by the CLI and dashboard. Grow a shared execution context when repeated orchestration needs it instead of extending command-specific conditionals indefinitely. Each task defines:
 
@@ -158,7 +158,7 @@ Use a permissive license for the project's original code and documentation, whil
 
 - Mission/event stage priorities, AP reserve, repetition limits, and reward-claim order.
 - Invitation selection beyond one named student and one successful invitation per visit.
-- Server-day reset policy for the first reset-based daily task.
+- Club uses the global 19:00 UTC reset policy; live attendance evidence and durable per-day suppression remain pending the fresh-reset test. See [Club](club.md).
 - Recovery semantics and migrations when durable job storage is introduced.
 - Platform-specific emulator discovery and service installation after live portability checks.
 - Whether optional AI assistance adds value; the deterministic execution path remains usable without it.

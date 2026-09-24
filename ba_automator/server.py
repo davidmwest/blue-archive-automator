@@ -139,6 +139,7 @@ class DashboardController:
         self._frame_root: Path | None = None
         self._capture_frame: Path | None = None
         self._app_closed = False
+        self._batch_has_game_job = False
         self._job_roots: dict[str, Path] = {}
         self._popup_cache: dict[Path, tuple[tuple[int, int], list[dict]]] = {}
         self._schedule = self._load_schedule()
@@ -215,7 +216,7 @@ class DashboardController:
 
     def enqueue(self, task: str) -> dict:
         if not isinstance(task, str) or task not in TASKS:
-            raise ApiError(400, "Task must be restart, cafe, lessons, or daily")
+            raise ApiError(400, "Task must be restart, club, cafe, lessons, or daily")
         with self._condition:
             if self._shutdown:
                 raise ApiError(409, "The server is shutting down")
@@ -309,6 +310,7 @@ class DashboardController:
                 self._started_at = _timestamp()
                 self._current = {"id": job["id"], "task": job["task"], "started_at": self._started_at}
                 self._task = job["task"]
+                self._batch_has_game_job |= job["task"] != "club"
                 self._state = "running"
                 self._phase = "Starting"
                 self._completed_at = None
@@ -358,7 +360,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info")
-                            marker = next((prefix for prefix in ("restart:", "cafe:", "lessons:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("restart:", "club:", "cafe:", "lessons:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -384,17 +386,24 @@ class DashboardController:
                     self._result = self._parse_result(output, run_root)
                     if self._stop_requested or self._shutdown:
                         self._state, self._phase = "stopped", "Stopped"
-                    elif exit_code == 0 and self._result and self._result.get("status") == "success":
-                        self._state = "success"
-                        self._phase = TASK_LABELS[job["task"]]
+                    elif exit_code == 0 and self._result and self._result.get("status") in {"success", "deferred"}:
+                        club_result = self._parse_result(output, run_root, task="club")
+                        if club_result and club_result.get("status") == "deferred":
+                            self._state = "deferred"
+                            self._phase = ("Club awaiting reset test" if job["task"] == "club"
+                                           else "Other tasks complete; Club awaiting reset test")
+                            self._result["deferred_tasks"] = ["club"]
+                        else:
+                            self._state = "success"
+                            self._phase = TASK_LABELS[job["task"]]
                     else:
                         self._state, self._phase = "failed", "Task failed; check the log"
-                    if self._state != "success":
+                    if self._state in {"failed", "stopped"}:
                         self._result = self._unfinished_result(run_root, self._state)
                     self._history.appendleft({"id": job["id"], "task": job["task"],
                                               "state": self._state, "completed_at": self._completed_at})
                     cafe_result = (self._parse_result(output, run_root, task="cafe")
-                                   if job["task"] == "daily" else None)
+                                   if job["task"] in {"daily", "cafe"} else None)
                     # A later lesson failure or stop does not undo a verified cafe visit.
                     cafe_state = ("success" if cafe_result and cafe_result.get("status") == "success"
                                   else self._state)
@@ -404,6 +413,8 @@ class DashboardController:
                     # Materialize any due scheduled job before deciding the queue is done.
                     self._enqueue_scheduled()
                     self._close_app_after_queue(selected, process)
+                    if not self._queue:
+                        self._batch_has_game_job = False
                     self._condition.notify_all()
 
     def _close_app_after_queue(self, selected: Config, process) -> None:
@@ -414,6 +425,7 @@ class DashboardController:
         a separately launched CLI runner. No idle timer repeats this action.
         """
         if (not selected.close_app_when_idle or self._queue or self._current is not None
+                or not self._batch_has_game_job  # A standalone placeholder leaves the game alone.
                 or self._capturing or (process is not None and process.poll() is None)):
             return
         try:

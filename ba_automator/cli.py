@@ -28,9 +28,10 @@ def main(argv=None) -> int:
     inspect = commands.add_parser("inspect", help="Classify a saved or live frame without game input")
     inspect.add_argument("--image", type=Path)
     descriptions = {"restart": "Restart Blue Archive and reach the home screen",
+                    "club": "Club placeholder: awaiting a fresh daily-reset test (no game input)",
                     "cafe": "Restart, collect cafe earnings, and greet students",
                     "lessons": "Restart and use lesson tickets with the configured strategy",
-                    "daily": "Run restart, cafe, and enabled lessons in order"}
+                    "daily": "Run restart, the Club placeholder, cafe, and enabled lessons in order"}
     for name, description in descriptions.items():
         command = commands.add_parser(name, help=description)
         command.add_argument("--no-downloads", action="store_true", help="Stop if game-data download consent is needed")
@@ -59,8 +60,16 @@ def main(argv=None) -> int:
             if args.no_downloads:
                 config = replace(config, auto_download=False)
                 device = AdbDevice(config)
-            vision = StartupVision()
+            vision = None
             for task in task_plan(args.command, config):
+                if task == "club":
+                    from .club import run_club
+
+                    result = run_club(config)
+                    print(json.dumps(asdict(result), default=str, indent=2))
+                    continue
+                if vision is None:
+                    vision = StartupVision()
                 if task == "lessons":
                     from .lessons import run_lessons
 

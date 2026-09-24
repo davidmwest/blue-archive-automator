@@ -7,19 +7,26 @@ from .config import Config
 
 TASK_LABELS = {
     "restart": "Home screen ready",
+    "club": "Club check-in complete",
     "cafe": "Cafe task complete",
     "lessons": "Lessons complete",
     "daily": "Daily tasks complete",
 }
 TASKS = frozenset(TASK_LABELS)
-RUN_PREFIXES = ("restart-", "cafe-", "lessons-")
+RUN_PREFIXES = ("restart-", "club-", "cafe-", "lessons-")
 
 
 def task_plan(command: str, config: Config) -> tuple[str, ...]:
-    """Every game job starts with restart; recurring cafe visits stay cafe-only."""
+    """Club has a reserved step after restart; its current stub sends no input."""
     if command == "daily":
-        return ("restart", "cafe", "lessons") if config.lessons_enabled_in_daily else ("restart", "cafe")
-    if command in {"cafe", "lessons"}:
+        plan = ("restart", "club", "cafe")
+        return (*plan, "lessons") if config.lessons_enabled_in_daily else plan
+    if command == "cafe":
+        return ("restart", "club", "cafe")
+    if command == "club":
+        # A placeholder does not need to launch the game. Add restart when live.
+        return ("club",)
+    if command == "lessons":
         return ("restart", command)
     if command == "restart":
         return ("restart",)

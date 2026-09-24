@@ -32,7 +32,7 @@ The default relationship strategy compares rooms across all unlocked locations a
 
 The runner surveys every unlocked school and reconciles the observed ranks with Total Area Rank before each ticket. It verifies the selected room, confirms one existing ticket, then checks the result and ticket decrement. Configurable ticket limits, eligible location names, and daily inclusion are available in TOML and the dashboard. Missing comparison evidence or an unknown configured location stops spending.
 
-`lessons` runs restart → Lessons; `daily` defaults to restart → Cafe → Lessons. The existing three-hour timer remains Cafe-only. A completed Cafe visit still updates its schedule if later Lessons work fails or is interrupted. No daily-reset timer or ticket-purchase flow has been added.
+`lessons` runs restart → Lessons; `daily` defaults to restart → Club placeholder → Cafe → Lessons. The existing three-hour timer includes the Club placeholder but no Lessons. A completed Cafe visit still updates its schedule if later Lessons work fails or is interrupted. No daily-reset timer or ticket-purchase flow has been added.
 
 Seven authorized tickets were used across calibration and guarded runs, with seven matching receipts and ticket decrements, in rooms containing two owned students each. The final uninterrupted job used the remaining two tickets, returned to a verified home screen, and closed the game in 475.3 seconds including restart. Every ticket compared 94 room cards across 12 unlocked locations with Total Area Rank 80. The [Lessons validation section](lessons.md#validation-status) records the limits and evidence.
 
@@ -54,7 +54,11 @@ Smoke-test installation, screenshot capture, input, restart, cafe, lessons, and 
 
 Run Blue Archive while the Azur Lane daemon is active on a different endpoint with a compatible shared ADB server. Confirm startup and recovery leave the other game connected. Measure OCR/capture latency and combined CPU, GPU, and memory use before choosing resource presets.
 
-## 6. Additional daily tasks and durable execution
+## 6. Club and additional daily tasks
+
+Club is scaffolded after restart in Daily and Cafe plans. It reports deferred and sends no input until a fresh 19:00 UTC reset lets us verify attendance delivery. A standalone placeholder is available in the queue. See [the Club activation checklist](club.md).
+
+## 7. Durable execution
 
 Add one routine at a time after restart, with recognized entry/exit states, bounded actions, and replay coverage. Reward collection and configured mission sweeps are candidates. Introduce spending/resource budgets only as needed for an implemented task.
 

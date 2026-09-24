@@ -32,7 +32,7 @@
   let actionsLimit = 15;
   let noticeTimer = null;
 
-  const taskName = (task) => ({ restart: "Restart", daily: "Daily", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
+  const taskName = (task) => ({ restart: "Restart", daily: "Daily", club: "Club", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
   const isRunning = () => Boolean(status && (status.state === "running" || status.current_job));
   const queue = () => (Array.isArray(status?.queue) ? status.queue : []);
   const isDemo = () => status?.demo === true;
@@ -122,6 +122,7 @@
     $("run-restart").disabled = unavailable;
     $("run-daily").disabled = unavailable;
     $("run-cafe").disabled = unavailable;
+    $("run-club").disabled = unavailable;
     $("run-lessons").disabled = unavailable;
     $("run-restart").querySelector("span").textContent = "queue restart";
     $("run-daily").textContent = "queue daily";
@@ -142,8 +143,8 @@
       ? "lowest rank first, then lowest XP. recheck after each ticket. pick the room with the most students; higher owned relationships break ties."
       : "check every location first. use tickets on rooms with the most owned students; higher relationships break ties.";
     $("daily-plan").textContent = status?.config?.lessons_enabled_in_daily === false
-      ? "daily does restart → café. lessons are off for daily, but you can still queue them yourself."
-      : "daily does restart → café → lessons. grab the AP, pat the students, then make the tickets count.";
+      ? "daily does restart → club → café. club is stubbed; lessons are off for daily."
+      : "daily does restart → club → café → lessons. club is stubbed for now; the reset test comes next.";
     $("map-toggle").disabled = !frameLoaded || !mapData;
     document.querySelectorAll("[data-cancel-job]").forEach((button) => { button.disabled = unavailable; });
   }
@@ -250,7 +251,7 @@
       timestamp.textContent = shortTime(job.completed_at);
       if (dateValue(job.completed_at)) timestamp.dateTime = job.completed_at;
       const badge = document.createElement("span");
-      stateBadge(badge, job.state, ({ success: "Completed", failed: "Failed", stopped: "Stopped" }[job.state] || job.state));
+      stateBadge(badge, job.state, ({ deferred: "Awaiting reset test", success: "Completed", failed: "Failed", stopped: "Stopped" }[job.state] || job.state));
       item.append(title, timestamp, badge);
       historyList.append(item);
     });
@@ -285,7 +286,7 @@
       $("settings-lock-note").textContent = "demo settings are read only. there’s no device connected.";
     }
     const running = isRunning();
-    stateBadge($("state-badge"), status.state, ({ idle: "Ready", running: "Running", success: status.task === "restart" && !status.app_closed ? "Home reached" : "Completed", failed: "Needs attention", stopped: "Stopped" }[status.state] || status.state));
+    stateBadge($("state-badge"), status.state, ({ deferred: "Awaiting reset test", idle: "Ready", running: "Running", success: status.task === "restart" && !status.app_closed ? "Home reached" : "Completed", failed: "Needs attention", stopped: "Stopped" }[status.state] || status.state));
     $("run-phase").textContent = status.phase || "close the game, open it again, get to home. deal with the popups on the way.";
     $("current-task").textContent = running ? taskName(status.current_job?.task || status.task) : "None running";
     $("device-serial").textContent = status.config?.serial || "—";
@@ -595,6 +596,7 @@
 
   $("run-restart").addEventListener("click", () => void post("/api/run", { task: "restart" }, "restart’s in the queue."));
   $("run-daily").addEventListener("click", () => void post("/api/run", { task: "daily" }, "daily’s in the queue."));
+  $("run-club").addEventListener("click", () => void post("/api/run", { task: "club" }, "club placeholder queued. live testing comes after reset."));
   $("run-cafe").addEventListener("click", () => void post("/api/run", { task: "cafe" }, "café’s in the queue."));
   $("run-lessons").addEventListener("click", () => void post("/api/run", { task: "lessons" }, "lessons are in the queue."));
   $("stop-run").addEventListener("click", () => void post("/api/stop", {}, "stopping this task and pausing the queue. everything waiting stays there."));

@@ -74,7 +74,7 @@ enabled_in_daily = true
 
 An explicit location list restricts optimization to those locations. An unknown configured name is an error rather than a silent fallback to all locations. `max_tickets` limits the current visit; it never authorizes purchasing tickets or exceeding the observed counter.
 
-Lessons can run as its own queued job or as the Lessons step of a daily plan. The default daily plan is restart → Cafe → Lessons; disabling `enabled_in_daily` removes only that final step. A standalone Lessons visit runs restart → Lessons. The Cafe job remains restart → Cafe, so its three-hour automatic schedule does not enqueue Lessons.
+Lessons can run as its own queued job or as the Lessons step of a daily plan. The default daily plan is restart → Club placeholder → Cafe → Lessons; disabling `enabled_in_daily` removes only that final step. A standalone Lessons visit runs restart → Lessons. The Cafe job is restart → Club placeholder → Cafe, so its three-hour automatic schedule does not enqueue Lessons.
 
 Including Lessons in the daily plan does not itself install a daily schedule: the existing automatic timer is the Cafe cooldown schedule.
 

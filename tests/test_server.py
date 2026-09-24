@@ -933,3 +933,73 @@ def test_enqueue_waits_for_close_before_dispatch_and_clears_closed_status(close_
     finally:
         devices.release.set()
         thread.join(timeout=2)
+
+
+@pytest.mark.parametrize("command", ["club", "cafe", "daily"])
+def test_club_stub_is_deferred_and_keeps_other_tasks_and_cafe_schedule(config_path, command):
+    class StubOutput(FakeOutput):
+        def __iter__(self):
+            self.process.done.wait()
+            root = self.process.run_dir.parent
+            yield json.dumps({"status": "deferred", "run_dir": str(root / "club-pending"),
+                              "duration": 0, "actions": 0}) + "\n"
+            if command != "club":
+                yield json.dumps({"status": "success", "run_dir": str(root / "cafe-complete"),
+                                  "duration": 40, "actions": 3}) + "\n"
+            if command == "daily":
+                yield json.dumps({"status": "success", "run_dir": str(root / "lessons-complete"),
+                                  "duration": 40, "actions": 1}) + "\n"
+
+    class StubFactory(ProcessFactory):
+        def __call__(self, arguments, **options):
+            process = super().__call__(arguments, **options)
+            process.stdout = StubOutput(process)
+            return process
+
+    factory = StubFactory()
+    controller = DashboardController(config_path, process_factory=factory)
+    try:
+        controller.enqueue(command)
+        eventually(lambda: len(factory.processes) == 1)
+        factory.processes[0].finish()
+        eventually(lambda: controller.status()["state"] == "deferred")
+        status = controller.status()
+        assert "awaiting reset test" in status["phase"]
+        assert status["result"]["deferred_tasks"] == ["club"]
+        assert status["history"][0]["state"] == "deferred"
+        assert status["schedule"]["cafe"]["consecutive_failures"] == 0
+        assert bool(status["schedule"]["cafe"]["last_success_at"]) is (command != "club")
+    finally:
+        controller.close()
+
+
+def test_standalone_club_placeholder_does_not_close_game(close_controlled):
+    controller, processes, devices = close_controlled
+    controller.update_settings({"close_app_when_idle": True})
+    controller.enqueue("club")
+    eventually(lambda: len(processes.processes) == 1)
+    processes.processes[0].finish()
+    eventually(lambda: controller.status()["state"] == "success")
+    assert not devices.calls
+    assert controller.actions()["actions"] == []
+
+
+def test_stub_at_end_of_game_queue_preserves_idle_close(close_controlled):
+    controller, processes, devices = close_controlled
+    controller.update_settings({"close_app_when_idle": True})
+    controller.pause()
+    controller.enqueue("restart")
+    controller.enqueue("club")
+    controller.resume()
+    eventually(lambda: len(processes.processes) == 1)
+    processes.processes[0].finish()
+    eventually(lambda: len(processes.processes) == 2)
+    assert not devices.calls
+    processes.processes[1].finish()
+    eventually(lambda: controller.status()["app_closed"])
+    assert [name for name, _ in devices.calls].count("force_stop") == 1
+    controller.enqueue("club")
+    eventually(lambda: len(processes.processes) == 3)
+    processes.processes[2].finish()
+    eventually(lambda: controller.status()["state"] == "success")
+    assert [name for name, _ in devices.calls].count("force_stop") == 1

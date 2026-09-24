@@ -66,11 +66,11 @@ def test_default_plans_include_lessons_only_in_daily_or_explicit_lessons_job():
     assert config.lessons_strategy == "relationship"
     assert config.lessons_max_tickets == 0
     assert config.lessons_locations == ()
-    assert task_plan("daily", config) == ("restart", "cafe", "lessons")
-    assert task_plan("cafe", config) == ("restart", "cafe")
+    assert task_plan("daily", config) == ("restart", "club", "cafe", "lessons")
+    assert task_plan("cafe", config) == ("restart", "club", "cafe")
     assert task_plan("lessons", config) == ("restart", "lessons")
     disabled = replace(config, lessons_enabled_in_daily=False)
-    assert task_plan("daily", disabled) == ("restart", "cafe")
+    assert task_plan("daily", disabled) == ("restart", "club", "cafe")
     assert task_plan("lessons", disabled) == ("restart", "lessons")
 
 
@@ -83,14 +83,14 @@ class Result:
 
 
 @pytest.mark.parametrize(("command", "enabled", "expected"), [
-    ("daily", True, ["restart", "cafe", "lessons"]),
-    ("daily", False, ["restart", "cafe"]),
+    ("daily", True, ["restart", "club", "cafe", "lessons"]),
+    ("daily", False, ["restart", "club", "cafe"]),
     ("lessons", True, ["restart", "lessons"]),
     ("lessons", False, ["restart", "lessons"]),
-    ("cafe", True, ["restart", "cafe"]),
+    ("cafe", True, ["restart", "club", "cafe"]),
 ])
 def test_cli_dispatches_sequential_plan_and_passes_lesson_config(monkeypatch, tmp_path, command, enabled, expected):
-    from ba_automator import cafe, restart
+    from ba_automator import cafe, club, restart
 
     config = selected(lessons_enabled_in_daily=enabled, lessons_strategy="school_rank", lessons_max_tickets=3)
     monkeypatch.setattr(cli.Config, "from_file", lambda _: config)
@@ -100,11 +100,14 @@ def test_cli_dispatches_sequential_plan_and_passes_lesson_config(monkeypatch, tm
     calls = []
 
     def runner(name):
-        def run(given_config, given_device, given_vision):
+        def run(given_config, given_device=None, given_vision=None):
             assert given_config.lessons_strategy == "school_rank"
             assert given_config.lessons_max_tickets == 3
             assert given_config.auto_download is False
-            assert given_device is device and given_vision is vision
+            if name == "club":
+                assert given_device is None and given_vision is None
+            else:
+                assert given_device is device and given_vision is vision
             calls.append(name)
             return Result("success", tmp_path / f"{name}-test")
         return run
@@ -114,6 +117,7 @@ def test_cli_dispatches_sequential_plan_and_passes_lesson_config(monkeypatch, tm
     monkeypatch.setitem(sys.modules, "ba_automator.lessons", module)
     monkeypatch.setattr(restart, "run_restart", runner("restart"))
     monkeypatch.setattr(cafe, "run_cafe", runner("cafe"))
+    monkeypatch.setattr(club, "run_club", runner("club"))
     assert cli.main([command, "--no-downloads"]) == 0
     assert calls == expected
 
