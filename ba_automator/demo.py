@@ -13,6 +13,7 @@ from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
+from socketserver import TCPServer
 from urllib.parse import urlsplit
 
 
@@ -154,6 +155,14 @@ def _routes(now: datetime) -> dict[str, tuple[str, bytes]]:
     return routes
 
 
+class _LoopbackHTTPServer(ThreadingHTTPServer):
+    def server_bind(self) -> None:
+        # HTTPServer.server_bind resolves its hostname with getfqdn(). A numeric
+        # loopback-only demo needs no DNS, and a broken resolver can stall startup.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 def make_server(port: int = 8766) -> ThreadingHTTPServer:
     """Construct a loopback server; port 0 is available for isolated tests."""
     if isinstance(port, bool) or not isinstance(port, int) or not 0 <= port <= 65535:
@@ -213,7 +222,7 @@ def make_server(port: int = 8766) -> ThreadingHTTPServer:
         do_DELETE = do_POST
         do_OPTIONS = do_POST
 
-    return ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    return _LoopbackHTTPServer(("127.0.0.1", port), Handler)
 
 
 def _port(value: str) -> int:

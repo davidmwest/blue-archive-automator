@@ -3,6 +3,7 @@ from __future__ import annotations
 import http.client
 import json
 from pathlib import Path
+import socket
 import subprocess
 import sys
 import threading
@@ -50,7 +51,7 @@ forbidden = {"numpy", "cv2", "rapidocr", "onnxruntime", "ba_automator.adb", "ba_
 def audit(event, args):
     if event == "import" and any(args[0] == name or args[0].startswith(name + ".") for name in forbidden):
         raise AssertionError("device/runtime dependency imported: " + args[0])
-    if event in {"subprocess.Popen", "os.system", "socket.connect"}:
+    if event in {"subprocess.Popen", "os.system", "socket.connect", "socket.gethostbyaddr", "socket.getaddrinfo", "socket.gethostbyname"}:
         raise AssertionError("external interaction: " + event)
     if event == "open":
         path, mode, flags = args
@@ -79,6 +80,21 @@ print(json.dumps({"stdlib_only": True, "no_external_interaction": True}))
     )
     assert json.loads(result.stdout) == {"stdlib_only": True, "no_external_interaction": True}
     assert not list(tmp_path.iterdir())
+
+
+def test_demo_bind_does_not_resolve_any_hostname(monkeypatch):
+    def reject_lookup(*args, **kwargs):
+        raise AssertionError("loopback demo startup must not resolve hostnames")
+
+    for name in ("getfqdn", "gethostbyaddr", "getaddrinfo", "gethostbyname", "gethostbyname_ex"):
+        monkeypatch.setattr(socket, name, reject_lookup)
+    server = make_server(0)
+    try:
+        assert server.server_name == "127.0.0.1"
+        assert server.server_port == server.server_address[1]
+        assert server.server_port > 0
+    finally:
+        server.server_close()
 
 
 def test_status_is_explicitly_fictional_and_cannot_schedule_jobs(demo_server):
