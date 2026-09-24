@@ -1,6 +1,8 @@
 # Cafe
 
-The cafe runner is implemented and undergoing live validation. Initial inspection collected **81 AP and 73,957 credits** and observed one relationship-heart response. That establishes the collection route and a feedback example; it does not yet establish reliable completion of every student interaction or the optional invitation flow.
+The cafe runner completed a live restart → Cafe → home run on the development Mac in **425.5 seconds**, including **379.3 seconds** in the Cafe task. It recognized empty earnings, completed measured scans with boundary checks on both unlocked floors, returned to a verified home screen, and closed Blue Archive through the idle-close setting. This run recorded zero new relationship increases.
+
+Earlier live collection receipts verified **81 AP and 73,957 credits**, then **16 AP and 14,791 credits**. Relationship hearts and rank-up screens were also observed and handled during calibration. The optional invitation flow remains unverified end to end while its cooldown is active.
 
 ## Running a visit
 
@@ -26,9 +28,9 @@ A visit has a 15-minute limit. Dialog waits, student attempts per view, and invi
 
 The detector matches the yellow attention rays using local color and template checks, then selects a point near the student's head inside the room. HUD controls and the floor-switch strip are excluded. It rereads the screen after each action, waits briefly for feedback, and moves the camera to cover more of the room.
 
-An attempted student tap and a verified relationship increase are different records. The latter requires a newly visible relationship-heart template near the target. Student names are not inferred from appearance. The important-action history can therefore show a floor and a confirmed interaction without a student name.
+An attempted student tap and a verified relationship increase are different records. The latter requires a newly visible relationship-heart template near the target or a recognized rank-up screen. A tap that produces both counts once. Student names are not inferred from appearance. The important-action history can therefore show a floor and a confirmed interaction without a student name.
 
-Yellow rays can disappear after interaction, be covered by speech bubbles, or leave the viewport. A view without markers is not proof that all students were petted. Completing the bounded scan records what was checked and how many heart responses were verified; it does not claim perfect student coverage. No furniture changes, automatic zoom calibration, or edit-mode difference detection are implemented.
+Yellow rays can disappear after interaction, be covered by speech bubbles, or leave the viewport. A view without markers is not proof that all students were petted. Completing the bounded scan records what was checked and how many relationship increases were verified; it does not claim perfect student coverage. No furniture changes, automatic zoom calibration, or edit-mode difference detection are implemented.
 
 This approach is informed by [ArisuAutoSweeper's cafe recognition](https://github.com/TheFunny/ArisuAutoSweeper/blob/master/tasks/cafe/ui.py) and [BAAH's interaction observations](https://github.com/BlueArchiveArisHelper/BAAH/blob/main/modules/AllTask/InCafe/TouchHead.py). Both use multiple views, and BAAH explicitly accounts for speech bubbles hiding attention markers. Their code and assets are not imported.
 
@@ -36,9 +38,9 @@ This approach is informed by [ArisuAutoSweeper's cafe recognition](https://githu
 
 The scan uses 1,800 ms drags and measures the resulting scene displacement with local feature matching. It works from observed movement instead of a furniture layout template. It first moves to verified camera edges, then traverses overlapping views in alternating directions. Horizontal steps aim for 450 pixels of observed movement and vertical steps for 220 pixels within the approximately 1,010×440 scene interior.
 
-Two separately observed drags with almost no movement establish a camera boundary. An unmeasurable frame does not count as a boundary. Unexpected movement, twelve unsuccessful drags toward a step/boundary, or exhausted row/column limits stop the scan. The final partial view at each boundary is checked too. The whole visit remains limited to 15 minutes.
+Two separately observed drags with almost no movement establish a camera boundary. If animation or speech bubbles prevent measurement, the runner first retries captures without another drag. If movement remains unknown, it scans that intermediate view for students, resets distance and boundary evidence, and continues with short drags. Unknown movement contributes no distance or boundary evidence. This recovery uses the overlapping movement observed on the fixed display profile. Unexpected movement, twelve unsuccessful drags toward a step/boundary, or exhausted row/column limits stop the scan. The final partial view at each boundary is checked too. The whole visit remains limited to 15 minutes.
 
-Slower pans exposed a previously obscured student marker during live calibration. Complete coverage across furniture layouts is still under validation; a measured camera scan and confirmed relationship feedback remain separate outcomes. The runner has no zoom dependency. An experimental raw pinch completed without a verified scale change and is not included in the runtime.
+Slower pans exposed a previously obscured student marker during live calibration. Measured scans of both floors now pass on the test account; another player's furniture layout also passed a separate camera-movement check. Repeatability across layouts remains under validation. A measured camera scan and confirmed relationship feedback remain separate outcomes. The runner has no zoom dependency.
 
 Upstream [Arisu camera control](https://github.com/TheFunny/ArisuAutoSweeper/blob/master/module/device/control.py) explicitly slows ordinary ADB swipes, and its cafe routine checks overlapping views after camera adjustment. [BAAH](https://github.com/BlueArchiveArisHelper/BAAH/blob/main/modules/AllTask/InCafe/TouchHead.py) also repeats horizontal and diagonal pans with settling time. These are calibration references, not measured guarantees for our BlueStacks input path.
 
@@ -81,6 +83,6 @@ The optional `[automation] close_app_when_idle = true` setting closes the config
 
 Each visit has a run journal, a ring of recent screenshots, and retained reward/relationship evidence. `data/state/important-actions.jsonl` stores attempts and confirmed outcomes across dashboard sessions. The dashboard displays that history separately from debug logs.
 
-A collection attempt is recorded when Claim is pressed; earnings are recorded as collected only after the receipt appears. Relationship taps and new-heart feedback are also separate. Invitation requests are recorded before result verification, and a verified new cooldown produces the completion record. A successful overall visit requires the final home screen.
+A collection attempt is recorded when Claim is pressed; earnings are recorded as collected only after the receipt appears. Relationship taps and verified heart/rank-up feedback are also separate. Invitation requests are recorded before result verification, and a verified new cooldown produces the completion record. A successful overall visit requires the final home screen.
 
-Remaining live validation includes complete repeat runs, both-floor coverage, no earnings available, obscured markers, cooldown behavior, named free invitations, and interruption recovery.
+Remaining live validation includes repeat complete visits after the relationship cooldown, obscured markers across more layouts, named free invitations, and interruption recovery. Both-floor scanning, floor transitions, empty earnings, reward receipts, relationship feedback, final home verification, and idle-close have each been observed live. The successful full run used invitations and scheduling disabled.

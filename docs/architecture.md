@@ -1,6 +1,6 @@
 # Architecture
 
-Status: restart verified live; local dashboard, scheduling, cafe runner, and event-profile recognition implemented. Cafe validation is in progress. Development session: September 23–24, 2026.
+Status: restart and a complete two-floor Cafe visit verified live; local dashboard, scheduling, idle-close, and event-profile recognition implemented. Optional invitation completion remains unverified live. Development session: September 23–24, 2026.
 
 ## Runtime
 
@@ -60,11 +60,11 @@ Default timing is a 1.5-second poll, three-second tap cooldown, 300-second start
 
 ## Cafe routine
 
-After restart, cafe enters from verified home, collects available AP and credits first, and verifies the Reward Acquired receipt. It scans the current floor, visits the other floor when its switch is recognized and unlocked, then returns to verified home. Optional configured free invitations are checked during each floor visit. See [cafe behavior](cafe.md) for cooldowns and validation limits.
+After restart, cafe enters from verified home, collects available AP and credits first, and verifies the Reward Acquired receipt. It scans both unlocked floors, requiring the English switch label before and after each transition. Optional configured free invitations are checked after both required scans; one successful invitation triggers another scan for that student and ends the invitation check. The task then returns to verified home. See [cafe behavior](cafe.md) for cooldowns and validation limits.
 
 Student detection uses local yellow attention-marker templates, fresh frames, settling waits, and bounded slow camera pans through overlapping views. A successful tap is recorded separately from relationship-heart feedback. Missing markers can mean cooldown, occlusion, or a student outside the current view; they do not prove every student was petted. The runner has a 15-minute limit and bounded camera, marker, and invitation-list scans.
 
-Camera coverage uses short 1,800 ms drags followed by local feature matching to measure scene displacement. The runner accumulates movement toward overlapping views and verifies a boundary through two independently observed stationary drags. When animation obscures motion evidence, it checks students in that intermediate view and resets the distance and boundary evidence before moving again. Unmeasurable motion never counts as a boundary. It traverses alternating rows with limits on drags, rows, columns, and total time, checking partial edge views too. The approach does not require a furniture template or zoom gesture. Full live validation across layouts is still in progress.
+Camera coverage uses short 1,800 ms drags followed by local feature matching to measure scene displacement. The runner accumulates movement toward overlapping views and verifies a boundary through two independently observed stationary drags. When animation obscures motion evidence, it checks students in that intermediate view and resets the distance and boundary evidence before moving again. Unmeasurable motion never counts as a boundary. It traverses alternating rows with limits on drags, rows, columns, and total time, checking partial edge views too. The approach does not require a furniture template or zoom gesture. Both floors passed a full live run; another player's layout passed a separate camera-movement check.
 
 The invitation handler matches an exact name to its row's Invite control, handles wrapped variants, scrolls inside the list, and guards the confirmation. A cooldown skips the action; a recognized cooldown notice is dismissed. New cooldown evidence is required before recording a successful invitation. The current account's active cooldown has prevented a complete live invitation test. No bulk relationship-collection control has been verified; the Gift panel's portrait shortcut is for gifting.
 

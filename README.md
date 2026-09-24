@@ -8,7 +8,7 @@ we're using bluestacks + ADB, with [ALAS](https://github.com/LmeSzinc/AzurLaneAu
 
 `restart` closes blue archive, opens it again, gets through the title screen, accepts required game-data downloads, closes startup popups, and waits for a clear home screen. that path has passed a live run on this mac.
 
-`cafe` starts with `restart`, collects available AP and credits, then checks students across both unlocked cafe floors. free invitations are optional and need an exact student name. `daily` currently runs the same restart → cafe sequence. cafe is implemented and still being tested against the live game; a completed scan doesn't mean every student was successfully petted.
+`cafe` starts with `restart`, collects available AP and credits, then checks students across both unlocked cafe floors and returns home. that sequence has passed a live run on this mac. free invitations are optional and need an exact student name. `daily` currently runs the same restart → cafe sequence.
 
 there's a local dashboard with a serial job queue, stop/pause controls, settings, a home-screen map, popup before/after screenshots, and a persistent log of important actions. an optional cafe schedule runs every three hours plus 15 seconds while the server is open.
 
@@ -66,6 +66,8 @@ required game-data downloads are accepted automatically. add `--no-downloads` to
 
 cafe scheduling and invitations are **off by default**. enable them in the dashboard or the `[cafe]` section of your local config. invitations need the exact English name, including variants such as `Yuuka (Track)`. only the free invitation path is supported; the paid bonus invitation isn't used.
 
+collecting cafe AP clears its storage. spending that AP still needs a mission/sweep job, which isn't built yet.
+
 a successful cafe job schedules the next visit for three hours and 15 seconds later. failures retry after 15 minutes; three consecutive failures pause retries until you press resume. the schedule survives server restarts. queued jobs don't. no login service or operating-system schedule is installed, so keep `serve` running for scheduled visits.
 
 pause lets the current job finish. stop interrupts it and pauses the queue. resume allows queued and due work to run again. press **Ctrl+C** to stop a CLI run or the server.
@@ -76,12 +78,14 @@ to close the game between dashboard visits, enable the idle-close setting or set
 
 runs save an `events.jsonl` log and a ring of the latest 24 screenshots under `data/runs/`, plus retained evidence such as `home.png`, popup before/after pairs, and cafe reward receipts. important actions and scheduling state live in `data/state/`. attempted taps and confirmed results are recorded separately. local config, logs, and full screenshots stay out of git.
 
-the development mac is on bluestacks air **5.21.790.7505**. startup accepted a **332.05 MB** game-data download automatically. after Apple reauthentication, a live restart reached home in **44 seconds**, handling the announcement and new-product popups. initial cafe inspection collected **81 AP and 73,957 credits** and observed one relationship-heart response; full cafe and invitation validation is still in progress.
+the development mac is on bluestacks air **5.21.790.7505**. startup accepted a **332.05 MB** game-data download automatically. after Apple reauthentication, a live restart reached home in **44 seconds**, handling the announcement and new-product popups.
 
-cafe coverage uses slow pans and measured scene movement, with overlapping views and camera-boundary checks. the full flow is still being calibrated across furniture layouts and has a 15-minute limit. the free-invitation cooldown has also prevented a complete live invitation test. no bulk relationship-collection button has been verified; the gift-panel portraits are a gifting shortcut.
+the full cafe run took about **seven minutes including restart**: it skipped verified empty earnings, completed measured scans of both floors, returned home, and closed the game. earlier runs collected **16 AP and 14,791 credits** and verified relationship hearts and rank-up screens. the passing run found no new relationship increases; a completed scan doesn't mean every student was petted.
+
+cafe uses short, slow pans with overlapping views and camera-boundary checks, within a 15-minute limit. camera movement also passed a separate check in another player's furniture layout. the free-invitation cooldown still prevents a complete live invitation test. no bulk relationship-collection button has been verified; the gift-panel portraits are a gifting shortcut.
 
 the current active event, lore pursuit, was reached through campaign's upper-left entry. event profiles are local JSON with validated OCR rules and destination checks. recognition helpers are implemented; there isn't an event navigation or farming job yet. event recap is the permanent archive, not the active event.
 
-run offline tests with `.venv/bin/python -m pytest` on mac or `.venv/Scripts/python.exe -m pytest` on windows.
+all **339 offline tests pass on macOS, Windows, and Ubuntu**. run them with `.venv/bin/python -m pytest` on mac or `.venv/Scripts/python.exe -m pytest` on windows.
 
 see [the architecture](docs/architecture.md), [cafe behavior](docs/cafe.md), [the home map](docs/home-map.md), [event profiles](docs/event-profiles.md), and [the build order](docs/roadmap.md).

@@ -8,17 +8,17 @@ The development mac was updated to BlueStacks Air **5.21.790.7505**. A live star
 
 Continue adding reviewed fixtures for new startup screens and keep download, interruption, unknown-screen, and timeout cases bounded. Full raw screenshots stay local.
 
-## 2. Dashboard and cafe — implemented, live validation in progress
+## 2. Dashboard and cafe — full visit live verified; invitations pending
 
 The loopback dashboard provides a serial job queue, settings, stop/pause controls, a visual home map, run evidence, and persistent important-action history. Its optional cafe schedule waits three hours and 15 seconds after success, retries failures after 15 minutes, and pauses after three consecutive failures. The queue is temporary; schedule and action records survive server restarts.
 
 An optional setting closes Blue Archive after the last dashboard job exits and the queue is empty. It leaves the emulator and server running; the next task starts through restart. It defaults to off and does not affect standalone CLI runs.
 
-`daily` and `cafe` run restart first, then collect cafe earnings, check students across unlocked floors, and return home. Optional exact-name invitations use the free route. The initial live inspection collected **81 AP and 73,957 credits** and observed relationship-heart feedback from one interaction.
+`daily` and `cafe` run restart first, then collect cafe earnings, check students across both unlocked floors, and return home. A live full run completed in **425.5 seconds**, recognized empty earnings, verified measured scans and camera boundaries on both floors, returned home, and closed the game. Earlier receipts verified **81 AP and 73,957 credits**, then **16 AP and 14,791 credits**; relationship hearts and rank-up screens were also verified. The full passing run recorded zero new relationship increases.
 
-Complete cafe validation with repeatable full runs, floor switching, empty earnings, occluded/disappearing attention markers, cooldowns, invitation selection and confirmation, and interruption. Report scan completion separately from confirmed student interactions. Keep invitations and scheduling off by default until explicitly enabled.
+Continue validation with repeat visits after the relationship cooldown, occluded/disappearing attention markers across more layouts, invitation selection and confirmation, and interruption. Report scan completion separately from confirmed student interactions. Keep invitations and scheduling off by default until explicitly enabled.
 
-Camera calibration is an immediate remaining step. Slower pans exposed additional markers. The runner now measures scene displacement, scans overlapping views, and requires observed stationary drags to establish camera bounds, within a 15-minute visit budget. It has no zoom dependency; the unverified raw-pinch experiment was removed. Validate camera movement and overlap instead of assuming each requested pan exposes a new area. A free-invitation cooldown has prevented the complete live invitation flow; exact-name row selection and confirmation remain to be checked when available. The Gift panel was inspected, and no bulk relationship-collection button was verified.
+The runner measures scene displacement, scans overlapping views, and requires two observed stationary drags to establish camera bounds, within a 15-minute visit budget. Unmeasurable movement triggers an intermediate student scan and resets distance/boundary evidence before another short drag. Camera movement also passed a separate check in another player's furniture layout. The runner has no zoom dependency. A free-invitation cooldown has prevented the complete live invitation flow; exact-name row selection and confirmation remain to be checked when available. The Gift panel was inspected, and no bulk relationship-collection button was verified.
 
 ## 3. Event navigation
 
@@ -29,6 +29,8 @@ Local version-1 event JSON and strict read-only recognition helpers are implemen
 Before farming, define playable-period checks, stage selection, resource limits, and observable sweep completion. Main Story, Mission, Event Recap, event shops, and timed event stages need separate destinations.
 
 ## 4. Portability and coexistence
+
+All **339 offline tests pass on macOS, Windows, and Ubuntu** in GitHub Actions.
 
 Smoke-test installation, screenshot capture, input, restart, cafe, and interruption on Windows with BlueStacks 5 at the same 1280×720 and 320 DPI profile.
 
