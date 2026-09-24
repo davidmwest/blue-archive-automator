@@ -47,3 +47,9 @@ images in code; no screenshot or live validation is claimed for that popup.
 Whole-frame OCR omitted that ratio; `ticket_crops` record its independently matching
 2× and 3× local OCR readings. Other remaining counts are synthetic OCR cases in the
 tests, not additional claims of captured gameplay.
+
+`lesson-hyakki-shopping-grid` and `lesson-hyakki-shopping-preview` preserve the
+same room before spending a ticket. Along with `lesson-haruhabara-headers`, they
+cover wrapped titles where tightly cropped OCR duplicated letter fragments. Their
+`header_crops` record OCR with an eight-pixel white margin before enlargement;
+the saved game screenshots themselves retain their original pixels.

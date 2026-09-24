@@ -1,0 +1,548 @@
+{
+  "source": "Authorized local staging capture, 2026-09-24 UTC; account HUD and unrelated controls masked. Padded header OCR and confirmation evidence for exact room names.",
+  "words": [
+    {
+      "text": "All Locations",
+      "confidence": 0.99988,
+      "box": [
+        535,
+        83,
+        744,
+        118
+      ]
+    },
+    {
+      "text": "X",
+      "confidence": 0.95209,
+      "box": [
+        1121,
+        82,
+        1157,
+        118
+      ]
+    },
+    {
+      "text": "Tickets Owned4/7",
+      "confidence": 0.9999,
+      "box": [
+        565,
+        136,
+        726,
+        164
+      ]
+    },
+    {
+      "text": "Haruhabara",
+      "confidence": 0.99995,
+      "box": [
+        900,
+        188,
+        1035,
+        214
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99962,
+      "box": [
+        151,
+        202,
+        205,
+        227
+      ]
+    },
+    {
+      "text": "Haruhabara Station",
+      "confidence": 0.99182,
+      "box": [
+        213,
+        201,
+        426,
+        226
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99969,
+      "box": [
+        496,
+        202,
+        549,
+        227
+      ]
+    },
+    {
+      "text": "Kinds!",
+      "confidence": 0.99994,
+      "box": [
+        556,
+        200,
+        630,
+        227
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99961,
+      "box": [
+        838,
+        200,
+        894,
+        229
+      ]
+    },
+    {
+      "text": "Multimedia Center",
+      "confidence": 0.99884,
+      "box": [
+        900,
+        212,
+        1106,
+        239
+      ]
+    },
+    {
+      "text": "Haruhabara Electric",
+      "confidence": 0.99894,
+      "box": [
+        213,
+        339,
+        428,
+        365
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99942,
+      "box": [
+        150,
+        351,
+        205,
+        381
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99953,
+      "box": [
+        496,
+        353,
+        549,
+        379
+      ]
+    },
+    {
+      "text": "Video Hall",
+      "confidence": 0.97958,
+      "box": [
+        556,
+        351,
+        670,
+        378
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99942,
+      "box": [
+        840,
+        353,
+        894,
+        379
+      ]
+    },
+    {
+      "text": "Haruhabara Crossfield",
+      "confidence": 0.98764,
+      "box": [
+        900,
+        352,
+        1141,
+        378
+      ]
+    },
+    {
+      "text": "Street",
+      "confidence": 0.99997,
+      "box": [
+        211,
+        363,
+        286,
+        390
+      ]
+    },
+    {
+      "text": "Maid Cafe",
+      "confidence": 0.99989,
+      "box": [
+        556,
+        490,
+        667,
+        517
+      ]
+    },
+    {
+      "text": "Lv.2 Mandrake Complex",
+      "confidence": 0.98774,
+      "box": [
+        151,
+        504,
+        424,
+        530
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99652,
+      "box": [
+        495,
+        503,
+        550,
+        531
+      ]
+    },
+    {
+      "text": "Candy.",
+      "confidence": 0.94355,
+      "box": [
+        556,
+        513,
+        635,
+        544
+      ]
+    },
+    {
+      "text": "ndy",
+      "confidence": 0.99972,
+      "box": [
+        646,
+        511,
+        702,
+        548
+      ]
+    },
+    {
+      "text": "Rank 8 required",
+      "confidence": 0.98942,
+      "box": [
+        212,
+        556,
+        382,
+        588
+      ]
+    },
+    {
+      "text": "Rank 9 required",
+      "confidence": 0.96645,
+      "box": [
+        557,
+        557,
+        726,
+        586
+      ]
+    }
+  ],
+  "bond_crops": [
+    {
+      "box": [
+        185,
+        288,
+        219,
+        310
+      ],
+      "scale": 5,
+      "words": []
+    },
+    {
+      "box": [
+        189,
+        292,
+        216,
+        313
+      ],
+      "scale": 5,
+      "words": []
+    },
+    {
+      "box": [
+        946,
+        288,
+        980,
+        310
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "11",
+          "confidence": 0.90864,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        874,
+        439,
+        908,
+        461
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "11",
+          "confidence": 0.96326,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    }
+  ],
+  "header_crops": [
+    {
+      "box": [
+        209,
+        185,
+        460,
+        247
+      ],
+      "scale": 2,
+      "words": [
+        {
+          "text": "Haruhabara Station",
+          "confidence": 0.99995,
+          "box": [
+            20,
+            42,
+            455,
+            104
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        209,
+        185,
+        460,
+        247
+      ],
+      "scale": 3,
+      "words": [
+        {
+          "text": "Haruhabara Station",
+          "confidence": 0.99996,
+          "box": [
+            30,
+            63,
+            684,
+            156
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        898,
+        185,
+        1149,
+        247
+      ],
+      "scale": 2,
+      "words": [
+        {
+          "text": "Haruhabara",
+          "confidence": 0.99997,
+          "box": [
+            22,
+            19,
+            291,
+            75
+          ]
+        },
+        {
+          "text": "Multimedia Center",
+          "confidence": 0.99995,
+          "box": [
+            22,
+            68,
+            433,
+            126
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        898,
+        185,
+        1149,
+        247
+      ],
+      "scale": 3,
+      "words": [
+        {
+          "text": "Haruhabara",
+          "confidence": 0.99998,
+          "box": [
+            34,
+            30,
+            437,
+            113
+          ]
+        },
+        {
+          "text": "Multimedia Center",
+          "confidence": 0.99995,
+          "box": [
+            33,
+            102,
+            650,
+            189
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        209,
+        336,
+        460,
+        398
+      ],
+      "scale": 2,
+      "words": [
+        {
+          "text": "Haruhabara Electric",
+          "confidence": 0.99711,
+          "box": [
+            21,
+            18,
+            457,
+            77
+          ]
+        },
+        {
+          "text": "Street",
+          "confidence": 0.99996,
+          "box": [
+            23,
+            69,
+            168,
+            126
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        209,
+        336,
+        460,
+        398
+      ],
+      "scale": 3,
+      "words": [
+        {
+          "text": "Haruhabara Electric",
+          "confidence": 0.98532,
+          "box": [
+            31,
+            26,
+            686,
+            119
+          ]
+        },
+        {
+          "text": "Street",
+          "confidence": 0.99996,
+          "box": [
+            34,
+            102,
+            253,
+            190
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        898,
+        336,
+        1149,
+        398
+      ],
+      "scale": 2,
+      "words": [
+        {
+          "text": "Haruhabara",
+          "confidence": 0.99995,
+          "box": [
+            21,
+            44,
+            299,
+            105
+          ]
+        },
+        {
+          "text": "Crossfield",
+          "confidence": 0.99989,
+          "box": [
+            282,
+            45,
+            508,
+            103
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        898,
+        336,
+        1149,
+        398
+      ],
+      "scale": 3,
+      "words": [
+        {
+          "text": "Haruhabara",
+          "confidence": 0.99994,
+          "box": [
+            31,
+            67,
+            448,
+            156
+          ]
+        },
+        {
+          "text": "Crossfield",
+          "confidence": 0.99985,
+          "box": [
+            422,
+            67,
+            760,
+            154
+          ]
+        }
+      ],
+      "padding": 8
+    }
+  ],
+  "ticket_crops": []
+}

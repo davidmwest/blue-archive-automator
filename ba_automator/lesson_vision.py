@@ -202,9 +202,14 @@ class LessonVision:
         crop = frame[y + 4:y + 66, x + 80:x + 331]
         key = crop.tobytes()
         if key not in self._header_cache:
+            # Text against a tight crop edge can make detection split overlapping
+            # words, duplicating letters ("Hyakkiyako S Shopping"). A small plain
+            # margin preserves complete lines without changing their contents.
+            padded = cv2.copyMakeBorder(crop, 8, 8, 8, 8, cv2.BORDER_CONSTANT,
+                                       value=(255, 255, 255))
             candidates = []
             for scale in (2, 3):
-                enlarged = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+                enlarged = cv2.resize(padded, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
                 words = self.startup.read(enlarged)
                 candidates.append(_text(words).strip() if words and all(word.confidence >= .85 for word in words) else None)
             normalized = [re.sub(r"[^a-z0-9]", "", candidate.lower()) if candidate else None

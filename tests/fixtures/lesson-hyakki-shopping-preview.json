@@ -1,0 +1,161 @@
+{
+  "source": "Authorized local staging capture, 2026-09-24 UTC; account HUD and unrelated controls masked. Padded header OCR and confirmation evidence for exact room names.",
+  "words": [
+    {
+      "text": "Location Info",
+      "confidence": 0.99996,
+      "box": [
+        534,
+        99,
+        745,
+        131
+      ]
+    },
+    {
+      "text": "Lv. 2| Hyakkiyako Shopping District",
+      "confidence": 0.9851,
+      "box": [
+        314,
+        167,
+        759,
+        200
+      ]
+    },
+    {
+      "text": "The shopping district of Allied Hyakkiyako Academy. It's the home of an",
+      "confidence": 0.98437,
+      "box": [
+        316,
+        216,
+        901,
+        242
+      ]
+    },
+    {
+      "text": "especially famous teahouse called Momoyodou. Rumor has it that whenever",
+      "confidence": 0.99336,
+      "box": [
+        314,
+        241,
+        942,
+        267
+      ]
+    },
+    {
+      "text": "troublemakers cause a problem, the face of Momoyodou steps in to solve it.",
+      "confidence": 0.99535,
+      "box": [
+        315,
+        267,
+        937,
+        290
+      ]
+    },
+    {
+      "text": "Lesson Rewards",
+      "confidence": 0.99982,
+      "box": [
+        559,
+        313,
+        721,
+        336
+      ]
+    },
+    {
+      "text": "x100",
+      "confidence": 0.9014,
+      "box": [
+        341,
+        394,
+        384,
+        415
+      ]
+    },
+    {
+      "text": "Tips",
+      "confidence": 0.99895,
+      "box": [
+        375,
+        432,
+        433,
+        460
+      ]
+    },
+    {
+      "text": "Only currently recruited students can earn Relationship Points.",
+      "confidence": 0.99009,
+      "box": [
+        434,
+        436,
+        922,
+        459
+      ]
+    },
+    {
+      "text": "4\u21923",
+      "confidence": 0.99712,
+      "box": [
+        690,
+        487,
+        775,
+        517
+      ]
+    },
+    {
+      "text": "Start Lesson",
+      "confidence": 0.99993,
+      "box": [
+        539,
+        532,
+        740,
+        567
+      ]
+    }
+  ],
+  "bond_crops": [
+    {
+      "box": [
+        810,
+        185,
+        844,
+        207
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "8",
+          "confidence": 0.99622,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        948,
+        185,
+        982,
+        207
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "8",
+          "confidence": 0.97651,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    }
+  ],
+  "header_crops": [],
+  "ticket_crops": []
+}

@@ -278,7 +278,29 @@
         247
       ],
       "scale": 2,
-      "text": "Hyakkiyako Yin-Yang Club Main Building"
+      "padding": 8,
+      "words": [
+        {
+          "text": "Hyakkiyako Yin-Yang",
+          "confidence": 0.98619,
+          "box": [
+            16,
+            11,
+            487,
+            90
+          ]
+        },
+        {
+          "text": "Club Main Building",
+          "confidence": 0.98879,
+          "box": [
+            19,
+            57,
+            437,
+            138
+          ]
+        }
+      ]
     },
     {
       "box": [
@@ -288,7 +310,29 @@
         247
       ],
       "scale": 3,
-      "text": "Hyakkiyako Yin-Yang Club Main Building"
+      "padding": 8,
+      "words": [
+        {
+          "text": "Hyakkiyako Yin-Yang",
+          "confidence": 0.99981,
+          "box": [
+            24,
+            17,
+            729,
+            134
+          ]
+        },
+        {
+          "text": "Club Main Building",
+          "confidence": 0.99929,
+          "box": [
+            28,
+            86,
+            655,
+            207
+          ]
+        }
+      ]
     }
   ]
 }

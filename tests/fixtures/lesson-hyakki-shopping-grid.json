@@ -1,0 +1,631 @@
+{
+  "source": "Authorized local staging capture, 2026-09-24 UTC; account HUD and unrelated controls masked. Padded header OCR and confirmation evidence for exact room names.",
+  "words": [
+    {
+      "text": "All Locations",
+      "confidence": 0.99981,
+      "box": [
+        537,
+        85,
+        743,
+        117
+      ]
+    },
+    {
+      "text": "X",
+      "confidence": 0.96012,
+      "box": [
+        1122,
+        83,
+        1157,
+        117
+      ]
+    },
+    {
+      "text": "Tickets Owned4/7",
+      "confidence": 0.99984,
+      "box": [
+        567,
+        139,
+        725,
+        162
+      ]
+    },
+    {
+      "text": "Hyakkiyako Yin-Yang",
+      "confidence": 0.99994,
+      "box": [
+        212,
+        188,
+        442,
+        217
+      ]
+    },
+    {
+      "text": "Yin-Yang Club",
+      "confidence": 0.97445,
+      "box": [
+        900,
+        187,
+        1054,
+        216
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99946,
+      "box": [
+        150,
+        200,
+        206,
+        229
+      ]
+    },
+    {
+      "text": "Cub Main Building",
+      "confidence": 0.99369,
+      "box": [
+        212,
+        210,
+        417,
+        243
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99969,
+      "box": [
+        496,
+        202,
+        549,
+        227
+      ]
+    },
+    {
+      "text": "Central Plaza",
+      "confidence": 0.99935,
+      "box": [
+        556,
+        201,
+        700,
+        227
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.9994,
+      "box": [
+        839,
+        200,
+        895,
+        229
+      ]
+    },
+    {
+      "text": "Auditorium",
+      "confidence": 0.99213,
+      "box": [
+        899,
+        211,
+        1029,
+        241
+      ]
+    },
+    {
+      "text": "Hyakkiyako Shopping",
+      "confidence": 0.97046,
+      "box": [
+        556,
+        337,
+        791,
+        369
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99954,
+      "box": [
+        151,
+        353,
+        204,
+        379
+      ]
+    },
+    {
+      "text": "Great Garden",
+      "confidence": 0.99996,
+      "box": [
+        214,
+        353,
+        360,
+        377
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99936,
+      "box": [
+        495,
+        352,
+        550,
+        381
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99948,
+      "box": [
+        841,
+        353,
+        894,
+        379
+      ]
+    },
+    {
+      "text": "Tourist Cable Car",
+      "confidence": 0.99996,
+      "box": [
+        900,
+        352,
+        1086,
+        378
+      ]
+    },
+    {
+      "text": "District",
+      "confidence": 0.99986,
+      "box": [
+        557,
+        363,
+        642,
+        390
+      ]
+    },
+    {
+      "text": "Lv. 2 Museur of Traditions",
+      "confidence": 0.96945,
+      "box": [
+        149,
+        500,
+        451,
+        531
+      ]
+    },
+    {
+      "text": "Lv.2 Tree Ohservatory",
+      "confidence": 0.96862,
+      "box": [
+        494,
+        501,
+        746,
+        532
+      ]
+    },
+    {
+      "text": "Rank 8 required",
+      "confidence": 0.96461,
+      "box": [
+        213,
+        557,
+        381,
+        586
+      ]
+    },
+    {
+      "text": "Rank 9 required",
+      "confidence": 0.9993,
+      "box": [
+        558,
+        559,
+        725,
+        585
+      ]
+    }
+  ],
+  "bond_crops": [
+    {
+      "box": [
+        257,
+        288,
+        291,
+        310
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "9",
+          "confidence": 0.99801,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        874,
+        288,
+        908,
+        310
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "8",
+          "confidence": 0.99984,
+          "box": [
+            35,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        185,
+        439,
+        219,
+        461
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "6",
+          "confidence": 0.99957,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        530,
+        439,
+        564,
+        461
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "8",
+          "confidence": 0.99931,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        674,
+        439,
+        708,
+        461
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "8",
+          "confidence": 0.98102,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    }
+  ],
+  "header_crops": [
+    {
+      "box": [
+        209,
+        185,
+        460,
+        247
+      ],
+      "scale": 2,
+      "words": [
+        {
+          "text": "Hyakkiyako Yin-Yang",
+          "confidence": 0.99969,
+          "box": [
+            17,
+            11,
+            487,
+            88
+          ]
+        },
+        {
+          "text": "Club Main Building",
+          "confidence": 0.997,
+          "box": [
+            19,
+            59,
+            437,
+            138
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        209,
+        185,
+        460,
+        247
+      ],
+      "scale": 3,
+      "words": [
+        {
+          "text": "Hyakkiyako Yin-Yang",
+          "confidence": 0.99838,
+          "box": [
+            25,
+            17,
+            728,
+            132
+          ]
+        },
+        {
+          "text": "Club Main Building",
+          "confidence": 0.99944,
+          "box": [
+            28,
+            89,
+            653,
+            206
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        898,
+        185,
+        1149,
+        247
+      ],
+      "scale": 2,
+      "words": [
+        {
+          "text": "Yin-Yang",
+          "confidence": 0.99928,
+          "box": [
+            17,
+            15,
+            234,
+            85
+          ]
+        },
+        {
+          "text": "Club",
+          "confidence": 0.99994,
+          "box": [
+            214,
+            18,
+            328,
+            80
+          ]
+        },
+        {
+          "text": "Auditorum",
+          "confidence": 0.99992,
+          "box": [
+            20,
+            68,
+            281,
+            128
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        898,
+        185,
+        1149,
+        247
+      ],
+      "scale": 3,
+      "words": [
+        {
+          "text": "Yin-Yang",
+          "confidence": 0.9994,
+          "box": [
+            27,
+            22,
+            351,
+            129
+          ]
+        },
+        {
+          "text": "Club",
+          "confidence": 0.99996,
+          "box": [
+            321,
+            27,
+            492,
+            121
+          ]
+        },
+        {
+          "text": "Auditorium",
+          "confidence": 0.95876,
+          "box": [
+            30,
+            102,
+            421,
+            192
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        554,
+        336,
+        805,
+        398
+      ],
+      "scale": 2,
+      "words": [
+        {
+          "text": "Hyakkiyako Shopping",
+          "confidence": 0.97581,
+          "box": [
+            14,
+            10,
+            500,
+            91
+          ]
+        },
+        {
+          "text": "District",
+          "confidence": 0.99824,
+          "box": [
+            20,
+            65,
+            195,
+            132
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        554,
+        336,
+        805,
+        398
+      ],
+      "scale": 3,
+      "words": [
+        {
+          "text": "Hyakkiyako Shopping",
+          "confidence": 0.99036,
+          "box": [
+            20,
+            14,
+            747,
+            139
+          ]
+        },
+        {
+          "text": "District",
+          "confidence": 0.99797,
+          "box": [
+            30,
+            98,
+            291,
+            197
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        898,
+        336,
+        1149,
+        398
+      ],
+      "scale": 2,
+      "words": [
+        {
+          "text": "Tourist",
+          "confidence": 0.99999,
+          "box": [
+            20,
+            44,
+            189,
+            104
+          ]
+        },
+        {
+          "text": "Cable",
+          "confidence": 0.99999,
+          "box": [
+            178,
+            45,
+            318,
+            103
+          ]
+        },
+        {
+          "text": "Car",
+          "confidence": 0.99995,
+          "box": [
+            304,
+            47,
+            391,
+            101
+          ]
+        }
+      ],
+      "padding": 8
+    },
+    {
+      "box": [
+        898,
+        336,
+        1149,
+        398
+      ],
+      "scale": 3,
+      "words": [
+        {
+          "text": "Tourist",
+          "confidence": 0.99999,
+          "box": [
+            31,
+            68,
+            283,
+            154
+          ]
+        },
+        {
+          "text": "Cable",
+          "confidence": 0.99997,
+          "box": [
+            259,
+            67,
+            479,
+            155
+          ]
+        },
+        {
+          "text": "Car",
+          "confidence": 0.99991,
+          "box": [
+            449,
+            66,
+            589,
+            153
+          ]
+        }
+      ],
+      "padding": 8
+    }
+  ],
+  "ticket_crops": []
+}

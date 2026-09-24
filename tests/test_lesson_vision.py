@@ -22,7 +22,11 @@ class RecordedOCR:
         for item in metadata["bond_crops"] + metadata.get("header_crops", []) + metadata.get("ticket_crops", []):
             x1, y1, x2, y2 = item["box"]
             scale = item.get("scale", 5)
-            image = cv2.resize(frame[y1:y2, x1:x2], None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+            crop = frame[y1:y2, x1:x2]
+            if padding := item.get("padding", 0):
+                crop = cv2.copyMakeBorder(crop, padding, padding, padding, padding,
+                                          cv2.BORDER_CONSTANT, value=(255, 255, 255))
+            image = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
             self.crops[image.tobytes()] = item.get("text", item.get("words"))
 
     def read(self, frame):
@@ -195,6 +199,26 @@ def test_narrow_heart_crop_recovers_single_digits_without_adjacent_artwork():
     screen = analyze(vision, frame)
     assert screen.room_cards[3].students[0].bond == 4
     assert screen.room_cards[5].students[1].bond == 3
+
+
+def test_padded_wrapped_name_matches_the_observed_confirmation_exactly():
+    frame, _, vision = replay("hyakki-shopping-grid")
+    grid = analyze(vision, frame)
+    frame, _, vision = replay("hyakki-shopping-preview")
+    preview = analyze(vision, frame)
+    card = grid.room_cards[4]
+    assert card.name == preview.room_name == "Hyakkiyako Shopping District"
+    assert [(student.owned, student.bond) for student in card.students] == [
+        (student.owned, student.bond) for student in preview.students
+    ] == [(True, 8), (False, None), (True, 8)]
+    assert grid.room_cards[0].name == "Hyakkiyako Yin-Yang Club Main Building"
+
+
+def test_padded_header_avoids_overlapping_multimedia_letter_fragments():
+    frame, _, vision = replay("haruhabara-headers")
+    grid = analyze(vision, frame)
+    assert grid.room_cards[2].name == "Haruhabara Multimedia Center"
+    assert grid.room_cards[3].name == "Haruhabara Electric Street"
 
 
 def test_same_line_ocr_fragments_keep_reading_order_despite_baseline_jitter():
