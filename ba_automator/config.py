@@ -31,6 +31,7 @@ class Config:
     cafe_schedule_enabled: bool = False
     cafe_invite_enabled: bool = False
     cafe_invite_student: str = ""
+    crafting_schedule_enabled: bool = False
     lessons_strategy: str = "relationship"
     lessons_max_tickets: int = 0
     lessons_locations: tuple[str, ...] = ()
@@ -83,7 +84,7 @@ class Config:
         if type(self.auto_download) is not bool:
             raise ConfigError("restart.auto_download must be true or false")
         for name in ("cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle",
-                     "lessons_enabled_in_daily"):
+                     "lessons_enabled_in_daily", "crafting_schedule_enabled"):
             if type(getattr(self, name)) is not bool:
                 raise ConfigError(f"{name} must be true or false")
         if (not isinstance(self.cafe_invite_student, str) or len(self.cafe_invite_student) > 100
@@ -131,6 +132,7 @@ class Config:
                         "home_confirmations", "action_cooldown", "auto_download"},
             "storage": {"run_dir", "lock_dir", "state_dir"},
             "cafe": {"schedule_enabled", "invite_enabled", "invite_student"},
+            "crafting": {"schedule_enabled"},
             "lessons": {"strategy", "max_tickets", "locations", "enabled_in_daily"},
             "automation": {"close_app_when_idle"},
         }
@@ -145,7 +147,7 @@ class Config:
             unexpected_keys = entries.keys() - keys
             if unexpected_keys:
                 raise ConfigError(f"Unknown {section} settings: {', '.join(sorted(unexpected_keys))}")
-            values.update({f"{section}_{key}" if section in {"cafe", "lessons"} else key: value
+            values.update({f"{section}_{key}" if section in {"cafe", "lessons", "crafting"} else key: value
                            for key, value in entries.items()})
         for required in ("serial", "package"):
             if required not in values:

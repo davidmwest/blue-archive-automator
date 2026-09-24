@@ -53,3 +53,5 @@ same room before spending a ticket. Along with `lesson-haruhabara-headers`, they
 cover wrapped titles where tightly cropped OCR duplicated letter fragments. Their
 `header_crops` record OCR with an eight-pixel white margin before enlargement;
 the saved game screenshots themselves retain their original pixels.
+
+Crafting samples (`crafting-*.png`) were captured on 2026-09-24. They retain the synthesis slot list, configured Quick Craft preset, maximum batch, confirmation, running timers, and red zero-inventory counter. The account resource bar is removed. `craft_keystone.png` is a small matching crop of the keystone material icon. Collection fixtures will be added after the first natural completion; no live receipt validation is claimed yet.

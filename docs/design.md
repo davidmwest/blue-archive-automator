@@ -146,7 +146,8 @@ The current foundation is implemented: restart, a serial dashboard queue, Cafe, 
 | Cafe repeatability | Scheduled visits after cooldown, named free invitation when available, and useful evidence for any missed/obscured markers |
 | Lessons | Inspect all unlocked locations, choose rooms with the configured relationship or school-rank policy, verify each ticket, and return home; live completion is recorded in [Lessons](lessons.md) |
 | Next gameplay job after Lessons | Prefer configured mission sweeps to address AP accumulation; choose the stage/resource policy before implementation |
-| Other daily routines | Add social, crafting, and reward routines individually through the task contract, with observable entry and exit states |
+| Crafting | Fill saved-preset Quick Craft slots; persist per-slot collection jobs; verify collection and refill after natural completion |
+| Other daily routines | Add social and reward routines individually through the task contract, with observable entry and exit states |
 | Active events | Guarded navigation from reviewed profiles, then configured stage farming with availability and resource checks |
 | Unattended distribution | Durable queue/recovery, evidence retention controls, Windows/emulator smoke tests, ALAS coexistence, then optional OS service installation |
 

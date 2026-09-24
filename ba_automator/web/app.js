@@ -3,9 +3,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const SVG_NS = "http://www.w3.org/2000/svg";
-  const booleanSettings = new Set(["auto_download", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle", "lessons_enabled_in_daily"]);
+  const booleanSettings = new Set(["auto_download", "crafting_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle", "lessons_enabled_in_daily"]);
   const stringSettings = new Set(["cafe_invite_student", "lessons_strategy"]);
-  const settingNames = ["auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
+  const settingNames = ["auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "crafting_schedule_enabled", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
   const fields = Object.fromEntries(settingNames.map((name) => [name, $(name.replaceAll("_", "-"))]));
   let status = null;
   let connected = false;
@@ -32,7 +32,7 @@
   let actionsLimit = 15;
   let noticeTimer = null;
 
-  const taskName = (task) => ({ restart: "Restart", daily: "Daily", club: "Club", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
+  const taskName = (task) => ({ restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
   const isRunning = () => Boolean(status && (status.state === "running" || status.current_job));
   const queue = () => (Array.isArray(status?.queue) ? status.queue : []);
   const isDemo = () => status?.demo === true;
@@ -82,6 +82,25 @@
   }
 
   function renderSchedule() {
+    const crafting = status?.schedule?.crafting;
+    const craftEnabled = crafting?.enabled ?? status?.config?.crafting_schedule_enabled ?? false;
+    $("crafting-status").textContent = crafting?.disabled_reason
+      ? `disabled: ${crafting.disabled_reason}. fix the setup in game, then queue crafting.`
+      : crafting?.retry_paused ? "retries paused. check the log, then resume the queue."
+      : !craftEnabled ? "schedule off. queue crafting for a single visit."
+      : crafting?.not_before && dateValue(crafting.not_before)?.getTime() > Date.now() && crafting.consecutive_failures
+        ? `retry at ${shortTime(crafting.not_before)}`
+        : status?.queue_paused ? "timers saved. collection waits while the queue is paused."
+        : "timers saved. finished crafts go through the queue, then get refilled.";
+    const craftJobs = document.createDocumentFragment();
+    (crafting?.jobs || []).forEach((job) => {
+      const item = document.createElement("li");
+      const due = dateValue(job.due_at);
+      const remaining = due ? Math.max(0, Math.ceil((due.getTime() - Date.now()) / 1000)) : null;
+      item.textContent = `${job.label} · ${shortTime(job.due_at)}${remaining !== null ? ` · ${remaining ? duration(remaining) : "due now"}` : ""}${!craftEnabled ? " · schedule off" : ""}`;
+      craftJobs.append(item);
+    });
+    $("crafting-jobs").replaceChildren(craftJobs);
     const schedule = status?.schedule?.cafe;
     const enabled = schedule?.enabled ?? status?.config?.cafe_schedule_enabled ?? false;
     $("cafe-schedule-title").textContent = enabled ? "next café visit" : "café schedule";
@@ -123,6 +142,7 @@
     $("run-daily").disabled = unavailable;
     $("run-cafe").disabled = unavailable;
     $("run-club").disabled = unavailable;
+    $("run-crafting").disabled = unavailable;
     $("run-lessons").disabled = unavailable;
     $("run-restart").querySelector("span").textContent = "queue restart";
     $("run-daily").textContent = "queue daily";
@@ -251,7 +271,7 @@
       timestamp.textContent = shortTime(job.completed_at);
       if (dateValue(job.completed_at)) timestamp.dateTime = job.completed_at;
       const badge = document.createElement("span");
-      stateBadge(badge, job.state, ({ deferred: "Awaiting reset test", success: "Completed", failed: "Failed", stopped: "Stopped" }[job.state] || job.state));
+      stateBadge(badge, job.state, ({ disabled: "Disabled", deferred: "Awaiting reset test", success: "Completed", failed: "Failed", stopped: "Stopped" }[job.state] || job.state));
       item.append(title, timestamp, badge);
       historyList.append(item);
     });
@@ -286,7 +306,7 @@
       $("settings-lock-note").textContent = "demo settings are read only. there’s no device connected.";
     }
     const running = isRunning();
-    stateBadge($("state-badge"), status.state, ({ deferred: "Awaiting reset test", idle: "Ready", running: "Running", success: status.task === "restart" && !status.app_closed ? "Home reached" : "Completed", failed: "Needs attention", stopped: "Stopped" }[status.state] || status.state));
+    stateBadge($("state-badge"), status.state, ({ disabled: "Disabled", deferred: "Awaiting reset test", idle: "Ready", running: "Running", success: status.task === "restart" && !status.app_closed ? "Home reached" : "Completed", failed: "Needs attention", stopped: "Stopped" }[status.state] || status.state));
     $("run-phase").textContent = status.phase || "close the game, open it again, get to home. deal with the popups on the way.";
     $("current-task").textContent = running ? taskName(status.current_job?.task || status.task) : "None running";
     $("device-serial").textContent = status.config?.serial || "—";
@@ -598,6 +618,7 @@
   $("run-daily").addEventListener("click", () => void post("/api/run", { task: "daily" }, "daily’s in the queue."));
   $("run-club").addEventListener("click", () => void post("/api/run", { task: "club" }, "club placeholder queued. live testing comes after reset."));
   $("run-cafe").addEventListener("click", () => void post("/api/run", { task: "cafe" }, "café’s in the queue."));
+  $("run-crafting").addEventListener("click", () => void post("/api/run", { task: "crafting" }, "crafting’s in the queue."));
   $("run-lessons").addEventListener("click", () => void post("/api/run", { task: "lessons" }, "lessons are in the queue."));
   $("stop-run").addEventListener("click", () => void post("/api/stop", {}, "stopping this task and pausing the queue. everything waiting stays there."));
   $("pause-queue").addEventListener("click", () => void post("/api/pause", {}, "queue paused. the current task can finish."));

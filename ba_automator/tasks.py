@@ -9,11 +9,12 @@ TASK_LABELS = {
     "restart": "Home screen ready",
     "club": "Club check-in complete",
     "cafe": "Cafe task complete",
+    "crafting": "Crafting checked; collection visits scheduled",
     "lessons": "Lessons complete",
     "daily": "Daily tasks complete",
 }
 TASKS = frozenset(TASK_LABELS)
-RUN_PREFIXES = ("restart-", "club-", "cafe-", "lessons-")
+RUN_PREFIXES = ("restart-", "club-", "cafe-", "crafting-", "lessons-")
 
 
 def task_plan(command: str, config: Config) -> tuple[str, ...]:
@@ -26,7 +27,7 @@ def task_plan(command: str, config: Config) -> tuple[str, ...]:
     if command == "club":
         # A placeholder does not need to launch the game. Add restart when live.
         return ("club",)
-    if command == "lessons":
+    if command in {"lessons", "crafting"}:
         return ("restart", command)
     if command == "restart":
         return ("restart",)

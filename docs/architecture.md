@@ -44,6 +44,7 @@ flowchart TD
 | `club.py` | No-input attendance placeholder and UTC server-day calculation; live completion and checkpointing remain pending |
 | `cafe.py`, `cafe_vision.py` | Earnings receipts, unlocked floor navigation, attention-marker scans, relationship feedback, and optional free invitations |
 | `lessons.py`, `lesson_vision.py` | Complete location surveys, rank/XP and room observations, guarded one-ticket confirmation, and result reconciliation |
+| `crafting.py`, `crafting_vision.py`, `crafting_state.py` | Saved-preset Quick Craft, guarded batch spending, reward reconciliation, and per-instance durable slot deadlines |
 | `lesson_planner.py` | Pure relationship and school-rank policy over observed locations, rooms, ownership, and relationship ranks |
 | `runtime.py` | Shared fresh-capture contract, task result/error, screenshot ring, and durable run journal |
 | `events.py` | Strict event-profile validation and read-only entrance/destination matching; no event task |
@@ -87,11 +88,17 @@ The pure planner defaults to the most owned students, then the highest sum of th
 
 Before spending, the runner reopens the selected room and checks its confirmation against the chosen observation. One ticket is confirmed at a time. Completion needs result evidence and the expected ticket decrement, with the location, room, strategy, counts, and readable rank/XP changes recorded in important actions. Ticket limits restrict existing tickets; there is no purchase path. See [Lessons](lessons.md) for the full policy, failure behavior, and current live-validation status.
 
+## Crafting
+
+`crafting` runs restart → Crafting → home. It checks all three synthesis slots, collects ready items with receipt verification, and refills empty slots from the existing keystone-only Quick Craft preset. Its atomic per-instance state records deadlines and pending irreversible actions. Setup problems disable further automatic visits; observed empty inventory schedules a later recheck. See [Crafting](crafting.md) for spending limits and live-validation status.
+
 ## Dashboard and schedule
 
 The dashboard binds to loopback and launches one task subprocess at a time. Each job gets a configuration snapshot and its own diagnostic directory. The same per-instance lock also protects against a separately launched CLI runner.
 
 Pause allows the current job to finish and blocks dispatch. Stop interrupts the current job and pauses the queue. Resume permits queued work and clears the scheduler's retry pause. Waiting jobs can be canceled. Settings cannot be changed while jobs are active or queued.
+
+Crafting scheduling is separately enabled and off by default. The dispatcher reads durable slot deadlines and combines currently due slots into one queued Crafting visit. It reconstructs overdue work after restart; failed runs back off 15 minutes and pause after three failures. Setup disables remain separate from retry pauses.
 
 Cafe scheduling is explicitly enabled and off by default. A successful cafe job or verified Cafe step within daily records the next due time three hours and 15 seconds later. A later Lessons failure or interruption does not undo the completed Cafe visit. A Cafe failure sets a 15-minute retry; three consecutive failures pause retries until Resume. Pending cafe/daily work prevents a duplicate scheduled cafe job. Canceling a scheduled occurrence skips that occurrence instead of immediately recreating it.
 
@@ -110,7 +117,8 @@ Storage paths are relative to the TOML file. With the example configuration:
 | `data/runs/` | Per-run durable `events.jsonl`, a 24-frame screenshot ring, and retained completion/evidence images |
 | `data/runs/dashboard-*/` | Dashboard job snapshots and the subprocess's run directories |
 | `data/state/important-actions.jsonl` | Persistent important actions, including separate attempts and verified results |
-| `data/state/schedule.json` | Cafe due time, last success, failure count, and retry pause |
+| `data/state/schedule.json` | Cafe due time and both schedulers’ failure counts, retry pauses, and backoff |
+| `data/state/crafting-<instance hash>.json` | Craft slot deadlines, inventory recheck time, setup-disable reason, and pending action |
 | `data/locks/` | Shared per-instance process locks |
 
 Ctrl+C and task failure record the result and release the lock. A restart starts a new force-stop/launch sequence; there is no resume checkpoint. Cafe receipts and relationship evidence, plus lesson survey and receipt evidence, are retained separately from the rotating screenshot ring.

@@ -33,6 +33,11 @@ max_tickets = 0
 locations = []
 enabled_in_daily = true
 
+[crafting]
+# Uses the preset already configured in game, spends available keystones, and
+# queues collection/refill visits when each slot finishes. No booster tickets.
+schedule_enabled = false
+
 # Paths are relative to this configuration file.
 [storage]
 run_dir = "../data/runs"

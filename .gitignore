@@ -43,3 +43,6 @@ build/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local ONNX Runtime telemetry identifier
+/:memory:.ses

@@ -30,6 +30,7 @@ def main(argv=None) -> int:
     descriptions = {"restart": "Restart Blue Archive and reach the home screen",
                     "club": "Club placeholder: awaiting a fresh daily-reset test (no game input)",
                     "cafe": "Restart, collect cafe earnings, and greet students",
+                    "crafting": "Collect finished crafts, fill Quick Craft slots, and save their timers",
                     "lessons": "Restart and use lesson tickets with the configured strategy",
                     "daily": "Run restart, the Club placeholder, cafe, and enabled lessons in order"}
     for name, description in descriptions.items():
@@ -70,7 +71,11 @@ def main(argv=None) -> int:
                     continue
                 if vision is None:
                     vision = StartupVision()
-                if task == "lessons":
+                if task == "crafting":
+                    from .crafting import run_crafting
+
+                    runner = run_crafting
+                elif task == "lessons":
                     from .lessons import run_lessons
 
                     runner = run_lessons

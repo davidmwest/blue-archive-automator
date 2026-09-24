@@ -1003,3 +1003,101 @@ def test_stub_at_end_of_game_queue_preserves_idle_close(close_controlled):
     processes.processes[2].finish()
     eventually(lambda: controller.status()["state"] == "success")
     assert [name for name, _ in devices.calls].count("force_stop") == 1
+
+
+def test_crafting_timers_survive_restart_and_coalesce_due_slots(config_path):
+    from ba_automator.crafting_state import empty_state, write_state
+    config = Config.from_file(config_path)
+    now = [datetime(2026,9,24,15,tzinfo=timezone.utc)]
+    state = empty_state()
+    state['slots'] = [{'slot':1,'due_at':(now[0]+timedelta(minutes=2)).isoformat()},
+                      {'slot':2,'due_at':(now[0]+timedelta(minutes=5)).isoformat()},
+                      {'slot':3,'due_at':(now[0]+timedelta(minutes=5)).isoformat()}]
+    write_state(config,state)
+    factory = ProcessFactory()
+    controller = DashboardController(config_path,process_factory=factory,wall_clock=lambda:now[0])
+    try:
+        controller.update_settings({'crafting_schedule_enabled':True})
+        assert len(controller.status()['schedule']['crafting']['jobs'])==3
+        assert not factory.processes
+    finally: controller.close()
+    controller=DashboardController(config_path,process_factory=factory,wall_clock=lambda:now[0])
+    try:
+        assert not factory.processes
+        now[0]+=timedelta(minutes=5)
+        controller.resume()
+        eventually(lambda:len(factory.processes)==1)
+        assert factory.processes[0].arguments[-1]=='crafting'
+        assert not controller.status()['queue']
+        controller.resume()
+        assert len(factory.processes)==1
+        # An empty inventory becomes a later recheck, not an immediate busy loop.
+        state['slots']=[]
+        state['next_check_at']=(now[0]+timedelta(hours=3)).isoformat()
+        write_state(config,state)
+        factory.processes[0].finish()
+        eventually(lambda:controller.status()['current_job'] is None)
+        assert len(factory.processes)==1
+        assert not controller.status()['queue']
+    finally: controller.close()
+
+
+def test_unconfigured_crafting_disables_only_its_schedule_and_manual_retry_is_allowed(config_path):
+    from ba_automator.crafting_state import empty_state, write_state
+    config=Config.from_file(config_path)
+    state=empty_state();state['disabled_reason']='Quick Craft is not configured'
+    write_state(config,state)
+    factory=ProcessFactory();controller=DashboardController(config_path,process_factory=factory)
+    try:
+        controller.update_settings({'crafting_schedule_enabled':True})
+        controller.resume()
+        assert not factory.processes
+        assert controller.status()['schedule']['crafting']['disabled_reason']
+        controller.enqueue('crafting')
+        eventually(lambda:len(factory.processes)==1)
+        assert factory.processes[0].arguments[-1]=='crafting'
+    finally: controller.close()
+
+
+def test_crafting_failures_back_off_and_resume_does_not_override_setup_disable(config_path):
+    from ba_automator.crafting_state import empty_state, write_state
+    now=[datetime(2026,9,24,15,tzinfo=timezone.utc)]
+    factory=ProcessFactory();controller=DashboardController(config_path,process_factory=factory,wall_clock=lambda:now[0])
+    try:
+        controller.update_settings({'crafting_schedule_enabled':True})
+        for n in range(3):
+            eventually(lambda:len(factory.processes)==n+1)
+            factory.processes[n].finish(1)
+            eventually(lambda:controller.status()['current_job'] is None)
+            assert controller.status()['schedule']['crafting']['consecutive_failures']==n+1
+            if n<2:
+                now[0]+=timedelta(minutes=15);controller.resume()
+        assert controller.status()['schedule']['crafting']['retry_paused']
+        state=empty_state();state['disabled_reason']='Node 1 is switched off'
+        write_state(controller.config,state)
+        controller.resume()
+        assert not controller.status()['schedule']['crafting']['retry_paused']
+        assert len(factory.processes)==3
+    finally:controller.close()
+
+
+def test_cancel_due_crafting_job_defers_without_losing_timers(config_path):
+    from ba_automator.crafting_state import empty_state, read_state, write_state
+    now=datetime(2026,9,24,15,tzinfo=timezone.utc)
+    factory=ProcessFactory();controller=DashboardController(config_path,process_factory=factory,wall_clock=lambda:now)
+    try:
+        controller.pause()
+        state=empty_state();state['slots']=[{'slot':1,'due_at':now.isoformat()}]
+        write_state(controller.config,state)
+        controller.update_settings({'crafting_schedule_enabled':True})
+        controller.enqueue('restart');controller.resume()
+        eventually(lambda:len(factory.processes)==1)
+        queued=controller.status()['queue']
+        assert len(queued)==1 and queued[0]['task']=='crafting'
+        controller.cancel(queued[0]['id'])
+        assert read_state(controller.config)['slots']==state['slots']
+        factory.processes[0].finish()
+        eventually(lambda:controller.status()['current_job'] is None)
+        assert not controller.status()['queue']
+        assert len(factory.processes)==1
+    finally:controller.close()

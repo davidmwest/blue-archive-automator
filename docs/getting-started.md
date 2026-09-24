@@ -47,6 +47,7 @@ open [the dashboard](http://127.0.0.1:8765). `serve --port 8767` selects a diffe
 | `restart` | closes the game and reaches a clear home screen |
 | `club` | records “awaiting reset test”; no game input while stubbed |
 | `cafe` | runs restart, collects Cafe earnings, and checks students |
+| `crafting` | runs restart, checks finished crafts, fills Quick Craft slots, and saves their collection times |
 | `lessons` | runs restart, surveys locations, and uses existing tickets with the configured strategy |
 | `daily` | runs restart → Club placeholder → Cafe → Lessons; the Lessons step can be disabled |
 | `probe` | checks the selected device, game, display size, and foreground app |
@@ -101,3 +102,7 @@ local config, logs, and full screenshots stay out of Git. use the dashboard to r
 ## development
 
 run `.venv/bin/python -m pytest -q` for the offline suite. it uses fake devices and reviewed fixtures, with no emulator connection. see [contributing](../CONTRIBUTING.md) for Windows commands and fixture guidance.
+
+## keep crafting
+
+configure Quick Craft in the game first, then enable **keep the crafting slots busy** in the dashboard. it uses available keystones and the displayed credit fee, saves each slot’s finish time, and queues collection/refill visits. if setup is missing, it disables itself with an explanation. [crafting behavior and validation →](crafting.md)

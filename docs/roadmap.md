@@ -65,3 +65,7 @@ Add one routine at a time after restart, with recognized entry/exit states, boun
 Add daily-reset-aware scheduling and task dependencies when the daily plan grows. The current scheduler is the cafe cooldown interval, not a complete server-day planner. Add SQLite history, resumable checkpoints, or account-level coordination when their use cases exist.
 
 Platform-specific emulator discovery/start/stop, packaging, and optional system-service installation follow reliable task execution. The current server must be launched and kept running manually.
+
+## Crafting collection timers
+
+Quick Craft now has a guarded maximum-batch runner and per-instance durable collection deadlines. The live three-keystone batch started with 90-minute/three-hour/three-hour timers; collection and refill validation remain pending natural completion. The dashboard combines due slots through its serial queue and persists setup-disable reasons. See [Crafting](crafting.md).

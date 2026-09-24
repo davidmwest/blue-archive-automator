@@ -35,6 +35,7 @@ from uuid import uuid4
 from .adb import AdbDevice
 from .actions import record_action
 from .config import Config, ConfigError
+from .crafting_state import CraftStateError, read_state, scheduled_jobs, timestamp
 from .locking import InstanceLock
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS
 from .vision import decode_frame
@@ -47,7 +48,8 @@ CAFE_SETTINGS = {"cafe_schedule_enabled": "schedule_enabled", "cafe_invite_enabl
 LESSONS_SETTINGS = {"lessons_strategy": "strategy", "lessons_max_tickets": "max_tickets",
                     "lessons_locations": "locations", "lessons_enabled_in_daily": "enabled_in_daily"}
 AUTOMATION_SETTINGS = {"close_app_when_idle"}
-SETTINGS = RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS
+CRAFTING_SETTINGS = {"crafting_schedule_enabled": "schedule_enabled"}
+SETTINGS = RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys()
 CAFE_INTERVAL = timedelta(hours=3, seconds=15)
 CAFE_RETRY_INTERVAL = timedelta(minutes=15)
 MAX_SCHEDULE_FAILURES = 3
@@ -98,6 +100,7 @@ def _config_document(config: Config) -> dict:
         "storage": {"run_dir": str(config.run_dir), "lock_dir": str(config.lock_dir)},
         "automation": {name: getattr(config, name) for name in AUTOMATION_SETTINGS},
         "lessons": {name: getattr(config, attribute) for attribute, name in LESSONS_SETTINGS.items()},
+        "crafting": {"schedule_enabled": config.crafting_schedule_enabled},
     }
     if hasattr(config, "state_dir"):
         document["storage"]["state_dir"] = str(config.state_dir)
@@ -157,6 +160,7 @@ class DashboardController:
                        for name in CAFE_SETTINGS})
         values.update({name: getattr(self.config, name) for name in AUTOMATION_SETTINGS})
         values.update({name: getattr(self.config, name) for name in LESSONS_SETTINGS})
+        values.update({name: getattr(self.config, name) for name in CRAFTING_SETTINGS})
         return values
 
     def _state_dir(self) -> Path:
@@ -166,19 +170,24 @@ class DashboardController:
         try:
             value = json.loads((self._state_dir() / "schedule.json").read_text(encoding="utf-8"))
             if isinstance(value, dict) and isinstance(value.get("cafe"), dict):
+                value.setdefault("crafting", {"not_before": None, "consecutive_failures": 0, "retry_paused": False})
+                if not isinstance(value["crafting"], dict):
+                    value["crafting"] = {"not_before": None, "consecutive_failures": 0, "retry_paused": True}
                 return value
         except (OSError, ValueError):
             pass
-        return {"cafe": {"last_success_at": None, "next_due_at": None,
+        return {"crafting": {"not_before": None, "consecutive_failures": 0, "retry_paused": False},
+                "cafe": {"last_success_at": None, "next_due_at": None,
                          "consecutive_failures": 0, "retry_paused": False}}
 
     def _save_schedule(self) -> None:
         try:
             _write_atomic(self._state_dir() / "schedule.json", json.dumps(self._schedule, indent=2) + "\n")
         except OSError as exc:
-            self._log(f"Could not persist cafe schedule: {exc}", "error")
+            self._log(f"Could not persist task schedules: {exc}", "error")
 
     def _enqueue_scheduled(self) -> None:
+        self._enqueue_crafting()
         if (self._paused or self._shutdown or not getattr(self.config, "cafe_schedule_enabled", False)
                 or self._schedule["cafe"].get("retry_paused", False)):
             return
@@ -196,6 +205,51 @@ class DashboardController:
                 self._schedule["cafe"]["retry_paused"] = True
                 return
         self._queue.append({"id": uuid4().hex, "task": "cafe", "created_at": _timestamp(), "source": "schedule"})
+
+    def _crafting_status(self) -> dict:
+        try:
+            state = read_state(self.config)
+            jobs = scheduled_jobs(state)
+            return {"enabled": self.config.crafting_schedule_enabled, **self._schedule["crafting"],
+                    "disabled_reason": state["disabled_reason"], "jobs": jobs,
+                    "updated_at": state["updated_at"]}
+        except CraftStateError as exc:
+            return {"enabled": self.config.crafting_schedule_enabled, "disabled_reason": str(exc), "jobs": []}
+
+    def _enqueue_crafting(self) -> None:
+        if self._paused or self._shutdown or not self.config.crafting_schedule_enabled or len(self._queue) >= 100:
+            return
+        if ((self._current and self._current["task"] == "crafting")
+                or any(job["task"] == "crafting" for job in self._queue)):
+            return
+        schedule = self._crafting_status()
+        if schedule.get("disabled_reason") or schedule.get("retry_paused"):
+            return
+        now = self._wall_clock()
+        try:
+            if schedule.get("not_before") and now < timestamp(schedule["not_before"]):
+                return
+            due = [job for job in schedule["jobs"] if timestamp(job["due_at"]) <= now]
+            if schedule["jobs"] and not due:
+                return
+        except (ValueError, TypeError, AttributeError):
+            self._schedule["crafting"]["retry_paused"] = True
+            self._save_schedule()
+            self._log("Crafting has an invalid retry date; scheduling is paused", "error")
+            return
+        self._queue.append({"id": uuid4().hex, "task": "crafting", "created_at": _timestamp(),
+                            "source": "schedule", "slots": [job["slot"] for job in due if job["slot"] is not None]})
+
+    def _record_crafting(self, task: str, state: str) -> None:
+        if task != "crafting" or state not in {"success", "disabled", "failed"}:
+            return
+        saved = self._schedule["crafting"]
+        failures = saved.get("consecutive_failures", 0)
+        failures = (failures + 1 if type(failures) is int else 1) if state == "failed" else 0
+        delay = timedelta(minutes=15) if state == "failed" else timedelta(seconds=30)
+        saved.update({"consecutive_failures": failures, "retry_paused": failures >= MAX_SCHEDULE_FAILURES,
+                      "not_before": (self._wall_clock() + delay).isoformat()})
+        self._save_schedule()
 
     def _record_schedule(self, task: str, state: str) -> None:
         if task not in {"cafe", "daily"} or state not in {"success", "failed"}:
@@ -216,7 +270,7 @@ class DashboardController:
 
     def enqueue(self, task: str) -> dict:
         if not isinstance(task, str) or task not in TASKS:
-            raise ApiError(400, "Task must be restart, club, cafe, lessons, or daily")
+            raise ApiError(400, "Task must be restart, club, cafe, crafting, lessons, or daily")
         with self._condition:
             if self._shutdown:
                 raise ApiError(409, "The server is shutting down")
@@ -243,6 +297,9 @@ class DashboardController:
                             "next_due_at": (now + CAFE_INTERVAL).isoformat(),
                         })
                         self._save_schedule()
+                    if job.get("source") == "schedule" and job["task"] == "crafting":
+                        self._schedule["crafting"]["not_before"] = (self._wall_clock() + timedelta(minutes=15)).isoformat()
+                        self._save_schedule()
                     self._history.appendleft({"id": job_id, "task": job["task"],
                                               "state": "stopped", "completed_at": _timestamp()})
                     return
@@ -257,6 +314,10 @@ class DashboardController:
             if self._shutdown:
                 raise ApiError(409, "The server is shutting down")
             self._paused = False
+            if self._schedule["crafting"].get("retry_paused", False):
+                self._schedule["crafting"].update({"retry_paused": False, "consecutive_failures": 0,
+                                                   "not_before": None})
+                self._save_schedule()
             if self._schedule["cafe"].get("retry_paused", False):
                 self._schedule["cafe"].update({"retry_paused": False, "consecutive_failures": 0,
                                                 "next_due_at": self._wall_clock().isoformat()})
@@ -360,7 +421,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info")
-                            marker = next((prefix for prefix in ("restart:", "club:", "cafe:", "lessons:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("restart:", "club:", "cafe:", "crafting:", "lessons:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -386,6 +447,8 @@ class DashboardController:
                     self._result = self._parse_result(output, run_root)
                     if self._stop_requested or self._shutdown:
                         self._state, self._phase = "stopped", "Stopped"
+                    elif exit_code == 0 and self._result and self._result.get("status") == "disabled":
+                        self._state, self._phase = "disabled", "Crafting disabled; check Quick Craft setup"
                     elif exit_code == 0 and self._result and self._result.get("status") in {"success", "deferred"}:
                         club_result = self._parse_result(output, run_root, task="club")
                         if club_result and club_result.get("status") == "deferred":
@@ -408,6 +471,7 @@ class DashboardController:
                     cafe_state = ("success" if cafe_result and cafe_result.get("status") == "success"
                                   else self._state)
                     self._record_schedule(job["task"], cafe_state)
+                    self._record_crafting(job["task"], self._state)
                     self._current = None
                     self._process = None
                     # Materialize any due scheduled job before deciding the queue is done.
@@ -566,7 +630,7 @@ class DashboardController:
                     "current_job": dict(self._current) if self._current else None,
                     "history": list(self._history), "queue_paused": self._paused,
                     "app_closed": self._app_closed,
-                    "schedule": {"cafe": {**self._schedule["cafe"],
+                    "schedule": {"crafting": self._crafting_status(), "cafe": {**self._schedule["cafe"],
                                           "enabled": getattr(self.config, "cafe_schedule_enabled", False)}}}
 
     def actions(self) -> dict:
@@ -586,7 +650,7 @@ class DashboardController:
                     public = {name: value.get(name) for name in
                               ("id", "time", "task", "action", "detail", "student", "cafe", "status",
                                "location", "room", "owned_students", "student_count", "tickets_before", "tickets_after",
-                               "strategy", "rank_before", "rank_after", "xp_before", "xp_after")}
+                               "strategy", "rank_before", "rank_after", "xp_before", "xp_after", "slots", "count")}
                     entries.append(public)
         except FileNotFoundError:
             pass
@@ -724,9 +788,10 @@ class DashboardController:
                     document = tomllib.load(stream)
                 for name, value in changes.items():
                     section = ("cafe" if name in CAFE_SETTINGS else
+                               "crafting" if name in CRAFTING_SETTINGS else
                                "lessons" if name in LESSONS_SETTINGS else
                                "automation" if name in AUTOMATION_SETTINGS else "restart")
-                    key = CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, name))
+                    key = CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, CRAFTING_SETTINGS.get(name, name)))
                     document.setdefault(section, {})[key] = value
                 _write_atomic(self.config_path, _toml(document))
                 self.config = Config.from_file(self.config_path)
