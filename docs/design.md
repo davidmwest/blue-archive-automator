@@ -16,7 +16,7 @@ The project also serves as an engineering portfolio: someone should be able to u
 
 - Reliable restart and daily routines, beginning with Cafe and expanding one verified job at a time.
 - Sequential execution with scheduled and manually queued work using the same runner.
-- Explicit resource policies: collect Cafe earnings, eventually spend AP on configured stages, and optionally close the game between runs.
+- Explicit resource policies: collect Cafe earnings, spend AP on configured stages above a reserve, and optionally close the game between runs.
 - Local screen recognition using templates, image processing, and OCR. Normal operation makes no LLM or cloud-inference calls.
 - Shared core behavior on macOS and Windows, with Blue Archive isolated from an independently running Azur Lane automator.
 - Clear status, important-action history, screenshots, and bounded recovery when the game changes.
@@ -69,7 +69,7 @@ One automation worker controls one configured game instance at a time. An OS loc
 
 ### Jobs and tasks
 
-A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, a deferred Club placeholder, optional paid-pack checks, Mail, and Cafe, with Lessons included when its daily setting is enabled.
+A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, a deferred Club placeholder, optional paid-pack checks, Mail, and Cafe, with Lessons included when its daily setting is enabled and Spend AP appended when automatic spending is enabled.
 
 `tasks.py` supplies a small catalog and ordered task plans shared by the CLI and dashboard. Grow a shared execution context when repeated orchestration needs it instead of extending command-specific conditionals indefinitely. Each task defines:
 
@@ -101,6 +101,14 @@ Queue pause is separate from job state. Pause allows the active job to finish; S
 The Cafe schedule runs three hours and 15 seconds after a successful visit. Duplicate due visits are suppressed while equivalent work is active or queued. Failed visits retry after 15 minutes, then pause after three consecutive failures. Future daily schedules must use an explicit game-server reset timezone and date, with an occurrence key that prevents a daily task from being enqueued twice for the same server day.
 
 After the final worker exits, an optional idle policy closes only Blue Archive if the queue is empty. It leaves the emulator, dashboard, and shared ADB server running. This is a once-per-finished-queue action, not a timer that repeatedly closes a manually opened game.
+
+### AP spending
+
+Spend AP is a separate queued job with an integer reserve floor (default 100). Automatic operation is opt-in: check hourly and append a visit after Cafe/mail or at the end of Daily. Survey is a separate read-only job. The dedicated AP page presents only scanned three-star Hard stages, supports drag-and-drop plus keyboard/text editing, and validates saved orders on the server.
+
+The default Eleph policy rotates one sweep per stage, highest numeric Hard stage first, retaining its next-stage cursor between jobs. Custom orders may omit stages. Exhausted attempts are skipped; the job never pays for resets. Commission policies rescan the entire stage list and select the highest verified three-star Base Defense or Item Retrieval stage. Read AP, unit cost, selected count, and the resulting balance from the game; require the game's final confirmation to agree and stay above the floor. Never round a budget upward or buy AP to continue.
+
+Save a pending intent before confirming an AP sweep. Require a reward receipt, the projected AP decrement, and (for Hard) the expected remaining-attempt count before advancing the cursor. Uncertain outcomes block further spending. Catalogs, cursor, holds, and schedules persist per instance. Return to home and log each confirmed spend with stage, count, AP before/after, and local receipt evidence. See [AP spending](spend-ap.md).
 
 ## 4. Recognition and recovery
 
@@ -149,7 +157,7 @@ The current foundation is implemented: restart, a serial dashboard queue, Cafe, 
 | Portfolio foundation | This design, clear setup/status docs, permissive licensing with third-party asset boundaries, and an isolated account-free demo |
 | Cafe repeatability | Scheduled visits after cooldown, named free invitation when available, and useful evidence for any missed/obscured markers |
 | Lessons | Inspect all unlocked locations, choose rooms with the configured relationship or school-rank policy, verify each ticket, and return home; live completion is recorded in [Lessons](lessons.md) |
-| Next gameplay job after Lessons | Prefer configured mission sweeps to address AP accumulation; choose the stage/resource policy before implementation |
+| Spend AP | Sweep highest three-star commissions or a persisted Hard-stage round robin without crossing its AP reserve; see [Spend AP](spend-ap.md) |
 | Crafting | Fill saved-preset Quick Craft slots; persist per-slot collection jobs; verify collection and refill after natural completion |
 | Other daily routines | Add social and reward routines individually through the task contract, with observable entry and exit states |
 | Active events | Guarded navigation from reviewed profiles, then configured stage farming with availability and resource checks |
@@ -161,7 +169,7 @@ Use a permissive license for the project's original code and documentation, whil
 
 ## 8. Decisions to make when their work begins
 
-- Mission/event stage priorities, AP reserve, repetition limits, and reward-claim order.
+- Event-specific stage priorities, repetition limits, and reward-claim order. The ordinary AP floor and Hard rotation are configured on the Spend AP page.
 - Invitation selection beyond one named student and one successful invitation per visit.
 - Club uses the global 19:00 UTC reset policy; live attendance evidence and durable per-day suppression remain pending the fresh-reset test. See [Club](club.md).
 - Recovery semantics and migrations when durable job storage is introduced.

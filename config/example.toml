@@ -50,6 +50,15 @@ monthly_max_cents = 699
 half_monthly_max_cents = 299
 ap_max_cents = 299
 
+[ap]
+# Spend existing AP only; never buys refills or Hard attempt resets.
+schedule_enabled = false
+floor = 100
+strategy = "elephs" # elephs, reports, or credits
+hard_default_order = true
+# Custom order accepts scanned three-star stages only. Empty custom order spends nothing.
+hard_order = []
+
 # Paths are relative to this configuration file.
 [storage]
 run_dir = "../data/runs"

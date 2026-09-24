@@ -49,7 +49,9 @@ open [the dashboard](http://127.0.0.1:8765). `serve --port 8767` selects a diffe
 | `cafe` | runs restart, collects Cafe earnings, and checks students |
 | `crafting` | runs restart, checks finished crafts, fills Quick Craft slots, and saves their collection times |
 | `lessons` | runs restart, surveys locations, and uses existing tickets with the configured strategy |
-| `daily` | runs restart → Club placeholder → Cafe → Lessons; the Lessons step can be disabled |
+| `daily` | runs restart → Club placeholder → enabled packs → mail → Cafe → enabled Lessons → enabled Spend AP |
+| `scan_ap` | surveys three-star Hard stages and commissions without spending AP |
+| `spend_ap` | sweeps the chosen stages without crossing the configured AP floor |
 | `probe` | checks the selected device, game, display size, and foreground app |
 | `capture --output data/capture.png` | saves a screenshot without game input |
 | `inspect --image data/capture.png` | classifies a saved screenshot without an emulator connection |
@@ -75,7 +77,7 @@ to close the game between dashboard visits, enable the idle-close setting or set
 
 ## lessons
 
-queue **lessons** for restart → Lessons, or **daily** for restart → Club placeholder → Cafe → Lessons. the relationship strategy has passed live; [the validation notes](lessons.md#validation-status) cover the tested run and the remaining school rank-up case.
+queue **lessons** for restart → Lessons, or **daily** to include Lessons in the full daily plan shown above. the relationship strategy has passed live; [the validation notes](lessons.md#validation-status) cover the tested run and the remaining school rank-up case.
 
 the default is to check every unlocked location, then choose rooms with the most owned students. ties go to the highest sum of owned students' relationship ranks. the alternate strategy picks the lowest school rank, then the lowest XP progress, and chooses its fullest room. tied rooms favor higher owned relationships. it rechecks after every ticket; no ticket purchases are allowed.
 
@@ -91,7 +93,7 @@ enabled_in_daily = true
 
 the dashboard's location list takes one name per line. an unknown name stops the job so a typo cannot redirect tickets somewhere else. a configured limit applies per run, not per day. the game counter and already-completed rooms determine what remains available.
 
-`enabled_in_daily = false` removes lessons from the daily plan; the standalone lessons button still works. this does **not** add a daily timer. the existing automatic schedule only runs Cafe every three hours. see [Lessons](lessons.md) for scoring, coverage checks, and receipt verification.
+`enabled_in_daily = false` removes lessons from the daily plan; the standalone lessons button still works. this does **not** add a daily timer. the Cafe timer leaves lesson tickets alone. Crafting, paid packs, and AP spending have their own optional schedules. see [Lessons](lessons.md) for scoring, coverage checks, and receipt verification.
 
 ## inspect a run
 
@@ -106,3 +108,7 @@ run `.venv/bin/python -m pytest -q` for the offline suite. it uses fake devices 
 ## keep crafting
 
 configure Quick Craft in the game first, then enable **keep the crafting slots busy** in the dashboard. it uses available keystones and the displayed credit fee, saves each slot’s finish time, and queues collection/refill visits. if setup is missing, it disables itself with an explanation. [crafting behavior and validation →](crafting.md)
+
+## spend the extra AP
+
+open **Spend AP** in the sidebar. scan your three-star stages, keep the default 100 AP reserve or choose another floor, then pick Elephs, reports, or credits. the Hard rotation supports drag-and-drop, add/remove buttons, arrow controls, and a text editor. enable automatic spending to check hourly and follow Cafe/mail through the same queue. [configuration, policies, and spending evidence →](spend-ap.md)

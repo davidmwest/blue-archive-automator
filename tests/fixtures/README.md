@@ -3,8 +3,7 @@
 These samples were captured from the authorized local Blue Archive staging instance
 on 2026-09-23: global English client, 1280×720, 320 DPI.
 
-Only the relevant dialog or interface controls remain visible. Everything else is
-black. They contain no account names, IDs, currency balances, credentials, or tokens.
+For the startup samples listed below, only the relevant dialog or interface controls remain visible. Everything else is black. They contain no account names, IDs, currency balances, credentials, or tokens. Later task-specific samples and their masking are described separately below.
 The test images preserve original pixel positions so the complete OCR/template
 pipeline can be tested without a running game.
 
@@ -54,8 +53,10 @@ cover wrapped titles where tightly cropped OCR duplicated letter fragments. Thei
 `header_crops` record OCR with an eight-pixel white margin before enlargement;
 the saved game screenshots themselves retain their original pixels.
 
-Crafting samples (`crafting-*.png`) were captured on 2026-09-24. They retain the synthesis slot list, configured Quick Craft preset, maximum batch, confirmation, running timers, and red zero-inventory counter. The account resource bar is removed. `craft_keystone.png` is a small matching crop of the keystone material icon. Collection fixtures will be added after the first natural completion; no live receipt validation is claimed yet.
+Crafting samples (`crafting-*.png`) were captured on 2026-09-24. They retain the synthesis slot list, configured Quick Craft preset, maximum batch, confirmation, running timers, and red zero-inventory counter. The account resource bar is removed. `craft_keystone.png` is a small matching crop of the keystone material icon. Natural completion and collection recognition now have live fixtures and passed runtime verification.
 
 Pack/mail samples (`packs-*.png`) were captured on 2026-09-24. Store backgrounds and account identity are masked; mailbox resource balances are removed. Google Play fixtures retain only the product/price/button or the optional backup-payment prompt, with account/payment information and underlying game identity removed. Tests also remove OCR status words to ensure the remaining ownership shading still prevents a duplicate purchase.
 
 `craft-one-ready.png` and `craft-collected.png` cover the first natural craft completion and receipt; the account resource bar is masked.
+
+AP samples (`ap-*.png`) retain the AP counters needed to verify spending, while masking credit/Pyroxene balances and the receipt’s account nickname. They cover commission selection, Hard stars and remaining attempts, the confirmation, and the receipt. The helper-icon, small-index, and split-title samples preserve OCR failures found during live surveys and sweeps. Hard details retain both current and projected attempt counts, including a last-available-attempt case.

@@ -5,7 +5,7 @@
   const SVG_NS = "http://www.w3.org/2000/svg";
   const booleanSettings = new Set(["packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "auto_download", "crafting_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle", "lessons_enabled_in_daily"]);
   const stringSettings = new Set(["cafe_invite_student", "lessons_strategy"]);
-  const settingNames = ["packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "packs_monthly_max_cents", "packs_half_monthly_max_cents", "packs_ap_max_cents", "auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "crafting_schedule_enabled", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
+  const settingNames = ["ap_floor","packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "packs_monthly_max_cents", "packs_half_monthly_max_cents", "packs_ap_max_cents", "auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "crafting_schedule_enabled", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
   const fields = Object.fromEntries(settingNames.map((name) => [name, $(name.replaceAll("_", "-"))]));
   let status = null;
   let connected = false;
@@ -32,7 +32,7 @@
   let actionsLimit = 15;
   let noticeTimer = null;
 
-  const taskName = (task) => ({ packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
+  const taskName = (task) => ({ spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
   const isRunning = () => Boolean(status && (status.state === "running" || status.current_job));
   const queue = () => (Array.isArray(status?.queue) ? status.queue : []);
   const isDemo = () => status?.demo === true;
@@ -144,6 +144,7 @@
     $("run-club").disabled = unavailable;
     $("run-crafting").disabled = unavailable;
     $("run-mail").disabled = unavailable;
+    $("run-ap").disabled = unavailable;
     $("run-packs").disabled = unavailable;
     $("run-lessons").disabled = unavailable;
     $("run-restart").querySelector("span").textContent = "queue restart";
@@ -165,7 +166,7 @@
       ? "lowest rank first, then lowest XP. recheck after each ticket. pick the room with the most students; higher owned relationships break ties."
       : "check every location first. use tickets on rooms with the most owned students; higher relationships break ties.";
     const packEnabled = ["monthly", "half_monthly", "ap"].some((key) => status?.config?.[`packs_${key}_enabled`]);
-    $("daily-plan").textContent = `daily does restart → club → ${packEnabled ? "packs → " : ""}mail → café${status?.config?.lessons_enabled_in_daily === false ? "" : " → lessons"}. club is stubbed for now.`;
+    $("daily-plan").textContent = `daily does restart → club → ${packEnabled ? "packs → " : ""}mail → café${status?.config?.lessons_enabled_in_daily === false ? "" : " → lessons"}${status?.config?.ap_schedule_enabled ? " → spend AP" : ""}. club is stubbed for now.`;
     const packs = status?.schedule?.packs;
     $("packs-status").textContent = packs?.blocked_reason
       ? `paused: ${packs.blocked_reason}. check the game, then queue a pack check.`
@@ -182,7 +183,7 @@
       if (booleanSettings.has(name)) fields[name].checked = Boolean(config[name] ?? (name === "lessons_enabled_in_daily"));
       else if (name.endsWith("_max_cents")) fields[name].value = ((config[name] ?? (name.includes("half_monthly") || name.includes("_ap_") ? 299 : 699)) / 100).toFixed(2);
       else if (name === "lessons_locations") fields[name].value = Array.isArray(config[name]) ? config[name].join("\n") : "";
-      else fields[name].value = config[name] ?? ({ lessons_strategy: "relationship", lessons_max_tickets: 0 }[name] ?? "");
+      else fields[name].value = config[name] ?? ({ ap_floor: 100, lessons_strategy: "relationship", lessons_max_tickets: 0 }[name] ?? "");
     });
     settingsLoaded = true;
     $("settings-status").textContent = isDemo() ? "sample settings · read only" : "saved on this machine";
@@ -646,6 +647,7 @@
   $("run-daily").addEventListener("click", () => void post("/api/run", { task: "daily" }, "daily’s in the queue."));
   $("run-club").addEventListener("click", () => void post("/api/run", { task: "club" }, "club placeholder queued. live testing comes after reset."));
   $("run-cafe").addEventListener("click", () => void post("/api/run", { task: "cafe" }, "café’s in the queue."));
+  $("run-ap").addEventListener("click", () => void post("/api/run", { task: "spend_ap" }, "AP spending is in the queue."));
   $("run-mail").addEventListener("click", () => void post("/api/run", { task: "mail" }, "mail’s in the queue."));
   $("run-packs").addEventListener("click", () => void post("/api/run", { task: "packs" }, "pack check and mail are in the queue."));
   $("run-crafting").addEventListener("click", () => void post("/api/run", { task: "crafting" }, "crafting’s in the queue."));

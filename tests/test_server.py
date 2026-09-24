@@ -1178,3 +1178,46 @@ def test_only_explicit_pack_job_can_retry_a_payment_hold(controlled):
     eventually(lambda:len(factory.processes)==2)
     assert '--retry-packs' not in factory.processes[1].arguments
     factory.processes[1].finish()
+
+
+def test_ap_settings_require_scanned_stages_and_persist_order(controlled,config_path):
+    from ba_automator.ap_state import read_state,write_state
+    controller,_=controlled
+    state=read_state(controller.config);state['hard_stages']=['13-3','2-1'];write_state(controller.config,state)
+    controller.update_settings({'ap_floor':100,'ap_strategy':'elephs','ap_hard_default_order':False,'ap_hard_order':['2-1','13-3']})
+    saved=Config.from_file(config_path);assert saved.ap_hard_order==('2-1','13-3')
+    original=config_path.read_bytes()
+    with pytest.raises(ApiError):controller.update_settings({'ap_hard_order':['14-3']})
+    assert config_path.read_bytes()==original
+    controller.update_settings({'ap_hard_order':[]})
+    assert controller.config.ap_hard_order==() and not controller.config.ap_hard_default_order
+
+
+def test_ap_schedule_respects_persisted_holds_and_due_time(controlled):
+    from ba_automator.ap_state import read_state,write_state
+    controller,_=controlled
+    with controller._condition:
+        controller.config=replace(controller.config,ap_schedule_enabled=True)
+        state=read_state(controller.config);state['blocked_reason']='uncertain receipt';write_state(controller.config,state)
+        controller._enqueue_ap();assert not controller._queue
+        state['blocked_reason']=None;state['pending']={'strategy':'elephs','stage':'1-1','ap_before':200,'cost':20,'count':1,'floor':100};write_state(controller.config,state)
+        controller._enqueue_ap();assert not controller._queue
+        state['pending']=None;state['next_check_at']=(datetime.now(timezone.utc)+timedelta(hours=1)).isoformat();write_state(controller.config,state)
+        controller._enqueue_ap();assert not controller._queue
+        state['next_check_at']=None;write_state(controller.config,state)
+        controller._enqueue_ap();controller._enqueue_ap()
+        assert [j['task'] for j in controller._queue]==['spend_ap']
+        controller._paused=True
+
+
+def test_ap_restart_failure_persists_hold_and_manual_retry_is_explicit(controlled):
+    from ba_automator.ap_state import read_state
+    controller,factory=controlled
+    controller.enqueue('spend_ap')
+    eventually(lambda:len(factory.processes)==1)
+    assert factory.processes[0].arguments[-2:]==['spend_ap','--retry-ap']
+    factory.processes[0].finish(1)
+    eventually(lambda:controller.status()['current_job'] is None)
+    assert read_state(controller.config)['blocked_reason']
+    controller.resume()
+    assert read_state(controller.config)['blocked_reason']

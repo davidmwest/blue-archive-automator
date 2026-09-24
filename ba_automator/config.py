@@ -32,6 +32,11 @@ class Config:
     cafe_invite_enabled: bool = False
     cafe_invite_student: str = ""
     crafting_schedule_enabled: bool = False
+    ap_schedule_enabled: bool = False
+    ap_floor: int = 100
+    ap_strategy: str = 'elephs'
+    ap_hard_default_order: bool = True
+    ap_hard_order: tuple[str, ...] = ()
     packs_monthly_enabled: bool = False
     packs_half_monthly_enabled: bool = False
     packs_ap_enabled: bool = False
@@ -91,12 +96,27 @@ class Config:
             raise ConfigError("restart.auto_download must be true or false")
         for name in ("cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle",
                      "lessons_enabled_in_daily", "crafting_schedule_enabled",
-                     "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled"):
+                     "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled",
+                     "ap_schedule_enabled", "ap_hard_default_order"):
             if type(getattr(self, name)) is not bool:
                 raise ConfigError(f"{name} must be true or false")
         for name in ('packs_monthly_max_cents', 'packs_half_monthly_max_cents', 'packs_ap_max_cents'):
             if type(getattr(self, name)) is not int or not 1 <= getattr(self, name) <= 10000:
                 raise ConfigError(f'{name} must be an integer from 1 to 10000 USD cents')
+        from .ap_policy import STRATEGIES, stage_key
+        if type(self.ap_floor) is not int or not 0 <= self.ap_floor <= 9999:
+            raise ConfigError('ap.floor must be an integer from 0 to 9999')
+        if self.ap_strategy not in STRATEGIES:
+            raise ConfigError('ap.strategy must be elephs, reports, or credits')
+        try:
+            if not isinstance(self.ap_hard_order, (list, tuple)) or len(self.ap_hard_order) > 297:
+                raise ValueError('Hard rotation must be a list of up to 297 stages')
+            for stage in self.ap_hard_order: stage_key(stage)
+            if len(set(self.ap_hard_order)) != len(self.ap_hard_order):
+                raise ValueError('Hard rotation must not repeat a stage')
+        except ValueError as exc:
+            raise ConfigError(str(exc)) from exc
+        object.__setattr__(self, 'ap_hard_order', tuple(self.ap_hard_order))
         if (not isinstance(self.cafe_invite_student, str) or len(self.cafe_invite_student) > 100
                 or any(ord(c) < 32 for c in self.cafe_invite_student)):
             raise ConfigError("cafe.invite_student must be a single student name")
@@ -143,6 +163,7 @@ class Config:
             "storage": {"run_dir", "lock_dir", "state_dir"},
             "cafe": {"schedule_enabled", "invite_enabled", "invite_student"},
             "crafting": {"schedule_enabled"},
+            "ap": {"schedule_enabled", "floor", "strategy", "hard_default_order", "hard_order"},
             "packs": {"monthly_enabled", "half_monthly_enabled", "ap_enabled",
                       "monthly_max_cents", "half_monthly_max_cents", "ap_max_cents"},
             "lessons": {"strategy", "max_tickets", "locations", "enabled_in_daily"},
@@ -159,7 +180,7 @@ class Config:
             unexpected_keys = entries.keys() - keys
             if unexpected_keys:
                 raise ConfigError(f"Unknown {section} settings: {', '.join(sorted(unexpected_keys))}")
-            values.update({f"{section}_{key}" if section in {"cafe", "lessons", "crafting", "packs"} else key: value
+            values.update({f"{section}_{key}" if section in {"cafe", "lessons", "crafting", "packs", "ap"} else key: value
                            for key, value in entries.items()})
         for required in ("serial", "package"):
             if required not in values:

@@ -33,14 +33,18 @@ def main(argv=None) -> int:
                     "crafting": "Collect finished crafts, fill Quick Craft slots, and save their timers",
                     "packs": "Check optional paid pack renewals, then collect mail",
                     "mail": "Collect ordinary and product mail and log rewards",
+                    "spend_ap": "Sweep selected Hard missions or commissions down to the AP floor",
+                    "scan_ap": "Survey three-star Hard missions and commissions without spending AP",
                     "lessons": "Restart and use lesson tickets with the configured strategy",
-                    "daily": "Run restart, Club placeholder, enabled packs, mail, cafe, and enabled lessons"}
+                    "daily": "Run restart, Club placeholder, enabled packs, mail, cafe, enabled lessons and AP spending"}
     for name, description in descriptions.items():
         command = commands.add_parser(name, help=description)
         command.add_argument("--no-downloads", action="store_true", help="Stop if game-data download consent is needed")
         if name == 'packs':
             command.add_argument('--retry-packs', action='store_true',
                                  help='Explicitly retry a blocked pack check; unresolved charges still cannot be repeated')
+        if name == 'spend_ap':
+            command.add_argument('--retry-ap', action='store_true', help='Retry a failed AP job; unresolved sweeps remain blocked')
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 
@@ -76,7 +80,10 @@ def main(argv=None) -> int:
                     continue
                 if vision is None:
                     vision = StartupVision()
-                if task == "packs":
+                if task in {'spend_ap', 'scan_ap'}:
+                    from .spend_ap import run_spend_ap, run_scan_ap
+                    runner = run_spend_ap if task == 'spend_ap' else run_scan_ap
+                elif task == "packs":
                     from .packs import run_packs
 
                     runner = run_packs
@@ -95,6 +102,8 @@ def main(argv=None) -> int:
                 else:
                     runner = run_restart if task == "restart" else run_cafe
                 options = ({'allow_retry': getattr(args, 'retry_packs', False)} if task == 'packs' else {})
+                if task == 'spend_ap':
+                    options = {'allow_retry': getattr(args, 'retry_ap', False)}
                 result = runner(config, device, vision, **options)
                 print(json.dumps(asdict(result), default=str, indent=2))
             return 0

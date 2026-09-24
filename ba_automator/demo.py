@@ -113,6 +113,8 @@ def _routes(now: datetime) -> dict[str, tuple[str, bytes]]:
             "lessons_max_tickets": 0,
             "lessons_locations": [],
             "lessons_enabled_in_daily": True,
+            "ap_floor":100,"ap_schedule_enabled":False,"ap_strategy":"elephs",
+            "ap_hard_default_order":True,"ap_hard_order":[],
         },
         "schedule": {"cafe": {"enabled": False, "next_due_at": None, "retry_paused": False}},
         "logs": [
@@ -164,6 +166,15 @@ def _routes(now: datetime) -> dict[str, tuple[str, bytes]]:
         "/api/popups/sample-announcement/before": ("image/svg+xml; charset=utf-8", _schematic(home_map, popup=True)),
         "/api/popups/sample-announcement/after": ("image/svg+xml; charset=utf-8", _schematic(home_map)),
     }
+    status['schedule']['ap']={'enabled':False,'hard_stages':[f'{a}-{s}' for a in range(4,0,-1) for s in (3,2,1)],
+                              'commissions':{'reports':'H','credits':'F'},'surveyed_at':stamp(-600),
+                              'last_ap':112,'next_stage':'3-2','last_summary':'sample data · a sweep stopped above the 100 AP floor.'}
+    for asset,kind in [('ap.html','text/html'),('ap.js','text/javascript'),('ap.css','text/css')]:
+        data=(_ROOT/'web'/asset).read_bytes()
+        if asset=='ap.html':
+            data=data.replace(b'<main class="ap-main">',b'<main class="ap-main"><p class="demo-banner">demo \xc2\xb7 fictional stages \xc2\xb7 no device</p>')
+        routes['/'+asset]=(kind+'; charset=utf-8',data)
+    routes['/ap']=routes['/ap.html']
     for path, value in (("/api/status", status), ("/api/map", home_map), ("/api/actions", actions), ("/api/popups", popups)):
         routes[path] = ("application/json; charset=utf-8", _json(value))
     return routes

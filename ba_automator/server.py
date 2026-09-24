@@ -40,6 +40,7 @@ from .crafting_state import CraftStateError, read_state, scheduled_jobs, timesta
 from .locking import InstanceLock
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS
 from . import packs_state
+from . import ap_state
 from .vision import decode_frame
 
 
@@ -53,7 +54,9 @@ AUTOMATION_SETTINGS = {"close_app_when_idle"}
 CRAFTING_SETTINGS = {"crafting_schedule_enabled": "schedule_enabled"}
 PACKS_SETTINGS = {f'packs_{key}_{suffix}': f'{key}_{suffix}'
                   for key in packs_state.PACKS for suffix in ('enabled', 'max_cents')}
-SETTINGS = RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys()
+AP_SETTINGS = {f'ap_{key}': key for key in
+               ('schedule_enabled', 'floor', 'strategy', 'hard_default_order', 'hard_order')}
+SETTINGS = RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
 CAFE_INTERVAL = timedelta(hours=3, seconds=15)
 CAFE_RETRY_INTERVAL = timedelta(minutes=15)
 MAX_SCHEDULE_FAILURES = 3
@@ -106,6 +109,7 @@ def _config_document(config: Config) -> dict:
         "lessons": {name: getattr(config, attribute) for attribute, name in LESSONS_SETTINGS.items()},
         "crafting": {"schedule_enabled": config.crafting_schedule_enabled},
         "packs": {name: getattr(config, attribute) for attribute, name in PACKS_SETTINGS.items()},
+        "ap": {name: getattr(config, attribute) for attribute, name in AP_SETTINGS.items()},
     }
     if hasattr(config, "state_dir"):
         document["storage"]["state_dir"] = str(config.state_dir)
@@ -152,6 +156,7 @@ class DashboardController:
         self._popup_cache: dict[Path, tuple[tuple[int, int], list[dict]]] = {}
         self._schedule = self._load_schedule()
         self._packs_not_before = None
+        self._ap_not_before = None
         self._failures = self._load_failures()
         self._worker = threading.Thread(target=self._work, name="blue-archive-queue", daemon=True)
         self._worker.start()
@@ -169,6 +174,7 @@ class DashboardController:
         values.update({name: getattr(self.config, name) for name in LESSONS_SETTINGS})
         values.update({name: getattr(self.config, name) for name in CRAFTING_SETTINGS})
         values.update({name: getattr(self.config, name) for name in PACKS_SETTINGS})
+        values.update({name: getattr(self.config, name) for name in AP_SETTINGS})
         return values
 
     def _state_dir(self) -> Path:
@@ -225,6 +231,7 @@ class DashboardController:
     def _enqueue_scheduled(self) -> None:
         self._enqueue_crafting()
         self._enqueue_packs()
+        self._enqueue_ap()
         if (self._paused or self._shutdown or not getattr(self.config, "cafe_schedule_enabled", False)
                 or self._schedule["cafe"].get("retry_paused", False)):
             return
@@ -249,6 +256,32 @@ class DashboardController:
             return {**state, 'enabled': bool(packs_state.enabled(self.config))}
         except RuntimeError as exc:
             return {'enabled': bool(packs_state.enabled(self.config)), 'blocked_reason': str(exc)}
+
+    def _ap_status(self):
+        try:
+            return {**ap_state.read_state(self.config), 'enabled': self.config.ap_schedule_enabled}
+        except RuntimeError as exc:
+            return {'enabled': self.config.ap_schedule_enabled, 'blocked_reason': str(exc)}
+
+    def _enqueue_ap(self):
+        if self._paused or self._shutdown or not self.config.ap_schedule_enabled or len(self._queue) >= 100:
+            return
+        related = {'spend_ap', 'scan_ap', 'cafe', 'mail', 'packs', 'daily'}
+        if ((self._current and self._current['task'] in related)
+                or any(job['task'] in related for job in self._queue)):
+            return
+        state = self._ap_status()
+        now = self._wall_clock()
+        if state.get('blocked_reason') or state.get('pending'):
+            return
+        if self._ap_not_before and now < self._ap_not_before:
+            return
+        due = state.get('next_check_at')
+        if due and now < datetime.fromisoformat(due):
+            return
+        self._queue.append({'id': uuid4().hex, 'task': 'spend_ap',
+                            'created_at': _timestamp(), 'source': 'schedule'})
+        self._ap_not_before = now + timedelta(minutes=15)
 
     def _enqueue_packs(self):
         if self._paused or self._shutdown or not packs_state.enabled(self.config) or len(self._queue) >= 100:
@@ -463,6 +496,8 @@ class DashboardController:
                 arguments = [sys.executable, "-m", "ba_automator", "--config", str(snapshot), job["task"]]
                 if job['task'] == 'packs' and job.get('source') != 'schedule':
                     arguments.append('--retry-packs')
+                if job['task'] == 'spend_ap' and job.get('source') != 'schedule':
+                    arguments.append('--retry-ap')
                 options = {"stdout": subprocess.PIPE, "stderr": subprocess.STDOUT,
                            "stdin": subprocess.DEVNULL, "text": True, "encoding": "utf-8",
                            "errors": "replace", "bufsize": 1}
@@ -486,7 +521,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info")
-                            marker = next((prefix for prefix in ("restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -548,6 +583,14 @@ class DashboardController:
                                   else self._state)
                     self._record_schedule(job["task"], cafe_state)
                     self._record_crafting(job["task"], self._state)
+                    if job['task'] == 'spend_ap' and self._state in {'failed', 'stopped'}:
+                        try:
+                            with InstanceLock(selected):
+                                state = ap_state.read_state(selected)
+                                state['blocked_reason'] = state['blocked_reason'] or 'AP job failed or stopped; review the log, then explicitly queue Spend AP'
+                                ap_state.write_state(selected, state)
+                        except (RuntimeError, OSError) as exc:
+                            self._log(f'Could not save AP failure hold: {exc}', 'error')
                     if job['task'] == 'packs' and self._state in {'failed', 'stopped'}:
                         try:
                             with InstanceLock(selected):
@@ -715,7 +758,7 @@ class DashboardController:
                     "history": list(self._history), "queue_paused": self._paused,
                     "failed_jobs": list(reversed(self._failures)),
                     "app_closed": self._app_closed,
-                    "schedule": {"packs": self._packs_status(), "crafting": self._crafting_status(), "cafe": {**self._schedule["cafe"],
+                    "schedule": {"ap": self._ap_status(), "packs": self._packs_status(), "crafting": self._crafting_status(), "cafe": {**self._schedule["cafe"],
                                           "enabled": getattr(self.config, "cafe_schedule_enabled", False)}}}
 
     def actions(self) -> dict:
@@ -736,7 +779,8 @@ class DashboardController:
                               ("id", "time", "task", "action", "detail", "student", "cafe", "status",
                                "location", "room", "owned_students", "student_count", "tickets_before", "tickets_after",
                                "strategy", "rank_before", "rank_after", "xp_before", "xp_after", "slots", "count",
-                               "items", "pyroxenes", "balance_gains", "pack", "currency", "price_cents")}
+                               "items", "pyroxenes", "balance_gains", "pack", "currency", "price_cents",
+                               "stage", "ap_spent", "ap_before", "ap_after", "ap_cost", "rewards")}
                     entries.append(public)
         except FileNotFoundError:
             pass
@@ -869,16 +913,24 @@ class DashboardController:
                 raise ApiError(409, "Settings cannot change while jobs are running or queued")
             try:
                 existing = Config.from_file(self.config_path)
-                replace(existing, **changes)  # Validate values before touching the file.
+                updated = replace(existing, **changes)  # Validate before touching the file.
+                if 'ap_hard_order' in changes and not updated.ap_hard_default_order:
+                    try:
+                        catalog = ap_state.read_state(updated)['hard_stages']
+                    except RuntimeError as exc:
+                        raise ConfigError(str(exc)) from exc
+                    if set(updated.ap_hard_order) - set(catalog):
+                        raise ConfigError('Rotation includes stages that were not verified with three stars; scan stages first')
                 with self.config_path.open("rb") as stream:
                     document = tomllib.load(stream)
                 for name, value in changes.items():
                     section = ("cafe" if name in CAFE_SETTINGS else
+                               "ap" if name in AP_SETTINGS else
                                "packs" if name in PACKS_SETTINGS else
                                "crafting" if name in CRAFTING_SETTINGS else
                                "lessons" if name in LESSONS_SETTINGS else
                                "automation" if name in AUTOMATION_SETTINGS else "restart")
-                    key = PACKS_SETTINGS.get(name, CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, CRAFTING_SETTINGS.get(name, name))))
+                    key = AP_SETTINGS.get(name, PACKS_SETTINGS.get(name, CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, CRAFTING_SETTINGS.get(name, name)))))
                     document.setdefault(section, {})[key] = value
                 _write_atomic(self.config_path, _toml(document))
                 self.config = Config.from_file(self.config_path)
@@ -1000,13 +1052,14 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     if parse_qs(target.query).keys() - {"v"}:
                         raise ApiError(400, "Popup images accept only a version parameter")
                     self._send(200, controller.popup_image(*match.groups()), "image/png")
-                elif target.path in {"/", "/index.html", "/app.js", "/style.css", "/maid-arisu.png"}:
-                    name = "index.html" if target.path == "/" else target.path[1:]
+                elif target.path in {"/", "/index.html", "/app.js", "/style.css", "/maid-arisu.png", "/ap", "/ap.html", "/ap.js", "/ap.css"}:
+                    name = "index.html" if target.path == "/" else "ap.html" if target.path == "/ap" else target.path[1:]
                     resource = files("ba_automator").joinpath("web", name)
                     if not resource.is_file():
                         raise ApiError(404, "Dashboard asset not found")
                     types = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8",
-                             "style.css": "text/css; charset=utf-8", "maid-arisu.png": "image/png"}
+                             "style.css": "text/css; charset=utf-8", "maid-arisu.png": "image/png",
+                             "ap.html":"text/html; charset=utf-8", "ap.js":"text/javascript; charset=utf-8", "ap.css":"text/css; charset=utf-8"}
                     self._send(200, resource.read_bytes(), types[name])
                 else:
                     raise ApiError(404, "Not found")

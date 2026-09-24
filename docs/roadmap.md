@@ -32,7 +32,7 @@ The default relationship strategy compares rooms across all unlocked locations a
 
 The runner surveys every unlocked school and reconciles the observed ranks with Total Area Rank before each ticket. It verifies the selected room, confirms one existing ticket, then checks the result and ticket decrement. Configurable ticket limits, eligible location names, and daily inclusion are available in TOML and the dashboard. Missing comparison evidence or an unknown configured location stops spending.
 
-`lessons` runs restart → Lessons; `daily` defaults to restart → Club placeholder → Cafe → Lessons. The existing three-hour timer includes the Club placeholder but no Lessons. A completed Cafe visit still updates its schedule if later Lessons work fails or is interrupted. No daily-reset timer or ticket-purchase flow has been added.
+`lessons` runs restart → Lessons; `daily` defaults to restart → Club placeholder → Mail → Cafe → Lessons, with separately enabled pack checks and AP spending. The existing three-hour timer includes the Club placeholder but no Lessons. A completed Cafe visit still updates its schedule if later Lessons work fails or is interrupted. No daily-reset timer or ticket-purchase flow has been added.
 
 Seven authorized tickets were used across calibration and guarded runs, with seven matching receipts and ticket decrements, in rooms containing two owned students each. The final uninterrupted job used the remaining two tickets, returned to a verified home screen, and closed the game in 475.3 seconds including restart. Every ticket compared 94 room cards across 12 unlocked locations with Total Area Rank 80. The [Lessons validation section](lessons.md#validation-status) records the limits and evidence.
 
@@ -62,10 +62,14 @@ Club is scaffolded after restart in Daily and Cafe plans. It reports deferred an
 
 Add one routine at a time after restart, with recognized entry/exit states, bounded actions, and replay coverage. Reward collection and configured mission sweeps are candidates. Introduce spending/resource budgets only as needed for an implemented task.
 
-Add daily-reset-aware scheduling and task dependencies when the daily plan grows. The current scheduler is the cafe cooldown interval, not a complete server-day planner. Add SQLite history, resumable checkpoints, or account-level coordination when their use cases exist.
+Add daily-reset-aware scheduling and task dependencies when the daily plan grows. The current scheduler handles Cafe cooldowns, craft deadlines, optional pack checks, and hourly AP checks; it is not a complete server-day planner. Add SQLite history, resumable checkpoints, or account-level coordination when their use cases exist.
 
 Platform-specific emulator discovery/start/stop, packaging, and optional system-service installation follow reliable task execution. The current server must be launched and kept running manually.
 
 ## Crafting collection timers
 
-Quick Craft now has a guarded maximum-batch runner and per-instance durable collection deadlines. The live three-keystone batch started with 90-minute/three-hour/three-hour timers; collection and refill validation remain pending natural completion. The dashboard combines due slots through its serial queue and persists setup-disable reasons. See [Crafting](crafting.md).
+Quick Craft now has a guarded maximum-batch runner and per-instance durable collection deadlines. The live three-keystone batch started with 90-minute/three-hour/three-hour timers; all three natural completions passed, including a combined visit for the two later slots, verified rewards, empty slots, zero-keystone inventory, and return home. Refill validation with new keystones remains pending; that path has offline coverage. The dashboard combines due slots through its serial queue and persists setup-disable reasons. See [Crafting](crafting.md).
+
+## AP spending
+
+A dedicated planning page provides a minimum AP floor, report/credit commission policies, and an editable Hard-stage round robin. The runner scans three-star clears, reads live costs, verifies every spending confirmation and receipt, and retains a durable rotation cursor and unresolved spend intent. Optional hourly visits and follow-ups after Cafe/Mail use the existing serial queue. See [Spend AP](spend-ap.md) for setup and validation status.
