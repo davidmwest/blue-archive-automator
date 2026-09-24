@@ -8,6 +8,7 @@ BlueStacks + ADB looks like the right starting point. [ALAS](https://github.com/
 
 - BlueStacks Air on mac, BlueStacks 5 on windows.
 - ADB for screenshots, taps, swipes, and app control.
+- Fixed 1280×720 landscape resolution, with templates and tap coordinates built for that size.
 - Run alongside the Azur Lane daemon, with each one pointed at its own instance and ADB port.
 - Python for the automation engine, with OpenCV for screen recognition and OCR where we actually need to read text or numbers.
 - Small task modules for things like cafe, daily rewards, and sweeps.
@@ -30,6 +31,6 @@ there's a dedicated Blue Archive instance for staging, but it's logged into a re
 
 architecture first. this repo has the design and build order; there's no runnable automator yet. ADB communication works with the currently running BlueStacks Air instance on the development mac. the Blue Archive instance is configured, but its screenshot and input paths still need testing. windows also needs its own smoke test.
 
-CPU and memory allocation are useful knobs. resolution, graphics settings, and FPS let us tune the graphics workload. we'll measure actual usage before calling any preset efficient.
+we're keeping the resolution at 1280×720. CPU and memory allocation, graphics settings, and FPS are the knobs we'll tune. we'll measure actual usage before calling any preset efficient.
 
 see [the architecture](docs/architecture.md) and [the build order](docs/roadmap.md).

@@ -6,6 +6,8 @@ Status: initial design, 2026-09-23. No runtime has been implemented.
 
 Use BlueStacks Air on Apple Silicon macOS and BlueStacks 5 on Windows. Build a portable Python automation core around standard ADB. Use ALAS as a design reference, with Blue Archive task logic implemented independently.
 
+Require a fixed 1280×720 landscape game display on both platforms. Templates, OCR regions, and input coordinates use that pixel grid directly; arbitrary-resolution support is outside the initial design.
+
 The portability boundary is ADB plus a small emulator-management interface. BlueStacks Air and BlueStacks 5 have different host integrations; choosing the same vendor does not make instance discovery, launch commands, installation, or resource settings identical.
 
 ## Components
@@ -30,7 +32,7 @@ flowchart TD
 | --- | --- |
 | Host adapter | Discover and select an instance, resolve its ADB endpoint, inspect supported resource settings, and eventually start/stop that instance. Separate macOS and Windows implementations. |
 | Device | Capture frames, tap, swipe, send key events, and inspect/control the game process through an explicit ADB serial. Expose timeouts and connection failures through a stable interface. |
-| Perception | Normalize the game viewport, match templates, identify pages and popups, and OCR small regions for counters or labels. Return evidence, confidence, and the frame timestamp. |
+| Perception | Validate the fixed 1280×720 frame and expected layout, match templates, identify pages and popups, and OCR small regions for counters or labels. Return evidence, confidence, and the frame timestamp. |
 | Navigation | Maintain a graph of recognized pages and verified transitions. Account for popups and loading states without assuming every screen has a working Back button. |
 | Tasks | Small state machines for individual chores. Each declares prerequisites, allowed actions, completion evidence, resource limits, and recovery behavior. |
 | Action policy | Check the selected target, current screen, frame freshness, execution mode, and task budget before input. Verify the result after input. |
@@ -54,7 +56,7 @@ Budget emulator CPU/RAM/FPS and recognition workers across both processes. Add a
 ## Stack and interfaces
 
 - Modern Python, with the exact supported version selected when the macOS ARM64 and Windows dependency smoke tests pass.
-- OpenCV and NumPy for deterministic image matching and viewport transforms.
+- OpenCV and NumPy for deterministic image matching and crops at fixed pixel coordinates.
 - A replaceable OCR provider selected against real English/Japanese/etc. screenshots for the chosen game client. Avoid committing to a large OCR stack before that check.
 - Android Platform Tools ADB for the first transport. Invoke commands using argument arrays, explicit device serials, and bounded timeouts.
 - Validated configuration for device selection, server, language, enabled tasks, budgets, and scheduling. Keep machine-specific configuration outside Git.
@@ -65,13 +67,15 @@ Start capture with `adb -s <serial> exec-out screencap -p` and input with standa
 ## Recognition and execution loop
 
 1. Capture a fresh frame from the explicitly selected device.
-2. Verify the expected app, viewport, page, and popup state.
+2. Verify the expected app, 1280×720 frame, page layout, and popup state.
 3. Choose one action whose preconditions and budget are satisfied.
 4. Send the action once.
 5. Wait for observable progress, with a deadline and adaptive capture interval.
 6. Record the observed outcome and continue, recover, or stop for inspection.
 
-Use 1280×720 landscape as the initial reference resolution. Detect the actual viewport and map coordinates through an explicit transform; unsupported aspect ratios or layouts stop recognition rather than silently stretching the screen. Treat game region, language, UI scale, and client version as part of the asset profile.
+Require decoded ADB screenshots to be exactly 1280×720 in landscape orientation. Store template locations, OCR crops, and tap/swipe coordinates directly in that space. Validate frame dimensions at startup and on every captured frame; a mismatch blocks input and reports the required emulator setting. No image rescaling or coordinate transform is needed for supported frames.
+
+Use 320 DPI for the initial emulator display profile, matching the configured staging instance, and confirm the game layout when live captures are available. Keep game UI scale consistent with the captured asset profile. Host window dimensions and macOS Retina scaling are not coordinate inputs: the contract is the actual ADB frame. Unexpected system bars, letterboxing, or shifted page anchors fail layout checks even if the frame dimensions match. Treat game region, language, UI scale, and client version as part of the asset profile.
 
 Template matching handles stable icons and buttons. OCR handles changing values in cropped regions. Multiple anchors should identify a screen before consequential actions. Ordinary execution should work locally without a language-model call per frame.
 
@@ -99,7 +103,7 @@ Raw screenshots, account identifiers, emulator configuration, ADB keys, logs, an
 
 BlueStacks documents CPU/memory allocation, display resolution, and graphics settings for Air, and per-instance settings in its multi-instance manager. Those are workload controls, not guaranteed host CPU/GPU percentage caps. [Air settings](https://support.bluestacks.com/hc/en-us/articles/32272893259533-How-to-use-the-Settings-Menu-on-BlueStacks-Air), [Air instance manager](https://support.bluestacks.com/hc/en-us/articles/34711762593037-How-to-create-and-manage-instances-using-the-Multi-instance-Manager-on-BlueStacks-Air).
 
-An initial candidate to benchmark is 1280×720, 4 virtual CPU cores, 4 GB RAM, and 30 FPS where the emulator/game exposes it. This is a starting experiment, not a tested recommendation. Increase memory or cores if startup or task stability suffers.
+Keep the display fixed at 1280×720 and 320 DPI. An initial resource candidate to benchmark is 4 virtual CPU cores, 4 GB RAM, and 30 FPS where the emulator/game exposes it. The resource allocation is a starting experiment, not a tested recommendation. Increase memory or cores if startup or task stability suffers.
 
 Keep emulator rendering FPS separate from automation capture frequency. Begin around 1–2 captures per second for menu work, capture faster briefly when verifying transitions, and back off during loading or idle periods. Reuse a frame across detectors, crop OCR, and limit OpenCV/OCR worker counts. Sleeping between scheduled runs should eliminate continuous recognition work. Emulator stop/start can be added after lifecycle behavior is validated.
 

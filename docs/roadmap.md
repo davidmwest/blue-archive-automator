@@ -8,13 +8,13 @@ Create the private repository, record the design, and identify the local staging
 
 Implement a CLI that discovers candidate instances, requires an explicit target, and validates its identity before connecting. Never fall back to the first connected device. Include bounded connection retries and a local configuration file.
 
-Read the game package/version, Android version, viewport size, and capture timings. Confirm the game client region and language. Save screenshots locally with input disabled. The macOS Blue Archive target and Windows target each need their own verification.
+Read the game package/version, Android version, display density, and capture timings. Require decoded ADB screenshots to be 1280×720 landscape and confirm the initial 320 DPI display profile and expected game layout. Confirm the game client region and language. Save screenshots locally with input disabled. The macOS Blue Archive target and Windows target each need their own verification.
 
 Done when the correct target can be identified and captured repeatedly, disconnects return a clear error, and another running game cannot be selected accidentally. Verify Blue Archive captures while the Azur Lane daemon remains active, using distinct device endpoints and no global ADB resets.
 
 ## 2. Perception and replay
 
-Implement viewport normalization and the first screen/popup detectors. Create reviewed fixtures for the home screen, loading, a disconnected state, an unknown popup, and the first task's screens. Cover ambiguous and low-confidence results as well as successful matches.
+Implement fixed-resolution frame validation and the first screen/popup detectors. Use direct pixel coordinates for templates, OCR regions, and input targets. Create reviewed fixtures for the home screen, loading, a disconnected state, an unknown popup, and the first task's screens. Cover wrong-size frames and shifted layouts as well as ambiguous, low-confidence, and successful matches.
 
 Done when recognition runs offline and unknown states produce no proposed live action. Replay demonstrates decision logic; it does not substitute for later live transport tests.
 
