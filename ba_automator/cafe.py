@@ -182,6 +182,9 @@ def invitation_confirmation(words, name):
         return None
     for word in panel:
         prompt = word.normalized
+        match = re.fullmatch(r"(.+) will be invited to (?:the |your )?cafe", prompt)
+        if match:
+            return button if match[1] == expected else None
         match = re.fullmatch(r"(?:would you like|do you want) to (?:invite|send an invitation to|send an invite to) (.+)", prompt)
         if match:
             recipient = re.split(r" to (?:the |your )?cafe\b", match[1], maxsplit=1)[0]
@@ -623,7 +626,9 @@ class CafeRunner:
             return False
         name = self.config.cafe_invite_student
         normalized = re.sub(r"[^a-z0-9]+", " ", name.lower()).strip()
-        if not normalized:
+        automatic = not name.strip()
+        selected = None
+        if not automatic and not normalized:
             self.fail("The configured invitation name has no recognized English identity")
 
         def check_dialog(screen):
@@ -659,6 +664,10 @@ class CafeRunner:
                 elif self.vision.is_cafe(screen[2]):
                     if not require_new_cooldown or invitation_cooldown(screen[3]):
                         return require_new_cooldown
+                else:
+                    notice = self.vision.visitor_notice(screen[2], screen[3])
+                    if notice is not None:
+                        self.tap(screen, notice, "Dismiss the verified visiting student notice")
                 self.sleep(.6)
             self.fail("Invitation result could not be verified from the Cafe cooldown")
 
@@ -675,11 +684,21 @@ class CafeRunner:
 
         self.tap(cap, (883, 652), "Open the free Invitation control")
         cap = wait_list()
-        for page in range(16):
-            if invitation_cooldown_notice(cap[3]):
-                dismiss_cooldown(cap)
-                restore_cafe(False, notice_closed=True)
+        if invitation_cooldown_notice(cap[3]):
+            dismiss_cooldown(cap)
+            restore_cafe(False, notice_closed=True)
+            return False
+        if automatic:
+            from .invitation_picker import select_automatic
+            selection = select_automatic(self, cap, wait_list)
+            if selection is None:
+                record_action(self.config, "invitation_skipped", "No available student can gain another relationship level.", cafe=self.floor)
+                restore_cafe(False)
                 return False
+            cap, selected = selection
+            name, normalized = selected["name"], selected["identity"]
+            self.phase(f"Cafe {self.floor}: selected {name}, relationship {selected['rank']}, below their cap")
+        for page in range(1 if automatic else 16):
             rows = [row for row in invitation_rows(cap[3]) if row["identity"] == normalized]
             if len(rows) > 1:
                 self.fail("Configured invitation name is ambiguous")
@@ -688,6 +707,8 @@ class CafeRunner:
                     self.fail("Configured student does not have an available normal Invite control")
                 self.tap(cap, rows[0]["target"], f"Press the free Invite row for {name}")
                 break
+            if automatic:
+                self.fail("Automatic invitation recipient disappeared before its Invite control was pressed")
             if page == 15:
                 self.fail(f"Configured student {name!r} was not found in the bounded invitation scan")
             self.journal.record("intent", operation="invitation_scroll", start=[650, 550], end=[650, 250])
@@ -698,6 +719,10 @@ class CafeRunner:
                 self.fail("Invitation list frame expired")
             self.sleep(.7)
             cap = wait_list()
+            if invitation_cooldown_notice(cap[3]):
+                dismiss_cooldown(cap)
+                restore_cafe(False, notice_closed=True)
+                return False
 
         end = self.clock() + 20
         while self.clock() < end:
@@ -716,7 +741,8 @@ class CafeRunner:
             self.fail("The configured student's normal free invitation confirmation was not verified")
         record_action(self.config, "invitation_attempted", f"Requested free invitation for {name}.", student=name, cafe=self.floor)
         if restore_cafe(True):
-            record_action(self.config, "student_invited", "Free invitation verified by its new cooldown.", student=name, cafe=self.floor)
+            details = {"strategy": "highest_non_maxed_relationship", "relationship_rank": selected["rank"]} if selected else {"strategy": "named_student"}
+            record_action(self.config, "student_invited", "Free invitation verified by its new cooldown.", student=name, cafe=self.floor, **details)
             return True
         return False
 

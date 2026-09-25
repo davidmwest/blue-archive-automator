@@ -2,7 +2,7 @@
 
 See [the high-level design](design.md) for the project direction and planned contracts. This document describes the implementation that exists today.
 
-Status: the local dashboard dispatches restart, Cafe, Lessons, Club, reward collection, ticket sweeps, AP spending, and Crafting through one queue. Schedule state, important actions, loot receipts, and daily text logs persist locally. Live validation covers the main Mac routines; task guides distinguish verified paths from offline-only cases. Actual school rank-up handling, free-invitation completion, and live Windows operation remain unverified. Development session: September 23–24, 2026.
+Status: the local dashboard dispatches restart, Cafe, Lessons, Club, reward collection, ticket sweeps, AP spending, and Crafting through one queue. Schedule state, important actions, loot receipts, and daily text logs persist locally. Live validation covers the main Mac routines, including an automatic free invitation; task guides distinguish verified paths from offline-only cases. Actual school rank-up handling and live Windows operation remain unverified. Development session: September 23–25, 2026.
 
 ## Runtime
 
@@ -49,6 +49,7 @@ flowchart TD
 | `restart.py` | Bounded startup loop, fresh-frame input, popup evidence, and stable-home verification |
 | `club.py` | Badge-gated attendance, verified Club entry, and per-instance checkpointing at the 19:00 UTC game-day boundary |
 | `cafe.py`, `cafe_vision.py` | Earnings receipts, unlocked floor navigation, attention-marker scans, relationship feedback, and optional free invitations |
+| `invitations.py`, `invitation_picker.py`, `invitation_roster.py` | Pure invitation ranking, guarded list navigation, and exact-student current-rarity lookup |
 | `lessons.py`, `lesson_vision.py` | Complete location surveys, rank/XP and room observations, guarded one-ticket confirmation, and result reconciliation |
 | `crafting.py`, `crafting_vision.py`, `crafting_state.py` | Saved-preset Quick Craft, guarded batch spending, reward reconciliation, and per-instance durable slot deadlines |
 | `spend_ap.py`, `ap_vision.py`, `ap_policy.py`, `ap_state.py` | Three-star stage surveys, AP-floor budgeting, commission sweeps, durable Hard-stage rotation, and pending spend reconciliation |
@@ -91,7 +92,9 @@ Student detection uses local yellow attention-marker templates, fresh frames, se
 
 Camera coverage uses short 1,800 ms drags followed by local feature matching to measure scene displacement. The runner accumulates movement toward overlapping views and verifies a boundary through two independently observed stationary drags. When animation obscures motion evidence, it checks students in that intermediate view and resets the distance and boundary evidence before moving again. Unmeasurable motion never counts as a boundary. It traverses alternating rows with limits on drags, rows, columns, and total time, checking partial edge views too. The approach does not require a furniture template or zoom gesture. Both floors passed a full live run; another player's layout passed a separate camera-movement check.
 
-The invitation handler matches an exact name to its row's Invite control, handles wrapped variants, scrolls inside the list, and guards the confirmation. A cooldown skips the action; a recognized cooldown notice is dismissed. New cooldown evidence is required before recording a successful invitation. The current account's active cooldown has prevented a complete live invitation test. No bulk relationship-collection control has been verified; the Gift panel's portrait shortcut is for gifting.
+Invitations are off by default. An exact configured name selects its matching row; a blank name uses the highest uncapped relationship policy. `invitations.py` separates row observations and rank/cap policy from input. `invitation_picker.py` verifies an empty search field, descending order, list boundaries, overlapping scroll observations, and a fresh selected row. At boundary ranks 10, 20, or 30, `invitation_roster.py` reads the exact student's current profile stars before the picker returns to the original Cafe and reselects; rank 100 is skipped. Uncertain identity, rarity, or comparison data stops selection. The [Cafe guide](cafe.md#free-invitations) records current caps and configuration.
+
+Both selection paths require an exact-name normal invitation confirmation and a new cooldown before recording success. A cooldown skips the action; bonus invitations are unsupported. The blank-name free invitation passed live, including confirmation, cooldown, action/daily-log evidence, and return home. Current-star lookup passed separately. The combined boundary-rank lookup and reselection, deep scrolling, and configured-name full path retain offline coverage only. No bulk relationship-collection control has been verified; the Gift panel's portrait shortcut is for gifting.
 
 ## Lessons routine
 

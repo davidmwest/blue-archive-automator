@@ -138,7 +138,9 @@ New resource-consuming routines require explicit policies: configured stage, max
 
 Paid packs are a separately enabled exception to ordinary game-resource spending. Each supported permanent pack has an explicit opt-in and USD price ceiling. Require matching product and price in both game and Play checkout, persist intent before charging, verify delivery, and then collect product mail. Every payment failure disables scheduled pack checks. Uncertain charges require ownership reconciliation before any retry. Google authentication remains manual, and payment screens are excluded from saved evidence. See [Packs and Mail](packs-and-mail.md).
 
-Free invitations remain optional and require an exact configured student name. The game cooldown is authoritative. Paid invitations and premium-currency refills are not part of the current routine.
+Free invitations are opt-in and off by default. An exact configured student name overrides automatic selection; a blank name chooses the highest relationship rank below its current cap. The picker verifies an empty search field, descending relationship order, list boundaries, and overlapping scroll observations before selecting. Unreadable comparison evidence stops selection rather than silently favoring a lower-ranked student.
+
+Current relationship caps are 10 for one/two stars, 20 for three stars, 30 for four stars, and 100 for five stars. The four-star cap increased in the [January 13, 2026 patch](https://forum.nexon.com/bluearchive-en/board_view?board=3028&thread=3336837). At ranks 10, 20, or 30, automatic selection inspects the exact student's current profile stars, returns to the original Cafe, and rereads the invitation list. Rank 100 is skipped. Base rarity is not evidence of an account's upgraded rarity. Require a fresh selected row, exact-name confirmation, and a new cooldown before logging success. The game cooldown is authoritative; bonus invitations and premium-currency refills are unsupported.
 
 Lessons has two configurable policies. **Relationship** is the default: compare every eligible room across all unlocked locations by owned-student count, then the sum of those students' visible relationship ranks, with a stable final tie-break. **School rank** first chooses the lowest uncapped location rank and fractional XP progress, then the room with the most students, favoring higher owned-student relationship ranks on a tie. Recheck rank and XP after every ticket; when all locations are capped, use the relationship policy. This balances location progression according to the user's preference; it does not claim to minimize the number of tickets until the next aggregate-rank reward. Optional exact location names restrict the comparison scope; an empty list means all locations. A configurable ticket limit caps each visit, with zero meaning all existing tickets. The first version never buys refills. [Lessons](lessons.md) defines the detailed selection and evidence contract.
 
@@ -156,12 +158,12 @@ The real dashboard remains bound to loopback, with Host/Origin validation and CS
 
 ## 7. Delivery and validation
 
-The current foundation is implemented: restart, a serial dashboard queue, Cafe, Lessons, scheduling, idle-close, important-action history, and event-profile recognition. A full two-floor Cafe visit and a relationship-focused Lessons visit passed on the development Mac. Actual school rank-up handling, optional invitation completion, live Windows operation, and simultaneous operation with ALAS still need live verification. Cross-platform offline tests are evidence about the software, not proof of those live behaviors.
+The current foundation is implemented: restart, a serial dashboard queue, Cafe, Lessons, scheduling, idle-close, important-action history, and event-profile recognition. A full two-floor Cafe visit, automatic free invitation, and relationship-focused Lessons visit passed on the development Mac. Current-star lookup passed separately; its complete boundary-rank reselection flow, deep invitation scrolling, and the configured-name path remain offline-tested. Actual school rank-up handling, live Windows operation, and simultaneous operation with ALAS still need live verification. Cross-platform offline tests are evidence about the software, not proof of those live behaviors.
 
 | Next increment | Exit condition |
 | --- | --- |
 | Portfolio foundation | This design, clear setup/status docs, permissive licensing with third-party asset boundaries, and an isolated account-free demo |
-| Cafe repeatability | Scheduled visits after cooldown, named free invitation when available, and useful evidence for any missed/obscured markers |
+| Cafe repeatability | Scheduled visits after cooldown, invitation boundary-rank reselection and deep scrolling, a configured-name invitation, and useful evidence for missed/obscured markers |
 | Lessons | Inspect all unlocked locations, choose rooms with the configured relationship or school-rank policy, verify each ticket, and return home; live completion is recorded in [Lessons](lessons.md) |
 | Spend AP | Sweep highest three-star commissions or a persisted Hard-stage round robin without crossing its AP reserve; see [Spend AP](spend-ap.md) |
 | Crafting | Fill saved-preset Quick Craft slots; persist per-slot collection jobs; verify collection and refill after natural completion |
@@ -176,7 +178,7 @@ Use a permissive license for the project's original code and documentation, whil
 ## 8. Decisions to make when their work begins
 
 - Event-specific stage priorities, repetition limits, and reward-claim order. The ordinary AP floor and Hard rotation are configured on the Spend AP page.
-- Invitation selection beyond one named student and one successful invitation per visit.
+- Invitation policies beyond highest uncapped relationship or an exact name, and more than one successful invitation per visit.
 - Club uses the global 19:00 UTC reset policy; live attendance and its mailbox AP receipt are verified, with durable per-instance suppression after an observed Club visit. See [Club](club.md).
 - Recovery semantics and migrations when durable job storage is introduced.
 - Platform-specific emulator discovery and service installation after live portability checks.

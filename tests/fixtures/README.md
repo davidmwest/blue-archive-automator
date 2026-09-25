@@ -313,3 +313,21 @@ does not name the student. The caller's separately verified gift confirmation
 identified Tsurugi, so tests supply that context explicitly and also verify that
 ordinary captures leave the name unknown. Stat totals remain unknown because
 the screen exposes only the increment.
+
+`invitation-list-controls.png` retains only September 25, 2026 invitation
+sort/search controls and the scrollbar. Student rows, portraits, account HUD,
+and all other pixels are masked. The invitation sort and search templates in
+`ba_automator/assets/invitation-{sort,search}-*.png` are small crops of those
+controls, including ascending/descending and collapsed/expanded states.
+Inline OCR fixtures in the invitation tests retain only the row names, ranks,
+button labels, and geometry needed by the parser; no account HUD is included.
+These fixtures test ordering, empty-search verification, row association,
+and bounded scrolling without publishing full account captures.
+
+`invitation-profile-rarity.png` is the 85×26-pixel gold-star strip from the
+September 25 live Aris (Maid) profile inspection. It contains no portrait,
+student name, or account background. The source profile had five stars;
+lower-rarity tests mask later stars and are synthetic variations, not live
+captures of all rarities. The complete boundary-rank lookup and invitation
+reselection remains offline-tested. These game-derived crops remain outside
+the MIT grant described in the third-party notices.

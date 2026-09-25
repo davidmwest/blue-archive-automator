@@ -127,9 +127,8 @@ class Config:
                 or any(ord(c) < 32 for c in self.cafe_invite_student)):
             raise ConfigError("cafe.invite_student must be a single student name")
         object.__setattr__(self, "cafe_invite_student", self.cafe_invite_student.strip())
-        if self.cafe_invite_enabled and not self.cafe_invite_student:
-            raise ConfigError("Choose cafe.invite_student before enabling invitations")
-        if self.cafe_invite_enabled and not re.search(r"[A-Za-z]", self.cafe_invite_student):
+        if (self.cafe_invite_enabled and self.cafe_invite_student
+                and not re.search(r"[A-Za-z]", self.cafe_invite_student)):
             raise ConfigError("cafe.invite_student must use the English in-game name")
         if self.total_assault_difficulty not in ("normal", "hard", "very_hard", "hardcore", "extreme", "insane", "torment", "lunatic"):
             raise ConfigError("total_assault.difficulty must be normal, hard, very_hard, hardcore, extreme, insane, torment, or lunatic")

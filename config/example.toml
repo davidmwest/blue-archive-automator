@@ -20,7 +20,8 @@ close_app_when_idle = false
 [cafe]
 schedule_enabled = false
 invite_enabled = false
-# Exact English in-game name, including variant, e.g. "Yuuka (Track)".
+# Blank picks the highest relationship below that student's current cap.
+# To pick someone yourself, use their exact English name, e.g. "Yuuka (Track)".
 invite_student = ""
 
 [lessons]

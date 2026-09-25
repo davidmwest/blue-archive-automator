@@ -37,7 +37,7 @@ on Windows: `py -3.11 -m ba_automator.demo`. open [localhost:8766](http://127.0.
 | tactical_rewards | collects available time and daily rewards; battle rules come later |
 | red_dots | queues home and Campaign reward collectors when their red dots appear; follows up on excess AP |
 | free_pack | claims the Free Daily Pack, verifies its receipt, then checks mail |
-| cafe | restarts first, collects available AP and credits, scans both unlocked floors for relationship icons, returns home |
+| cafe | restarts first, collects available AP and credits, scans both unlocked floors for relationship icons, optionally invites a student, returns home |
 | tasks | checks the Tasks red dot, claims completed rewards and the daily bonus, saves item counts and receipts |
 | loot gathered | game icons, exact tooltip names, grouped totals, itemized receipts, and relationship level-ups with stat gains; clearing keeps the history |
 | [daily logs](docs/daily-logs.md) | the full day's text log beside important actions, saved as YYYY-MM-DD.log and kept across restarts |
@@ -50,7 +50,9 @@ on Windows: `py -3.11 -m ba_automator.demo`. open [localhost:8766](http://127.0.
 | scheduling | optional hourly AP checks, daily pack checks, Cafe visits and per-slot crafting deadlines, bounded failure retries, optional game closure between visits |
 | event profiles | reviewed JSON and recognition helpers; navigation and farming are still to come |
 
-restart, a complete two-floor Cafe visit, and the relationship-focused Lessons routine have passed live on the development Mac. seven lesson tickets were tested with verified receipts; the final run reached zero tickets, returned home, and closed the game. offline tests run on macOS, Windows, and Ubuntu. actual school rank-up popups, live Windows operation, running beside ALAS, and a complete free invitation still need verification. a completed scan and a verified relationship increase are different results; the logs keep them separate.
+restart, a complete two-floor Cafe visit, a free invitation, and the relationship-focused Lessons routine have passed live on the development Mac. seven lesson tickets were tested with verified receipts; the final run reached zero tickets, returned home, and closed the game. offline tests run on macOS, Windows, and Ubuntu. actual school rank-up popups, live Windows operation, and running beside ALAS still need verification. a completed scan and a verified relationship increase are different results; the logs keep them separate.
+
+cafe invitations are off by default. turn them on and leave the name blank to pick the highest relationship that still has room to grow, or give it an exact student name. it checks current rarity when a rank might be capped; it doesn't assume everybody is still at their original stars. only normal free invitations are supported. [setup and validation limits →](docs/getting-started.md#cafe-and-scheduling)
 
 `daily` runs restart → club → free pack → optional packs → mail → cafe → bounties → scrimmages → tactical rewards → lessons → optional Total Assault → Total Assault rewards → optional Spend AP → collect Tasks. Club is live: the three-hour cafe schedule checks attendance and mail after restart, leaving lesson tickets alone. home and Campaign red dots queue their collection jobs after a successful run; excess AP can queue Spend AP immediately. [red-dot collection →](docs/red-dots.md) lessons can also be queued on their own, with a ticket limit and optional location list. it uses the tickets you already have; it never buys more. [Tactical Challenge rewards →](docs/tactical-challenge.md) [task rewards →](docs/task-rewards.md) [ticket splitting and sweeps →](docs/tickets.md) [how the lesson strategies work →](docs/lessons.md) [Club attendance →](docs/club.md) [crafting and saved timers →](docs/crafting.md) [paid packs and mail →](docs/packs-and-mail.md) [AP spending and rotation →](docs/spend-ap.md)
 
@@ -68,7 +70,7 @@ the first profile is the global English game at **1280×720, 320 DPI**. use a de
 
 ## what's next
 
-capture an actual school rank-up, repeat Cafe visits after cooldown, and finish the free-invitation check. AP spending now has its own floor and rotation policy. crafting refill checks and event farming follow one verified routine at a time.
+capture an actual school rank-up, repeat Cafe visits after cooldown, and validate invitation selection across deeper lists and capped students. AP spending now has its own floor and rotation policy. crafting refill checks and event farming follow one verified routine at a time.
 
 the queue is currently in memory. schedule state and important actions survive a server restart, but queued jobs don't. durable recovery, emulator lifecycle management, and service installation are later work. see [the roadmap](docs/roadmap.md) for the live evidence and remaining limits.
 

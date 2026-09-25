@@ -171,7 +171,6 @@
     $("settings-lock-note").hidden = !active && !queued;
     $("save-settings").disabled = unavailable || active || queued || !settingsDirty;
     fields.cafe_invite_student.disabled = unavailable || !fields.cafe_invite_enabled.checked;
-    fields.cafe_invite_student.required = fields.cafe_invite_enabled.checked;
     $("lessons-strategy-description").textContent = fields.lessons_strategy.value === "school_rank"
       ? "lowest rank first, then lowest XP. recheck after each ticket. pick the room with the most students; higher owned relationships break ties."
       : "check every location first. use tickets on rooms with the most owned students; higher relationships break ties.";
@@ -868,9 +867,6 @@
   });
   $("settings-form").addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (fields.cafe_invite_enabled.checked && !fields.cafe_invite_student.value.trim()) {
-      fields.cafe_invite_student.setCustomValidity("Enter the student’s exact English name to enable invitations.");
-    }
     if (!$("settings-form").reportValidity()) return;
     const values = Object.fromEntries(settingNames.map((name) => {
       const value = booleanSettings.has(name) ? fields[name].checked

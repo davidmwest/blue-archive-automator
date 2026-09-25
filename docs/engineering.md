@@ -46,4 +46,6 @@ a documented live run on BlueStacks Air completed restart, measured scans of bot
 
 that distinction also appears in the product: a tap attempt, a verified relationship increase, and a completed camera scan are separate records. popup attempts retain before/after images. a failed run leaves evidence instead of claiming completion.
 
-live Windows operation, simultaneous operation with ALAS, and complete free invitations remain unverified. more layouts and repeat visits after cooldown are still useful validation. the [Cafe documentation](cafe.md) records the current boundary between implemented behavior and live evidence.
+the automatic free-invitation path passed a separate live check: a blank target selected Aris (Maid) at relationship rank 26, verified her exact confirmation and new cooldown, logged the result, and returned home. current-star lookup also passed separately. it uses current profile stars at possible cap boundaries rather than assuming the student's original rarity. the complete boundary-rank lookup and reselection, deeper list scrolling, and a configured-name run still have offline coverage only.
+
+live Windows operation and simultaneous operation with ALAS remain unverified. more layouts and repeat visits after cooldown are still useful validation. the [Cafe documentation](cafe.md#free-invitations) records the current boundary between implemented behavior and live evidence.

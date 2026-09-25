@@ -68,7 +68,11 @@ required game-data downloads are accepted automatically. add `--no-downloads` to
 
 ## Cafe and scheduling
 
-Cafe scheduling and invitations are **off by default**. enable them in the dashboard or the `[cafe]` section of your local config. invitations need the exact English name, including variants such as `Yuuka (Track)`. only the free invitation path is supported. its full live flow still needs verification.
+Cafe scheduling and invitations are **off by default**. enable them in the dashboard or the `[cafe]` section of your local config. leave the invitation name blank to pick the student with the highest relationship below their current cap, or enter an exact English name, including variants such as `Yuuka (Track)`, to pick someone yourself. only normal free invitations are supported; bonus invitations aren't used.
+
+automatic selection checks an empty search field and descending relationship order before choosing. at ranks 10, 20, or 30, it reads the student's current stars from their profile, then returns to the Cafe and checks the list again. rank 100 is already capped. unreadable ranks, names, or filters stop the selection instead of quietly choosing someone lower. [current caps and policy →](design.md#5-configuration-and-game-specific-policy)
+
+the blank-name path has passed live: it selected a rank-26 student, verified the exact confirmation and new cooldown, logged the invitation, and returned home. current-star lookup also passed separately. the full boundary-rank lookup and reselection, deeper list scrolling, and a configured-name run still have offline coverage only. [validation notes →](roadmap.md#2-dashboard-and-cafe--full-visit-and-free-invitation-live-verified)
 
 collecting Cafe AP clears its storage. when automatic AP spending is enabled, a Cafe visit then runs Spend AP using your chosen strategy and AP floor. configure this on the dashboard's **Spend AP** page; see [AP spending](spend-ap.md).
 

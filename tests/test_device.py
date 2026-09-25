@@ -92,8 +92,17 @@ class ConfigTests(unittest.TestCase):
                 with self.subTest(name=name, value=value), self.assertRaises(ConfigError):
                     replace(config(), **{name: value})
 
-    def test_invitations_require_one_nonempty_bounded_student_name(self):
-        for value in ("", "   ", "Hoshino\nShiroko", "Hoshino\x00", "x" * 101, False):
+    def test_blank_invitation_name_selects_automatic_target_without_enabling_invites(self):
+        for value in ("", "   "):
+            with self.subTest(value=value):
+                automatic = replace(config(), cafe_invite_enabled=True, cafe_invite_student=value)
+                self.assertTrue(automatic.cafe_invite_enabled)
+                self.assertEqual(automatic.cafe_invite_student, "")
+                disabled = replace(config(), cafe_invite_student=value)
+                self.assertFalse(disabled.cafe_invite_enabled)
+
+    def test_invitation_name_override_requires_one_bounded_english_student_name(self):
+        for value in ("Hoshino\nShiroko", "Hoshino\x00", "x" * 101, False):
             with self.subTest(value=value), self.assertRaises(ConfigError):
                 replace(config(), cafe_invite_enabled=True, cafe_invite_student=value)
         with self.assertRaisesRegex(ConfigError, "English"):

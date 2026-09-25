@@ -503,6 +503,19 @@ def test_cafe_settings_are_persisted_in_cafe_table_and_snapshots_keep_state_dir(
     assert snapshot.cafe_invite_student == "Hoshino"
 
 
+def test_cafe_automatic_invitation_settings_round_trip_with_blank_name(controlled, config_path):
+    controller, _ = controlled
+    controller.pause()
+    controller.update_settings({"cafe_invite_enabled": True, "cafe_invite_student": ""})
+    document = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    assert document["cafe"]["invite_enabled"] is True
+    assert document["cafe"]["invite_student"] == ""
+    snapshot = Config.from_file(config_path)
+    assert snapshot.cafe_invite_enabled is True
+    assert snapshot.cafe_invite_student == ""
+    assert controller.status()["config"]["cafe_invite_student"] == ""
+
+
 def test_schedule_persists_success_and_waits_three_hours_fifteen_seconds(config_path):
     now = [datetime(2026, 9, 24, 12, tzinfo=timezone.utc)]
     factory = ProcessFactory()

@@ -2,7 +2,7 @@
 
 The latest live dashboard verification completed restart → Cafe → home in **576.3 seconds**, including **524.1 seconds** in the Cafe task. It dismissed Visiting Student List notices on both floors, recovered their ignored first dismissal taps, collected **49 AP and 44,374 credits**, and verified **five relationship increases**. It completed measured scans on both unlocked floors, returned to a verified home screen, and closed Blue Archive through the idle-close setting. Scheduling was enabled: success cleared the previous failure count and set the next visit for three hours and 15 seconds later. Invitations remained disabled.
 
-Earlier live collection receipts verified **81 AP and 73,957 credits**, then **16 AP and 14,791 credits**. Relationship hearts and rank-up screens were also observed and handled during calibration. The optional invitation flow remains unverified end to end while its cooldown is active.
+Earlier live collection receipts verified **81 AP and 73,957 credits**, then **16 AP and 14,791 credits**. Relationship hearts and rank-up screens were also observed and handled during calibration. A separate September 25 check completed the automatic free-invitation flow; its evidence and remaining limits are recorded [below](#free-invitations).
 
 ## Running a visit
 
@@ -70,12 +70,16 @@ Invitations are off by default. Configure them in the dashboard, or in `config/l
 [cafe]
 schedule_enabled = false
 invite_enabled = true
-invite_student = "Yuuka (Track)"
+invite_student = ""  # highest relationship below its current cap
 ```
 
-The name must match the English in-game student name, including any variant. The runner checks the current free-invitation cooldown, scans a bounded portion of the MomoTalk-style list, and selects the Invite control belonging to one unambiguous matching name. It handles wrapped variant text, scrolls within the list, requires a contextual normal invitation confirmation, closes the recognized list, and checks for a new cooldown. Missing or ambiguous names, an unrecognized confirmation, purchase-related context, or a request to replace/move a student between cafes stop the flow.
+Leave the name blank for automatic selection, or set an exact English in-game name such as `Yuuka (Track)`, including its variant, to override it. Automatic selection verifies that search is empty, relationship order is descending, and the list starts at the top. It chooses the highest uncapped relationship from eligible owned students, checking overlapping pages when scrolling. Unknown filters, missing ranks, or ambiguous names stop selection instead of silently preferring a lower-ranked student.
 
-A visible cooldown skips the invitation. A recognized cooldown notice is dismissed and also skips the invitation without claiming success. During current live testing the free invitation was still cooling down, so the available list, exact-name selection, and successful invitation have not yet been verified on this client. Their handlers are based on primary-source UI research and offline tests until the cooldown permits that check.
+Caps depend on current stars: **1–2 stars → 10**, **3 stars → 20**, **4 stars → 30**, **5 stars → 100**. The four-star cap increased in the [January 13, 2026 patch](https://forum.nexon.com/bluearchive-en/board_view?board=3028&thread=3336837). At ranks 10, 20, or 30, automatic selection checks the exact student's current profile stars, then returns to the original Cafe and rereads the list. It never substitutes base rarity for upgraded rarity. Rank 100 is skipped.
+
+The runner refreshes the selected row before pressing its Invite control, verifies the exact student name in a normal invitation confirmation, and requires a new cooldown before logging success. A visible cooldown or recognized cooldown notice skips the invitation without claiming success. Purchase-related context, an unrecognized confirmation, or a request to replace/move a student between cafes stops the flow.
+
+On September 25, the blank-name path selected **Aris (Maid), relationship rank 26**, verified the exact confirmation and new cooldown, saved the important action and daily-log entry, and returned home. A separate profile lookup read her current **five stars** and returned home. The complete boundary-rank lookup plus invitation reselection, deep list scrolling, and a configured-name run have offline coverage only; the automatic live run exercised the shared exact-name confirmation, not the full configured-name path.
 
 The paid Bonus Invitation route is not used. The game's current cooldown is authoritative; a locally elapsed timer does not authorize another invitation. Nexon's [Cafe guide](https://forum.nexon.com/bluearchive-en/board_view?board=3222&thread=2523171) documents the **20-hour free-invitation cooldown** and **three-hour student interaction interval**.
 
@@ -97,4 +101,4 @@ Each visit has a run journal, a ring of recent screenshots, and retained reward/
 
 A collection attempt is recorded when Claim is pressed; earnings are recorded as collected only after the receipt appears. Relationship taps and verified heart/rank-up feedback are also separate. Invitation requests are recorded before result verification, and a verified new cooldown produces the completion record. A successful overall visit requires the final home screen.
 
-Remaining live validation includes repeated unattended visits across further relationship cooldowns, obscured markers across more layouts, named free invitations, and interruption recovery. Both-floor scanning, floor transitions, empty earnings, reward receipts, relationship feedback, final home verification, and idle-close have each been observed live. The latest successful full run used invitations disabled and scheduling enabled. The extended loading timeout is covered by offline regression tests; this successful live floor change did not require the full two-minute allowance.
+Remaining live validation includes repeated unattended visits across further relationship cooldowns, obscured markers across more layouts, invitation boundary-rank reselection and deep scrolling, a configured-name invitation, and interruption recovery. Both-floor scanning, floor transitions, empty earnings, reward receipts, relationship feedback, automatic free invitation, final home verification, and idle-close have each been observed live. The latest successful full run used invitations disabled and scheduling enabled; the invitation check was separate. The extended loading timeout is covered by offline regression tests; this successful live floor change did not require the full two-minute allowance.

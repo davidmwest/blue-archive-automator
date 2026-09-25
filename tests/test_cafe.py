@@ -764,3 +764,50 @@ def test_navigation_recaptures_slow_ocr_instead_of_retrying_on_old_frame(cafe, m
     with pytest.raises(RestartError, match="within 120s"):
         cafe.runner.enter()
     assert cafe.device.taps == [(100, 659)]
+
+
+def test_live_declarative_invitation_prompt_requires_exact_recipient():
+    from ba_automator.cafe import invitation_confirmation
+    dialog = [word('Notice', 640, 170), word('Aris (Maid) will be invited to the cafe.', 640, 335),
+              word('Cancel', 509, 505), word('Confirm', 770, 505)]
+    assert invitation_confirmation(dialog, 'Aris (Maid)') == (770, 505)
+    assert invitation_confirmation(dialog, 'Aris') is None
+
+
+def test_blank_target_invites_verified_automatic_choice_and_logs_rank(cafe, monkeypatch):
+    import ba_automator.invitation_picker as picker
+    cafe.runner.config = replace(cafe.config, cafe_invite_enabled=True, cafe_invite_student='')
+    selected = {'identity': 'aris maid', 'name': 'Aris (Maid)', 'rank': 26}
+    monkeypatch.setattr(picker, 'select_automatic', lambda runner, screen, wait: (screen, selected))
+    cafe.script([], invite_list_words('Aris (Maid)'),
+                [word('Aris (Maid) will be invited to the cafe.', 640, 335), word('Confirm', 770, 505)],
+                [word('19:59:59', 890, 595)])
+    assert cafe.runner.invite()
+    event = action_records(cafe.config)[-1]
+    assert event['student'] == 'Aris (Maid)'
+    assert event['relationship_rank'] == 26
+    assert event['strategy'] == 'highest_non_maxed_relationship'
+    assert cafe.device.taps == [(883, 652), (787, 222), (770, 505)]
+
+
+def test_auto_choice_does_not_accept_another_students_confirmation(cafe, monkeypatch):
+    import ba_automator.invitation_picker as picker
+    cafe.runner.config = replace(cafe.config, cafe_invite_enabled=True, cafe_invite_student='')
+    selected = {'identity': 'aris maid', 'name': 'Aris (Maid)', 'rank': 26}
+    monkeypatch.setattr(picker, 'select_automatic', lambda runner, screen, wait: (screen, selected))
+    cafe.script([], invite_list_words('Aris (Maid)'),
+                [word('Aris will be invited to the cafe.', 640, 335), word('Confirm', 770, 505)])
+    with pytest.raises(RestartError, match='confirmation'):
+        cafe.runner.invite()
+    assert cafe.device.taps == [(883, 652), (787, 222)]
+    assert action_records(cafe.config) == []
+
+
+def test_all_students_capped_closes_list_without_spending_invite(cafe, monkeypatch):
+    import ba_automator.invitation_picker as picker
+    cafe.runner.config = replace(cafe.config, cafe_invite_enabled=True, cafe_invite_student='')
+    monkeypatch.setattr(picker, 'select_automatic', lambda runner, screen, wait: None)
+    cafe.script([], invite_list_words(), invite_list_words(), [])
+    assert cafe.runner.invite() is False
+    assert cafe.device.taps == [(883, 652), (837, 95)]
+    assert action_records(cafe.config)[-1]['action'] == 'invitation_skipped'

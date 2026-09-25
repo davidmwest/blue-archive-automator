@@ -8,7 +8,7 @@ The repository includes a high-level design, an engineering case study, setup an
 
 ## 1. Restart and diagnostics — live verified
 
-The private repository contains the CLI, explicit-target ADB transport, local TOML configuration, per-instance lock, OCR/template recognition, and bounded startup task. `probe`, `capture`, and `inspect` support diagnosis without game input. Popup dismissal records preserve before/after evidence.
+The repository contains the CLI, explicit-target ADB transport, local TOML configuration, per-instance lock, OCR/template recognition, and bounded startup task. `probe`, `capture`, and `inspect` support diagnosis without game input. Popup dismissal records preserve before/after evidence.
 
 The development mac was updated to BlueStacks Air **5.21.790.7505**. A live startup automatically accepted a **332.05 MB** game-data download. Apple reauthentication was completed, and a subsequent restart reached a clear home screen in **44 seconds** with three actions, including the announcement and new-product overlays.
 
@@ -16,7 +16,7 @@ On September 24, a force restart recovered a frozen publisher splash and verifie
 
 Continue adding reviewed fixtures for new startup screens and keep download, interruption, unknown-screen, and timeout cases bounded. Full raw screenshots stay local.
 
-## 2. Dashboard and cafe — full visit live verified; invitations pending
+## 2. Dashboard and cafe — full visit and free invitation live verified
 
 The loopback dashboard provides a serial job queue, settings, stop/pause controls, a visual home map, run evidence, persistent important-action history, and full daily text logs. Its optional cafe schedule waits three hours and 15 seconds after success, retries failures after 15 minutes, and pauses after three consecutive failures. The queue is temporary; schedule, action, loot, and daily-log records survive server restarts.
 
@@ -24,9 +24,13 @@ An optional setting closes Blue Archive after the last dashboard job exits and t
 
 `cafe` runs restart → Club → mail → Cafe, followed by Spend AP when enabled. The Cafe routine collects earnings, checks students across both unlocked floors, and returns home; Daily uses the same routine before its ticket and lesson work. A live full run completed in **425.5 seconds**, recognized empty earnings, verified measured scans and camera boundaries on both floors, returned home, and closed the game. Earlier receipts verified **81 AP and 73,957 credits**, then **16 AP and 14,791 credits**; relationship hearts and rank-up screens were also verified. The full passing run recorded zero new relationship increases.
 
-Continue validation with repeat visits after the relationship cooldown, occluded/disappearing attention markers across more layouts, invitation selection and confirmation, and interruption. Report scan completion separately from confirmed student interactions. Keep invitations and scheduling off by default until explicitly enabled.
+Continue validation with repeat visits after the relationship cooldown, occluded/disappearing attention markers across more layouts, and interruption. Report scan completion separately from confirmed student interactions. Keep invitations and scheduling off by default until explicitly enabled.
 
-The runner measures scene displacement, scans overlapping views, and requires two observed stationary drags to establish camera bounds, within a 15-minute visit budget. Unmeasurable movement triggers an intermediate student scan and resets distance/boundary evidence before another short drag. Camera movement also passed a separate check in another player's furniture layout. The runner has no zoom dependency. A free-invitation cooldown has prevented the complete live invitation flow; exact-name row selection and confirmation remain to be checked when available. The Gift panel was inspected, and no bulk relationship-collection button was verified.
+The runner measures scene displacement, scans overlapping views, and requires two observed stationary drags to establish camera bounds, within a 15-minute visit budget. Unmeasurable movement triggers an intermediate student scan and resets distance/boundary evidence before another short drag. Camera movement also passed a separate check in another player's furniture layout. The runner has no zoom dependency. The Gift panel was inspected, and no bulk relationship-collection button was verified.
+
+On September 25, the blank-name invitation policy selected **Aris (Maid), relationship rank 26**, accepted the exact-name confirmation, verified the new free-invitation cooldown, recorded an important action and daily log, and returned home. A separate live profile inspection verified her current **five stars** and returned home. No bonus invitation was needed or used. Invitations remain opt-in; an exact configured name overrides the automatic highest-uncapped relationship policy.
+
+Offline coverage includes empty-search verification, descending order and page overlap, ambiguous names/ranks, current-rarity caps, and refreshed confirmation guards. The complete boundary-rank profile lookup plus invitation reselection, deep list scrolling, and a standalone configured-name run still need live verification. Only the shared exact-name confirmation was exercised by the automatic live run. The [design](design.md#5-configuration-and-game-specific-policy) records the current caps, including the January 2026 four-star increase to 30.
 
 ## 3. Lessons — relationship routine live verified; school rank-up pending
 
