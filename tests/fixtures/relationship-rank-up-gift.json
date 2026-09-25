@@ -1,0 +1,47 @@
+{
+  "source": "Authorized gift validation on September 25, 2026 UTC. Only the rank, celebration title and stat bar remain; portrait and surroundings are masked. The screen has no student name. Tsurugi is verified separately by the preceding gift confirmation.",
+  "words": [
+    {
+      "text": "3",
+      "box": [
+        623,
+        519,
+        655,
+        560
+      ],
+      "confidence": 0.99996
+    },
+    {
+      "text": "Relationship rank up!",
+      "box": [
+        389,
+        588,
+        888,
+        658
+      ],
+      "confidence": 0.99995
+    },
+    {
+      "text": "ATK +8",
+      "box": [
+        594,
+        663,
+        692,
+        697
+      ],
+      "confidence": 0.99534
+    }
+  ],
+  "rank_words": [
+    {
+      "text": "3",
+      "confidence": 0.99,
+      "box": [
+        0,
+        0,
+        191,
+        164
+      ]
+    }
+  ]
+}

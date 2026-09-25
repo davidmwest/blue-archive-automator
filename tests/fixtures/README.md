@@ -304,3 +304,12 @@ and Final/Confirm panel remain; all account identifiers, resources, experience,
 and background pixels are masked. The pair verifies that decorative pulse
 pixels cannot invalidate unchanged loot, while changed card artwork, quantity,
 heading, or Confirm still fail the same strict pixel guard.
+
+`relationship-rank-up-gift.png/json` is the September 25, 2026 authorized gift
+validation: one Wind-Up Music Box raised the selected student from relationship
+rank 2 to 3, with the displayed ATK +8. Only the heart rank, celebration heading,
+and stat bar remain; the portrait and background are masked. The overlay itself
+does not name the student. The caller's separately verified gift confirmation
+identified Tsurugi, so tests supply that context explicitly and also verify that
+ordinary captures leave the name unknown. Stat totals remain unknown because
+the screen exposes only the increment.

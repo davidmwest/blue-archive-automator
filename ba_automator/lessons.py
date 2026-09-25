@@ -14,7 +14,10 @@ from .loot_receipts import inspect_receipt
 from .lesson_planner import LessonLocation, LessonRoom, choose_lesson
 from .lesson_vision import LessonScreen, LessonVision
 from .locking import InstanceLock
+from .relationship import (is_relationship_rank_up, read_relationship_rank_up,
+                           record_relationship_increase, same_relationship_screen)
 from .runtime import Capture, Journal, RunResult, TaskError, HOME_STABLE_SECONDS
+from .vision import decode_frame
 
 LOGGER = logging.getLogger(__name__)
 LESSONS_TIMEOUT = 1800
@@ -57,6 +60,7 @@ class LessonsRunner:
         self.initial_tickets = None
         self.completed_rooms = set()
         self.celebrations = 0
+        self.last_relationship_screen = None
 
     def fail(self, message):
         raise TaskError(message, self.run_dir)
@@ -269,9 +273,36 @@ class LessonsRunner:
         kind = 'relationship' if frame.screen.kind == 'relationship_rank_up' else 'area'
         evidence = f'lesson-{self.confirmed + 1:02d}-{kind}-{self.celebrations}.png'
         self.journal.save_image(evidence, frame.capture.png)
-        record_action(self.config, f'lesson_{kind}_rank_up',
-                      f'Observed a {kind} rank-up screen during Lessons.', task='lessons',
-                      evidence=str(self.run_dir / evidence))
+        if kind == 'relationship':
+            result = None
+            image = None
+            if frame.screen.words:
+                image = decode_frame(frame.capture.png)
+                result = read_relationship_rank_up(
+                    image,
+                    self.startup if hasattr(self.startup, 'read') else None,
+                    words=frame.screen.words)
+            previous = self.last_relationship_screen
+            if image is None or previous is None or not same_relationship_screen(previous, image):
+                record_relationship_increase(self.config, result, evidence=self.run_dir / evidence,
+                                             run_dir=self.run_dir, task='lessons',
+                                             record_action=record_action)
+                self.last_relationship_screen = image.copy() if image is not None else None
+            for _ in range(3):
+                if frame.capture.deadline - self.clock() >= INPUT_TIME_RESERVE:
+                    break
+                fresh = self.capture()
+                if (image is None or fresh.screen.kind != 'relationship_rank_up'
+                        or not is_relationship_rank_up(fresh.screen.words)
+                        or not same_relationship_screen(image, decode_frame(fresh.capture.png))):
+                    self.fail('Relationship celebration changed before dismissal; no input was sent')
+                frame = fresh
+            else:
+                self.fail('Relationship celebration remained stale before dismissal; no input was sent')
+        else:
+            record_action(self.config, 'lesson_area_rank_up',
+                          'Observed an area rank-up screen during Lessons.', task='lessons',
+                          evidence=str(self.run_dir / evidence))
         self.tap(frame, frame.screen.dismiss_target, f'Dismiss the verified {kind} rank-up')
         self.sleep(1.5)
 

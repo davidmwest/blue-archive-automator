@@ -48,6 +48,8 @@ The location survey is bounded and checks for repeated pages and duplicate locat
 
 Every lesson has a before/after record with the location, room, selected policy, score, tickets before/after, and any readable reward or rank change. A confirmation tap records an attempt. A verified lesson records completion. Relationship increases are recorded only when the result screen supports them; school XP or a ticket decrement alone does not prove a relationship reward.
 
+Relationship celebrations use the same reader as Cafe: the new rank and displayed stat increments are saved in important actions, the daily text log, and the clearable loot box. Unreadable values stay unknown. A celebration's portrait does not establish a student name, and the room's participant list is not used to guess which student leveled up. Its screenshot remains available beside the result.
+
 The shared `runtime.py` provides a bounded screenshot ring, journal, task error, result, and capture timestamps. The task uses the same queue and instance lock as restart and Cafe. It does not create a second device worker or make runtime AI calls.
 
 ### Recognition details and rank-up limits

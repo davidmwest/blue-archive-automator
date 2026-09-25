@@ -76,6 +76,18 @@
 .loot-item-tile .loot-item-name { align-self: center; font-size: 12px; line-height: 1.3; font-weight: 600; color: #354967; }
 .loot-item-tile .loot-icon { width: 100px; height: 100px; flex-basis: auto; padding: 4px; background: transparent; }
 .loot-item-tile strong { align-self: end; width: 100%; padding-top: 10px; border-top: 1px solid #dce5f0; font-size: 22px; line-height: 1.2; letter-spacing: -.4px; }
+.loot-relationships { --loot-accent: #ca72a4; }
+.loot-relationship-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,260px),1fr)); gap: 12px; max-height: 600px; overflow: auto; padding: 2px; }
+.loot-relationship { min-width: 0; padding: 16px; border: 1px solid #efd7e5; border-radius: 12px; background: linear-gradient(135deg,#fff3f9,#fff); }
+.loot-relationship-heading { display: flex; align-items: baseline; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.loot-relationship-heading strong { font-size: 14px; color: #653e5b; overflow-wrap: anywhere; }
+.loot-relationship-rank { padding: 4px 9px; border-radius: 7px; background: #f6dfea; font-size: 16px; font-weight: 700; color: #98567c; font-variant-numeric: tabular-nums; }
+.loot-relationship time { display: block; margin-top: 8px; font-size: 10px; color: #897489; }
+.loot-relationship-stats { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px 12px; margin: 16px 0; font-size: 12px; }
+.loot-relationship-stats dt { color: #6e5c70; overflow-wrap: anywhere; }
+.loot-relationship-stats dd { margin: 0; text-align: right; color: #764b68; font-weight: 600; font-variant-numeric: tabular-nums; }
+.loot-relationship-note { font-size: 11px; line-height: 1.5; color: #897489; margin: 12px 0; }
+.loot-relationship > a { display: inline-block; margin-top: 4px; font-size: 11px; }
 .loot-card summary { cursor: pointer; color: #326be8; padding: 10px 0; font-weight: 600; }
 .loot-receipts { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,320px),1fr)); gap: 16px; max-height: 650px; overflow: auto; padding: 8px 2px; }
 .loot-receipt { min-width: 0; border: 1px solid #e0e6ef; border-radius: 12px; padding: 14px; font-size: 13px; }

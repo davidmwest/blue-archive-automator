@@ -26,6 +26,10 @@ The main cards follow the game's vertical layout: item name, framed icon, then g
 
 Equipment and everything else start collapsed; opening them is preserved when the dashboard refreshes. Each receipt has an itemized breakdown, its saved image, and its original action log. Review counts distinguish unread item names or amounts, known items with unverified full-list coverage, and missing item details. Unidentified historical drops sit in an expandable section with the same evidence links; its entry count groups matching icons and is not a count of individual units. Unknown quantities remain unknown; they are never treated as zero or inferred from an icon.
 
+Relationship level-ups have their own section in the same box, near student materials. Each observed increase keeps its new level, readable stat changes, time, and a link to the saved screen. Two level-ups for the same student remain two events; ranks are never added together or counted as inventory. A heart after a Café tap only confirms relationship experience, so it does not create a level-up card. Older actions without structured rank/stat observations remain in the action log.
+
+The game may show a portrait without a student name. The dashboard labels the student as unidentified unless the task has verified who received the increase. Unread levels and stats remain explicitly unknown; an observed `ATK +20` does not imply a known total ATK. Clearing the box also clears these displayed relationship gains, while retaining their action history and screenshots. A repeated inspection of the same saved screen cannot duplicate an increase or bring it back after a clear.
+
 Old receipts can gain names from an exact previously verified icon hash or readable saved labels. Static screenshots cannot prove that off-screen items were captured, so their incomplete status stays visible. This is local OCR and image matching; no AI or external item service runs in the daemon.
 
 ## storage and accounting

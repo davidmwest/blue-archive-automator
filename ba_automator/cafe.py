@@ -10,6 +10,8 @@ from .loot_receipts import ReceiptReader
 from .cafe_vision import CafeVision
 from .cafe_camera import measure_camera_displacement
 from .locking import InstanceLock
+from .relationship import (is_relationship_rank_up, read_relationship_rank_up,
+                           record_relationship_increase, same_relationship_screen)
 from .runtime import Journal, RunResult, TaskError, FRAME_MAX_AGE, HOME_STABLE_SECONDS
 from .vision import decode_frame
 
@@ -209,6 +211,7 @@ class CafeRunner:
         self.confirmed = 0
         self.floor = None
         self.last_frame = None
+        self.last_relationship_screen = None
 
     def fail(self, message):
         raise TaskError(message, self.run_dir)
@@ -493,15 +496,33 @@ class CafeRunner:
                     return False
         self.fail("Cafe camera coverage could not be verified after twelve drags")
 
-    def clear_relationship_popup(self):
+    def clear_relationship_popup(self, *, student=None, student_evidence=None):
         """Dismiss recognized feedback and return whether a rank increase was seen."""
         cap = self.capture(ocr=True)
         if self.vision.is_cafe(cap[2]):
             return False
         text = text_of(cap[3])
-        if any(w.normalized == "relationship rank up" and 530 <= w.center[1] <= 680 for w in cap[3]):
-            self.journal.save_image(f"rank-up-{self.actions}.png", cap[1])
-            record_action(self.config, "relationship_rank_increased", "Relationship rank-up screen verified.", cafe=self.floor)
+        if is_relationship_rank_up(cap[3]):
+            evidence = f"rank-up-{self.actions}.png"
+            self.journal.save_image(evidence, cap[1])
+            result = read_relationship_rank_up(cap[2], self.startup if hasattr(self.startup, 'read') else None,
+                                              words=cap[3], student=student)
+            previous = self.last_relationship_screen
+            if previous is None or not same_relationship_screen(previous, cap[2]):
+                record_relationship_increase(self.config, result, evidence=self.run_dir / evidence,
+                                             run_dir=self.run_dir, task="cafe", cafe=self.floor,
+                                             student_evidence=student_evidence,
+                                             record_action=record_action)
+                self.last_relationship_screen = cap[2].copy()
+            original = cap[2]
+            for _ in range(3):
+                if cap[0] + FRAME_MAX_AGE - self.clock() >= 1:
+                    break
+                cap = self.capture(ocr=True)
+                if not is_relationship_rank_up(cap[3]) or not same_relationship_screen(original, cap[2]):
+                    self.fail("Relationship celebration changed before dismissal; no input was sent")
+            else:
+                self.fail("Relationship celebration remained stale before dismissal; no input was sent")
             self.tap(cap, (640, 630), "Dismiss the verified relationship rank-up screen")
             self.wait_cafe()
             return True

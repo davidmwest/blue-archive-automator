@@ -38,6 +38,10 @@ An attempted student tap and a verified relationship increase are different reco
 
 Yellow rays can disappear after interaction, be covered by speech bubbles, or leave the viewport. A view without markers is not proof that all students were petted. Completing the bounded scan records what was checked and how many relationship increases were verified; it does not claim perfect student coverage. No furniture changes, automatic zoom calibration, or edit-mode difference detection are implemented.
 
+Relationship **rank-ups** also appear in the dashboard's clearable loot box. Before dismissing the celebration, the runner saves its screenshot and reads the new rank in the heart plus the displayed stat increments. Ordinary heart feedback is still logged as affection gained, but does not invent a new rank or stat bonus. The celebration shows a portrait without a student name, so a name is included only when independently verified; otherwise the screenshot remains available for identification. Unreadable fields remain unknown, and stat totals are not estimated from the displayed increment.
+
+On September 25, an authorized manual gift test gave one Wind-Up Music Box to Tsurugi at relationship rank 2. The resulting screen verified **rank 3 and ATK +8**. The gift confirmation supplied the student name. No bonus invitation was needed. This validates the celebration reader; gifting itself remains outside the automatic Cafe routine.
+
 This approach is informed by [ArisuAutoSweeper's cafe recognition](https://github.com/TheFunny/ArisuAutoSweeper/blob/master/tasks/cafe/ui.py) and [BAAH's interaction observations](https://github.com/BlueArchiveArisHelper/BAAH/blob/main/modules/AllTask/InCafe/TouchHead.py). Both use multiple views, and BAAH explicitly accounts for speech bubbles hiding attention markers. Their code and assets are not imported.
 
 ## Camera coverage

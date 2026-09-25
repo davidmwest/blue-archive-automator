@@ -24,6 +24,7 @@ RECEIVED = {
     "ap_spent",
     "tickets_spent",
 }
+RELATIONSHIP_ACTIONS = {"relationship_rank_increased"}
 ALIASES = {
     "ap": "AP",
     "credits": "Credits",
@@ -79,7 +80,7 @@ def clear(config):
     return value
 
 
-def _events(data, seen=None):
+def _events(data, seen=None, *, actions=RECEIVED):
     seen = set() if seen is None else seen
     for line in data.splitlines():
         try:
@@ -95,7 +96,7 @@ def _events(data, seen=None):
         if event["id"] in seen:
             continue
         seen.add(event["id"])
-        if event.get("action") in RECEIVED:
+        if event.get("action") in actions:
             yield event
 
 
@@ -352,6 +353,70 @@ def _select_icons(config, event, selected, cache):
             selected[name] = icon
 
 
+def _relationship(event, config):
+    """Keep observed rank-ups separate from fungible reward quantities.
+
+    Older heart/rank-up actions have no structured observations. They remain in
+    the action log instead of becoming apparently complete relationship cards.
+    """
+    if "rank" not in event or not isinstance(event.get("stats"), list):
+        return None
+    student = _name(event.get("student"))
+    rank = event.get("rank")
+    rank = rank if type(rank) is int and 0 < rank < 2**53 else None
+    stats = []
+    for value in event["stats"]:
+        if not isinstance(value, dict) or not (name := _name(value.get("name"))):
+            continue
+        stat = {"name": name}
+        for field in ("before", "after", "delta"):
+            number = value.get(field)
+            stat[field] = (
+                number
+                if type(number) is int
+                and abs(number) < 2**53
+                and (field == "delta" or number >= 0)
+                else None
+            )
+        if any(stat[field] is not None for field in ("before", "after", "delta")):
+            stats.append(stat)
+    path = receipt_path(config, event)
+    if not (student or rank or stats or path):
+        return None
+    return {
+        "id": event["id"],
+        "time": event.get("time"),
+        "task": event.get("task"),
+        "student": student,
+        "rank": rank,
+        "stats": stats,
+        "incomplete": (
+            not student or rank is None or not stats
+            or event.get("recognition") == "partial"
+        ),
+        "receipt_url": f'/api/loot/{event["id"]}/receipt' if path else None,
+    }
+
+
+def _relationships(config, data, offset):
+    seen_ids = set()
+    before = list(_events(data[:offset], seen_ids, actions=RELATIONSHIP_ACTIONS))
+    seen_receipts = {_receipt_key(config, event) for event in before}
+    seen_receipts.discard(None)
+    rows = []
+    for event in _events(data[offset:], seen_ids, actions=RELATIONSHIP_ACTIONS):
+        key = _receipt_key(config, event)
+        if key is not None and key in seen_receipts:
+            continue
+        row = _relationship(event, config)
+        if row is None:
+            continue
+        rows.append(row)
+        if key is not None:
+            seen_receipts.add(key)
+    return list(reversed(rows))
+
+
 def snapshot(config):
     data = _source(config)
     cursor = _cursor(config)
@@ -440,6 +505,7 @@ def snapshot(config):
         )
     return {
         "cleared_at": cursor["cleared_at"],
+        "relationships": _relationships(config, data, cursor["offset"]),
         "items": [{"name": n, "quantity": q} for n, q in sorted(totals.items())],
         "groups": grouped(config, totals, icon_by_name),
         "unresolved_items": group_unresolved(config, unresolved),
@@ -452,7 +518,7 @@ def snapshot(config):
 
 
 def image_path(config, identifier):
-    for event in _events(_source(config)):
+    for event in _events(_source(config), actions=RECEIVED | RELATIONSHIP_ACTIONS):
         if event["id"] == identifier:
             return receipt_path(config, event)
     return None

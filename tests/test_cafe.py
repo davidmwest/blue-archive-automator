@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import cv2
@@ -452,6 +453,61 @@ def test_generic_relationship_notice_does_not_prove_an_increase(cafe, monkeypatc
     assert cafe.runner.clear_relationship_popup() is False
     assert cafe.runner.confirmed == 0
     assert cafe.device.taps == [(640, 505)]
+
+
+def test_rankup_saves_observed_values_and_verified_name_context(cafe, monkeypatch):
+    cafe.vision.is_cafe = lambda image: False
+    monkeypatch.setattr(cafe.runner, "wait_cafe", lambda **kwargs: cafe.capture())
+    cafe.script([word("Relationship rank up!", 640, 600), word("3", 640, 540),
+                 word("ATK +8", 640, 681)])
+    assert cafe.runner.clear_relationship_popup(student="Tsurugi", student_evidence="gift-confirm.png")
+    event = action_records(cafe.config)[-1]
+    assert event["action"] == "relationship_rank_increased"
+    assert event["student"] == "Tsurugi" and event["rank"] == 3
+    assert event["stats"] == [{"name": "ATK", "before": None, "after": None, "delta": 8}]
+    assert Path(event["evidence"]).is_file()
+    assert event["student_evidence"] == "gift-confirm.png"
+
+
+def test_extra_rank_ocr_recaptures_stale_overlay_before_dismissal(cafe, monkeypatch):
+    cafe.vision.is_cafe = lambda image: False
+    monkeypatch.setattr(cafe.runner, "wait_cafe", lambda **kwargs: cafe.capture())
+    cafe.script([word("Relationship rank up!", 640, 600), word("ATK +8", 640, 681)])
+
+    def slow_crop(image):
+        cafe.clock.sleep(6)
+        return [word("3", 80, 80)]
+
+    cafe.startup.read = slow_crop
+    assert cafe.runner.clear_relationship_popup()
+    assert cafe.device.taps == [(640, 630)]
+    assert action_records(cafe.config)[-1]["rank"] == 3
+
+
+def test_stale_rankup_followed_by_other_screen_sends_no_dismissal(cafe, monkeypatch):
+    cafe.vision.is_cafe = lambda image: False
+    cafe.script([word("Relationship rank up!", 640, 600)], [word("Confirm", 640, 505)])
+
+    def slow_crop(image):
+        cafe.clock.sleep(6)
+        return [word("3", 80, 80)]
+
+    cafe.startup.read = slow_crop
+    with pytest.raises(RestartError, match="celebration changed"):
+        cafe.runner.clear_relationship_popup()
+    assert cafe.device.taps == []
+
+
+def test_same_lingering_relationship_popup_is_logged_once(cafe, monkeypatch):
+    cafe.vision.is_cafe = lambda image: False
+    monkeypatch.setattr(cafe.runner, "wait_cafe", lambda **kwargs: cafe.capture())
+    cafe.script([word("Relationship rank up!", 640, 600), word("3", 640, 540),
+                 word("ATK +8", 640, 681)])
+    cafe.runner.clear_relationship_popup()
+    cafe.runner.clear_relationship_popup()
+    assert len([event for event in action_records(cafe.config)
+                if event["action"] == "relationship_rank_increased"]) == 1
+    assert cafe.device.taps == [(640, 630), (640, 630)]
 
 
 def prepare_two_floor_run(cafe, monkeypatch):

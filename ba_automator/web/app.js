@@ -647,8 +647,11 @@
       if (signature === lootSignature) return;
       lootSignature = signature;
       $("loot-since").textContent = data.cleared_at ? `since ${new Date(data.cleared_at).toLocaleString()}` : "all saved rewards · clear whenever you want a fresh count";
-      $("loot-empty").hidden = data.receipt_count > 0;
-      $("loot-count").textContent = data.receipt_count ? `${data.items.length.toLocaleString()} ${data.items.length === 1 ? "kind of loot" : "kinds of loot"} · ${data.receipt_count.toLocaleString()} ${data.receipt_count === 1 ? "receipt" : "receipts"}` : "";
+      const relationships = Array.isArray(data.relationships) ? data.relationships : [];
+      $("loot-empty").hidden = data.receipt_count > 0 || relationships.length > 0;
+      const countParts = data.receipt_count ? [`${data.items.length.toLocaleString()} ${data.items.length === 1 ? "kind of loot" : "kinds of loot"}`, `${data.receipt_count.toLocaleString()} ${data.receipt_count === 1 ? "receipt" : "receipts"}`] : [];
+      if (relationships.length) countParts.push(`${relationships.length.toLocaleString()} relationship ${relationships.length === 1 ? "level-up" : "level-ups"}`);
+      $("loot-count").textContent = countParts.join(" · ");
       const totals = document.createDocumentFragment();
       const groups = Array.isArray(data.groups) ? [...data.groups] : [{ id: "other", label: "the haul", items: data.items }];
       const icons = new Map(groups.flatMap((group) => group.items.map((item) => [item.name, item.icon_url])));
@@ -686,7 +689,56 @@
       };
       if (data.unresolved_items?.length) groups.push({ id: "unresolved", label: "needs a closer look", items: data.unresolved_items });
       const openGroups = new Set([...document.querySelectorAll('details[data-loot-group][open]')].map((section) => section.dataset.lootGroup));
+      let relationshipsAdded = false;
+      const appendRelationships = () => {
+        if (relationshipsAdded || !relationships.length) return;
+        relationshipsAdded = true;
+        const section = document.createElement("section"); section.className = "loot-group loot-relationships"; section.dataset.lootGroup = "relationships";
+        const heading = document.createElement("h3"); heading.textContent = "relationship gains";
+        const count = document.createElement("span"); count.textContent = `${relationships.length} ${relationships.length === 1 ? "level-up" : "level-ups"}`; heading.append(count);
+        const grid = document.createElement("div"); grid.className = "loot-relationship-grid";
+        relationships.forEach((gain) => {
+          const card = document.createElement("article"); card.className = "loot-relationship";
+          const title = document.createElement("div"); title.className = "loot-relationship-heading";
+          const student = document.createElement("strong"); student.textContent = gain.student || "relationship increased";
+          const rank = document.createElement("span"); rank.className = "loot-relationship-rank";
+          rank.textContent = Number.isSafeInteger(gain.rank) && gain.rank > 0 ? `Lv. ${gain.rank}` : "level unread";
+          title.append(student, rank); card.append(title);
+          const time = document.createElement("time"); const when = dateValue(gain.time);
+          time.textContent = `${taskName(gain.task)} · ${when ? when.toLocaleString() : "time unavailable"}`;
+          if (when) time.dateTime = when.toISOString();
+          card.append(time);
+          const stats = document.createElement("dl"); stats.className = "loot-relationship-stats";
+          (gain.stats || []).forEach((stat) => {
+            const name = document.createElement("dt"); name.textContent = stat.name;
+            const value = document.createElement("dd");
+            const before = Number.isSafeInteger(stat.before), after = Number.isSafeInteger(stat.after), delta = Number.isSafeInteger(stat.delta);
+            const change = delta ? `${stat.delta >= 0 ? "+" : ""}${stat.delta.toLocaleString()}` : "";
+            value.textContent = before && after ? `${stat.before.toLocaleString()} → ${stat.after.toLocaleString()}${delta ? ` (${change})` : ""}`
+              : after ? `now ${stat.after.toLocaleString()}${delta ? ` (${change})` : ""}`
+              : delta ? change : before ? `was ${stat.before.toLocaleString()} · new value unread` : "unread";
+            stats.append(name, value);
+          });
+          if (stats.childElementCount) card.append(stats);
+          if (!gain.student || !gain.rank || !gain.stats?.length || gain.incomplete) {
+            const note = document.createElement("p"); note.className = "loot-relationship-note";
+            const missing = [];
+            if (!gain.student) missing.push("student not identified");
+            if (!gain.rank) missing.push("new level unread");
+            if (!gain.stats?.length) missing.push("stat changes unread");
+            note.textContent = missing.length ? `${missing.join(" · ")}. known details are saved.` : "some details need a look. known changes are saved.";
+            card.append(note);
+          }
+          if (/^\/api\/loot\/[a-f0-9]{32}\/receipt$/.test(gain.receipt_url || "")) {
+            const link = document.createElement("a"); link.href = gain.receipt_url; link.target = "_blank"; link.rel = "noopener"; link.textContent = "view level-up ↗";
+            card.append(link);
+          }
+          grid.append(card);
+        });
+        section.append(heading, grid); totals.append(section);
+      };
       groups.forEach((group) => {
+        if (!["premium", "students"].includes(group.id)) appendRelationships();
         const unresolved = group.id === "unresolved";
         const collapsible = ["equipment", "other", "unresolved"].includes(group.id);
         const section = document.createElement(collapsible ? "details" : "section"); section.className = "loot-group"; section.dataset.lootGroup = group.id;
@@ -700,6 +752,7 @@
         group.items.forEach((item) => grid.append(makeItem(item, unresolved)));
         section.append(heading, grid); totals.append(section);
       });
+      appendRelationships();
       $("loot-totals").replaceChildren(totals);
       $("loot-unidentified").hidden = !data.unidentified_receipts;
       const reviewReasons = [

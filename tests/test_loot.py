@@ -38,6 +38,106 @@ def test_empty_and_confirmed_rewards_only(config):
     assert data["receipt_count"] == 2 and data["unidentified_receipts"] == 0
 
 
+def test_relationship_levels_are_individual_events_not_loot_quantities(config):
+    record_action(config, "relationship_increased", "heart feedback", student="Serina")
+    record_action(config, "relationship_rank_increased", "legacy rank-up")
+    first = record_action(
+        config, "relationship_rank_increased", "rank-up observed", student="Serina",
+        rank=2, stats=[{"name": "Healing", "before": 0, "after": 5, "delta": 5}],
+    )
+    second = record_action(
+        config, "relationship_rank_increased", "rank-up observed", student="Serina",
+        rank=3, stats=[{"name": "Healing", "before": 5, "after": 10, "delta": 5}],
+    )
+    record_action(config, "loot_received", "credits received", items_complete=True,
+                  items=[{"name": "Credits", "quantity": 100}])
+    data = loot.snapshot(config)
+    assert data["items"] == [{"name": "Credits", "quantity": 100}]
+    assert data["receipt_count"] == 1 and data["unidentified_receipts"] == 0
+    assert [gain["id"] for gain in data["relationships"]] == [second["id"], first["id"]]
+    assert [gain["rank"] for gain in data["relationships"]] == [3, 2]
+    assert data["relationships"][1]["stats"] == [
+        {"name": "Healing", "before": 0, "after": 5, "delta": 5}
+    ]
+    assert all(not gain["incomplete"] for gain in data["relationships"])
+
+
+def test_relationship_clear_and_duplicate_screenshot_keep_history(config):
+    config.run_dir.mkdir(parents=True)
+    image = config.run_dir / "relationship.png"
+    image.write_bytes(b"observed screen")
+    fields = {"rank": 2, "stats": [{"name": "ATK", "delta": 20}], "evidence": str(image)}
+    original = record_action(config, "relationship_rank_increased", "observed", **fields)
+    record_action(config, "relationship_rank_increased", "same screen inspected again", **fields)
+    data = loot.snapshot(config)
+    assert len(data["relationships"]) == 1
+    assert data["relationships"][0]["receipt_url"] == f"/api/loot/{original['id']}/receipt"
+    assert loot.image_path(config, original["id"]) == image
+    history = (config.state_dir / "important-actions.jsonl").read_bytes()
+    loot.clear(config)
+    assert (config.state_dir / "important-actions.jsonl").read_bytes() == history
+    assert loot.snapshot(config)["relationships"] == []
+    record_action(config, "relationship_rank_increased", "late duplicate", **fields)
+    assert loot.snapshot(config)["relationships"] == []
+    assert loot.image_path(config, original["id"]) == image
+    record_action(config, "relationship_rank_increased", "new rank-up", rank=3, stats=[])
+    assert [gain["rank"] for gain in loot.snapshot(config)["relationships"]] == [3]
+
+
+def test_relationship_partial_values_remain_unknown(config):
+    record_action(
+        config, "relationship_rank_increased", "partially readable", rank=None,
+        stats=[
+            {"name": "ATK", "before": None, "after": None, "delta": 20},
+            {"name": "Max HP", "before": 10, "after": 15, "delta": None},
+        ],
+        recognition="partial",
+    )
+    gain = loot.snapshot(config)["relationships"][0]
+    assert gain["student"] is None and gain["rank"] is None
+    assert gain["incomplete"] and gain["receipt_url"] is None
+    assert gain["stats"] == [
+        {"name": "ATK", "before": None, "after": None, "delta": 20},
+        {"name": "Max HP", "before": 10, "after": 15, "delta": None},
+    ]  # Unknown totals and deltas are not calculated or inferred.
+
+
+@pytest.mark.parametrize("bad", [True, "2", -1, 0, 2**53, 2.5])
+def test_relationship_rejects_invalid_rank_without_losing_readable_stats(config, bad):
+    record_action(
+        config, "relationship_rank_increased", "partial", rank=bad,
+        stats=[{"name": "ATK", "delta": 20}],
+    )
+    assert loot.snapshot(config)["relationships"][0]["rank"] is None
+
+
+def test_relationship_malformed_stats_and_unsafe_evidence(config, tmp_path):
+    secret = tmp_path / "private.png"
+    secret.write_bytes(b"not a game receipt")
+    event = record_action(
+        config, "relationship_rank_increased", "partial", rank=2, evidence=str(secret),
+        stats=[None, {}, {"name": "ATK", "before": True, "after": -20, "delta": "20"},
+               {"name": "Healing", "before": 0, "after": 2**53, "delta": None}],
+    )
+    gain = loot.snapshot(config)["relationships"][0]
+    assert gain["stats"] == [{"name": "Healing", "before": 0, "after": None, "delta": None}]
+    assert gain["receipt_url"] is None and loot.image_path(config, event["id"]) is None
+
+
+def test_unread_relationship_has_evidence_without_claiming_known_details(config):
+    config.run_dir.mkdir(parents=True)
+    image = config.run_dir / "relationship.png"
+    image.write_bytes(b"rank-up screen")
+    record_action(
+        config, "relationship_rank_increased", "unread screen", rank=None,
+        stats=[], evidence=str(image), recognition="partial",
+    )
+    data = loot.snapshot(config)
+    assert len(data["relationships"]) == 1
+    assert data["relationships"][0]["incomplete"]
+    assert data["receipt_count"] == 0 and data["unidentified_receipts"] == 0
+
+
 def test_clear_persists_and_preserves_history_and_receipt(config):
     config.run_dir.mkdir(parents=True)
     image = config.run_dir / "receipt.png"

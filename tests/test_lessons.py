@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -12,6 +13,7 @@ from ba_automator.lesson_vision import LessonScreen, LocationRow, RoomCard
 from ba_automator.lessons import LessonFrame, LessonsRunner
 from ba_automator.locking import InstanceLock
 from ba_automator.runtime import Capture, TaskError
+from ba_automator.vision import Word
 import ba_automator.lessons as lessons_module
 
 
@@ -471,9 +473,80 @@ def test_relationship_rank_up_then_receipt_completes_without_replaying_start(har
     assert runner.confirmed == 1
     assert runner.expected_tickets == 1
     assert [record["event"] for record in harness.records] == [
-        "lesson_start_attempted", "lesson_relationship_rank_up", "lesson_completed"]
+        "lesson_start_attempted", "relationship_rank_increased", "lesson_completed"]
     assert (runner.run_dir / "lesson-01-relationship-1.png").exists()
     assert (runner.run_dir / "lesson-01-receipt.png").exists()
+
+
+def prepare_rankup_frame(harness):
+    fixture = Path(__file__).parent / "fixtures" / "relationship-rank-up-gift.png"
+    png = fixture.read_bytes()
+    raw = json.loads(fixture.with_suffix(".json").read_text())
+    words = tuple(Word(item["text"], item["confidence"], tuple(item["box"])) for item in raw["words"])
+    screen = LessonScreen("relationship_rank_up", dismiss_target=(1170, 650), words=words)
+    harness.device.screenshot = lambda: png
+    harness.screens[:] = [screen]
+    return harness.frame(screen)
+
+
+def test_repeated_lesson_celebration_is_one_structured_relationship_gain(harness):
+    runner = harness.make()
+    frame = prepare_rankup_frame(harness)
+    runner.dismiss_celebration(frame)
+    runner.dismiss_celebration(harness.frame(frame.screen))
+    assert harness.device.taps == [(1170, 650), (1170, 650)]
+    assert len(harness.records) == 1
+    assert harness.records[0]["event"] == "relationship_rank_increased"
+    assert harness.records[0]["rank"] == 3
+    assert harness.records[0]["student"] is None
+    assert harness.records[0]["stats"] == [{"name": "ATK", "before": None, "after": None, "delta": 8}]
+
+
+def test_lesson_recaptures_after_slow_rank_read_before_any_dismissal(harness):
+    runner = harness.make()
+    frame = prepare_rankup_frame(harness)
+
+    def slow_crop(image):
+        harness.clock.sleep(6)
+        return [Word("3", .99, (0, 0, 80, 80))]
+
+    harness.startup.read = slow_crop
+    runner.dismiss_celebration(frame)
+    assert harness.device.taps == [(1170, 650)]
+    assert len(harness.records) == 1
+    assert harness.records[0]["rank"] == 3
+
+
+def test_lesson_stale_rankup_cannot_dismiss_a_changed_screen(harness):
+    runner = harness.make()
+    frame = prepare_rankup_frame(harness)
+    harness.screens[:] = [LessonScreen("receipt", dismiss_target=(640, 630))]
+
+    def slow_crop(image):
+        harness.clock.sleep(6)
+        return [Word("3", .99, (0, 0, 80, 80))]
+
+    harness.startup.read = slow_crop
+    with pytest.raises(TaskError, match="celebration changed"):
+        runner.dismiss_celebration(frame)
+    assert harness.device.taps == []
+
+
+def test_next_rank_for_same_student_is_a_distinct_celebration(harness):
+    import cv2
+    import numpy as np
+
+    runner = harness.make()
+    frame = prepare_rankup_frame(harness)
+    runner.dismiss_celebration(frame)
+    image = cv2.imdecode(np.frombuffer(frame.capture.png, np.uint8), cv2.IMREAD_COLOR)
+    image[522:555, 618:663] = 255
+    _, png = cv2.imencode(".png", image)
+    next_screen = replace(frame.screen, words=tuple(replace(w, text="4") if w.text == "3" else w
+                                                   for w in frame.screen.words))
+    next_frame = LessonFrame(Capture(png.tobytes(), harness.clock.now, harness.device.foreground), next_screen)
+    runner.dismiss_celebration(next_frame)
+    assert [record["rank"] for record in harness.records] == [3, 4]
 
 
 def test_endless_relationship_rank_ups_stop_after_four_dismissals(harness, monkeypatch):
