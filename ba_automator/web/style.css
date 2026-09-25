@@ -89,6 +89,11 @@
 .loot-receipt-image span { position: absolute; right: 5px; bottom: 5px; padding: 3px 7px; background: #162b48e6; color: #fff; font-size: 9px; border-radius: 4px; }
 .loot-card > .microcopy, .loot-card > .loot-totals, .loot-card > .logs-empty, .loot-card > details { margin-left: 24px; margin-right: 24px; }
 .loot-card > .microcopy:last-child { margin-bottom: 20px; }
+.actions-card > .card-header { flex-wrap: wrap; }
+.actions-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px 16px; }
+.actions-heading > a { font-size: 11px; color: #416b9f; text-decoration: underline; text-underline-offset: 3px; }
+.actions-heading > a:hover { color: #254d82; }
+.actions-heading > a:focus-visible { outline: 2px solid #4d8ade; outline-offset: 4px; border-radius: 2px; }
 @media(min-width:651px) and (max-width:1150px) { .loot-totals { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width:650px) {
   .loot-card { margin-bottom: 17px; }

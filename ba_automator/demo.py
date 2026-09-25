@@ -187,15 +187,33 @@ def _routes(now: datetime) -> dict[str, tuple[str, bytes]]:
         "unresolved_items": [],
         "receipt_count": 1,
         "unidentified_receipts": 0,
+        "review_counts": {"unidentified_items": 0, "unverified_coverage": 0, "missing_details": 0},
         "receipts": [{
             "id": "sample-earnings", "time": stamp(-360), "task": "cafe",
             "detail": "Sample: receipt confirmed 60 AP and 45,000 credits.",
             "items": [{"name": "AP", "quantity": 60}, {"name": "Credits", "quantity": 45000}],
-            "unidentified": False, "receipt_url": None,
+            "unidentified": False, "review_reason": None, "receipt_url": None,
         }],
         "older_receipts": 0,
     }
     routes["/api/loot"] = ("application/json; charset=utf-8", _json(sample_loot))
+    day = now.astimezone().date().isoformat()
+    # The demo has no local history: construct its plain-text log from these
+    # fictional records, without importing any runtime or logging dependencies.
+    sample_log = [
+        f"Maid in Schale — {day} — read-only demo / fictional sample data",
+        "No device is connected. These events did not occur on a real account.",
+        "",
+    ]
+    for event in sorted(status["logs"] + actions["actions"], key=lambda row: row["time"]):
+        local_time = datetime.fromisoformat(event["time"].replace("Z", "+00:00")).astimezone()
+        category = event.get("action", "runtime")
+        detail = event.get("detail", event.get("message", ""))
+        sample_log.append(f"{local_time.isoformat(timespec='seconds')} INFO [{category}] {detail}")
+    log_route = ("text/plain; charset=utf-8", ("\n".join(sample_log) + "\n").encode("utf-8"))
+    routes["/api/logs"] = ("application/json; charset=utf-8", _json({"today": day, "dates": [day]}))
+    routes["/api/logs/today.log"] = log_route
+    routes[f"/api/logs/{day}.log"] = log_route
     for path, value in (("/api/status", status), ("/api/map", home_map), ("/api/actions", actions), ("/api/popups", popups)):
         routes[path] = ("application/json; charset=utf-8", _json(value))
     return routes
@@ -223,7 +241,7 @@ def make_server(port: int = 8766) -> ThreadingHTTPServer:
         def log_message(self, format: str, *args: object) -> None:
             pass
 
-        def _reply(self, code: int, body: bytes, content_type: str = "application/json; charset=utf-8") -> None:
+        def _reply(self, code: int, body: bytes, content_type: str = "application/json; charset=utf-8", *, filename: str | None = None) -> None:
             self.send_response(code)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
@@ -231,6 +249,8 @@ def make_server(port: int = 8766) -> ThreadingHTTPServer:
             self.send_header("Content-Security-Policy", _CONTENT_POLICY)
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "no-referrer")
+            if filename is not None:
+                self.send_header("Content-Disposition", f'inline; filename="{filename}"')
             self.send_header("Connection", "close")
             self.end_headers()
             if self.command != "HEAD":
@@ -256,7 +276,11 @@ def make_server(port: int = 8766) -> ThreadingHTTPServer:
                 self._reply(404, _json({"error": "Not found in the read-only demo."}))
                 return
             content_type, body = route
-            self._reply(200, body, content_type)
+            filename = None
+            if path.startswith("/api/logs/") and content_type.startswith("text/plain"):
+                day = json.loads(routes["/api/logs"][1])["today"]
+                filename = f"{day}.log"
+            self._reply(200, body, content_type, filename=filename)
 
         do_HEAD = do_GET
 

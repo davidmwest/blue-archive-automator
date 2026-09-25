@@ -38,6 +38,7 @@ on Windows: `py -3.11 -m ba_automator.demo`. open [localhost:8766](http://127.0.
 | cafe | restarts first, collects available AP and credits, scans both unlocked floors for relationship icons, returns home |
 | tasks | checks the Tasks red dot, claims completed rewards and the daily bonus, saves item counts and receipts |
 | loot gathered | game icons, exact tooltip names, grouped totals in priority order, and itemized receipts; clearing keeps the history |
+| [daily logs](docs/daily-logs.md) | the full day's text log beside important actions, saved as YYYY-MM-DD.log and kept across restarts |
 | bounties and scrimmages | split tickets across three areas, rotate extras by weekday, sweep the highest three-star clears, save receipts |
 | packs and mail | optional paid renewal of the three permanent daily-benefit packs, off by default; collect product and ordinary mail with reward logs |
 | crafting | uses the saved Quick Craft preset, fills affordable slots, and persists collection/refill timers; all three natural completions and the zero-keystone path passed |

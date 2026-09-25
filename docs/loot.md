@@ -18,7 +18,7 @@ Inspection saves its observations before returning to the task, including partia
 
 The default order is premium currency and recruitment items, student materials, AP and tickets, shop currencies, leveling and skill materials, equipment, crafting and gifts, credits, then other items. Within a category, recognized material tiers precede alphabetical order. These are display priorities, not prices or a claim that every item has the same value to every player.
 
-The main cards show grouped quantities and locally captured game icons. Each receipt has an itemized breakdown, its saved image, and its original action log. Unidentified historical drops sit in an expandable section with the same evidence links. Unknown quantities remain unknown; they are never treated as zero or inferred from an icon.
+The main cards show grouped quantities and locally captured game icons. Each receipt has an itemized breakdown, its saved image, and its original action log. Review counts distinguish unread item names or amounts, known items with unverified full-list coverage, and missing item details. Unidentified historical drops sit in an expandable section with the same evidence links; its entry count groups matching icons and is not a count of individual units. Unknown quantities remain unknown; they are never treated as zero or inferred from an icon.
 
 Old receipts can gain names from an exact previously verified icon hash or readable saved labels. Static screenshots cannot prove that off-screen items were captured, so their incomplete status stays visible. This is local OCR and image matching; no AI or external item service runs in the daemon.
 

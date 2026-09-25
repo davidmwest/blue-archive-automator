@@ -41,7 +41,7 @@ from .locking import InstanceLock
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS, task_plan
 from .home_badges import PRIORITY
 from . import packs_state
-from . import ap_state, loot
+from . import ap_state, loot, daily_log
 from .vision import decode_frame
 
 
@@ -164,13 +164,28 @@ class DashboardController:
         self._packs_not_before = None
         self._ap_not_before = None
         self._failures = self._load_failures()
+        self._daily("dashboard_started", detail="Local serial queue started")
         self._worker = threading.Thread(target=self._work, name="blue-archive-queue", daemon=True)
         self._worker.start()
 
-    def _log(self, message: str, level: str = "info") -> None:
+    def _daily(self, event, *, level="INFO", **fields):
+        try:
+            daily_log.append_event(self._state_dir(), event, timestamp=self._wall_clock(),
+                                   level=level, **fields)
+        except (OSError, ValueError, TypeError):
+            LOGGER.error("Could not append the daily log", exc_info=True, extra={"skip_daily": True})
+
+    def _queued(self, job):
+        self._daily("job_queued", task=job["task"], run=job["id"],
+                    source=job.get("source", "manual"), slots=job.get("slots"))
+
+    def _log(self, message: str, level: str = "info", *, child=False) -> None:
         with self._condition:
             self._logs.append({"time": _timestamp(), "message": message[:2000], "level": level})
-        (LOGGER.error if level == "error" else LOGGER.info)("dashboard: %s", message[:2000])
+        (LOGGER.error if level == "error" else LOGGER.info)("dashboard: %s", message[:2000],
+                                                            extra={"skip_daily": True})
+        if not child:
+            self._daily("diagnostic", level=level.upper(), detail=message)
 
     def _public_config(self) -> dict:
         values = {name: getattr(self.config, name) for name in ("serial", "package", *sorted(RESTART_SETTINGS))}
@@ -210,8 +225,12 @@ class DashboardController:
         with self._condition:
             if not isinstance(identifier, str) or not re.fullmatch(r'[a-f0-9]{32}', identifier):
                 raise ApiError(400, 'A failed job id is required')
+            dismissed = next((item for item in self._failures if item['id'] == identifier), None)
             self._failures = [item for item in self._failures if item['id'] != identifier]
             self._save_failures()
+            if dismissed:
+                self._daily("failure_notice_dismissed", task=dismissed["task"], run=identifier,
+                            detail=dismissed["detail"], failed_at=dismissed["time"])
             # Acknowledging a notice never clears schedules or purchase holds.
 
     def _load_schedule(self) -> dict:
@@ -231,6 +250,7 @@ class DashboardController:
     def _save_schedule(self) -> None:
         try:
             _write_atomic(self._state_dir() / "schedule.json", json.dumps(self._schedule, indent=2) + "\n")
+            self._daily("schedule_saved", schedule=self._schedule)
         except OSError as exc:
             self._log(f"Could not persist task schedules: {exc}", "error")
 
@@ -255,6 +275,7 @@ class DashboardController:
                 self._schedule["cafe"]["retry_paused"] = True
                 return
         self._queue.append({"id": uuid4().hex, "task": "cafe", "created_at": _timestamp(), "source": "schedule"})
+        self._queued(self._queue[-1])
 
     def _packs_status(self):
         try:
@@ -287,6 +308,7 @@ class DashboardController:
             return
         self._queue.append({'id': uuid4().hex, 'task': 'spend_ap',
                             'created_at': _timestamp(), 'source': 'schedule'})
+        self._queued(self._queue[-1])
         self._ap_not_before = now + timedelta(minutes=15)
 
     def _enqueue_packs(self):
@@ -305,6 +327,7 @@ class DashboardController:
         if due and now < datetime.fromisoformat(due):
             return
         self._queue.append({'id': uuid4().hex, 'task': 'packs', 'created_at': _timestamp(), 'source': 'schedule'})
+        self._queued(self._queue[-1])
         # Also bounds failures that occur in restart before the pack handler runs.
         self._packs_not_before = now + timedelta(minutes=15)
 
@@ -341,6 +364,7 @@ class DashboardController:
             return
         self._queue.append({"id": uuid4().hex, "task": "crafting", "created_at": _timestamp(),
                             "source": "schedule", "slots": [job["slot"] for job in due if job["slot"] is not None]})
+        self._queued(self._queue[-1])
 
     def _record_crafting(self, task: str, state: str) -> None:
         if task != "crafting" or state not in {"success", "disabled", "failed"}:
@@ -380,6 +404,7 @@ class DashboardController:
                 raise ApiError(409, "The queue already contains 100 jobs")
             job = {"id": uuid4().hex, "task": task, "created_at": _timestamp()}
             self._queue.append(job)
+            self._queued(job)
             self._condition.notify_all()
             return dict(job)
 
@@ -404,11 +429,14 @@ class DashboardController:
                         self._save_schedule()
                     self._history.appendleft({"id": job_id, "task": job["task"],
                                               "state": "stopped", "completed_at": _timestamp()})
+                    self._daily("job_cancelled", task=job["task"], run=job_id)
                     return
             raise ApiError(404, "Queued job not found")
 
     def pause(self) -> None:
         with self._condition:
+            if not self._paused:
+                self._daily("queue_paused")
             self._paused = True
 
     def resume(self) -> None:
@@ -416,6 +444,7 @@ class DashboardController:
             if self._shutdown:
                 raise ApiError(409, "The server is shutting down")
             self._paused = False
+            self._daily("queue_resumed")
             if self._schedule["crafting"].get("retry_paused", False):
                 self._schedule["crafting"].update({"retry_paused": False, "consecutive_failures": 0,
                                                    "not_before": None})
@@ -429,6 +458,8 @@ class DashboardController:
     def stop(self) -> None:
         with self._condition:
             self._paused = True
+            self._daily("queue_stop_requested", task=self._task,
+                        run=self._current["id"] if self._current else None)
             if not self._current:
                 return
             self._stop_requested = True
@@ -494,6 +525,8 @@ class DashboardController:
                 if len(self._job_roots) > 100:
                     self._job_roots.pop(next(iter(self._job_roots)))
                 selected = replace(self.config, run_dir=run_root)
+                self._daily("job_started", task=job["task"], run=job["id"],
+                            source=job.get("source", "manual"), plan=task_plan(job["task"], selected))
             exit_code = 1
             output = ""
             process = None
@@ -527,7 +560,7 @@ class DashboardController:
                         message = line.rstrip("\r\n")
                         output = (output + line)[-100000:]
                         if message:
-                            self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info")
+                            self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info", child=True)
                             marker = next((prefix for prefix in ("tactical_rewards:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
                             if marker:
                                 with self._condition:
@@ -563,6 +596,10 @@ class DashboardController:
                         self._state, self._phase = "failed", "Task failed; check the log"
                     if self._state in {"failed", "stopped"}:
                         self._result = self._unfinished_result(run_root, self._state)
+                    self._daily("job_finished", task=job["task"], run=job["id"],
+                                level="ERROR" if self._state == "failed" else "INFO",
+                                status=self._state, duration=round(self._duration, 3),
+                                exit_code=exit_code, result=self._result)
                     self._history.appendleft({"id": job["id"], "task": job["task"],
                                               "state": self._state, "completed_at": self._completed_at})
                     if self._state == 'failed':
@@ -640,6 +677,7 @@ class DashboardController:
                 continue
             self._queue.append({'id': uuid4().hex, 'task': task,
                                 'created_at': _timestamp(), 'source': 'red_dot'})
+            self._queued(self._queue[-1])
             covered.update(task_plan(task, self.config))
             self._log(f'Queued {task}: home notification detected')
         ap = value.get('ap')
@@ -655,6 +693,7 @@ class DashboardController:
             if not state.get('blocked_reason') and not state.get('pending'):
                 self._queue.append({'id': uuid4().hex, 'task': 'spend_ap',
                                     'created_at': _timestamp(), 'source': 'ap_balance'})
+                self._queued(self._queue[-1])
                 self._log(f'Queued Spend AP: {ap} AP observed, floor {self.config.ap_floor}')
                 queued_ap = True
         if valid_ap and (spent_here or queued_ap or self._ap_batch_observed is None or ap < self._ap_batch_observed):
@@ -852,9 +891,22 @@ class DashboardController:
         with self._condition:
             return loot.snapshot(self.config)
 
+    def daily_logs(self) -> dict:
+        return {"today": daily_log.today(), "dates": daily_log.list_days(self._state_dir())}
+
+    def daily_log_text(self, day) -> bytes:
+        try:
+            return daily_log.read_day(self._state_dir(), day).encode("utf-8")
+        except ValueError as exc:
+            raise ApiError(400, "A valid YYYY-MM-DD log date is required") from exc
+        except OSError as exc:
+            raise ApiError(404, "Daily log unavailable") from exc
+
     def clear_loot(self) -> dict:
         with self._condition:
-            return loot.clear(self.config)
+            result = loot.clear(self.config)
+            self._daily("loot_view_cleared", cleared_at=result["cleared_at"])
+            return result
 
     def loot_image(self, identifier) -> bytes:
         with self._condition:
@@ -1020,6 +1072,7 @@ class DashboardController:
                     document.setdefault(section, {})[key] = value
                 _write_atomic(self.config_path, _toml(document))
                 self.config = Config.from_file(self.config_path)
+                self._daily("settings_changed", changes=changes)
                 self._condition.notify_all()
             except (ConfigError, ValueError, TypeError) as exc:
                 raise ApiError(400, str(exc)) from exc
@@ -1027,6 +1080,7 @@ class DashboardController:
 
     def close(self) -> None:
         with self._condition:
+            self._daily("dashboard_stopping", active=self._current, queued_count=len(self._queue))
             self._shutdown = True
             self.stop()
             self._condition.notify_all()
@@ -1057,10 +1111,12 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
         def log_message(self, format, *args):
             LOGGER.debug("dashboard HTTP: " + format, *args)
 
-        def _send(self, status: int, payload: bytes, content_type: str) -> None:
+        def _send(self, status: int, payload: bytes, content_type: str, *, filename=None) -> None:
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(payload)))
+            if filename:
+                self.send_header("Content-Disposition", f'inline; filename="{filename}"')
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("X-Frame-Options", "DENY")
@@ -1122,6 +1178,15 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                 target = urlsplit(self.path)
                 if target.path == "/api/status":
                     self._json(200, controller.status())
+                elif target.path == "/api/logs":
+                    if target.query:
+                        raise ApiError(400, "Log requests do not accept query parameters")
+                    self._json(200, controller.daily_logs())
+                elif match := re.fullmatch(r"/api/logs/(today|\d{4}-\d{2}-\d{2})\.log", target.path):
+                    if target.query:
+                        raise ApiError(400, "Log requests do not accept query parameters")
+                    day = daily_log.today() if match[1] == "today" else match[1]
+                    self._send(200, controller.daily_log_text(day), "text/plain; charset=utf-8", filename=f"{day}.log")
                 elif target.path == "/api/frame":
                     if parse_qs(target.query).keys() - {"v"}:
                         raise ApiError(400, "Frame requests accept only a version parameter")

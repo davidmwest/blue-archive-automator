@@ -301,6 +301,73 @@ def test_dashboard_serves_branded_page_and_only_the_explicit_mascot_asset(http_s
     assert request("GET", "/maid-arisu.png/../config/local.toml")[0] == 404
 
 
+def test_daily_log_is_full_plain_text_with_a_local_dated_filename(http_server):
+    from collections import deque
+    from ba_automator.daily_log import today
+
+    request, controller, _, port = http_server
+    controller._logs = deque(maxlen=2)
+    for detail in ("first saved message", "second saved message", "third saved message"):
+        controller._log(detail)
+    assert len(controller.status()["logs"]) == 2
+    code, catalog = request("GET", "/api/logs")
+    assert code == 200 and catalog["today"] == today()
+    assert today() in catalog["dates"]
+    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=3)
+    connection.request("GET", "/api/logs/today.log")
+    response = connection.getresponse()
+    contents = response.read().decode("utf-8")
+    assert response.status == 200
+    assert response.getheader("Content-Type") == "text/plain; charset=utf-8"
+    assert response.getheader("Content-Disposition") == f'inline; filename="{today()}.log"'
+    assert response.getheader("X-Content-Type-Options") == "nosniff"
+    connection.close()
+    assert "first saved message" in contents and "third saved message" in contents
+    assert request("GET", f"/api/logs/{today()}.log")[1].decode() == contents
+    assert controller.daily_log_text(today()).decode() == contents
+
+
+def test_daily_log_routes_reject_paths_queries_invalid_dates_and_symlinks(http_server, tmp_path):
+    from ba_automator.daily_log import today
+
+    request, controller, _, _ = http_server
+    assert request("GET", "/api/logs/2026-02-30.log")[0] == 400
+    assert request("GET", "/api/logs/1900-01-01.log")[0] == 404
+    for route in ("/api/logs/../../config/local.toml", "/api/logs/%2e%2e/secret.log"):
+        assert request("GET", route)[0] == 404
+    assert request("GET", "/api/logs/today.log?path=/etc/passwd")[0] == 400
+    assert request("GET", "/api/logs?date=2026-09-24")[0] == 400
+    assert request("GET", "/api/logs/today.log", headers={"Origin": "https://attacker.example"})[0] == 403
+    path = controller._state_dir() / "logs" / f"{today()}.log"
+    path.unlink()
+    secret = tmp_path / "secret.txt"
+    secret.write_text("must never be served")
+    try:
+        path.symlink_to(secret)
+    except OSError:
+        pytest.skip("Symlinks are unavailable on this host")
+    code, result = request("GET", "/api/logs/today.log")
+    assert code in {400, 404} and "must never be served" not in str(result)
+
+
+def test_daily_log_tracks_queue_lifecycle_without_duplicate_child_stdout(controlled):
+    from ba_automator.daily_log import read_day, today
+
+    controller, factory = controlled
+    controller.pause()
+    job = controller.enqueue("restart")
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    controller._log("private child mirror sentinel", child=True)
+    factory.processes[0].finish()
+    eventually(lambda: controller.status()["state"] == "success")
+    contents = read_day(controller._state_dir(), today())
+    for event in ("queue_paused", "queue_resumed", "job_queued", "job_started", "job_finished"):
+        assert event in contents
+    assert job["id"] in contents and 'status="success"' in contents
+    assert "private child mirror sentinel" not in contents
+
+
 def test_non_loopback_binding_is_rejected(controlled):
     controller, _ = controlled
     with pytest.raises(ValueError, match="loopback"):
@@ -500,7 +567,7 @@ def test_cancel_manual_cafe_does_not_change_schedule(controlled):
 def test_important_actions_persist_and_exclude_evidence_filesystem_paths(http_server):
     request, controller, _, _ = http_server
     state = controller.config.state_dir
-    state.mkdir(parents=True)
+    state.mkdir(parents=True, exist_ok=True)
     path = state / "important-actions.jsonl"
     first = {"id": "first", "time": "2026-09-24T01:00:00Z", "task": "cafe", "action": "pat",
              "detail": "Patted a visiting student", "student": "Hoshino", "cafe": 1,
@@ -724,7 +791,7 @@ def test_lesson_frame_and_action_metadata_are_visible_without_private_paths(cont
     (folder / "trace-0001.png").write_bytes(b"lesson frame")
     assert controller.frame_bytes() == b"lesson frame"
     state = controller.config.state_dir
-    state.mkdir(parents=True)
+    state.mkdir(parents=True, exist_ok=True)
     action = {"task": "lessons", "action": "lesson_completed", "location": "Gehenna Academy",
               "room": "Classroom", "owned_students": 3, "student_count": 4,
               "tickets_before": 7, "tickets_after": 6, "strategy": "relationship",

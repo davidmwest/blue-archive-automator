@@ -18,11 +18,11 @@ Continue adding reviewed fixtures for new startup screens and keep download, int
 
 ## 2. Dashboard and cafe — full visit live verified; invitations pending
 
-The loopback dashboard provides a serial job queue, settings, stop/pause controls, a visual home map, run evidence, and persistent important-action history. Its optional cafe schedule waits three hours and 15 seconds after success, retries failures after 15 minutes, and pauses after three consecutive failures. The queue is temporary; schedule and action records survive server restarts.
+The loopback dashboard provides a serial job queue, settings, stop/pause controls, a visual home map, run evidence, persistent important-action history, and full daily text logs. Its optional cafe schedule waits three hours and 15 seconds after success, retries failures after 15 minutes, and pauses after three consecutive failures. The queue is temporary; schedule, action, loot, and daily-log records survive server restarts.
 
 An optional setting closes Blue Archive after the last dashboard job exits and the queue is empty. It leaves the emulator and server running; the next task starts through restart. It defaults to off and does not affect standalone CLI runs.
 
-`cafe` runs restart first, then collects cafe earnings, checks students across both unlocked floors, and returns home. The Cafe step of `daily` uses the same routine, before its optional Lessons step. A live full run completed in **425.5 seconds**, recognized empty earnings, verified measured scans and camera boundaries on both floors, returned home, and closed the game. Earlier receipts verified **81 AP and 73,957 credits**, then **16 AP and 14,791 credits**; relationship hearts and rank-up screens were also verified. The full passing run recorded zero new relationship increases.
+`cafe` runs restart → Club → mail → Cafe, followed by Spend AP when enabled. The Cafe routine collects earnings, checks students across both unlocked floors, and returns home; Daily uses the same routine before its ticket and lesson work. A live full run completed in **425.5 seconds**, recognized empty earnings, verified measured scans and camera boundaries on both floors, returned home, and closed the game. Earlier receipts verified **81 AP and 73,957 credits**, then **16 AP and 14,791 credits**; relationship hearts and rank-up screens were also verified. The full passing run recorded zero new relationship increases.
 
 Continue validation with repeat visits after the relationship cooldown, occluded/disappearing attention markers across more layouts, invitation selection and confirmation, and interruption. Report scan completion separately from confirmed student interactions. Keep invitations and scheduling off by default until explicitly enabled.
 
@@ -34,7 +34,7 @@ The default relationship strategy compares rooms across all unlocked locations a
 
 The runner surveys every unlocked school and reconciles the observed ranks with Total Area Rank before each ticket. It verifies the selected room, confirms one existing ticket, then checks the result and ticket decrement. Configurable ticket limits, eligible location names, and daily inclusion are available in TOML and the dashboard. Missing comparison evidence or an unknown configured location stops spending.
 
-`lessons` runs restart → Lessons; `daily` defaults to restart → Club placeholder → Mail → Cafe → Lessons, with separately enabled pack checks and AP spending. The existing three-hour timer includes the Club placeholder but no Lessons. A completed Cafe visit still updates its schedule if later Lessons work fails or is interrupted. No daily-reset timer or ticket-purchase flow has been added.
+`lessons` runs restart → Lessons. The full `daily` plan now includes Club, free packs, mail, Cafe, Bounties, Scrimmages, Tactical Challenge rewards, Lessons, and Tasks rewards, with configurable daily inclusion for ticket/lesson jobs and opt-in paid packs and AP spending. All successful plans finish with a home-notification scan. The three-hour Cafe timer checks Club and mail but does not spend lesson tickets. A completed Cafe visit still updates its schedule if later Lessons work fails or is interrupted. No daily-reset Lessons timer or lesson-ticket purchase flow has been added.
 
 Seven authorized tickets were used across calibration and guarded runs, with seven matching receipts and ticket decrements, in rooms containing two owned students each. The final uninterrupted job used the remaining two tickets, returned to a verified home screen, and closed the game in 475.3 seconds including restart. Every ticket compared 94 room cards across 12 unlocked locations with Total Area Rank 80. The [Lessons validation section](lessons.md#validation-status) records the limits and evidence.
 
@@ -58,20 +58,32 @@ Run Blue Archive while the Azur Lane daemon is active on a different endpoint wi
 
 ## 6. Club and additional daily tasks
 
-Club is scaffolded after restart in Daily and Cafe plans. It reports deferred and sends no input until a fresh 19:00 UTC reset lets us verify attendance delivery. A standalone placeholder is available in the queue. See [the Club activation checklist](club.md).
+Club is active after restart in Daily and Cafe plans, and is available independently. It requires Social and Club notification badges, verifies entry, and persists a per-instance check for the game day beginning at 19:00 UTC. The September 24 live run verified the attendance notice, its 10 AP mailbox receipt, and return home. Same-day suppression and interrupted visits have offline coverage. See [Club attendance](club.md).
+
+Free packs, mail, and completed Tasks have collection jobs. Successful runs scan home red dots and request the relevant serial follow-ups. Paid-pack renewal is independently configurable and off by default; uncertain charges create a durable hold. The inspected AP-pack purchase and mail receipt were verified live, while automated charge decisions and recovery were tested offline. See [red-dot dispatch](red-dots.md), [Tasks rewards](task-rewards.md), and [packs and mail](packs-and-mail.md).
+
+Bounties and Scrimmages split available tickets across three areas, rotate extras by game-day weekday, and sweep the highest observed three-star stages. Both jobs completed live 15-ticket allocations of 5 / 5 / 5; Scrimmages cost zero AP on that account. Uneven allocations and nonzero Scrimmage AP costs remain offline-tested cases. [Ticket sweeps](tickets.md) records the receipt and recovery checks.
+
+Tactical Challenge collects available rewards and verifies that battle tickets are unchanged. Time Reward collection has passed live; an available Daily Reward still needs live validation. Fighting remains a no-input stub outside dispatch. See [Tactical Challenge rewards](tactical-challenge.md).
 
 ## 7. Durable execution
 
-Add one routine at a time after restart, with recognized entry/exit states, bounded actions, and replay coverage. Reward collection and configured mission sweeps are candidates. Introduce spending/resource budgets only as needed for an implemented task.
+Keep extending one routine at a time, with recognized entry/exit states, bounded actions, and replay coverage. Reward collection and configured mission sweeps already follow this contract. Crafting, AP, ticket sweeps, Club, and paid packs have durable task-specific state; unresolved resource actions must be reconciled before further spending.
 
-Add daily-reset-aware scheduling and task dependencies when the daily plan grows. The current scheduler handles Cafe cooldowns, craft deadlines, optional pack checks, and hourly AP checks; it is not a complete server-day planner. Add SQLite history, resumable checkpoints, or account-level coordination when their use cases exist.
+Add daily-reset-aware scheduling and task dependencies when the daily plan grows. The current scheduler handles Cafe cooldowns, craft deadlines, optional pack checks, and hourly AP checks; it is not a complete server-day planner. Add SQLite history, general resumable execution, or account-level coordination when their use cases exist.
 
 Platform-specific emulator discovery/start/stop, packaging, and optional system-service installation follow reliable task execution. The current server must be launched and kept running manually.
 
 ## Crafting collection timers
 
-Quick Craft now has a guarded maximum-batch runner and per-instance durable collection deadlines. The live three-keystone batch started with 90-minute/three-hour/three-hour timers; all three natural completions passed, including a combined visit for the two later slots, verified rewards, empty slots, zero-keystone inventory, and return home. Refill validation with new keystones remains pending; that path has offline coverage. The dashboard combines due slots through its serial queue and persists setup-disable reasons. See [Crafting](crafting.md).
+Quick Craft has a guarded affordable-batch runner and per-instance durable collection deadlines. The live three-keystone batch started with 90-minute/three-hour/three-hour timers; all three natural completions passed, including a combined visit for the two later slots, verified rewards, empty slots, zero-keystone inventory, and return home. An evening check exposed the game's unaffordable Max selection; incremental, cost-checked quantity selection replaced it. The subsequent two-keystone refill spent 4,000 credits, verified two three-hour timers, and returned home without changing the preset. Collection immediately followed by refill in the same visit, resetting an initial quantity with Min, and changed-cost cases still have offline coverage only. The dashboard combines due slots through its serial queue and persists setup-disable reasons. See [Crafting](crafting.md).
 
 ## AP spending
 
 A dedicated planning page provides a minimum AP floor, report/credit commission policies, and an editable Hard-stage round robin. The runner scans three-star clears, reads live costs, verifies every spending confirmation and receipt, and retains a durable rotation cursor and unresolved spend intent. Optional hourly visits and follow-ups after Cafe/Mail use the existing serial queue. See [Spend AP](spend-ap.md) for setup and validation status.
+
+## Loot and daily logs
+
+Loot Gathered now reads reward-card tooltips, stores exact names, quantities, and game icons, groups matching items, and orders categories by importance. Live checks covered ordinary sweep totals, expanded Full List receipts, and a Tactical Challenge reward card; three authorized sweeps used 60 AP while the configured 100 AP floor stayed unchanged. Long scrolling lists and other task integrations retain offline coverage. Older screenshots may lack item names or proof that every card was captured, so review notices distinguish unread details, an unverified full list, and missing details. Clearing totals preserves the evidence. See [Loot Gathered](loot.md).
+
+The Important Actions header links to a full plain-text log saved as `YYYY-MM-DD.log` using the computer's local calendar. Queue events, runtime decisions, resource outcomes, and important actions share that durable view; existing journals can be imported without duplicating events, with estimated historical timestamps marked. Local logs and account evidence remain outside the portfolio repository. See [daily logs](daily-logs.md).

@@ -208,6 +208,26 @@ def test_head_exposes_only_the_response_headers(demo_server):
     assert body == b""
 
 
+def test_daily_log_is_fictional_plain_text_with_a_dated_filename(demo_server):
+    code, _, body = request(demo_server, "/api/logs")
+    assert code == 200
+    index = json.loads(body)
+    assert index["dates"] == [index["today"]]
+    filename = f'{index["today"]}.log'
+    code, headers, today = request(demo_server, "/api/logs/today.log")
+    assert code == 200
+    assert headers["Content-Type"] == "text/plain; charset=utf-8"
+    assert headers["Content-Disposition"] == f'inline; filename="{filename}"'
+    assert "fictional sample data" in today.decode()
+    assert "[runtime] Sample:" in today.decode()
+    assert "[lesson_completed] Sample:" in today.decode()
+    assert request(demo_server, f"/api/logs/{filename}")[2] == today
+    assert request(demo_server, "/api/logs/2000-01-01.log")[0] == 404
+    code, headers, body = request(demo_server, "/api/logs/today.log", method="HEAD")
+    assert code == 200 and body == b""
+    assert int(headers["Content-Length"]) == len(today)
+
+
 @pytest.mark.parametrize("port", [True, -1, 65536, 12.5, "8766", 8765])
 def test_invalid_or_live_reserved_ports_fail_before_binding(port):
     with pytest.raises(ValueError):

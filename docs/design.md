@@ -148,6 +148,8 @@ Today, purchase intent, failed-job notices, schedules, and important actions per
 
 Failed-job notices persist separately from the live runner log and remain visible until acknowledged. Acknowledging a notice does not clear a paid-purchase hold or re-enable its schedule.
 
+The full-day text log is linked beside important actions and saved as `state_dir/logs/YYYY-MM-DD.log`, using the host's local calendar date and offset-aware timestamps. The daemon and task subprocesses append queue decisions, task journals, outcomes, diagnostics, and important actions to the same file. A cross-process lock preserves complete entries; midnight selects a new date without discarding earlier logs. Historical imports are idempotent and label reconstructed timestamps. See [daily logs](daily-logs.md).
+
 The real dashboard remains bound to loopback, with Host/Origin validation and CSRF protection for mutations. A portfolio demo uses a separate process, fictional data, and clearly labeled original illustrations. It must neither read the real configuration/history nor expose working device controls.
 
 ## 7. Delivery and validation

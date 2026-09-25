@@ -139,6 +139,85 @@ def test_zero_unknown_drops_not_invented(config):
     )
 
 
+@pytest.mark.parametrize(
+    "items,complete,reason",
+    [
+        ([], False, "missing_details"),
+        ([{"name": None, "quantity": 2}], False, "unidentified_items"),
+        ([{"name": "Keystone", "quantity": None}], True, "unidentified_items"),
+        ([{"name": "Keystone", "quantity": True}], True, "unidentified_items"),
+        ([{"name": "Keystone", "quantity": 2}], False, "unverified_coverage"),
+        ([{"name": "Keystone", "quantity": 2}], True, None),
+    ],
+)
+def test_review_reason_distinguishes_missing_items_from_unproven_coverage(
+    config, items, complete, reason
+):
+    record_action(
+        config,
+        "loot_received",
+        "Receipt observations",
+        items=items,
+        items_complete=complete,
+    )
+    data = loot.snapshot(config)
+    row = data["receipts"][0]
+    assert row["review_reason"] == reason
+    assert row["unidentified"] == (reason is not None)
+    assert data["review_counts"] == {
+        key: int(key == reason)
+        for key in ("missing_details", "unidentified_items", "unverified_coverage")
+    }
+    assert sum(data["review_counts"].values()) == data["unidentified_receipts"]
+
+
+def test_review_counts_cover_full_history_and_clear_without_changing_totals(config):
+    for _ in range(101):
+        record_action(
+            config,
+            "loot_received",
+            "Named old cards without proven coverage",
+            items=[{"name": "Keystone", "quantity": 2}],
+            items_complete=False,
+        )
+    record_action(config, "ap_spent", "Legacy receipt without item details")
+    record_action(
+        config,
+        "loot_received",
+        "Partially read card",
+        items=[{"name": None, "quantity": 3}],
+        items_complete=False,
+    )
+    record_action(config, "earnings_collected", "Verified earnings", ap=40, credits=100)
+    data = loot.snapshot(config)
+    assert len(data["receipts"]) == 100
+    assert data["review_counts"] == {
+        "missing_details": 1,
+        "unidentified_items": 1,
+        "unverified_coverage": 101,
+    }
+    assert data["unidentified_receipts"] == 103
+    assert data["items"] == [
+        {"name": "AP", "quantity": 40},
+        {"name": "Credits", "quantity": 100},
+        {"name": "Keystone", "quantity": 202},
+    ]
+    loot.clear(config)
+    assert loot.snapshot(config)["review_counts"] == {
+        "missing_details": 0,
+        "unidentified_items": 0,
+        "unverified_coverage": 0,
+    }
+
+
+def test_cafe_missing_currency_is_coverage_issue_not_unknown_item(config):
+    record_action(config, "earnings_collected", "Only credits verified", credits=100)
+    data = loot.snapshot(config)
+    assert data["receipts"][0]["review_reason"] == "unverified_coverage"
+    assert data["unresolved_items"] == []
+    assert data["items"] == [{"name": "Credits", "quantity": 100}]
+
+
 def test_sidecar_enrichment_deduplicates_legacy_action_and_clear(config):
     config.run_dir.mkdir()
     image = config.run_dir / "receipt.png"

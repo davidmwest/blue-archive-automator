@@ -310,6 +310,11 @@ def snapshot(config):
     totals = Counter()
     rows = []
     unknown = 0
+    review_counts = {
+        "missing_details": 0,
+        "unidentified_items": 0,
+        "unverified_coverage": 0,
+    }
     icon_by_name = {}
     unresolved = []
     catalog = {}
@@ -345,6 +350,15 @@ def snapshot(config):
         )
         if event.get("_cafe") and not {"AP", "Credits"} <= counts.keys():
             incomplete = True
+        review_reason = None
+        if incomplete:
+            if invalid:
+                review_reason = "unidentified_items"
+            elif not counts:
+                review_reason = "missing_details"
+            else:
+                review_reason = "unverified_coverage"
+            review_counts[review_reason] += 1
         unknown += int(incomplete)
         rows.append(
             {
@@ -354,6 +368,7 @@ def snapshot(config):
                 "detail": event.get("detail", ""),
                 "items": [{"name": n, "quantity": q} for n, q in counts.items()],
                 "unidentified": incomplete,
+                "review_reason": review_reason,
                 "receipt_url": (
                     f'/api/loot/{event["id"]}/receipt'
                     if receipt_path(config, event)
@@ -368,6 +383,7 @@ def snapshot(config):
         "unresolved_items": group_unresolved(config, unresolved),
         "receipt_count": len(rows),
         "unidentified_receipts": unknown,
+        "review_counts": review_counts,
         "receipts": list(reversed(rows))[:100],
         "older_receipts": max(0, len(rows) - 100),
     }

@@ -685,14 +685,26 @@
         section.classList.toggle("loot-group-highlight", ["premium", "students", "energy"].includes(group.id) && group.items.length <= 3);
         if (unresolved) section.open = unresolvedOpen;
         const heading = document.createElement(unresolved ? "summary" : "h3"); heading.textContent = group.label;
-        const count = document.createElement("span"); count.textContent = `${group.items.length} ${group.items.length === 1 ? "item" : "items"}`; heading.append(count);
+        const count = document.createElement("span");
+        const unit = unresolved ? (group.items.length === 1 ? "entry" : "entries") : (group.items.length === 1 ? "item" : "items");
+        count.textContent = `${group.items.length} ${unit}`; heading.append(count);
         const grid = document.createElement("div"); grid.className = "loot-grid";
         group.items.forEach((item) => grid.append(makeItem(item, unresolved)));
         section.append(heading, grid); totals.append(section);
       });
       $("loot-totals").replaceChildren(totals);
       $("loot-unidentified").hidden = !data.unidentified_receipts;
-      $("loot-unidentified").textContent = `${data.unidentified_receipts} ${data.unidentified_receipts === 1 ? "receipt still has" : "receipts still have"} unidentified drops. what we know is counted; the rest stays here for a closer look.`;
+      const reviewReasons = [
+        ["unidentified_items", "with unread names or amounts"],
+        ["unverified_coverage", "with an unverified full list"],
+        ["missing_details", "with no item details"],
+      ];
+      const reviewParts = reviewReasons.flatMap(([key, label]) => {
+        const count = data.review_counts?.[key];
+        return Number.isSafeInteger(count) && count > 0 ? [`${count} ${label}`] : [];
+      });
+      const reviewSummary = reviewParts.length ? reviewParts.join(" · ") : "we couldn't verify every item";
+      $("loot-unidentified").textContent = `${data.unidentified_receipts} ${data.unidentified_receipts === 1 ? "receipt needs" : "receipts need"} a look: ${reviewSummary}. confirmed amounts are counted.`;
       $("loot-receipts-wrap").hidden = !data.receipt_count;
       $("loot-receipts-label").textContent = `${data.receipt_count} reward ${data.receipt_count === 1 ? "receipt" : "receipts"}${data.older_receipts ? " · showing the latest 100" : ""}`;
       const rows = document.createDocumentFragment();
@@ -701,7 +713,8 @@
         const heading = document.createElement("div"); heading.className = "loot-receipt-heading";
         const task = document.createElement("strong"); task.textContent = taskName(receipt.task);
         const state = document.createElement("span"); state.className = `loot-receipt-state${receipt.unidentified ? " incomplete" : ""}`;
-        state.textContent = receipt.unidentified ? "some drops unread" : "counted";
+        const reviewLabels = { unidentified_items: "some item details unread", unverified_coverage: "full list not verified", missing_details: "no item details saved" };
+        state.textContent = receipt.unidentified ? (reviewLabels[receipt.review_reason] || "needs a look") : "counted";
         heading.append(task, state);
         const time = document.createElement("time"); const when = dateValue(receipt.time);
         time.textContent = when ? when.toLocaleString() : "time unavailable";
