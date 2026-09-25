@@ -14,6 +14,8 @@ Full List uses the same inspection path with vertical scrolling. Overlap is reco
 
 Inspection saves its observations before returning to the task, including partial results if inspection fails. A later navigation or resource-check failure therefore cannot hide an already recorded reward. Resource intent checkpoints still require their existing postconditions and cannot be replayed merely because loot was captured.
 
+Sweep revalidation compares the heading, complete Final reward row, and Confirm button. It excludes the decorative label column, where a tooltip-dismiss click can leave a fading animation. Changed cards, quantities, or controls still stop input. A rejected scroll read saves the exact frame and parsed page kind/card count for diagnosis.
+
 ## the dashboard
 
 The default order is premium currency and recruitment items, student materials, AP and tickets, shop currencies, leveling and skill materials, crafting and gifts, credits, other items, then equipment at the bottom. Within a category, recognized material tiers precede alphabetical order. These are display priorities, not prices or a claim that every item has the same value to every player.

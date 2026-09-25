@@ -295,3 +295,12 @@ are tested offline by modifying the captured control; no live rank reward was
 available during this checkpoint.
 
 `red-dots-campaign.png` is a September 25, 2026 staging capture. The private AP and currency header is masked. Its Total Assault marker is red and its Tactical Challenge marker is amber. Tests also compare the earlier `ap-campaign-stable.png` amber markers, reject dimmed screens, and remove the red marker to verify that a Campaign label alone cannot request collection. The fixture shows notification evidence, not a reward receipt or a completed claim.
+
+`loot-sweep-dismiss-pulse-{before,after}.png` preserve the exact failed refresh
+pair from the September 25, 2026 12:30 UTC Hard 1-2 sweep. The Final row contains
+six unchanged reward cards while the neutral tooltip-dismiss pulse fades at
+(270, 550), outside those cards and Confirm. Only the Sweep Complete heading
+and Final/Confirm panel remain; all account identifiers, resources, experience,
+and background pixels are masked. The pair verifies that decorative pulse
+pixels cannot invalidate unchanged loot, while changed card artwork, quantity,
+heading, or Confirm still fail the same strict pixel guard.

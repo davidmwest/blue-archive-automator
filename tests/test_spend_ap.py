@@ -31,6 +31,90 @@ def frame(r, screen):
     return ShopFrame(Capture(b"fixture", 0, r.config.package), screen)
 
 
+@pytest.mark.parametrize("right", [False, True])
+def test_area_step_reobserves_an_arrow_hidden_by_the_previous_tap(runner, right):
+    initial = frame(runner, APScreen("hard_list", area=5))
+    visible = frame(runner, APScreen("hard_list", area=5, left=True, right=True))
+    observations = iter([initial, visible])
+    runner.capture = lambda: next(observations)
+    pauses, taps = [], []
+    runner.sleep = pauses.append
+    runner.tap = lambda *args: taps.append(args)
+    destination = frame(runner, APScreen("hard_list", area=5 + (1 if right else -1)))
+
+    def wait(kind, *, predicate):
+        assert kind == "hard_list" and predicate(destination.screen)
+        assert not predicate(visible.screen)
+        return destination
+
+    runner.wait = wait
+    assert runner.area_step(initial, right) is destination
+    assert pauses == [0.7, 0.7]
+    assert len(taps) == 1
+    assert taps[0][0] is visible
+    assert taps[0][1] == (1240 if right else 42, 358)
+
+
+def test_area_step_visible_arrow_needs_no_extra_capture(runner):
+    initial = frame(runner, APScreen("hard_list", area=5, left=True))
+    runner.capture = lambda: pytest.fail("visible arrow needs no recheck")
+    runner.sleep = lambda _: pytest.fail("no arrow settling delay needed")
+    taps = []
+    runner.tap = lambda *args: taps.append(args)
+    runner.wait = lambda *args, **kwargs: "destination"
+    assert runner.area_step(initial, False) == "destination"
+    assert taps[0][0] is initial
+
+
+def test_area_step_persistent_missing_arrow_still_fails_without_input(runner):
+    initial = frame(runner, APScreen("hard_list", area=14))
+    captures = []
+    runner.capture = lambda: captures.append(1) or initial
+    runner.tap = lambda *args: pytest.fail("cannot tap an unobserved arrow")
+    with pytest.raises(TaskError, match="not reachable"):
+        runner.area_step(initial, True)
+    assert len(captures) == 2
+
+
+@pytest.mark.parametrize("screen", [APScreen("hard_list", area=4, left=True),
+                                    APScreen("normal", area=5, left=True),
+                                    APScreen("unknown")])
+def test_area_step_cannot_reuse_target_after_area_or_screen_changes(runner, screen):
+    initial = frame(runner, APScreen("hard_list", area=5))
+    runner.capture = lambda: frame(runner, screen)
+    runner.tap = lambda *args: pytest.fail("changed page must never get input")
+    with pytest.raises(TaskError, match="area changed"):
+        runner.area_step(initial, False)
+
+
+@pytest.mark.parametrize("fault", ["stale", "foreground"])
+def test_area_step_arrow_recheck_retains_input_guards(runner, fault):
+    initial = frame(runner, APScreen("hard_list", area=5))
+    visible = frame(runner, APScreen("hard_list", area=5, left=True))
+
+    def capture():
+        if fault == "stale":
+            runner.clock = lambda: 6
+        return visible
+
+    runner.capture = capture
+    runner.device = SimpleNamespace(
+        foreground_package=lambda: (
+            "com.android.settings" if fault == "foreground" else runner.config.package
+        ),
+        tap=lambda *args, **kwargs: pytest.fail("unsafe input must not reach ADB"),
+    )
+    with pytest.raises(TaskError, match="fresh recognized|Foreground changed"):
+        runner.area_step(initial, False)
+
+
+def test_area_step_does_not_retry_past_the_first_area(runner):
+    runner.capture = lambda: pytest.fail("area zero cannot exist")
+    runner.tap = lambda *args: pytest.fail("cannot navigate past the first area")
+    with pytest.raises(TaskError, match="not reachable"):
+        runner.area_step(frame(runner, APScreen("hard_list", area=1)), False)
+
+
 def detail(**kw):
     values = dict(
         kind="detail",

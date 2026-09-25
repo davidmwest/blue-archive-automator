@@ -89,12 +89,21 @@ class ShopRunner:
         self.sleep(.7)
 
     def navigate(self, source, destination, target):
-        for _ in range(3):
+        for attempt in range(3):
             frame = self.wait({source, destination})
             if frame.screen.kind == destination:
                 return frame
             self.tap(frame, target, f'Open {destination}')
             self.sleep(2)
+            if source == 'home' and destination == 'campaign' and attempt < 2:
+                frame = self.wait({source, destination})
+                if frame.screen.kind == destination:
+                    return frame
+                # After startup, clear Home has remained visible while Campaign
+                # ignored input; a later normal tap succeeded. Pace only these
+                # retries, then recognize a fresh frame before the next input.
+                self.phase('Campaign has not opened; letting the home menu settle before retrying')
+                self.sleep(10)
         return self.wait(destination)
 
     def home(self):

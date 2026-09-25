@@ -140,6 +140,38 @@ def test_fixed_receipt_panels_reject_changed_loot(filename, kind, change_box):
     assert not lr.same_receipt_view(before, lr.encode(after), lr.Page(kind))
 
 
+def sweep_dismiss_frames():
+    return [
+        (FIXTURES / f"loot-sweep-dismiss-pulse-{suffix}.png").read_bytes()
+        for suffix in ("before", "after")
+    ]
+
+
+def test_sweep_tooltip_dismiss_pulse_does_not_change_final_rewards():
+    before, after = sweep_dismiss_frames()
+    first, second = (decode_frame(png) for png in (before, after))
+    # The exact failed refresh pair: the fading pulse is outside all reward
+    # cards and Confirm, but inside the old, overly broad comparison panel.
+    assert not lr.same_pixels(first[440:630, 191:1088], second[440:630, 191:1088])
+    assert not lr.same_pixels(first[520:630, 191:370], second[520:630, 191:370])
+    assert lr.same_receipt_view(before, after, lr.Page("sweep"))
+
+
+@pytest.mark.parametrize("change_box", [
+    pytest.param((392, 465, 30, 28), id="first-card-art"),
+    pytest.param((737, 462, 30, 28), id="last-card-art"),
+    pytest.param((417, 496, 17, 13), id="quantity"),
+    pytest.param((517, 85, 120, 26), id="heading"),
+    pytest.param((573, 568, 110, 31), id="confirm"),
+])
+def test_sweep_pulse_exclusion_still_rejects_changed_receipt(change_box):
+    before, after = sweep_dismiss_frames()
+    changed = decode_frame(after)
+    x, y, w, h = change_box
+    changed[y:y + h, x:x + w] = 0
+    assert not lr.same_receipt_view(before, lr.encode(changed), lr.Page("sweep"))
+
+
 def test_tooltip_must_still_be_the_identical_popup():
     before = (FIXTURES / "loot-tooltip-0.png").read_bytes()
     after = decode_frame(before)

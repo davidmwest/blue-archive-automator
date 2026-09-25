@@ -150,9 +150,25 @@ class APRunner(ShopRunner):
         return frame
 
     def area_step(self, frame, right):
-        expected = frame.screen.area + (1 if right else -1)
-        if not (frame.screen.right if right else frame.screen.left):
+        area = frame.screen.area
+        if frame.screen.kind != "hard_list" or not isinstance(area, int):
+            self.fail("No recognized Hard area for navigation")
+        expected = area + (1 if right else -1)
+        if not 1 <= expected <= 99:
             self.fail("Requested mission area is not reachable")
+        for attempt in range(3):
+            if frame.screen.kind != "hard_list" or frame.screen.area != area:
+                self.fail("Hard mission area changed before navigation")
+            if frame.screen.right if right else frame.screen.left:
+                break
+            if attempt == 2:
+                self.fail("Requested mission area is not reachable")
+            # The previous tap's blue pulse can briefly hide the arrow's normal
+            # color. Observe the same area again rather than treating it as an edge.
+            if attempt == 0:
+                self.phase("Waiting for the Hard mission arrow to become visible")
+            self.sleep(0.7)
+            frame = self.capture()
         self.tap(frame, (1240 if right else 42, 358), f"Open Hard area {expected}")
         return self.wait("hard_list", predicate=lambda s: s.area == expected)
 

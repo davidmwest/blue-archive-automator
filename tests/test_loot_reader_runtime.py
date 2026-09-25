@@ -555,6 +555,26 @@ def test_reward_scroll_that_never_settles_stops_without_more_inputs(harness, mon
     assert (h.evidence.parent / "receipt-scroll-unsettled.png").is_file()
 
 
+@pytest.mark.parametrize("rejected", [lr.Page("unknown"), lr.Page("reward")])
+def test_rejected_scroll_read_saves_exact_capture_and_stops(harness, rejected):
+    h = harness
+    h.pages = [rejected]
+    reader = h.reader()
+    with pytest.raises(TaskError, match="Receipt changed while scrolling rewards"):
+        reader.pan(reader.capture(), "reward", True)
+    assert h.inputs == [("swipe", (480, 367), (875, 367))]
+    assert h.page_reads == 1
+    saved = h.evidence.parent / "receipt-scroll-rejected.png"
+    assert saved.read_bytes() == reader.observed[0]
+    events = [json.loads(line) for line in
+              (h.evidence.parent / "events.jsonl").read_text().splitlines()]
+    rejection = [e for e in events if e["event"] == "receipt_scroll_rejected"]
+    assert len(rejection) == 1
+    assert rejection[0]["observed_kind"] == rejected.kind
+    assert rejection[0]["card_count"] == 0
+    assert rejection[0]["frame"] == saved.name
+
+
 def test_scroll_resuming_during_ocr_reobserves_before_using_new_target(harness, monkeypatch):
     h = harness
     h.pages = [lr.Page("reward", (card("AA", x),)) for x in (100, 207)]

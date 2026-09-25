@@ -23,7 +23,9 @@ All listed home controls were visually checked against a clear staging screensho
 | Menu | `(1226,36)` | Position verified |
 | Rotating event banner | `(1193,207)` | Position verified; card identity changes |
 
-Campaign contains Mission, Story, Bounty, Commissions, Scrimmage, Total Assault, Joint Firing Drill, Grand Assault, Tactical Challenge, and Final Restriction Release in the current screenshot. Mission is near `(821,232)`; this is a visually mapped target, not a verified Mission-navigation route. Home's Tasks control is separate from playable missions.
+After a September 25 startup, Home looked ready but Campaign did not respond to either a normal tap or a 150 ms press. The same normal tap succeeded about 28 seconds later; the underlying cause is unconfirmed. Home → Campaign now checks the destination after each attempt and, if Home is still recognized, waits ten seconds before its next freshly verified attempt. It keeps the three-tap limit and returns immediately when Campaign opens. A queued Spend AP run subsequently opened Campaign on a delayed retry and reached Hard missions. Other navigation routes are unchanged.
+
+Campaign contains Mission, Story, Bounty, Commissions, Scrimmage, Total Assault, Joint Firing Drill, Grand Assault, Tactical Challenge, and Final Restriction Release in the current screenshot. Mission is near `(821,232)`; the Spend AP job has verified this route into Hard missions. Home's Tasks control is separate from playable missions.
 
 The **Campaign upper-left event entry near `(100,162)`** was exercised: Lore Pursuit opened a spoiler notice, its contextual Confirm advanced to a play guide, and the recognized guide X led to the event page with Lore Pursuit and Quest/Challenge controls. That verifies this route for the observed event and session. It does not validate every card that can occupy the same position or the separate home-carousel route.
 

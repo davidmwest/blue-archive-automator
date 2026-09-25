@@ -469,7 +469,10 @@ def same_receipt_view(before, after, expected, *, vision=None):
         return False
     panels = {
         "grid": ((314, 114, 650, 489),),
-        "sweep": ((170, 70, 940, 65), (191, 440, 897, 190)),
+        # Keep the complete Final card row and Confirm button. The decorative
+        # label column contains the neutral tooltip-dismiss click pulse, which
+        # can fade while the receipt itself remains unchanged.
+        "sweep": ((170, 70, 940, 65), (370, 440, 718, 190)),
         "lesson": ((416, 112, 448, 514),),
     }
     if expected.kind in panels:
@@ -848,6 +851,12 @@ class ReceiptReader:
                 self.r.fail("Reward receipt did not settle after scrolling")
             p = self.read(cap)
             if p.kind != "reward" or not p.cards:
+                self.evidence_frame(cap, "scroll-rejected")
+                self.r.journal.record(
+                    "receipt_scroll_rejected", observed_kind=p.kind,
+                    card_count=len(p.cards),
+                    frame=f"{self.evidence.stem}-scroll-rejected.png",
+                )
                 self.r.fail("Receipt changed while scrolling rewards")
             fresh = self.capture()
             if (same_receipt_view(cap.png, fresh.png, p, vision=self.vision)
