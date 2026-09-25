@@ -1,5 +1,6 @@
 """Collect both mailbox tabs and log observed rewards, especially Pyroxenes."""
 from .actions import record_action
+from .loot_receipts import inspect_receipt
 from .locking import InstanceLock
 from .shop_runtime import ShopRunner
 
@@ -22,7 +23,9 @@ class MailRunner(ShopRunner):
         detail = f'Received {label}' if label else 'Mail claimed; item labels unreadable. Receipt saved locally for review'
         record_action(self.config, 'mail_received', detail, task='mail', items=items,
                       pyroxenes=pyro, balance_gains=gains, evidence=str(self.run_dir / receipt))
+        frame = inspect_receipt(self, frame, self.run_dir / receipt)
         self.phase(detail)
+        return frame
 
     def run(self):
         frame = self.wait('home')
@@ -57,7 +60,7 @@ class MailRunner(ShopRunner):
                 if result.screen.kind == 'claim_confirm':
                     self.tap(result, result.screen.target, 'Confirm mailbox claim')
                     result = self.wait('receipt')
-                self.log_receipt(result, before)
+                result = self.log_receipt(result, before)
                 self.tap(result, result.screen.target, 'Close reward receipt')
                 frame = self.wait({'mail', 'mail_empty'}, predicate=lambda s: s.tab == tab)
             # Require a second empty observation before declaring this tab done.

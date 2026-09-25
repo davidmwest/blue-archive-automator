@@ -12,12 +12,14 @@ FIXTURES = Path(__file__).parent/'fixtures'
 def vision():
     return CraftVision(StartupVision())
 
-@pytest.mark.parametrize(('fixture','kind'),[('empty','list'),('quick','quick'),('maximum','quick'),('confirm','confirm'),('running','list'),('zero-keys','quick')])
+@pytest.mark.parametrize(('fixture','kind'),[('empty','list'),('quick','quick'),('maximum','quick'),('unaffordable-max','quick'),('confirm','confirm'),('running','list'),('zero-keys','quick')])
 def test_real_sanitized_quick_craft_screens(vision, fixture, kind):
     result = vision.analyze((FIXTURES/f'crafting-{fixture}.png').read_bytes())
     assert result.kind == kind
     if fixture == 'maximum':
         assert (result.quantity,result.owned,result.required,result.credits)==(3,3,3,6000)
+    if fixture == 'unaffordable-max':
+        assert (result.quantity,result.owned,result.required,result.credits)==(3,2,3,6000)
     if fixture == 'zero-keys':
         assert result.owned == 0 and result.required == 1
     if fixture == 'running':

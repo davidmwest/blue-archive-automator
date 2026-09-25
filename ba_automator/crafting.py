@@ -8,13 +8,16 @@ import time
 from uuid import uuid4
 
 from .actions import record_action
+from .loot_receipts import inspect_receipt
 from .crafting_state import read_state, write_state
 from .crafting_vision import CraftVision
 from .locking import InstanceLock
 from .runtime import Capture, Journal, RunResult, TaskError, HOME_STABLE_SECONDS
 
 LOGGER = logging.getLogger(__name__)
-TIMEOUT = 240
+# A collection can contain three different rewards. Leave room for the shared
+# reader's bounded four-minute tooltip inspection, slot verification, and refill.
+TIMEOUT = 600
 TIMER_MARGIN = 15
 EMPTY_RECHECK = timedelta(hours=3)
 
@@ -27,6 +30,8 @@ class CraftFrame:
 
 
 class CraftingRunner:
+    task = 'crafting'
+
     def __init__(self, config, device, vision, *, crafting_vision=None,
                  monotonic=time.monotonic, sleep=time.sleep,
                  wall_clock=lambda: datetime.now(timezone.utc)):
@@ -44,7 +49,7 @@ class CraftingRunner:
         raise TaskError(detail, self.run_dir)
 
     def budget(self):
-        if self.clock() - self.started >= TIMEOUT or self.actions >= 25:
+        if self.clock() - self.started >= TIMEOUT or self.actions >= 200:
             self.fail('Crafting reached its time or input limit')
 
     def phase(self, detail):
@@ -187,6 +192,7 @@ class CraftingRunner:
         self.tap(frame, frame.screen.collect_target, 'Claim completed crafts')
         receipt = self.wait('receipt')
         self.journal.save_image('collection-receipt.png', receipt.capture.png)
+        receipt = inspect_receipt(self, receipt, self.run_dir / 'collection-receipt.png')
         self.tap(receipt, receipt.screen.target, 'Dismiss craft receipt')
         result = self.wait('list', predicate=lambda screen: all(slot.kind == 'empty' for slot in screen.slots if slot.number in ready))
         self.important('crafts_collected', f'Collected {len(ready)} completed craft(s); reward receipt and empty slots verified.', status='confirmed', slots=ready, count=len(ready), evidence=str(self.run_dir / 'collection-receipt.png'))
@@ -214,18 +220,36 @@ class CraftingRunner:
             self.tap(quick, (1206, 102), 'Close Quick Craft without spending')
             self.wait('list')
             return 'success'
-        self.tap(quick, (1186, 512), 'Select maximum affordable simultaneous crafts')
-        maximum = self.wait('quick', predicate=lambda screen: screen.quantity == count)
-        if (maximum.screen.owned != initial.owned or maximum.screen.required != unit * count
-                or maximum.screen.required > maximum.screen.owned
-                or maximum.screen.credits * initial.quantity != initial.credits * count):
-            self.fail('Quick Craft cost changed while choosing the maximum batch')
-        self.journal.save_image('maximum-batch.png', maximum.capture.png)
-        self.tap(maximum, (1114, 589), 'Open batch confirmation')
+        def selected_quantity(expected, previous):
+            def verified(screen):
+                if (screen.owned != initial.owned or screen.required != unit * screen.quantity
+                        or screen.credits * initial.quantity != initial.credits * screen.quantity):
+                    self.fail('Quick Craft cost changed while choosing the affordable batch')
+                if screen.quantity not in {previous, expected}:
+                    self.fail('Quick Craft selected an unexpected batch quantity')
+                if screen.quantity != expected:
+                    return False
+                if screen.required > screen.owned:
+                    self.fail('Quick Craft selected an unaffordable batch')
+                return True
+
+            return self.wait('quick', predicate=verified)
+
+        # Max selects every vacant slot, even when there are not enough keys.
+        # Begin at one and verify each individual increment before advancing.
+        selected = quick
+        if initial.quantity != 1:
+            self.tap(selected, (836, 512), 'Reset Quick Craft batch to one')
+            selected = selected_quantity(1, initial.quantity)
+        for quantity in range(2, count + 1):
+            self.tap(selected, (1117, 512), f'Select {quantity} affordable simultaneous crafts')
+            selected = selected_quantity(quantity, quantity - 1)
+        self.journal.save_image('maximum-batch.png', selected.capture.png)
+        self.tap(selected, (1114, 589), 'Open batch confirmation')
         confirm = self.wait('confirm', predicate=lambda screen: screen.quantity == count)
         self.state['pending_action'] = {'kind': 'start', 'slots': empty[:count], 'count': count, 'run_dir': str(self.run_dir)}
         self.save()
-        self.important('craft_start_requested', f'Starting {count} Quick Craft(s) using {unit * count} keystones and {maximum.screen.credits:,} credits.', status='attempted', count=count)
+        self.important('craft_start_requested', f'Starting {count} Quick Craft(s) using {unit * count} keystones and {selected.screen.credits:,} credits.', status='attempted', count=count)
         self.tap(confirm, confirm.screen.target, 'Confirm verified Quick Craft batch')
         result = self.wait('list', timeout=60, predicate=lambda screen: all(slot.kind == 'running' for slot in screen.slots if slot.number in empty[:count]))
         self.journal.save_image('started-crafts.png', result.capture.png)

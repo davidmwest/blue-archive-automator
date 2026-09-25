@@ -1329,3 +1329,39 @@ def test_completed_ap_pass_with_no_available_stages_does_not_loop(controlled):
         controller._badge_attempted.add('spend_ap');controller._ap_batch_observed=117
         controller._enqueue_badges(output,root)
         assert not controller._queue and controller._ap_batch_observed==437
+
+
+def test_loot_icon_http_allows_only_local_hashed_icons(http_server, tmp_path):
+    from ba_automator.loot_receipts import save_icon
+    request, controller, factory, _ = http_server
+    _, encoded = cv2.imencode('.png', np.zeros((24, 24, 3), np.uint8))
+    png = encoded.tobytes()
+    identifier = save_icon(controller.config, png)
+    assert request('GET', f'/api/loot/icons/{identifier}') == (200, png)
+    assert request('GET', '/api/loot/icons/' + 'f' * 64)[0] == 404
+    assert request('GET', '/api/loot/icons/../../private.png')[0] == 404
+    assert request('GET', '/api/loot/icons/%2E%2E%2Fprivate.png')[0] == 404
+    assert request('GET', '/api/loot/icons/' + 'A' * 64)[0] == 404
+    root = controller.config.state_dir / 'loot-icons'
+    (root / ('e' * 64 + '.png')).write_bytes(b'x' * 131073)
+    assert request('GET', '/api/loot/icons/' + 'e' * 64)[0] == 404
+    secret = tmp_path / 'private.png'
+    secret.write_bytes(png)
+    try:
+        (root / ('d' * 64 + '.png')).symlink_to(secret)
+    except OSError:
+        pytest.skip('symlink privileges unavailable')
+    assert request('GET', '/api/loot/icons/' + 'd' * 64)[0] == 404
+    assert not factory.processes
+
+
+def test_loot_icon_removed_before_read_returns_not_found(controlled, monkeypatch):
+    from ba_automator import loot
+    controller, _ = controlled
+    class GoneIcon:
+        def read_bytes(self):
+            raise FileNotFoundError('removed')
+    monkeypatch.setattr(loot, 'icon_path', lambda *args: GoneIcon())
+    with pytest.raises(ApiError) as exc:
+        controller.loot_icon('a' * 64)
+    assert exc.value.status == 404

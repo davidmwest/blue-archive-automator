@@ -10,6 +10,7 @@ import time
 from uuid import uuid4
 
 from .actions import record_action
+from .loot_receipts import inspect_receipt
 from .lesson_planner import LessonLocation, LessonRoom, choose_lesson
 from .lesson_vision import LessonScreen, LessonVision
 from .locking import InstanceLock
@@ -331,6 +332,7 @@ class LessonsRunner:
         if identity(receipt.screen.room_name or '') != identity(room.name):
             self.fail('Lesson receipt names an unexpected room; review the spent ticket')
         self.journal.save_image(f'lesson-{self.confirmed + 1:02d}-receipt.png', receipt.capture.png)
+        receipt = inspect_receipt(self, receipt, self.run_dir / f'lesson-{self.confirmed + 1:02d}-receipt.png')
         target = receipt.screen.dismiss_target
         if target is None:
             self.fail('Lesson receipt has no recognized dismissal control; the ticket may already be spent')

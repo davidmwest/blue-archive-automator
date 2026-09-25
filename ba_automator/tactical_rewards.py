@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 import re
 from .actions import record_action
+from .loot_receipts import inspect_receipt
 from .ap_vision import classify_ap
 from .crafting_vision import has, bright, yellow, within
 from .locking import InstanceLock
@@ -115,6 +116,7 @@ class TacticalRewardsRunner(ShopRunner):
             result = self.wait("receipt")
             evidence = f"{name}-receipt.png"
             self.journal.save_image(evidence, result.capture.png)
+            result = inspect_receipt(self, result, self.run_dir / evidence)
             items = list(result.screen.items)
             label = ", ".join(f'+{i["quantity"]:,} {i["name"]}' for i in items)
             record_action(

@@ -3,6 +3,7 @@
 import cv2
 import numpy as np
 from .actions import record_action
+from .loot_receipts import inspect_receipt
 from .vision import decode_frame
 from .locking import InstanceLock
 from .shop_runtime import ShopRunner
@@ -91,6 +92,10 @@ class TaskRewardsRunner(ShopRunner):
     def log_receipt(self, frame):
         receipt_id = f"receipt-{self.actions:03d}"
         self.journal.save_image(f"{receipt_id}-initial.png", frame.capture.png)
+        if getattr(self.vision, 'startup', None) is not None:
+            evidence = f"{receipt_id}.png"
+            self.journal.save_image(evidence, frame.capture.png)
+            return inspect_receipt(self, frame, self.run_dir / evidence)
         # Receipts animate toward the final item. Rewind, then scan overlapping
         # pages. Repeated names are the same aggregated card, never another drop.
         stationary = 0

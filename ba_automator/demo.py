@@ -177,8 +177,24 @@ def _routes(now: datetime) -> dict[str, tuple[str, bytes]]:
             data=data.replace(b'<main class="ap-main">',b'<main class="ap-main"><p class="demo-banner">demo \xc2\xb7 fictional stages \xc2\xb7 no device</p>')
         routes['/'+asset]=(kind+'; charset=utf-8',data)
     routes['/ap']=routes['/ap.html']
-    sample_loot = {"cleared_at": None, "items": [{"name":"AP","quantity":60},{"name":"Credits","quantity":45000}],
-                   "receipt_count":1,"unidentified_receipts":0,"receipts":[],"older_receipts":0}
+    sample_loot = {
+        "cleared_at": None,
+        "items": [{"name": "AP", "quantity": 60}, {"name": "Credits", "quantity": 45000}],
+        "groups": [
+            {"id": "energy", "label": "AP + tickets", "items": [{"name": "AP", "quantity": 60, "icon_url": None}]},
+            {"id": "credits", "label": "credits", "items": [{"name": "Credits", "quantity": 45000, "icon_url": None}]},
+        ],
+        "unresolved_items": [],
+        "receipt_count": 1,
+        "unidentified_receipts": 0,
+        "receipts": [{
+            "id": "sample-earnings", "time": stamp(-360), "task": "cafe",
+            "detail": "Sample: receipt confirmed 60 AP and 45,000 credits.",
+            "items": [{"name": "AP", "quantity": 60}, {"name": "Credits", "quantity": 45000}],
+            "unidentified": False, "receipt_url": None,
+        }],
+        "older_receipts": 0,
+    }
     routes["/api/loot"] = ("application/json; charset=utf-8", _json(sample_loot))
     for path, value in (("/api/status", status), ("/api/map", home_map), ("/api/actions", actions), ("/api/popups", popups)):
         routes[path] = ("application/json; charset=utf-8", _json(value))

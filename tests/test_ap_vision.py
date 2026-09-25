@@ -185,3 +185,10 @@ def test_hard_projected_and_current_attempts_must_agree(vision):
         for w in words
     ]
     assert classify_ap(f, changed).kind == "unknown"
+
+
+def test_natural_regeneration_allows_postcondition_but_not_another_spend(vision):
+    result = vision.analyze((FIXTURES / "ap-regenerated-detail.png").read_bytes())
+    assert result.kind == "detail" and result.stage == "4-2"
+    assert (result.ap, result.after, result.remaining) == (105, 84, 1)
+    assert result.target is None

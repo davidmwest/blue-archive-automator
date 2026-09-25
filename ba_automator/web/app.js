@@ -647,28 +647,90 @@
       lootSignature = signature;
       $("loot-since").textContent = data.cleared_at ? `since ${new Date(data.cleared_at).toLocaleString()}` : "all saved rewards · clear whenever you want a fresh count";
       $("loot-empty").hidden = data.receipt_count > 0;
+      $("loot-count").textContent = data.receipt_count ? `${data.items.length.toLocaleString()} ${data.items.length === 1 ? "kind of loot" : "kinds of loot"} · ${data.receipt_count.toLocaleString()} ${data.receipt_count === 1 ? "receipt" : "receipts"}` : "";
       const totals = document.createDocumentFragment();
-      data.items.forEach((item) => {
-        const card = document.createElement("div"); card.className = "loot-item";
-        const quantity = document.createElement("strong"); quantity.textContent = Number(item.quantity).toLocaleString();
-        const label = document.createElement("span"); label.textContent = item.name;
-        card.append(quantity, label); totals.append(card);
+      const groups = Array.isArray(data.groups) ? [...data.groups] : [{ id: "other", label: "the haul", items: data.items }];
+      const icons = new Map(groups.flatMap((group) => group.items.map((item) => [item.name, item.icon_url])));
+      const makeIcon = (item) => {
+        const visual = document.createElement("div"); visual.className = "loot-icon"; visual.setAttribute("aria-hidden", "true");
+        const missingIcon = () => {
+          visual.replaceChildren(); visual.classList.add("loot-icon-missing"); visual.textContent = "?"; visual.title = "no saved game icon yet";
+        };
+        const url = item.icon_url || icons.get(item.name);
+        if (/^\/api\/loot\/icons\/[a-f0-9]{64}$/.test(url || "")) {
+          const img = document.createElement("img"); img.src = url; img.alt = ""; img.loading = "lazy"; img.width = 72; img.height = 72;
+          img.addEventListener("error", missingIcon, { once: true });
+          visual.append(img);
+        } else missingIcon();
+        return visual;
+      };
+      const quantityText = (quantity) => Number.isSafeInteger(quantity) && quantity > 0 ? `+${quantity.toLocaleString()}` : "?";
+      const makeItem = (item, unresolved = false) => {
+        const card = document.createElement("article"); card.className = "loot-item";
+        const text = document.createElement("div"); text.className = "loot-item-text";
+        const quantity = document.createElement("strong"); quantity.textContent = quantityText(item.quantity);
+        const label = document.createElement("span"); label.textContent = item.name; label.title = item.name;
+        text.append(quantity, label); card.append(makeIcon(item), text);
+        if (unresolved && /^\/api\/loot\/[a-f0-9]{32}\/receipt$/.test(item.receipt_url || "")) {
+          const link = document.createElement("a"); link.href = item.receipt_url; link.target = "_blank"; link.rel = "noopener"; link.textContent = "check receipt";
+          text.append(link);
+        }
+        return card;
+      };
+      if (data.unresolved_items?.length) groups.push({ id: "unresolved", label: "needs a closer look", items: data.unresolved_items });
+      const unresolvedOpen = Boolean(document.querySelector('details[data-loot-group="unresolved"]')?.open);
+      groups.forEach((group) => {
+        const unresolved = group.id === "unresolved";
+        const section = document.createElement(unresolved ? "details" : "section"); section.className = "loot-group"; section.dataset.lootGroup = group.id;
+        section.classList.toggle("loot-group-highlight", ["premium", "students", "energy"].includes(group.id) && group.items.length <= 3);
+        if (unresolved) section.open = unresolvedOpen;
+        const heading = document.createElement(unresolved ? "summary" : "h3"); heading.textContent = group.label;
+        const count = document.createElement("span"); count.textContent = `${group.items.length} ${group.items.length === 1 ? "item" : "items"}`; heading.append(count);
+        const grid = document.createElement("div"); grid.className = "loot-grid";
+        group.items.forEach((item) => grid.append(makeItem(item, unresolved)));
+        section.append(heading, grid); totals.append(section);
       });
       $("loot-totals").replaceChildren(totals);
       $("loot-unidentified").hidden = !data.unidentified_receipts;
-      $("loot-unidentified").textContent = `${data.unidentified_receipts} receipt(s) need an image check for complete totals. check the receipts below; older runs may only have a text log.`;
+      $("loot-unidentified").textContent = `${data.unidentified_receipts} ${data.unidentified_receipts === 1 ? "receipt still has" : "receipts still have"} unidentified drops. what we know is counted; the rest stays here for a closer look.`;
       $("loot-receipts-wrap").hidden = !data.receipt_count;
-      $("loot-receipts-label").textContent = `${data.receipt_count} reward receipts${data.older_receipts ? " · showing the latest 100" : ""}`;
+      $("loot-receipts-label").textContent = `${data.receipt_count} reward ${data.receipt_count === 1 ? "receipt" : "receipts"}${data.older_receipts ? " · showing the latest 100" : ""}`;
       const rows = document.createDocumentFragment();
       data.receipts.forEach((receipt) => {
         const row = document.createElement("article"); row.className = "loot-receipt";
-        const heading = document.createElement("strong"); heading.textContent = `${taskName(receipt.task)} · ${new Date(receipt.time).toLocaleString()}`;
-        const detail = document.createElement("p"); detail.textContent = receipt.detail;
-        row.append(heading, detail);
+        const heading = document.createElement("div"); heading.className = "loot-receipt-heading";
+        const task = document.createElement("strong"); task.textContent = taskName(receipt.task);
+        const state = document.createElement("span"); state.className = `loot-receipt-state${receipt.unidentified ? " incomplete" : ""}`;
+        state.textContent = receipt.unidentified ? "some drops unread" : "counted";
+        heading.append(task, state);
+        const time = document.createElement("time"); const when = dateValue(receipt.time);
+        time.textContent = when ? when.toLocaleString() : "time unavailable";
+        if (when) time.dateTime = when.toISOString();
+        const detail = document.createElement("p"); detail.className = "loot-receipt-detail"; detail.textContent = receipt.detail;
+        row.append(heading, time);
+        if (receipt.items?.length) {
+          const items = document.createElement("ul"); items.className = "loot-receipt-items"; items.setAttribute("aria-label", "Items received");
+          receipt.items.forEach((item) => {
+            const line = document.createElement("li");
+            const name = document.createElement("span"); name.textContent = item.name;
+            const quantity = document.createElement("strong"); quantity.textContent = quantityText(item.quantity);
+            line.append(makeIcon(item), name, quantity); items.append(line);
+          });
+          row.append(items);
+        } else {
+          const unread = document.createElement("p"); unread.className = "loot-receipt-empty";
+          unread.textContent = "reward saved. item details still need a look."; row.append(unread);
+        }
+        if (receipt.detail) {
+          const note = document.createElement("details"); note.className = "loot-receipt-note";
+          const label = document.createElement("summary"); label.textContent = "original action log";
+          note.append(label, detail); row.append(note);
+        }
         if (/^\/api\/loot\/[a-f0-9]{32}\/receipt$/.test(receipt.receipt_url || "")) {
-          const link = document.createElement("a"); link.href = receipt.receipt_url; link.target = "_blank"; link.rel = "noopener";
+          const link = document.createElement("a"); link.className = "loot-receipt-image"; link.href = receipt.receipt_url; link.target = "_blank"; link.rel = "noopener";
           const img = document.createElement("img"); img.src = receipt.receipt_url; img.alt = "Saved reward receipt"; img.loading = "lazy";
-          link.append(img); row.append(link);
+          const label = document.createElement("span"); label.textContent = "open receipt ↗";
+          link.append(img, label); row.append(link);
         }
         rows.append(row);
       });

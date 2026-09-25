@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from .actions import record_action
+from .loot_receipts import inspect_receipt
 from .crafting_vision import bright, cyan, has, yellow
 from .home_badges import badges
 from .locking import InstanceLock
@@ -110,6 +111,7 @@ class FreePackRunner(ShopRunner):
                 evidence=str(self.run_dir / "delivery.png"),
             )
         else:
+            result = inspect_receipt(self, result, self.run_dir / "delivery.png")
             record_action(
                 self.config,
                 "free_pack_received",

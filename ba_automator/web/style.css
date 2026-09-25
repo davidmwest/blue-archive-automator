@@ -35,14 +35,67 @@
 .failure-list p { overflow-wrap: anywhere; }
 
 .loot-card { margin-bottom: 24px; }
-.loot-totals { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
-.loot-item { display: grid; gap: 4px; min-width: 130px; padding: 16px 20px; background: #edf5ff; border: 1px solid #dbe8fa; border-radius: 12px; }
-.loot-item strong { font-size: 24px; color: #244c8c; font-variant-numeric: tabular-nums; }
-.loot-item span { font-size: 13px; color: #4b5e79; }
+.loot-card > .card-header { background: linear-gradient(110deg,#f4f8ff,#fff 70%); }
+.loot-caption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 18px; margin: 0 24px; }
+.loot-count { font-size: 11px; color: #58769e; font-variant-numeric: tabular-nums; }
+.loot-totals { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px 14px; margin: 20px 0; }
+.loot-group { --loot-accent: #6a88af; min-width: 0; grid-column: 1 / -1; }
+.loot-group-highlight { grid-column: auto; }
+.loot-group h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 14px; color: #354967; }
+.loot-group h3::before { content: ""; width: 5px; height: 15px; border-radius: 3px; background: var(--loot-accent); }
+.loot-group h3 span { font-size: 10px; font-weight: 500; color: #6f8099; background: #f0f4f9; border-radius: 9px; padding: 2px 7px; }
+.loot-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,235px),1fr)); gap: 10px; }
+.loot-item { display: flex; align-items: center; gap: 13px; min-width: 0; padding: 14px; background: #f7f9fd; border: 1px solid #e2e9f3; border-radius: 12px; }
+.loot-group[data-loot-group="premium"] { --loot-accent: #6875db; }
+.loot-group[data-loot-group="premium"] .loot-item { background: linear-gradient(120deg,#eff1ff,#eefaff); border-color: #cddbf5; }
+.loot-group[data-loot-group="students"] { --loot-accent: #ca72a4; }
+.loot-group[data-loot-group="students"] .loot-item { background: linear-gradient(120deg,#fff1f8,#fff9fc); border-color: #f2dbe9; }
+.loot-group[data-loot-group="energy"] { --loot-accent: #5caa99; }
+.loot-group[data-loot-group="growth"] { --loot-accent: #8b83bb; }
+.loot-group[data-loot-group="equipment"] { --loot-accent: #698bb7; }
+.loot-group[data-loot-group="crafting"] { --loot-accent: #baa16a; }
+.loot-group[data-loot-group="credits"] { --loot-accent: #caa346; }
+.loot-group[data-loot-group="unresolved"] { --loot-accent: #be9e6c; }
+.loot-group[data-loot-group="unresolved"] > summary { font-size: 13px; color: #947744; }
+.loot-group[data-loot-group="unresolved"] > summary span { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 7px; margin-left: 10px; background: #faf3e7; border-radius: 9px; }
+.loot-group[data-loot-group="unresolved"] > .loot-grid { max-height: 480px; overflow: auto; padding: 2px; }
+.loot-group[data-loot-group="unresolved"] .loot-item { background: #fcfaf5; border-style: dashed; border-color: #e2d8c5; }
+.loot-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 72px; width: 72px; height: 72px; border-radius: 10px; background: #e9f0f9; overflow: hidden; }
+.loot-icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.loot-icon-missing { color: #91a1b8; font-size: 25px; }
+.loot-item-text { min-width: 0; display: grid; gap: 4px; }
+.loot-item strong { font-size: clamp(20px,1.8vw,26px); line-height: 1.1; letter-spacing: -.6px; color: #244c8c; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.loot-item span { font-size: 12px; line-height: 1.4; color: #4b5e79; overflow-wrap: anywhere; }
+.loot-item a { font-size: 12px; }
 .loot-card summary { cursor: pointer; color: #326be8; padding: 10px 0; font-weight: 600; }
 .loot-receipts { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,320px),1fr)); gap: 16px; max-height: 650px; overflow: auto; padding: 8px 2px; }
 .loot-receipt { min-width: 0; border: 1px solid #e0e6ef; border-radius: 12px; padding: 14px; font-size: 13px; }
-.loot-receipt p { overflow-wrap: anywhere; color: #58677d; }
-.loot-receipt img { display: block; width: 100%; height: auto; border-radius: 6px; }
+.loot-receipt-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 5px 10px; }
+.loot-receipt-state { font-size: 9px; color: #448271; background: #edf7f1; padding: 2px 6px; border-radius: 5px; }
+.loot-receipt-state.incomplete { color: #95723c; background: #fcf4e7; }
+.loot-receipt time { display: block; font-size: 10px; color: #8b98ab; margin-top: 3px; }
+.loot-receipt p { overflow-wrap: anywhere; color: #58677d; font-size: 11px; }
+.loot-receipt-detail { margin-top: 9px; }
+.loot-receipt-note > summary { color: #7890ae; font-size: 10px; font-weight: 500; padding: 3px 0; }
+.loot-receipt-note p { padding-bottom: 8px; }
+.loot-receipt-empty { padding: 12px 0; }
+.loot-receipt-items { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 6px; }
+.loot-receipt-items li { display: flex; gap: 9px; align-items: center; min-width: 0; font-size: 11px; }
+.loot-receipt-items .loot-icon { width: 34px; height: 34px; flex-basis: 34px; border-radius: 5px; font-size: 16px; }
+.loot-receipt-items li > span { min-width: 0; overflow-wrap: anywhere; color: #586b88; }
+.loot-receipt-items strong { margin-left: auto; color: #355984; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.loot-receipt-image { display: block; position: relative; border-radius: 6px; overflow: hidden; margin-top: 12px; }
+.loot-receipt-image img { display: block; width: 100%; height: auto; }
+.loot-receipt-image span { position: absolute; right: 5px; bottom: 5px; padding: 3px 7px; background: #162b48e6; color: #fff; font-size: 9px; border-radius: 4px; }
 .loot-card > .microcopy, .loot-card > .loot-totals, .loot-card > .logs-empty, .loot-card > details { margin-left: 24px; margin-right: 24px; }
 .loot-card > .microcopy:last-child { margin-bottom: 20px; }
+@media(min-width:651px) and (max-width:1150px) { .loot-totals { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:650px) {
+  .loot-card { margin-bottom: 17px; }
+  .loot-caption, .loot-card > .microcopy, .loot-card > .loot-totals, .loot-card > .logs-empty, .loot-card > details { margin-left: 16px; margin-right: 16px; }
+  .loot-caption { gap: 6px; }
+  .loot-totals { grid-template-columns: minmax(0,1fr); gap: 20px; }
+  .loot-item { padding: 12px; }
+  .loot-item strong { font-size: 24px; }
+  .loot-receipts { grid-template-columns: minmax(0,1fr); }
+}

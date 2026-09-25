@@ -78,9 +78,9 @@ def actions(config):
 
 def test_maximum_batch_is_checked_before_spending_and_timers_are_saved(harness):
     h = harness
-    h.screens[:] = [quick(), quick(3), CraftScreen('confirm', quantity=3, target=(768, 504)), listing('running','running','running')]
+    h.screens[:] = [quick(), quick(2), quick(3), CraftScreen('confirm', quantity=3, target=(768, 504)), listing('running','running','running')]
     assert h.runner.fill(h.frame(listing('empty','empty','empty'))) == 'success'
-    assert h.device.taps == [(890,618),(1186,512),(1114,589),(768,504)]
+    assert h.device.taps == [(890,618),(1117,512),(1117,512),(1114,589),(768,504)]
     state = read_state(h.config)
     assert len(state['slots']) == 3 and state['pending_action'] is None
     assert [a['action'] for a in actions(h.config)] == ['craft_start_requested','crafts_started']
@@ -89,9 +89,57 @@ def test_maximum_batch_is_checked_before_spending_and_timers_are_saved(harness):
 
 def test_only_vacant_slots_are_filled_and_low_inventory_limits_batch(harness):
     h = harness
-    h.screens[:] = [quick(owned=1), quick(owned=1), CraftScreen('confirm', quantity=1, target=(768,504)), listing('running','running','empty')]
+    h.screens[:] = [quick(owned=1), CraftScreen('confirm', quantity=1, target=(768,504)), listing('running','running','empty')]
     h.runner.fill(h.frame(listing('running','empty','empty')))
     assert actions(h.config)[-1]['count'] == 1
+
+
+@pytest.mark.parametrize('initial_quantity', [1, 3])
+def test_two_keys_with_three_vacant_slots_selects_only_two_crafts(harness, initial_quantity):
+    h = harness
+    h.screens[:] = [quick(initial_quantity, owned=2)]
+    if initial_quantity != 1:
+        h.screens.append(quick(owned=2))
+    h.screens.extend([quick(2, owned=2), CraftScreen('confirm', quantity=2, target=(768,504)),
+                      listing('running','running','empty')])
+    assert h.runner.fill(h.frame(listing('empty','empty','empty'))) == 'success'
+    expected = [(890,618)]
+    if initial_quantity != 1:
+        expected.append((836,512))
+    expected.extend([(1117,512),(1114,589),(768,504)])
+    assert h.device.taps == expected
+    assert actions(h.config)[-1]['count'] == 2
+    assert [slot['slot'] for slot in read_state(h.config)['slots']] == [1, 2]
+    assert read_state(h.config)['pending_action'] is None
+
+
+def test_unaffordable_jump_to_three_never_opens_confirmation(harness):
+    h = harness
+    h.screens[:] = [quick(owned=2), quick(3, owned=2)]
+    with pytest.raises(TaskError, match='unexpected batch quantity'):
+        h.runner.fill(h.frame(listing('empty','empty','empty')))
+    assert h.device.taps == [(890,618),(1117,512)]
+    assert not actions(h.config)
+    assert h.runner.state['pending_action'] is None
+
+
+def test_unacknowledged_minimum_never_advances_or_spends(harness):
+    h = harness
+    h.screens[:] = [quick(3, owned=2)]
+    with pytest.raises(TaskError, match='expected quick'):
+        h.runner.fill(h.frame(listing('empty','empty','empty')))
+    assert h.device.taps == [(890,618),(836,512)]
+    assert not actions(h.config)
+
+
+def test_multi_keystone_preset_uses_affordable_whole_crafts(harness):
+    h = harness
+    h.screens[:] = [quick(owned=5, unit=2), quick(2, owned=5, unit=2),
+                    CraftScreen('confirm', quantity=2, target=(768,504)),
+                    listing('running','running','empty')]
+    h.runner.fill(h.frame(listing('empty','empty','empty')))
+    assert actions(h.config)[-1]['count'] == 2
+    assert h.device.taps == [(890,618),(1117,512),(1114,589),(768,504)]
 
 
 def test_zero_keys_sends_no_craft_or_confirmation_input(harness):
@@ -110,7 +158,7 @@ def test_full_slots_need_no_quick_craft_input(harness):
     assert not h.device.taps
 
 
-@pytest.mark.parametrize('changed', [replace(quick(3), owned=2), replace(quick(3), required=6), replace(quick(3), credits=9999)])
+@pytest.mark.parametrize('changed', [replace(quick(2), owned=2), replace(quick(2), required=6), replace(quick(2), credits=9999)])
 def test_cost_changes_stop_before_craft_confirmation(harness, changed):
     h = harness
     h.screens[:] = [quick(), changed]
@@ -120,9 +168,24 @@ def test_cost_changes_stop_before_craft_confirmation(harness, changed):
     assert not actions(h.config)
 
 
+@pytest.mark.parametrize('step', ['minimum', 'second_increment'])
+def test_cost_and_inventory_are_rechecked_at_every_quantity_step(harness, step):
+    h = harness
+    if step == 'minimum':
+        h.screens[:] = [quick(3), replace(quick(), owned=2)]
+        expected = [(890,618),(836,512)]
+    else:
+        h.screens[:] = [quick(), quick(2), replace(quick(3), credits=9999)]
+        expected = [(890,618),(1117,512),(1117,512)]
+    with pytest.raises(TaskError, match='cost changed'):
+        h.runner.fill(h.frame(listing('empty','empty','empty')))
+    assert h.device.taps == expected
+    assert not actions(h.config)
+
+
 def test_wrong_confirmation_count_never_spends(harness):
     h = harness
-    h.screens[:] = [quick(), quick(3), CraftScreen('confirm', quantity=2, target=(768,504))]
+    h.screens[:] = [quick(), quick(2), quick(3), CraftScreen('confirm', quantity=2, target=(768,504))]
     with pytest.raises(TaskError, match='expected confirm'):
         h.runner.fill(h.frame(listing('empty','empty','empty')))
     assert (768,504) not in h.device.taps
@@ -130,7 +193,7 @@ def test_wrong_confirmation_count_never_spends(harness):
 
 def test_uncertain_spend_is_retained_and_not_replayed(harness):
     h = harness
-    h.screens[:] = [quick(),quick(3),CraftScreen('confirm',quantity=3,target=(768,504)),listing('empty','empty','empty')]
+    h.screens[:] = [quick(),quick(2),quick(3),CraftScreen('confirm',quantity=3,target=(768,504)),listing('empty','empty','empty')]
     with pytest.raises(TaskError):
         h.runner.fill(h.frame(listing('empty','empty','empty')))
     assert read_state(h.config)['pending_action']['kind'] == 'start'
@@ -151,6 +214,41 @@ def test_receipt_and_new_empty_slots_are_required_for_collection(harness):
     assert actions(h.config)[-1]['action'] == 'crafts_collected'
     assert actions(h.config)[-1]['count'] == 2
     assert [slot['slot'] for slot in read_state(h.config)['slots']] == [2]
+
+
+def test_collection_budget_includes_tooltip_inspection_and_slot_verification(harness, monkeypatch):
+    from ba_automator import crafting
+
+    h = harness
+    h.clock.sleep(200)
+    h.screens[:] = [CraftScreen('receipt', target=(1110, 660)), listing('empty', 'empty', 'empty')]
+
+    def inspect(runner, receipt, evidence):
+        assert runner.task == 'crafting'
+        assert read_state(h.config)['pending_action']['slots'] == [1, 2, 3]
+        h.clock.sleep(240)
+        return h.frame(receipt.screen)
+
+    monkeypatch.setattr(crafting, 'inspect_receipt', inspect)
+    h.runner.collect(h.frame(listing('ready', 'ready', 'ready')))
+    assert h.device.taps == [(1120, 618), (1110, 660)]
+    assert read_state(h.config)['pending_action'] is None
+    assert actions(h.config)[-1]['action'] == 'crafts_collected'
+    assert actions(h.config)[-1]['count'] == 3
+
+
+@pytest.mark.parametrize('limit', ['time', 'inputs'])
+def test_extended_collection_budget_remains_bounded(harness, limit):
+    from ba_automator import crafting
+
+    h = harness
+    if limit == 'time':
+        h.clock.sleep(crafting.TIMEOUT)
+    else:
+        h.runner.actions = 200
+    with pytest.raises(TaskError, match='time or input limit'):
+        h.runner.capture()
+    assert not h.device.taps
 
 
 def test_missing_receipt_stops_without_claiming_collection_or_starting_more(harness):

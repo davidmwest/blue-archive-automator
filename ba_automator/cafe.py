@@ -6,6 +6,7 @@ import time
 from uuid import uuid4
 
 from .actions import record_action
+from .loot_receipts import ReceiptReader
 from .cafe_vision import CafeVision
 from .cafe_camera import measure_camera_displacement
 from .locking import InstanceLock
@@ -412,6 +413,9 @@ class CafeRunner:
             if receipt:
                 detail += ": " + ", ".join(f"{amount:,} {name.upper() if name == 'ap' else name}" for name, amount in receipt.items())
             record_action(self.config, "earnings_collected", detail + ".", cafe=self.floor, evidence=str(self.run_dir / f"earnings-{self.floor}.png"), **receipt)
+            if hasattr(self.startup, 'read'):
+                ReceiptReader(self, self.startup, self.run_dir / f"earnings-{self.floor}.png").run()
+                cap = self.wait_words(lambda w: "reward acquired" in text_of(w), timeout=25)
             self.tap(cap, (640, 630), "Dismiss verified Cafe reward receipt")
             cap = self.wait_words(lambda w: "cafe earnings" in text_of(w) and "reward acquired" not in text_of(w))
         self.tap(cap, (982, 145), "Close verified Cafe earnings dialog")

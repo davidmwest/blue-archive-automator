@@ -213,6 +213,45 @@ def test_confirmed_receipt_balances_and_persisted_share(runner):
 
 
 @pytest.mark.parametrize(
+    "elapsed,ap,tickets,accepted",
+    [
+        (240, 151, 10, True),
+        (359, 152, 10, False),
+        (361, 152, 10, True),
+        (721, 153, 10, True),
+        (721, 154, 10, False),
+        (721, 149, 10, False),
+        (721, 153, 11, False),
+    ],
+)
+def test_loot_inspection_allows_only_time_bounded_ap_recovery(
+    runner, monkeypatch, elapsed, ap, tickets, accepted
+):
+    from ba_automator import tickets as module
+
+    clock = [0.0]
+    runner.clock = lambda: clock[0]
+    taps = setup_sweep(runner, after=detail(ap=ap, tickets=tickets))
+
+    def inspect(task, receipt, evidence):
+        assert read_state(task.config, task.task)["pending"] is not None
+        clock[0] += elapsed
+        return replace(receipt, capture=replace(receipt.capture, captured_at=clock[0]))
+
+    monkeypatch.setattr(module, "inspect_receipt", inspect)
+    if accepted:
+        runner.sweep(frame(runner, detail()), 5, 0)
+        assert read_state(runner.config, runner.task)["pending"] is None
+        assert read_state(runner.config, runner.task)["done"] == [5, 0, 0]
+    else:
+        with pytest.raises(TaskError, match="Post-sweep"):
+            runner.sweep(frame(runner, detail()), 5, 0)
+        assert read_state(runner.config, runner.task)["pending"] is not None
+        assert read_state(runner.config, runner.task)["done"] == [0, 0, 0]
+    assert len(taps) == 3
+
+
+@pytest.mark.parametrize(
     "confirm",
     [
         TicketScreen("confirm", task="bounties", ap=150, tickets=4, count=4, ap_cost=0),

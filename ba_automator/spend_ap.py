@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 from .actions import record_action
+from .loot_receipts import inspect_receipt
 from .ap_policy import choose_hard, default_order, sweep_count
 from .ap_state import read_state, write_state
 from .ap_vision import APVision
@@ -344,6 +345,7 @@ class APRunner(ShopRunner):
             self.fail(
                 "Sweep receipt AP differs from its projection; inspect possible level-up or interrupted results"
             )
+        receipt = inspect_receipt(self, receipt, self.run_dir / receipt_name)
         rewards = receipt.screen.rewards
         self.tap(receipt, receipt.screen.target, "Close sweep receipt")
         result = self.wait(

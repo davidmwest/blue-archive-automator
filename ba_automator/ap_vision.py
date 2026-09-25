@@ -146,7 +146,7 @@ def classify_ap(frame, words, *, home=False):
             remaining = int(actual[1])
             qty = count[0]
             if (
-                before != ap
+                (ap is None or not before <= ap <= before + 5)
                 or not 0 <= remaining <= 3
                 or not 0 <= qty <= remaining
                 or projected_remaining != remaining - qty
@@ -171,6 +171,7 @@ def classify_ap(frame, words, *, home=False):
                 target=(
                     (937, 437)
                     if qty
+                    and before == ap
                     and has(words, "start sweep", (770, 405, 1110, 477))
                     and cyan(frame, (810, 417, 1050, 460))
                     else None
@@ -206,7 +207,8 @@ def classify_ap(frame, words, *, home=False):
             stage
             and count
             and projection
-            and projection[0] == ap
+            and ap is not None
+            and projection[0] <= ap <= projection[0] + 5
             and projection[0] >= projection[1]
         ):
             total = projection[0] - projection[1]
@@ -235,7 +237,8 @@ def classify_ap(frame, words, *, home=False):
                 stars=mission_stars(frame),
                 target=(
                     (937, 405)
-                    if has(words, "start sweep", (770, 373, 1110, 449))
+                    if projection[0] == ap
+                    and has(words, "start sweep", (770, 373, 1110, 449))
                     and cyan(frame, (810, 387, 1050, 430))
                     else None
                 ),

@@ -183,7 +183,7 @@ These are implementation inputs for later increments, not reasons to expand the 
 
 ### Loot gathered
 
-The dashboard has a durable, clearable reward view over confirmed important actions. It totals recognized item quantities, using mail currency deltas only when the receipt did not already name that currency. It never counts spending intents, failed claims, resource costs, or AP regeneration as loot. Receipts with unnamed drops remain visible and explicitly unquantified; icon identities are not guessed.
+The dashboard has a durable, clearable reward view over confirmed receipts. A shared deterministic reader inspects item tooltips, received quantities, and game icons before dismissal. Sweeps use only the Final row and expand Full List when additional rewards are hidden. The view groups identical items by importance, preserves itemized receipts, and marks unknown quantities or names for review. Receipt identity joins observation and later task-completion records without double-counting; late enrichment never resurrects cleared loot. See [loot accounting and recognition](loot.md).
 
 Clearing saves a cursor at the last complete JSONL record and a timestamp. It does not remove action history or receipt files, and concurrent later appends belong to the fresh view. Totals include all records since that cursor; the gallery shows the latest 100. Receipt endpoints accept a validated action ID and serve only the recorded PNG beneath the configured run directory. Existing older actions without receipt paths retain their known totals and text. New Cafe, Mail, Crafting, Lesson, AP and ticket jobs attach their saved reward receipts.
 

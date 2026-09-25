@@ -55,6 +55,12 @@ the saved game screenshots themselves retain their original pixels.
 
 Crafting samples (`crafting-*.png`) were captured on 2026-09-24. They retain the synthesis slot list, configured Quick Craft preset, maximum batch, confirmation, running timers, and red zero-inventory counter. The account resource bar is removed. `craft_keystone.png` is a small matching crop of the keystone material icon. Natural completion and collection recognition now have live fixtures and passed runtime verification.
 
+`crafting-unaffordable-max.png` preserves the evening live failure where Max
+selected three crafts despite only two owned keystones. The red 2/3 material
+counter, quantity 3, and 6,000-credit fee remain; the account resource bar is
+masked. It verifies recognition of an unaffordable selection, not a completed
+craft start.
+
 Pack/mail samples (`packs-*.png`) were captured on 2026-09-24. Store backgrounds and account identity are masked; mailbox resource balances are removed. Google Play fixtures retain only the product/price/button or the optional backup-payment prompt, with account/payment information and underlying game identity removed. Tests also remove OCR status words to ensure the remaining ownership shading still prevents a duplicate purchase.
 
 `craft-one-ready.png` and `craft-collected.png` cover the first natural craft completion and receipt; the account resource bar is masked.
@@ -66,3 +72,13 @@ Task reward samples (`task-rewards-*.png`) were captured on 2026-09-24 at 1280×
 Home notification samples (`red-dots-*.png`) were captured on 2026-09-24. They mask account identity/balances and private Club details, retaining the fixed badges, Social cards, Free Daily Pack price/confirmation/exhausted state, attendance notice, and receipts. No paid checkout was entered for these captures.
 
 Tactical Challenge samples (`tactical-*.png`) were captured on 2026-09-24 local time. Account and opponent identities/ranks are masked. They retain an available Time Reward, the disabled controls after collection, and its actual 70,570-credit receipt. The enabled Daily Reward color state is synthesized only inside a test; it is not presented as a live daily-claim capture.
+
+Loot inspection fixtures (`loot-*.png`) were captured from the authorized staging
+instance on September 25 UTC (September 24 local). They preserve only reward
+panels and tooltips; player identity, balances, and XP were removed. The fixtures
+cover wrapped names, currency tooltips without Owned, a cyan title divider that
+OCR previously misread as an extra `I`, Final-only sweep accounting,
+and the magnifier/Full List overflow layout. `ap-regenerated-detail.png` retains
+the AP values needed to reproduce the stale preview after natural regeneration,
+with other account balances removed. Game artwork remains subject to the
+third-party notices, outside the project's MIT grant.

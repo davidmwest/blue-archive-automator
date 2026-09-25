@@ -84,12 +84,12 @@
 
     <section id="loot" class="loot-card card" aria-labelledby="loot-title">
       <div class="card-header"><div><p class="section-kicker">SINCE LAST CLEAR</p><h2 id="loot-title">loot gathered</h2></div><button id="clear-loot" class="button secondary small" type="button" disabled>clear loot</button></div>
-      <p id="loot-since" class="microcopy">loading the haul.</p>
-      <div id="loot-totals" class="loot-totals" aria-label="Loot totals"></div>
+      <div class="loot-caption"><p id="loot-since" class="microcopy">loading the haul.</p><p id="loot-count" class="loot-count" aria-live="polite"></p></div>
+      <div id="loot-totals" class="loot-totals" aria-label="Loot grouped by importance"></div>
       <p id="loot-empty" class="logs-empty">nothing collected since the last clear. give it a minute.</p>
       <p id="loot-unidentified" class="microcopy" hidden></p>
       <details id="loot-receipts-wrap"><summary id="loot-receipts-label">reward receipts</summary><div id="loot-receipts" class="loot-receipts"></div></details>
-      <p class="microcopy">clear starts a fresh count. the history and receipts stay put. totals are what we could verify; unnamed drops stay in the receipts below.</p>
+      <p class="microcopy">the good stuff comes first. clear starts a fresh count; history and receipts stay put. anything we couldn't read gets its own spot below.</p>
     </section>
 
     <section class="actions-card card" aria-labelledby="actions-title">

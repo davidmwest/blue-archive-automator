@@ -862,6 +862,14 @@ class DashboardController:
             if path is None: raise ApiError(404, "Receipt unavailable")
             return path.read_bytes()
 
+    def loot_icon(self, identifier) -> bytes:
+        path = loot.icon_path(self.config, identifier)
+        if path is None: raise ApiError(404, "Item icon unavailable")
+        try:
+            return path.read_bytes()
+        except OSError as exc:
+            raise ApiError(404, "Item icon unavailable") from exc
+
     def frame_bytes(self) -> bytes:
         with self._condition:
             frame = self._frame()
@@ -1124,6 +1132,8 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                                if resource.is_file() else {"width": 1280, "height": 720, "buttons": []})
                 elif target.path == "/api/popups":
                     self._json(200, controller.popups())
+                elif match := re.fullmatch(r"/api/loot/icons/([a-f0-9]{64})", target.path):
+                    self._send(200, controller.loot_icon(match[1]), "image/png")
                 elif target.path == "/api/loot":
                     self._json(200, controller.loot())
                 elif match := re.fullmatch(r"/api/loot/([a-f0-9]{32})/receipt", target.path):

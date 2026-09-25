@@ -1,11 +1,16 @@
 """Serial daily Bounty/Scrimmage sweeps, with weekday-rotated remainder tickets."""
 
 from .actions import record_action
+from .loot_receipts import inspect_receipt
 from .club import game_day
 from .locking import InstanceLock
 from .shop_runtime import ShopRunner
 from .ticket_state import AREAS, allocation, read_state, write_state
 from .ticket_vision import TicketVision
+
+# Nexon's content/reset-time guide specifies one naturally recovered AP per six
+# minutes. The initial tick phase is unknown, so allow one imminent tick too.
+AP_RECOVERY_SECONDS = 6 * 60
 
 
 class TicketRunner(ShopRunner):
@@ -238,6 +243,7 @@ class TicketRunner(ShopRunner):
             self.fail(
                 "Ticket receipt does not match the requested sweep; inspect before retrying"
             )
+        receipt = inspect_receipt(self, receipt, self.run_dir / f"receipt-{index}.png")
         self.tap(receipt, receipt.screen.target, "Close ticket sweep receipt")
         # Spending the last ticket closes Mission Info automatically.
         result = self.wait(
@@ -245,10 +251,15 @@ class TicketRunner(ShopRunner):
             predicate=lambda r: (r.task, r.area) == (s.task, s.area)
             and (r.kind == "list" and s.after_tickets == 0 or r.stage == s.stage),
         )
+        # Item tooltips can take several minutes to inspect. AP regeneration is
+        # independent of the receipt, but must remain bounded by actual elapsed
+        # time rather than accepting an arbitrary balance increase or level-up.
+        elapsed = max(0, self.clock() - frame.capture.captured_at)
+        recovered_limit = 1 + int(elapsed // AP_RECOVERY_SECONDS)
         if (
             result.screen.tickets != s.after_tickets
             or result.screen.ap is None
-            or not s.after_ap <= result.screen.ap <= s.after_ap + 1
+            or not s.after_ap <= result.screen.ap <= s.after_ap + recovered_limit
         ):
             self.fail("Post-sweep ticket or AP balance did not verify")
         self.state["done"][index] += count
