@@ -57,8 +57,10 @@ PACKS_SETTINGS = {f'packs_{key}_{suffix}': f'{key}_{suffix}'
                   for key in packs_state.PACKS for suffix in ('enabled', 'max_cents')}
 AP_SETTINGS = {f'ap_{key}': key for key in
                ('schedule_enabled', 'floor', 'strategy', 'hard_default_order', 'hard_order')}
+TOTAL_ASSAULT_SETTINGS = {f"total_assault_{key}": key
+                          for key in ("difficulty", "enabled_in_daily", "comfort_seconds")}
 TICKET_SETTINGS = {"bounties_enabled_in_daily", "scrimmages_enabled_in_daily"}
-SETTINGS = TICKET_SETTINGS | RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
+SETTINGS = TOTAL_ASSAULT_SETTINGS.keys() | TICKET_SETTINGS | RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
 CAFE_INTERVAL = timedelta(hours=3, seconds=15)
 CAFE_RETRY_INTERVAL = timedelta(minutes=15)
 MAX_SCHEDULE_FAILURES = 3
@@ -113,6 +115,7 @@ def _config_document(config: Config) -> dict:
         "packs": {name: getattr(config, attribute) for attribute, name in PACKS_SETTINGS.items()},
         "bounties": {"enabled_in_daily": config.bounties_enabled_in_daily},
         "scrimmages": {"enabled_in_daily": config.scrimmages_enabled_in_daily},
+        "total_assault": {name: getattr(config, attribute) for attribute, name in TOTAL_ASSAULT_SETTINGS.items()},
         "ap": {name: getattr(config, attribute) for attribute, name in AP_SETTINGS.items()},
     }
     if hasattr(config, "state_dir"):
@@ -195,7 +198,7 @@ class DashboardController:
         values.update({name: getattr(self.config, name) for name in LESSONS_SETTINGS})
         values.update({name: getattr(self.config, name) for name in CRAFTING_SETTINGS})
         values.update({name: getattr(self.config, name) for name in PACKS_SETTINGS})
-        values.update({name: getattr(self.config, name) for name in AP_SETTINGS.keys() | TICKET_SETTINGS})
+        values.update({name: getattr(self.config, name) for name in AP_SETTINGS.keys() | TICKET_SETTINGS | TOTAL_ASSAULT_SETTINGS.keys()})
         return values
 
     def _state_dir(self) -> Path:
@@ -561,7 +564,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info", child=True)
-                            marker = next((prefix for prefix in ("tactical_rewards:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("total_assault:", "tactical_rewards:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -1061,6 +1064,7 @@ class DashboardController:
                     document = tomllib.load(stream)
                 for name, value in changes.items():
                     section = (name.split("_")[0] if name in TICKET_SETTINGS else
+                               "total_assault" if name in TOTAL_ASSAULT_SETTINGS else
                                "cafe" if name in CAFE_SETTINGS else
                                "ap" if name in AP_SETTINGS else
                                "packs" if name in PACKS_SETTINGS else
@@ -1068,6 +1072,7 @@ class DashboardController:
                                "lessons" if name in LESSONS_SETTINGS else
                                "automation" if name in AUTOMATION_SETTINGS else "restart")
                     key = AP_SETTINGS.get(name, PACKS_SETTINGS.get(name, CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, CRAFTING_SETTINGS.get(name, name)))))
+                    if name in TOTAL_ASSAULT_SETTINGS: key = TOTAL_ASSAULT_SETTINGS[name]
                     if name in TICKET_SETTINGS: key = "enabled_in_daily"
                     document.setdefault(section, {})[key] = value
                 _write_atomic(self.config_path, _toml(document))

@@ -1,0 +1,102 @@
+[
+  {
+    "text": "Room Info",
+    "confidence": 0.98282,
+    "box": [
+      180,
+      122,
+      288,
+      149
+    ]
+  },
+  {
+    "text": "Notice",
+    "confidence": 0.99997,
+    "box": [
+      584,
+      145,
+      692,
+      182
+    ]
+  },
+  {
+    "text": "X",
+    "confidence": 0.84993,
+    "box": [
+      866,
+      145,
+      907,
+      185
+    ]
+  },
+  {
+    "text": "HARDCORE",
+    "confidence": 0.99993,
+    "box": [
+      153,
+      191,
+      266,
+      217
+    ]
+  },
+  {
+    "text": "Use 5 Total Assault Ticket to Sweep 5",
+    "confidence": 0.99677,
+    "box": [
+      418,
+      285,
+      860,
+      319
+    ]
+  },
+  {
+    "text": "time(s)?",
+    "confidence": 0.99995,
+    "box": [
+      585,
+      315,
+      692,
+      355
+    ]
+  },
+  {
+    "text": " 5 \u21920",
+    "confidence": 0.76489,
+    "box": [
+      1005,
+      329,
+      1089,
+      355
+    ]
+  },
+  {
+    "text": "Obtain 39029760 Rank Points via Sweep.",
+    "confidence": 0.99064,
+    "box": [
+      399,
+      351,
+      878,
+      387
+    ]
+  },
+  {
+    "text": "Cancel",
+    "confidence": 0.99997,
+    "box": [
+      460,
+      486,
+      566,
+      524
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99995,
+    "box": [
+      701,
+      485,
+      828,
+      521
+    ]
+  }
+]

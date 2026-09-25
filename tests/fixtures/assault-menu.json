@@ -1,0 +1,172 @@
+[
+  {
+    "text": "Total Assault ",
+    "box": [
+      103,
+      9,
+      313,
+      38
+    ],
+    "confidence": 0.97777
+  },
+  {
+    "text": "Preservation Count 1/1",
+    "box": [
+      53,
+      89,
+      284,
+      115
+    ],
+    "confidence": 0.99829
+  },
+  {
+    "text": "AAssistant Settings",
+    "box": [
+      312,
+      85,
+      526,
+      119
+    ],
+    "confidence": 0.98819
+  },
+  {
+    "text": "Battle Select",
+    "box": [
+      657,
+      88,
+      900,
+      130
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Total Assault Ticket",
+    "box": [
+      913,
+      87,
+      1072,
+      111
+    ],
+    "confidence": 0.99917
+  },
+  {
+    "text": "09/21 19:00",
+    "box": [
+      1147,
+      88,
+      1244,
+      112
+    ],
+    "confidence": 0.99951
+  },
+  {
+    "text": "6/6",
+    "box": [
+      939,
+      110,
+      978,
+      139
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "- 09/28 11:59",
+    "box": [
+      1140,
+      110,
+      1244,
+      133
+    ],
+    "confidence": 0.96312
+  },
+  {
+    "text": "Very Hard",
+    "box": [
+      674,
+      204,
+      786,
+      235
+    ],
+    "confidence": 0.98169
+  },
+  {
+    "text": "Drumbarka",
+    "box": [
+      672,
+      233,
+      898,
+      275
+    ],
+    "confidence": 0.99968
+  },
+  {
+    "text": "Enter",
+    "box": [
+      1113,
+      240,
+      1203,
+      277
+    ],
+    "confidence": 0.99989
+  },
+  {
+    "text": "Hardcore",
+    "box": [
+      675,
+      340,
+      778,
+      368
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Drumbarka",
+    "box": [
+      672,
+      367,
+      898,
+      409
+    ],
+    "confidence": 0.99934
+  },
+  {
+    "text": "Enter",
+    "box": [
+      1113,
+      374,
+      1204,
+      413
+    ],
+    "confidence": 0.99985
+  },
+  {
+    "text": "Extreme",
+    "box": [
+      676,
+      475,
+      770,
+      502
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Drumbarka",
+    "box": [
+      672,
+      501,
+      897,
+      543
+    ],
+    "confidence": 0.99983
+  },
+  {
+    "text": "Enter",
+    "box": [
+      1114,
+      511,
+      1204,
+      545
+    ],
+    "confidence": 0.9995
+  }
+]

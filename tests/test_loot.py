@@ -609,6 +609,38 @@ def test_shop_currency_priority_and_only_verified_artifact_names(config):
     assert groups[3]["items"][0]["name"] == "Unknown Event Fragment"
 
 
+@pytest.mark.parametrize("name", [
+    "Total Assault Coin",
+    "Advanced Total Assault Coin",
+    "total assault coins",
+    "  ADVANCED\u00a0TOTAL   ASSAULT COINS  ",
+])
+def test_total_assault_coin_names_are_shop_currencies(name):
+    assert loot.category(name) == "shop"
+
+
+def test_total_assault_coins_group_without_merging_tiers_or_matching_unrelated_items(config):
+    record_action(
+        config, "loot_received", "Verified raid rewards", items_complete=True,
+        items=[
+            {"name": "Total Assault Coin", "quantity": 10},
+            {"name": "  TOTAL   ASSAULT COINS  ", "quantity": 5},
+            {"name": "Advanced Total Assault Coin", "quantity": 2},
+            {"name": "Total Assault Coin Box", "quantity": 1},
+        ],
+    )
+    history = config.state_dir / "important-actions.jsonl"
+    before = history.read_bytes()
+    groups = loot.snapshot(config)["groups"]
+    assert [group["id"] for group in groups] == ["shop", "other"]
+    assert [(item["name"], item["quantity"]) for item in groups[0]["items"]] == [
+        ("Advanced Total Assault Coin", 2),
+        ("Total Assault Coin", 15),
+    ]
+    assert groups[1]["items"][0]["name"] == "Total Assault Coin Box"
+    assert history.read_bytes() == before
+
+
 @pytest.mark.parametrize(
     "name",
     [

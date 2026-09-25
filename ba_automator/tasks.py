@@ -6,6 +6,7 @@ from .config import Config
 
 
 TASK_LABELS = {
+    "total_assault": "Total Assault complete",
     "tactical_rewards": "Tactical Challenge rewards collected",
     "red_dots": "Home notifications checked",
     "free_pack": "Free package checked and mail collected",
@@ -24,7 +25,7 @@ TASK_LABELS = {
     "daily": "Daily tasks complete",
 }
 TASKS = frozenset(TASK_LABELS)
-RUN_PREFIXES = ("tactical_rewards-", "red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
+RUN_PREFIXES = ("total_assault-", "tactical_rewards-", "red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
 
 
 def _task_plan(command: str, config: Config) -> tuple[str, ...]:
@@ -36,6 +37,7 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
                 *(("scrimmages",) if config.scrimmages_enabled_in_daily else ()))
         plan = (*plan, "tactical_rewards")
         plan = (*plan, "lessons") if config.lessons_enabled_in_daily else plan
+        plan = (*plan, "total_assault") if config.total_assault_enabled_in_daily else plan
         plan = (*plan, "spend_ap") if config.ap_schedule_enabled else plan
         return (*plan, "tasks")
     if command == "cafe":
@@ -48,7 +50,7 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
         return ("restart", "packs", "mail", *(("spend_ap",) if config.ap_schedule_enabled else ()))
     if command == 'mail':
         return ('restart', 'mail', *(("spend_ap",) if config.ap_schedule_enabled else ()))
-    if command in {"tactical_rewards", "tasks", "bounties", "scrimmages", "lessons", "crafting", "spend_ap", "scan_ap"}:
+    if command in {"total_assault", "tactical_rewards", "tasks", "bounties", "scrimmages", "lessons", "crafting", "spend_ap", "scan_ap"}:
         return ("restart", command)
     if command == "restart":
         return ("restart",)

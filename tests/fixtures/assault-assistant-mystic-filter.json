@@ -1,0 +1,142 @@
+[
+  {
+    "text": "Display Settings",
+    "box": [
+      518,
+      64,
+      766,
+      110
+    ],
+    "confidence": 0.99963
+  },
+  {
+    "text": "X",
+    "box": [
+      1192,
+      63,
+      1232,
+      102
+    ],
+    "confidence": 0.96606
+  },
+  {
+    "text": "Filter",
+    "box": [
+      110,
+      137,
+      182,
+      169
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "List",
+    "box": [
+      253,
+      147,
+      302,
+      181
+    ],
+    "confidence": 0.99993
+  },
+  {
+    "text": "C",
+    "box": [
+      1045,
+      148,
+      1077,
+      176
+    ],
+    "confidence": 0.78597
+  },
+  {
+    "text": "Reset All",
+    "box": [
+      1074,
+      146,
+      1173,
+      179
+    ],
+    "confidence": 0.99119
+  },
+  {
+    "text": "Sort",
+    "box": [
+      116,
+      197,
+      177,
+      229
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "|ATK Attribute",
+    "box": [
+      258,
+      207,
+      396,
+      231
+    ],
+    "confidence": 0.95862
+  },
+  {
+    "text": "IDEF Attribute",
+    "box": [
+      258,
+      351,
+      397,
+      378
+    ],
+    "confidence": 0.99686
+  },
+  {
+    "text": "\u65e5",
+    "box": [
+      1022,
+      412,
+      1061,
+      450
+    ],
+    "confidence": 0.65405
+  },
+  {
+    "text": "\u65e5",
+    "box": [
+      317,
+      477,
+      356,
+      516
+    ],
+    "confidence": 0.73708
+  },
+  {
+    "text": "\u25b3\u00d7+\u25cb",
+    "box": [
+      60,
+      521,
+      121,
+      542
+    ],
+    "confidence": 0.70706
+  },
+  {
+    "text": "Cancel",
+    "box": [
+      460,
+      576,
+      566,
+      613
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      699,
+      575,
+      829,
+      615
+    ],
+    "confidence": 0.99993
+  }
+]

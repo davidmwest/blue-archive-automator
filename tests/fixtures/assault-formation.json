@@ -1,0 +1,312 @@
+[
+  {
+    "text": "Total Assault Formation",
+    "box": [
+      104,
+      8,
+      433,
+      37
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "Unit 1",
+    "box": [
+      28,
+      172,
+      109,
+      203
+    ],
+    "confidence": 0.99908
+  },
+  {
+    "text": "Quick Formation",
+    "box": [
+      1145,
+      214,
+      1258,
+      234
+    ],
+    "confidence": 0.99967
+  },
+  {
+    "text": "Unit 2",
+    "box": [
+      25,
+      251,
+      109,
+      283
+    ],
+    "confidence": 0.99637
+  },
+  {
+    "text": "Starting Skill",
+    "box": [
+      1141,
+      312,
+      1260,
+      338
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "Unit 3",
+    "box": [
+      26,
+      330,
+      109,
+      361
+    ],
+    "confidence": 0.96727
+  },
+  {
+    "text": "Unit 4",
+    "box": [
+      25,
+      409,
+      109,
+      440
+    ],
+    "confidence": 0.99914
+  },
+  {
+    "text": "Unit Info",
+    "box": [
+      1159,
+      414,
+      1243,
+      437
+    ],
+    "confidence": 0.9987
+  },
+  {
+    "text": "BACK",
+    "box": [
+      245,
+      494,
+      291,
+      516
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "MIDDLE",
+    "box": [
+      434,
+      493,
+      526,
+      517
+    ],
+    "confidence": 0.99338
+  },
+  {
+    "text": "BACK",
+    "box": [
+      693,
+      494,
+      739,
+      516
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "FRONT",
+    "box": [
+      911,
+      495,
+      967,
+      516
+    ],
+    "confidence": 0.99944
+  },
+  {
+    "text": "Aris (Maid)",
+    "box": [
+      271,
+      529,
+      369,
+      557
+    ],
+    "confidence": 0.99982
+  },
+  {
+    "text": "Kayoko (New",
+    "box": [
+      486,
+      521,
+      603,
+      545
+    ],
+    "confidence": 0.97172
+  },
+  {
+    "text": "Koyuki",
+    "box": [
+      733,
+      528,
+      802,
+      559
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "\u767d",
+    "box": [
+      887,
+      523,
+      913,
+      549
+    ],
+    "confidence": 0.66924
+  },
+  {
+    "text": "Izuna",
+    "box": [
+      966,
+      522,
+      1019,
+      544
+    ],
+    "confidence": 0.99978
+  },
+  {
+    "text": "Presets",
+    "box": [
+      1166,
+      516,
+      1238,
+      539
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      208,
+      547,
+      257,
+      568
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      431,
+      547,
+      480,
+      568
+    ],
+    "confidence": 0.99983
+  },
+  {
+    "text": "Year)",
+    "box": [
+      518,
+      541,
+      570,
+      566
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      656,
+      547,
+      704,
+      568
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      880,
+      547,
+      928,
+      568
+    ],
+    "confidence": 0.99987
+  },
+  {
+    "text": "(Swimsuit)",
+    "box": [
+      943,
+      539,
+      1040,
+      568
+    ],
+    "confidence": 0.99989
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      28,
+      559,
+      150,
+      582
+    ],
+    "confidence": 0.99979
+  },
+  {
+    "text": "Mobilize",
+    "box": [
+      1112,
+      640,
+      1240,
+      673
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "4",
+    "box": [
+      421,
+      656,
+      445,
+      679
+    ],
+    "confidence": 0.99843
+  },
+  {
+    "text": "Ako",
+    "box": [
+      501,
+      663,
+      542,
+      686
+    ],
+    "confidence": 0.99931
+  },
+  {
+    "text": "Yuzu (Armed)",
+    "box": [
+      809,
+      660,
+      930,
+      687
+    ],
+    "confidence": 0.99819
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      411,
+      678,
+      459,
+      699
+    ],
+    "confidence": 0.9998
+  },
+  {
+    "text": "Lv.78",
+    "box": [
+      759,
+      678,
+      808,
+      699
+    ],
+    "confidence": 0.99992
+  }
+]

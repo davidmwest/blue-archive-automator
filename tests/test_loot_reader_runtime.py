@@ -36,6 +36,7 @@ def harness(tmp_path, monkeypatch):
         tip=None,
         unknown=False,
         capture_delay=0.0,
+        page_delay=0.0,
         on_capture=None,
         broken_item=None,
         pages=[lr.Page("sweep", (card("A", 100), card("B", 300, 2)))],
@@ -83,6 +84,7 @@ def harness(tmp_path, monkeypatch):
         return True
 
     def page(png, vision):
+        h.now += h.page_delay
         snapshot = json.loads(png)
         if snapshot["unknown"]:
             return lr.Page("unknown")
@@ -258,4 +260,62 @@ def test_bare_receipt_cannot_authorize_tooltip_dismissal(harness):
     reader = h.reader()
     with pytest.raises(TaskError, match="No item tooltip"):
         reader.dismiss_tooltip(reader.capture(), "sweep")
+    assert h.inputs == []
+
+
+@pytest.mark.parametrize("kind", ["reward", "sweep"])
+def test_slow_ocr_refreshes_unchanged_receipt_before_each_input(harness, monkeypatch, kind):
+    h = harness
+    h.pages = [replace(h.pages[0], kind=kind)]
+    h.page_delay = 6.0
+
+    def slow_tooltip(image, vision):
+        h.now += 6.0
+        return image["tip"]
+
+    monkeypatch.setattr(lr, "read_tooltip", slow_tooltip)
+    result = h.reader().run()
+    assert result["items_complete"] is True
+    assert [(i["name"], i["quantity"]) for i in result["items"]] == [("A", 1), ("B", 2)]
+    assert sum(action[0] == "tap" for action in h.inputs) == 4
+    records = [
+        json.loads(line)
+        for line in (h.evidence.parent / "events.jsonl").read_text().splitlines()
+    ]
+    refreshed = [entry for entry in records if entry["event"] == "receipt_revalidated"]
+    assert refreshed and all(entry["previous_age"] >= 6 for entry in refreshed)
+
+
+@pytest.mark.parametrize("change", ["receipt", "foreground"])
+def test_slow_ocr_refresh_cannot_authorize_a_changed_screen(harness, change):
+    h = harness
+    reader = h.reader()
+    cap = reader.capture()
+    reader.read(cap)
+    h.now += 6.0
+    if change == "receipt":
+        h.unknown = True
+    else:
+        h.foreground = "com.android.settings"
+    with pytest.raises(TaskError):
+        reader.input(cap, h.pages[0].cards[0].target)
+    assert h.inputs == []
+
+
+def test_refresh_does_not_extend_deadline_during_device_preflight(harness):
+    h = harness
+    reader = h.reader()
+    cap = reader.capture()
+    reader.read(cap)
+    h.now += 6.0
+
+    def expired_tap(x, y, *, deadline, monotonic):
+        assert deadline == 11.0  # New capture began at 6; the original cap is still 0.
+        h.now += 6.0
+        return monotonic() <= deadline
+
+    h.runner.device.tap = expired_tap
+    with pytest.raises(TaskError, match="expired during device preflight"):
+        reader.input(cap, h.pages[0].cards[0].target)
+    assert cap.captured_at == 0 and cap.deadline == 5
     assert h.inputs == []

@@ -1,0 +1,352 @@
+[
+  {
+    "text": "Synergy Info",
+    "confidence": 0.99307,
+    "box": [
+      52,
+      74,
+      187,
+      104
+    ]
+  },
+  {
+    "text": "Quick Formation",
+    "confidence": 0.99789,
+    "box": [
+      504,
+      75,
+      779,
+      111
+    ]
+  },
+  {
+    "text": "X",
+    "confidence": 0.971,
+    "box": [
+      1229,
+      73,
+      1260,
+      105
+    ]
+  },
+  {
+    "text": "My Students",
+    "confidence": 0.99988,
+    "box": [
+      669,
+      145,
+      812,
+      175
+    ]
+  },
+  {
+    "text": "Assistant (Available: 1/1)",
+    "confidence": 0.99823,
+    "box": [
+      974,
+      146,
+      1200,
+      171
+    ]
+  },
+  {
+    "text": "STRIKER",
+    "confidence": 0.99991,
+    "box": [
+      584,
+      193,
+      676,
+      223
+    ]
+  },
+  {
+    "text": "SPECIAL",
+    "confidence": 0.99974,
+    "box": [
+      704,
+      195,
+      795,
+      222
+    ]
+  },
+  {
+    "text": "Lv.",
+    "confidence": 0.99589,
+    "box": [
+      978,
+      197,
+      1016,
+      224
+    ]
+  },
+  {
+    "text": "LV.90",
+    "confidence": 0.86279,
+    "box": [
+      591,
+      257,
+      630,
+      279
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.91011,
+    "box": [
+      1146,
+      260,
+      1187,
+      278
+    ]
+  },
+  {
+    "text": "(Armed)",
+    "confidence": 0.99946,
+    "box": [
+      593,
+      364,
+      660,
+      387
+    ]
+  },
+  {
+    "text": "Aris",
+    "confidence": 0.99997,
+    "box": [
+      610,
+      348,
+      645,
+      370
+    ]
+  },
+  {
+    "text": "(Dress)",
+    "confidence": 0.99979,
+    "box": [
+      710,
+      364,
+      764,
+      384
+    ]
+  },
+  {
+    "text": "Hina",
+    "confidence": 0.99973,
+    "box": [
+      718,
+      348,
+      759,
+      370
+    ]
+  },
+  {
+    "text": "(Dress)",
+    "confidence": 0.99994,
+    "box": [
+      822,
+      365,
+      875,
+      385
+    ]
+  },
+  {
+    "text": "Hina",
+    "confidence": 0.99962,
+    "box": [
+      828,
+      347,
+      871,
+      371
+    ]
+  },
+  {
+    "text": "(Dress)",
+    "confidence": 0.99983,
+    "box": [
+      934,
+      364,
+      986,
+      385
+    ]
+  },
+  {
+    "text": "Hina",
+    "confidence": 0.99975,
+    "box": [
+      940,
+      348,
+      981,
+      370
+    ]
+  },
+  {
+    "text": "(Dress)",
+    "confidence": 0.99995,
+    "box": [
+      1044,
+      365,
+      1098,
+      385
+    ]
+  },
+  {
+    "text": "Hina",
+    "confidence": 0.99955,
+    "box": [
+      1052,
+      348,
+      1093,
+      370
+    ]
+  },
+  {
+    "text": "Mika",
+    "confidence": 0.99981,
+    "box": [
+      1161,
+      356,
+      1205,
+      378
+    ]
+  },
+  {
+    "text": "Add students to the unit",
+    "confidence": 0.98222,
+    "box": [
+      174,
+      443,
+      395,
+      466
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.99535,
+    "box": [
+      700,
+      434,
+      743,
+      455
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.94066,
+    "box": [
+      1032,
+      430,
+      1076,
+      455
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.99434,
+    "box": [
+      1146,
+      436,
+      1186,
+      454
+    ]
+  },
+  {
+    "text": "Lv:90",
+    "confidence": 0.90539,
+    "box": [
+      126,
+      561,
+      163,
+      579
+    ]
+  },
+  {
+    "text": "Lv.78",
+    "confidence": 0.94491,
+    "box": [
+      487,
+      560,
+      530,
+      581
+    ]
+  },
+  {
+    "text": "Auto",
+    "confidence": 0.99992,
+    "box": [
+      593,
+      581,
+      652,
+      608
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99987,
+    "box": [
+      1110,
+      576,
+      1229,
+      610
+    ]
+  },
+  {
+    "text": "Loan 1",
+    "confidence": 1.0,
+    "box": [
+      597,
+      393,
+      657,
+      409
+    ]
+  },
+  {
+    "text": "Loan 2",
+    "confidence": 1.0,
+    "box": [
+      708,
+      393,
+      768,
+      409
+    ]
+  },
+  {
+    "text": "Loan 3",
+    "confidence": 1.0,
+    "box": [
+      819,
+      393,
+      879,
+      409
+    ]
+  },
+  {
+    "text": "Loan 4",
+    "confidence": 1.0,
+    "box": [
+      930,
+      393,
+      990,
+      409
+    ]
+  },
+  {
+    "text": "Loan 5",
+    "confidence": 1.0,
+    "box": [
+      1041,
+      393,
+      1101,
+      409
+    ]
+  },
+  {
+    "text": "Loan 6",
+    "confidence": 1.0,
+    "box": [
+      1152,
+      393,
+      1212,
+      409
+    ]
+  }
+]

@@ -1,0 +1,72 @@
+[
+  {
+    "text": "Battle Complete",
+    "box": [
+      47,
+      4,
+      473,
+      83
+    ],
+    "confidence": 0.99933
+  },
+  {
+    "text": "Ranking Point",
+    "box": [
+      669,
+      26,
+      833,
+      58
+    ],
+    "confidence": 0.99967
+  },
+  {
+    "text": "Time",
+    "box": [
+      1060,
+      29,
+      1118,
+      57
+    ],
+    "confidence": 0.99954
+  },
+  {
+    "text": "04:29.667",
+    "box": [
+      1147,
+      30,
+      1239,
+      54
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      43,
+      576,
+      125,
+      600
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "SPECIAL",
+    "box": [
+      469,
+      575,
+      547,
+      599
+    ],
+    "confidence": 0.99984
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      1114,
+      644,
+      1224,
+      680
+    ],
+    "confidence": 0.99984
+  }
+]

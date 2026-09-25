@@ -1,0 +1,242 @@
+[
+  {
+    "text": "Synergy Info",
+    "box": [
+      52,
+      74,
+      187,
+      104
+    ],
+    "confidence": 0.99706
+  },
+  {
+    "text": "Quick Formation",
+    "box": [
+      504,
+      75,
+      779,
+      111
+    ],
+    "confidence": 0.99957
+  },
+  {
+    "text": "X",
+    "box": [
+      1229,
+      74,
+      1260,
+      105
+    ],
+    "confidence": 0.97249
+  },
+  {
+    "text": "My Students",
+    "box": [
+      668,
+      144,
+      811,
+      173
+    ],
+    "confidence": 0.99984
+  },
+  {
+    "text": "Assistant (Available: 1/1)",
+    "box": [
+      975,
+      148,
+      1199,
+      170
+    ],
+    "confidence": 0.99044
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      584,
+      193,
+      676,
+      223
+    ],
+    "confidence": 0.99991
+  },
+  {
+    "text": "SPECIAL",
+    "box": [
+      704,
+      195,
+      795,
+      222
+    ],
+    "confidence": 0.99974
+  },
+  {
+    "text": "Lv.",
+    "box": [
+      978,
+      197,
+      1016,
+      224
+    ],
+    "confidence": 0.99589
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      927,
+      262,
+      961,
+      276
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "Aris (Maid)",
+    "box": [
+      585,
+      356,
+      667,
+      377
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "(New Year)",
+    "box": [
+      698,
+      365,
+      779,
+      385
+    ],
+    "confidence": 0.99794
+  },
+  {
+    "text": "Kayoko",
+    "box": [
+      708,
+      349,
+      768,
+      370
+    ],
+    "confidence": 0.99982
+  },
+  {
+    "text": "(Swimsuit)",
+    "box": [
+      809,
+      365,
+      889,
+      385
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "Izuna",
+    "box": [
+      824,
+      347,
+      873,
+      370
+    ],
+    "confidence": 0.99605
+  },
+  {
+    "text": "(Armed)",
+    "box": [
+      928,
+      363,
+      993,
+      386
+    ],
+    "confidence": 0.95308
+  },
+  {
+    "text": "Eimi",
+    "box": [
+      943,
+      349,
+      978,
+      368
+    ],
+    "confidence": 0.99722
+  },
+  {
+    "text": "Shun",
+    "box": [
+      1047,
+      354,
+      1094,
+      378
+    ],
+    "confidence": 0.99987
+  },
+  {
+    "text": "Niko",
+    "box": [
+      1161,
+      354,
+      1203,
+      378
+    ],
+    "confidence": 0.99985
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      704,
+      411,
+      740,
+      429
+    ],
+    "confidence": 0.98475
+  },
+  {
+    "text": "Add students to the unit",
+    "box": [
+      174,
+      443,
+      395,
+      466
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Lv.78",
+    "box": [
+      488,
+      560,
+      530,
+      581
+    ],
+    "confidence": 0.94591
+  },
+  {
+    "text": "Auto",
+    "box": [
+      593,
+      581,
+      652,
+      608
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      1109,
+      575,
+      1229,
+      612
+    ],
+    "confidence": 0.99991
+  },
+  {
+    "text": "4",
+    "box": [
+      118,
+      618,
+      136,
+      637
+    ],
+    "confidence": 0.99976
+  }
+]

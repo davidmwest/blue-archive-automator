@@ -1,0 +1,722 @@
+[
+  {
+    "text": "Synergy Info",
+    "box": [
+      54,
+      74,
+      187,
+      104
+    ],
+    "confidence": 0.99714
+  },
+  {
+    "text": "Quick Formation",
+    "box": [
+      505,
+      75,
+      779,
+      111
+    ],
+    "confidence": 0.99974
+  },
+  {
+    "text": "X",
+    "box": [
+      1229,
+      74,
+      1260,
+      106
+    ],
+    "confidence": 0.95915
+  },
+  {
+    "text": "Basic Info",
+    "box": [
+      236,
+      139,
+      334,
+      165
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "My Students",
+    "box": [
+      670,
+      145,
+      812,
+      175
+    ],
+    "confidence": 0.99335
+  },
+  {
+    "text": "Assistant (Available: 1/1)",
+    "box": [
+      974,
+      146,
+      1199,
+      171
+    ],
+    "confidence": 0.9972
+  },
+  {
+    "text": "Lv.90",
+    "box": [
+      54,
+      204,
+      91,
+      223
+    ],
+    "confidence": 0.91732
+  },
+  {
+    "text": "77",
+    "box": [
+      172,
+      201,
+      217,
+      236
+    ],
+    "confidence": 0.8761
+  },
+  {
+    "text": "Aris (Armed)",
+    "box": [
+      231,
+      213,
+      414,
+      249
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "Millennium Science School",
+    "box": [
+      233,
+      187,
+      444,
+      209
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      585,
+      196,
+      676,
+      222
+    ],
+    "confidence": 0.99991
+  },
+  {
+    "text": "SPECIAL",
+    "box": [
+      704,
+      195,
+      794,
+      222
+    ],
+    "confidence": 0.99975
+  },
+  {
+    "text": "Lv.",
+    "box": [
+      976,
+      195,
+      1015,
+      225
+    ],
+    "confidence": 0.98408
+  },
+  {
+    "text": "\u53e4",
+    "box": [
+      44,
+      263,
+      62,
+      282
+    ],
+    "confidence": 0.99761
+  },
+  {
+    "text": "Dealer",
+    "box": [
+      201,
+      265,
+      254,
+      287
+    ],
+    "confidence": 0.94462
+  },
+  {
+    "text": "\u767d",
+    "box": [
+      519,
+      274,
+      539,
+      290
+    ],
+    "confidence": 0.65145
+  },
+  {
+    "text": "\u53e4",
+    "box": [
+      580,
+      263,
+      603,
+      284
+    ],
+    "confidence": 0.82703
+  },
+  {
+    "text": "\u53e4",
+    "box": [
+      1030,
+      260,
+      1049,
+      278
+    ],
+    "confidence": 0.99095
+  },
+  {
+    "text": "Shortcut",
+    "box": [
+      41,
+      299,
+      135,
+      323
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "MIDDLE",
+    "box": [
+      177,
+      299,
+      252,
+      324
+    ],
+    "confidence": 0.93997
+  },
+  {
+    "text": "Mystic",
+    "box": [
+      278,
+      299,
+      338,
+      327
+    ],
+    "confidence": 0.99983
+  },
+  {
+    "text": "Composite",
+    "box": [
+      350,
+      300,
+      424,
+      320
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "(New Year)",
+    "box": [
+      582,
+      310,
+      669,
+      336
+    ],
+    "confidence": 0.99061
+  },
+  {
+    "text": "Mutsuki",
+    "box": [
+      594,
+      297,
+      660,
+      318
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "(New Year)",
+    "box": [
+      697,
+      314,
+      780,
+      335
+    ],
+    "confidence": 0.99866
+  },
+  {
+    "text": "Kayoko",
+    "box": [
+      708,
+      298,
+      768,
+      319
+    ],
+    "confidence": 0.99985
+  },
+  {
+    "text": "Shiroko*Terror",
+    "box": [
+      805,
+      307,
+      894,
+      324
+    ],
+    "confidence": 0.9998
+  },
+  {
+    "text": "Wakamo",
+    "box": [
+      924,
+      304,
+      996,
+      327
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "Already in",
+    "box": [
+      1033,
+      289,
+      1111,
+      308
+    ],
+    "confidence": 0.99387
+  },
+  {
+    "text": "formation",
+    "box": [
+      1032,
+      302,
+      1111,
+      324
+    ],
+    "confidence": 0.99965
+  },
+  {
+    "text": "Kei",
+    "box": [
+      1167,
+      304,
+      1198,
+      327
+    ],
+    "confidence": 0.99919
+  },
+  {
+    "text": "Skill Info",
+    "box": [
+      114,
+      355,
+      197,
+      382
+    ],
+    "confidence": 0.9669
+  },
+  {
+    "text": "Equipment Info",
+    "box": [
+      342,
+      355,
+      485,
+      384
+    ],
+    "confidence": 0.99945
+  },
+  {
+    "text": "Lv:90",
+    "box": [
+      593,
+      384,
+      629,
+      403
+    ],
+    "confidence": 0.8851
+  },
+  {
+    "text": "LV.90",
+    "box": [
+      813,
+      385,
+      853,
+      403
+    ],
+    "confidence": 0.89434
+  },
+  {
+    "text": "LV490",
+    "box": [
+      923,
+      383,
+      965,
+      404
+    ],
+    "confidence": 0.89846
+  },
+  {
+    "text": "Liv.90",
+    "box": [
+      1035,
+      384,
+      1075,
+      402
+    ],
+    "confidence": 0.77262
+  },
+  {
+    "text": "EX Skill",
+    "box": [
+      66,
+      402,
+      126,
+      423
+    ],
+    "confidence": 0.98499
+  },
+  {
+    "text": "Basic Skill",
+    "box": [
+      183,
+      402,
+      263,
+      422
+    ],
+    "confidence": 0.98962
+  },
+  {
+    "text": "Enhanced Skill+",
+    "box": [
+      292,
+      402,
+      407,
+      422
+    ],
+    "confidence": 0.99916
+  },
+  {
+    "text": "Sub Skill",
+    "box": [
+      441,
+      402,
+      511,
+      423
+    ],
+    "confidence": 0.99806
+  },
+  {
+    "text": "+",
+    "box": [
+      365,
+      428,
+      380,
+      445
+    ],
+    "confidence": 0.98384
+  },
+  {
+    "text": "\u53e4",
+    "box": [
+      581,
+      440,
+      604,
+      460
+    ],
+    "confidence": 0.90025
+  },
+  {
+    "text": "\u53e4",
+    "box": [
+      693,
+      439,
+      715,
+      460
+    ],
+    "confidence": 0.99394
+  },
+  {
+    "text": "\u53e4",
+    "box": [
+      803,
+      439,
+      825,
+      461
+    ],
+    "confidence": 0.99015
+  },
+  {
+    "text": "MAX",
+    "box": [
+      69,
+      491,
+      119,
+      517
+    ],
+    "confidence": 0.92057
+  },
+  {
+    "text": "MAX",
+    "box": [
+      196,
+      491,
+      245,
+      517
+    ],
+    "confidence": 0.90877
+  },
+  {
+    "text": "MAX",
+    "box": [
+      323,
+      491,
+      372,
+      517
+    ],
+    "confidence": 0.88022
+  },
+  {
+    "text": "MAX",
+    "box": [
+      449,
+      491,
+      499,
+      517
+    ],
+    "confidence": 0.93804
+  },
+  {
+    "text": "Already in",
+    "box": [
+      587,
+      470,
+      668,
+      490
+    ],
+    "confidence": 0.98096
+  },
+  {
+    "text": "formation",
+    "box": [
+      586,
+      483,
+      668,
+      506
+    ],
+    "confidence": 0.99987
+  },
+  {
+    "text": "formation",
+    "box": [
+      697,
+      482,
+      780,
+      509
+    ],
+    "confidence": 0.96264
+  },
+  {
+    "text": "Already in",
+    "box": [
+      699,
+      470,
+      779,
+      490
+    ],
+    "confidence": 0.98972
+  },
+  {
+    "text": "Kei",
+    "box": [
+      833,
+      480,
+      864,
+      503
+    ],
+    "confidence": 0.99958
+  },
+  {
+    "text": "Kei",
+    "box": [
+      944,
+      481,
+      976,
+      504
+    ],
+    "confidence": 0.99947
+  },
+  {
+    "text": "Hoshino",
+    "box": [
+      1037,
+      472,
+      1105,
+      495
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "(Armed)",
+    "box": [
+      1039,
+      489,
+      1104,
+      513
+    ],
+    "confidence": 0.99928
+  },
+  {
+    "text": "Wakamo",
+    "box": [
+      1146,
+      480,
+      1219,
+      503
+    ],
+    "confidence": 0.99979
+  },
+  {
+    "text": "Lv:90",
+    "box": [
+      126,
+      561,
+      163,
+      579
+    ],
+    "confidence": 0.90539
+  },
+  {
+    "text": "Lv.78",
+    "box": [
+      487,
+      560,
+      529,
+      581
+    ],
+    "confidence": 0.94622
+  },
+  {
+    "text": "Auto",
+    "box": [
+      593,
+      581,
+      652,
+      608
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      1109,
+      575,
+      1229,
+      612
+    ],
+    "confidence": 0.99991
+  },
+  {
+    "text": "\u53e4",
+    "box": [
+      25,
+      616,
+      46,
+      638
+    ],
+    "confidence": 0.88582
+  },
+  {
+    "text": "\u53e4",
+    "box": [
+      116,
+      616,
+      137,
+      638
+    ],
+    "confidence": 0.98076
+  },
+  {
+    "text": "3",
+    "box": [
+      210,
+      619,
+      226,
+      636
+    ],
+    "confidence": 0.88408
+  },
+  {
+    "text": "4",
+    "box": [
+      484,
+      618,
+      500,
+      636
+    ],
+    "confidence": 0.99964
+  },
+  {
+    "text": "Loan 7",
+    "confidence": 1.0,
+    "box": [
+      597,
+      344,
+      657,
+      360
+    ]
+  },
+  {
+    "text": "Loan 8",
+    "confidence": 1.0,
+    "box": [
+      708,
+      344,
+      768,
+      360
+    ]
+  },
+  {
+    "text": "Loan 9",
+    "confidence": 1.0,
+    "box": [
+      819,
+      344,
+      879,
+      360
+    ]
+  },
+  {
+    "text": "Loan 10",
+    "confidence": 1.0,
+    "box": [
+      930,
+      344,
+      990,
+      360
+    ]
+  },
+  {
+    "text": "Loan 11",
+    "confidence": 1.0,
+    "box": [
+      1041,
+      344,
+      1101,
+      360
+    ]
+  },
+  {
+    "text": "Loan 12",
+    "confidence": 1.0,
+    "box": [
+      1152,
+      344,
+      1212,
+      360
+    ]
+  }
+]

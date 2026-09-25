@@ -1,0 +1,312 @@
+[
+  {
+    "text": "Notice",
+    "confidence": 0.99997,
+    "box": [
+      585,
+      142,
+      694,
+      181
+    ]
+  },
+  {
+    "text": "X",
+    "confidence": 0.94536,
+    "box": [
+      868,
+      142,
+      907,
+      179
+    ]
+  },
+  {
+    "text": "Unit 1",
+    "confidence": 0.99874,
+    "box": [
+      28,
+      172,
+      108,
+      203
+    ]
+  },
+  {
+    "text": "Quick Formation",
+    "confidence": 0.99664,
+    "box": [
+      1145,
+      214,
+      1258,
+      234
+    ]
+  },
+  {
+    "text": "Unit 2",
+    "confidence": 0.93488,
+    "box": [
+      25,
+      249,
+      110,
+      284
+    ]
+  },
+  {
+    "text": "Hardcore",
+    "confidence": 0.99992,
+    "box": [
+      582,
+      253,
+      698,
+      288
+    ]
+  },
+  {
+    "text": "Starting Skill",
+    "confidence": 0.9998,
+    "box": [
+      1141,
+      312,
+      1260,
+      338
+    ]
+  },
+  {
+    "text": "Unit3",
+    "confidence": 0.98991,
+    "box": [
+      25,
+      329,
+      110,
+      363
+    ]
+  },
+  {
+    "text": "Use Total Assault Ticket to enter?",
+    "confidence": 0.99884,
+    "box": [
+      443,
+      333,
+      837,
+      362
+    ]
+  },
+  {
+    "text": "\u81ea",
+    "confidence": 0.743,
+    "box": [
+      1185,
+      358,
+      1220,
+      401
+    ]
+  },
+  {
+    "text": "Unit 4",
+    "confidence": 0.97281,
+    "box": [
+      25,
+      409,
+      109,
+      440
+    ]
+  },
+  {
+    "text": "Even if you lose, you can still receive preservation rewards.",
+    "confidence": 0.99419,
+    "box": [
+      414,
+      401,
+      866,
+      427
+    ]
+  },
+  {
+    "text": "Unit Info",
+    "confidence": 0.99855,
+    "box": [
+      1158,
+      412,
+      1244,
+      438
+    ]
+  },
+  {
+    "text": "6\u21925",
+    "confidence": 0.98357,
+    "box": [
+      814,
+      442,
+      878,
+      470
+    ]
+  },
+  {
+    "text": "Cancel",
+    "confidence": 0.99997,
+    "box": [
+      461,
+      483,
+      568,
+      520
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99991,
+    "box": [
+      702,
+      480,
+      830,
+      520
+    ]
+  },
+  {
+    "text": "BACK",
+    "confidence": 0.99987,
+    "box": [
+      243,
+      493,
+      292,
+      518
+    ]
+  },
+  {
+    "text": "FRONT",
+    "confidence": 0.9928,
+    "box": [
+      918,
+      495,
+      968,
+      516
+    ]
+  },
+  {
+    "text": "Izuna",
+    "confidence": 0.99231,
+    "box": [
+      964,
+      519,
+      1021,
+      546
+    ]
+  },
+  {
+    "text": "Presets",
+    "confidence": 0.99997,
+    "box": [
+      1166,
+      516,
+      1238,
+      539
+    ]
+  },
+  {
+    "text": "Aris (Maid",
+    "confidence": 0.99841,
+    "box": [
+      271,
+      530,
+      363,
+      557
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.99931,
+    "box": [
+      208,
+      547,
+      257,
+      568
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.9999,
+    "box": [
+      943,
+      540,
+      1040,
+      567
+    ]
+  },
+  {
+    "text": "STRIKER",
+    "confidence": 0.99946,
+    "box": [
+      28,
+      559,
+      149,
+      582
+    ]
+  },
+  {
+    "text": "Mobilize",
+    "confidence": 0.99998,
+    "box": [
+      1112,
+      640,
+      1242,
+      676
+    ]
+  },
+  {
+    "text": "4",
+    "confidence": 0.978,
+    "box": [
+      420,
+      654,
+      447,
+      680
+    ]
+  },
+  {
+    "text": "Ako",
+    "confidence": 0.99796,
+    "box": [
+      500,
+      661,
+      543,
+      688
+    ]
+  },
+  {
+    "text": "4",
+    "confidence": 0.88606,
+    "box": [
+      769,
+      653,
+      796,
+      680
+    ]
+  },
+  {
+    "text": "Yuzu (Armed)",
+    "confidence": 0.98875,
+    "box": [
+      810,
+      661,
+      930,
+      685
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.99752,
+    "box": [
+      411,
+      678,
+      459,
+      699
+    ]
+  },
+  {
+    "text": "Lv.78",
+    "confidence": 0.99799,
+    "box": [
+      759,
+      678,
+      808,
+      699
+    ]
+  }
+]

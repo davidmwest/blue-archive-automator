@@ -1,0 +1,652 @@
+[
+  {
+    "text": "Synergy Info",
+    "box": [
+      54,
+      74,
+      187,
+      104
+    ],
+    "confidence": 0.99714
+  },
+  {
+    "text": "Quick Formation",
+    "box": [
+      504,
+      75,
+      779,
+      111
+    ],
+    "confidence": 0.99694
+  },
+  {
+    "text": "X",
+    "box": [
+      1228,
+      72,
+      1262,
+      107
+    ],
+    "confidence": 0.9392
+  },
+  {
+    "text": "Basic Info",
+    "box": [
+      236,
+      139,
+      334,
+      165
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "My Students",
+    "box": [
+      670,
+      145,
+      812,
+      175
+    ],
+    "confidence": 0.99335
+  },
+  {
+    "text": "Assistant (Available: 1/1)",
+    "box": [
+      974,
+      146,
+      1199,
+      171
+    ],
+    "confidence": 0.9972
+  },
+  {
+    "text": "Lv:90",
+    "box": [
+      53,
+      204,
+      91,
+      223
+    ],
+    "confidence": 0.86238
+  },
+  {
+    "text": "77",
+    "box": [
+      172,
+      201,
+      218,
+      237
+    ],
+    "confidence": 0.80346
+  },
+  {
+    "text": "Aris (Armed)",
+    "box": [
+      231,
+      213,
+      414,
+      249
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "Millennium Science School",
+    "box": [
+      233,
+      187,
+      444,
+      209
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      585,
+      196,
+      676,
+      222
+    ],
+    "confidence": 0.99991
+  },
+  {
+    "text": "SPECIAL",
+    "box": [
+      704,
+      195,
+      795,
+      222
+    ],
+    "confidence": 0.99974
+  },
+  {
+    "text": "Lv.",
+    "box": [
+      978,
+      197,
+      1015,
+      224
+    ],
+    "confidence": 0.97054
+  },
+  {
+    "text": "Dealer",
+    "box": [
+      201,
+      265,
+      254,
+      287
+    ],
+    "confidence": 0.94462
+  },
+  {
+    "text": "Lv.90",
+    "box": [
+      590,
+      255,
+      630,
+      277
+    ],
+    "confidence": 0.90474
+  },
+  {
+    "text": "LV!90",
+    "box": [
+      702,
+      257,
+      739,
+      275
+    ],
+    "confidence": 0.88532
+  },
+  {
+    "text": "Lv.90",
+    "box": [
+      811,
+      256,
+      855,
+      277
+    ],
+    "confidence": 0.97218
+  },
+  {
+    "text": "Lv:90",
+    "box": [
+      923,
+      255,
+      964,
+      276
+    ],
+    "confidence": 0.91331
+  },
+  {
+    "text": "Lv.90",
+    "box": [
+      1035,
+      257,
+      1076,
+      275
+    ],
+    "confidence": 0.91033
+  },
+  {
+    "text": "LV:90",
+    "box": [
+      1145,
+      255,
+      1186,
+      276
+    ],
+    "confidence": 0.83191
+  },
+  {
+    "text": "Shortcut",
+    "box": [
+      41,
+      299,
+      135,
+      323
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "MIDDLE",
+    "box": [
+      177,
+      299,
+      252,
+      324
+    ],
+    "confidence": 0.93997
+  },
+  {
+    "text": "Mystic",
+    "box": [
+      278,
+      299,
+      338,
+      327
+    ],
+    "confidence": 0.99983
+  },
+  {
+    "text": "Composite",
+    "box": [
+      350,
+      300,
+      424,
+      320
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "\u53e4",
+    "box": [
+      583,
+      314,
+      602,
+      333
+    ],
+    "confidence": 0.99958
+  },
+  {
+    "text": "Skill Info",
+    "box": [
+      115,
+      357,
+      196,
+      381
+    ],
+    "confidence": 0.98602
+  },
+  {
+    "text": "Equipment Info",
+    "box": [
+      342,
+      355,
+      485,
+      384
+    ],
+    "confidence": 0.99852
+  },
+  {
+    "text": "(Armed)",
+    "box": [
+      594,
+      361,
+      660,
+      384
+    ],
+    "confidence": 0.99943
+  },
+  {
+    "text": "Aris",
+    "box": [
+      609,
+      346,
+      645,
+      368
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "Shiroko*Terror",
+    "box": [
+      693,
+      355,
+      783,
+      374
+    ],
+    "confidence": 0.99863
+  },
+  {
+    "text": "Hoshino",
+    "box": [
+      816,
+      347,
+      882,
+      368
+    ],
+    "confidence": 0.99984
+  },
+  {
+    "text": "(Armed)",
+    "box": [
+      817,
+      361,
+      882,
+      384
+    ],
+    "confidence": 0.98584
+  },
+  {
+    "text": "formation",
+    "box": [
+      919,
+      356,
+      1001,
+      379
+    ],
+    "confidence": 0.99985
+  },
+  {
+    "text": "Already in",
+    "box": [
+      921,
+      342,
+      1001,
+      363
+    ],
+    "confidence": 0.99223
+  },
+  {
+    "text": "Hoshino",
+    "box": [
+      1038,
+      347,
+      1104,
+      368
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "(Armed)",
+    "box": [
+      1038,
+      361,
+      1104,
+      384
+    ],
+    "confidence": 0.99787
+  },
+  {
+    "text": "Already in",
+    "box": [
+      1143,
+      342,
+      1223,
+      363
+    ],
+    "confidence": 0.9767
+  },
+  {
+    "text": "formation",
+    "box": [
+      1142,
+      356,
+      1224,
+      379
+    ],
+    "confidence": 0.99989
+  },
+  {
+    "text": "EX Skill",
+    "box": [
+      66,
+      402,
+      126,
+      423
+    ],
+    "confidence": 0.98499
+  },
+  {
+    "text": "Basic Skill",
+    "box": [
+      183,
+      402,
+      263,
+      422
+    ],
+    "confidence": 0.98962
+  },
+  {
+    "text": "Enhanced Skill+",
+    "box": [
+      292,
+      402,
+      407,
+      422
+    ],
+    "confidence": 0.99916
+  },
+  {
+    "text": "Sub Skill",
+    "box": [
+      441,
+      402,
+      510,
+      423
+    ],
+    "confidence": 0.99775
+  },
+  {
+    "text": "+",
+    "box": [
+      361,
+      426,
+      382,
+      446
+    ],
+    "confidence": 0.94159
+  },
+  {
+    "text": "Lv.90",
+    "box": [
+      592,
+      433,
+      630,
+      451
+    ],
+    "confidence": 0.91146
+  },
+  {
+    "text": "Lv.90",
+    "box": [
+      700,
+      432,
+      742,
+      453
+    ],
+    "confidence": 0.96836
+  },
+  {
+    "text": "Lv:90",
+    "box": [
+      1034,
+      431,
+      1075,
+      452
+    ],
+    "confidence": 0.94517
+  },
+  {
+    "text": "LV490",
+    "box": [
+      1144,
+      432,
+      1187,
+      453
+    ],
+    "confidence": 0.79953
+  },
+  {
+    "text": "MAX",
+    "box": [
+      69,
+      491,
+      119,
+      517
+    ],
+    "confidence": 0.92057
+  },
+  {
+    "text": "MAX",
+    "box": [
+      196,
+      491,
+      245,
+      517
+    ],
+    "confidence": 0.90877
+  },
+  {
+    "text": "mAX",
+    "box": [
+      322,
+      489,
+      373,
+      518
+    ],
+    "confidence": 0.94942
+  },
+  {
+    "text": "MAX",
+    "box": [
+      449,
+      491,
+      498,
+      517
+    ],
+    "confidence": 0.92629
+  },
+  {
+    "text": "\u53e4",
+    "box": [
+      580,
+      488,
+      602,
+      510
+    ],
+    "confidence": 0.90726
+  },
+  {
+    "text": "\u53e4",
+    "box": [
+      1028,
+      490,
+      1047,
+      508
+    ],
+    "confidence": 0.94367
+  },
+  {
+    "text": "Lv:90",
+    "box": [
+      126,
+      561,
+      163,
+      579
+    ],
+    "confidence": 0.90539
+  },
+  {
+    "text": "Lv.78",
+    "box": [
+      487,
+      560,
+      529,
+      581
+    ],
+    "confidence": 0.94622
+  },
+  {
+    "text": "Auto",
+    "box": [
+      593,
+      581,
+      652,
+      608
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      1109,
+      575,
+      1229,
+      612
+    ],
+    "confidence": 0.99991
+  },
+  {
+    "text": "\u53e4",
+    "box": [
+      118,
+      618,
+      136,
+      636
+    ],
+    "confidence": 0.98991
+  },
+  {
+    "text": "3",
+    "box": [
+      210,
+      619,
+      226,
+      636
+    ],
+    "confidence": 0.88408
+  },
+  {
+    "text": "Loan 1",
+    "confidence": 1.0,
+    "box": [
+      597,
+      393,
+      657,
+      409
+    ]
+  },
+  {
+    "text": "Loan 2",
+    "confidence": 1.0,
+    "box": [
+      708,
+      393,
+      768,
+      409
+    ]
+  },
+  {
+    "text": "Loan 3",
+    "confidence": 1.0,
+    "box": [
+      819,
+      393,
+      879,
+      409
+    ]
+  },
+  {
+    "text": "Loan 4",
+    "confidence": 1.0,
+    "box": [
+      930,
+      393,
+      990,
+      409
+    ]
+  },
+  {
+    "text": "Loan 5",
+    "confidence": 1.0,
+    "box": [
+      1041,
+      393,
+      1101,
+      409
+    ]
+  },
+  {
+    "text": "Loan 6",
+    "confidence": 1.0,
+    "box": [
+      1152,
+      393,
+      1212,
+      409
+    ]
+  }
+]

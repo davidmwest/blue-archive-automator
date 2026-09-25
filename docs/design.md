@@ -69,7 +69,7 @@ One automation worker controls one configured game instance at a time. An OS loc
 
 ### Jobs and tasks
 
-A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, Club attendance, the free daily pack, optional paid-pack checks, Mail, and Cafe, with Tactical Challenge reward collection, and Bounties, Scrimmages, and Lessons included when their daily settings are enabled and Spend AP appended when automatic spending is enabled. Tasks collection finishes the daily activities, checking its home red dot and claiming completed rewards after the activities that earn them.
+A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, Club attendance, the free daily pack, optional paid-pack checks, Mail, and Cafe, with Tactical Challenge reward collection, and Bounties, Scrimmages, and Lessons included when their daily settings are enabled with opt-in Total Assault after Lessons and Spend AP appended when automatic spending is enabled. Tasks collection finishes the daily activities, checking its home red dot and claiming completed rewards after the activities that earn them.
 
 `tasks.py` supplies a small catalog and ordered task plans shared by the CLI and dashboard. Grow a shared execution context when repeated orchestration needs it instead of extending command-specific conditionals indefinitely. Each task defines:
 
@@ -192,3 +192,7 @@ Clearing saves a cursor at the last complete JSONL record and a timestamp. It do
 Home notifications are checked after successful task plans. Two stable home frames produce a bounded queue request for free packs, Club, Mail, and Tasks; dispatch deduplicates tasks across the busy batch before optional idle closure. Fresh AP at least 20 above the configured floor can enqueue automatic Spend AP without overriding failure holds. No idle polling or AI is involved. See [red-dot collection](red-dots.md).
 
 Tactical Challenge separates reward collection from battle policy. The reward task only reaches Campaign, enters Tactical Challenge, claims the two recognized reward controls once each, verifies receipts and unchanged tickets, then returns home. Battle execution is a no-input deferred stub outside the dispatch allowlist. See [Tactical Challenge](tactical-challenge.md).
+
+## Total Assault policy
+
+Total Assault has a configurable target difficulty, defaulting to Hardcore, and separate opt-in Daily inclusion. An observed prerequisite ladder may require easier clears, but every real entry needs a winning mock at that difficulty. Auto formation is tested first. A failed or marginal mock may replace the least-damage striker with an eligible assistant matching the attack type, ordered by stars then level, followed by a second mock. The exact passing team is reused for real entry; remaining tickets are swept only after the target clear and sweep eligibility are verified. Unavailable assistants, unreadable evidence, or unsuccessful mocks produce a player-facing failure rather than an untested real attempt. See [Total Assault](total-assault.md).

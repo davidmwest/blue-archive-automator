@@ -111,6 +111,9 @@ def test_status_is_explicitly_fictional_and_cannot_schedule_jobs(demo_server):
     assert status["config"]["lessons_max_tickets"] == 0
     assert status["config"]["lessons_locations"] == []
     assert status["config"]["lessons_enabled_in_daily"] is True
+    assert status["config"]["total_assault_difficulty"] == "hardcore"
+    assert status["config"]["total_assault_comfort_seconds"] == 30
+    assert status["config"]["total_assault_enabled_in_daily"] is False
     assert not status["schedule"]["cafe"]["enabled"]
     assert "csrf_token" not in status
     assert all(job["id"].startswith("sample-") for job in status["queue"] + status["history"])

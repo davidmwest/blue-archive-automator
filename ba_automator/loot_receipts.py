@@ -66,7 +66,21 @@ def amount(words):
     return next(iter(values)) if len(values) == 1 else None
 
 
-def has_tooltip(image):
+def complete_name(name):
+    """Only a complete high-confidence label may stand in for animated artwork."""
+    return bool(
+        name
+        and 1 < len(name) <= 160
+        and not name.rstrip().endswith(("-", "—"))
+        and "..." not in name
+        and "…" not in name
+        and name.count("(") == name.count(")")
+        and name.count("[") == name.count("]")
+    )
+
+
+def tooltip_boxes(image):
+    boxes = []
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, (75, 100, 180), (105, 255, 255))
     for contour in cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[
@@ -85,8 +99,12 @@ def has_tooltip(image):
             )[0]
             for _, _, bw, bh in [cv2.boundingRect(c)]
         ):
-            return True
-    return False
+            boxes.append((x, y, w, h))
+    return tuple(sorted(boxes))
+
+
+def has_tooltip(image):
+    return bool(tooltip_boxes(image))
 
 
 def tooltip(image, words):
@@ -300,7 +318,7 @@ def page(png, vision):
                 if titles and all(a.confidence >= 0.85 for a in titles)
                 else None
             )
-            if not name or name.endswith("-"):
+            if not complete_name(name):
                 name = None
             icon = image[
                 y + int(h * 0.30) : y + int(h * 0.70),
@@ -319,14 +337,125 @@ def same_icon(a, b):
     second = cv2.imdecode(np.frombuffer(b, np.uint8), cv2.IMREAD_COLOR)
     if first is None or second is None or first.shape != second.shape:
         return False
+    return same_pixels(first, second)
+
+
+def same_pixels(first, second):
+    if first.shape != second.shape or not first.size:
+        return False
     delta = np.abs(first.astype(np.float32) - second)
     # A few edge pixels shimmer after a no-op scroll. This very tight bound
     # accepts that observed raster noise, not similar artwork or translated icons.
     return float(delta.mean()) <= 0.1 and float(np.mean(delta * delta)) <= 1.0
 
 
+def same_receipt_view(before, after, expected):
+    """Revalidate recognized foreground without another expensive OCR pass.
+
+    Reward Acquired overlays leave the game visible behind them. Its timers and
+    portraits may change while OCR runs, so only the receipt's own pixels can
+    authorize a fresh input. Any uncertainty fails closed.
+    """
+    if before == after:
+        return True
+    first, second = decode_frame(before), decode_frame(after)
+    if (
+        getattr(first, "shape", None) != (720, 1280, 3)
+        or getattr(second, "shape", None) != first.shape
+    ):
+        return False
+    old_tips, new_tips = tooltip_boxes(first), tooltip_boxes(second)
+    if old_tips != new_tips:
+        return False
+    if old_tips:
+        # A neutral-area input can only dismiss this same recognized tooltip.
+        # Its original receipt is parsed again immediately after dismissal.
+        return all(
+            same_pixels(
+                first[y + 4 : y + h - 16, x + 4 : x + w - 4],
+                second[y + 4 : y + h - 16, x + 4 : x + w - 4],
+            )
+            for x, y, w, h in old_tips
+        )
+    if expected is None:
+        return False
+    panels = {
+        "grid": ((314, 114, 650, 489),),
+        "sweep": ((170, 70, 940, 65), (191, 440, 897, 190)),
+        "lesson": ((416, 112, 448, 514),),
+    }
+    if expected.kind in panels:
+        return all(
+            same_pixels(first[y : y + h, x : x + w], second[y : y + h, x : x + w])
+            for x, y, w, h in panels[expected.kind]
+        )
+    if expected.kind != "reward" or not expected.cards:
+        return False
+
+    def title(image):
+        crop = image[125:190, 365:915]
+        b, g, r = cv2.split(crop)
+        mask = (r > 180) & (g > 180) & (b < 120)
+        return mask, crop
+
+    old_title, new_title = title(first), title(second)
+    if (
+        np.count_nonzero(old_title[0]) < 2000
+        # Tiny particles can cross a few heading edge pixels; the yellow text
+        # itself must remain in place and retain the same color.
+        or np.count_nonzero(old_title[0] != new_title[0]) > 32
+        or not same_pixels(
+            old_title[1][old_title[0] & new_title[0]],
+            new_title[1][old_title[0] & new_title[0]],
+        )
+    ):
+        return False
+
+    def boxes(image):
+        roi = image[250:490, 90:1190]
+        mask = (np.min(roi, axis=2) > 180).astype(np.uint8) * 255
+        return sorted(
+            (x + 90, y + 250, w, h)
+            for c in cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+            for x, y, w, h in [cv2.boundingRect(c)]
+            if w > 8 and h >= 175
+        )
+
+    old_boxes = boxes(first)
+    if old_boxes != boxes(second):
+        return False
+    named = {
+        card.box
+        for card in expected.cards
+        if complete_name(card.name) and card.quantity is not None
+    }
+    for x, y, w, h in old_boxes:
+        regions = [(x, y, w, h)]
+        if (x, y, w, h) in named:
+            # Full OCR-read names and quantities identify these cards. Their
+            # artwork can sparkle (notably Pyroxenes) without changing the loot.
+            regions = [
+                (x + 5, y + 6, w - 10, int(h * 0.24) - 6),
+                (x + 8, y + h - 48, w - 16, 39),
+            ]
+        for rx, ry, rw, rh in regions:
+            if not same_pixels(
+                first[ry : ry + rh, rx : rx + rw],
+                second[ry : ry + rh, rx : rx + rw],
+            ):
+                return False
+    return bool(old_boxes)
+
+
 def same_card(a, b):
-    return a.quantity == b.quantity and same_icon(a.icon, b.icon)
+    if a.quantity != b.quantity:
+        return False
+    if a.quantity is not None and complete_name(a.name) and complete_name(b.name):
+        # Named cards can animate. Compare complete labels and dimensions;
+        # callers verify position for a tap/stable page, while ordered overlap
+        # deliberately permits the same card to move after a scroll.
+        return a.name == b.name and a.box[2:] == b.box[2:]
+    return same_icon(a.icon, b.icon)
 
 
 def save_icon(config, png):
@@ -392,6 +521,7 @@ class ReceiptReader:
         self.r, self.vision, self.evidence = runner, vision, Path(evidence)
         self.started, self.inputs = runner.clock(), 0
         self.sequence = 0
+        self.observed = None
 
     def capture(self):
         r = self.r
@@ -404,8 +534,30 @@ class ReceiptReader:
         # Timestamp must precede capture: the caller's freshness rules still apply.
         return cap
 
+    def read(self, cap):
+        result = page(cap.png, self.vision)
+        self.observed = (cap.png, result)
+        return result
+
     def input(self, cap, target, *, end=None):
         r = self.r
+        if cap.deadline - r.clock() < 1.0:
+            expected = (
+                self.observed[1]
+                if self.observed is not None and self.observed[0] == cap.png
+                else None
+            )
+            fresh = self.capture()
+            if not fresh.is_fresh(r.clock()) or not same_receipt_view(
+                cap.png, fresh.png, expected
+            ):
+                r.fail(
+                    "Reward receipt changed or capture expired before inspection input"
+                )
+            r.journal.record(
+                "receipt_revalidated", previous_age=r.clock() - cap.captured_at
+            )
+            cap = fresh
         if (
             not cap.is_fresh(r.clock())
             or r.device.foreground_package() != r.config.package
@@ -435,7 +587,6 @@ class ReceiptReader:
     def dismiss_tooltip(self, cap, kind):
         # Never tap a neutral area unless a tooltip is positively recognized:
         # doing so on a bare Reward Acquired page could dismiss the whole receipt.
-        words = self.vision.read(decode_frame(cap.png))
         if not has_tooltip(decode_frame(cap.png)):
             self.r.fail("No item tooltip to dismiss; receipt left untouched")
         point = {
@@ -448,7 +599,7 @@ class ReceiptReader:
             self.input(cap, point)
             cap = self.capture()
             for _ in range(3):
-                p = page(cap.png, self.vision)
+                p = self.read(cap)
                 if p.kind == kind and p.cards:
                     return cap
                 if p.kind == "tooltip":
@@ -465,13 +616,13 @@ class ReceiptReader:
             self.input(cap, card.target, end=card.target if attempt == 1 else None)
             cap = self.capture()
             name = read_tooltip(decode_frame(cap.png), self.vision)
-            if name or page(cap.png, self.vision).kind != kind:
+            if name or self.read(cap).kind != kind:
                 break
         self.evidence_frame(cap, f"item-{self.sequence:03d}")
         self.sequence += 1
         if has_tooltip(decode_frame(cap.png)):
             cap = self.dismiss_tooltip(cap, kind)
-        elif page(cap.png, self.vision).kind != kind:
+        elif self.read(cap).kind != kind:
             self.r.fail("Unrecognized item detail; receipt evidence saved for review")
         return cap, name or card.name
 
@@ -483,7 +634,7 @@ class ReceiptReader:
             start, end = ((480, 367), (875, 367)) if left else ((875, 367), (480, 367))
         self.input(cap, start, end=end)
         cap = self.capture()
-        p = page(cap.png, self.vision)
+        p = self.read(cap)
         if p.kind != kind:
             self.r.fail("Receipt changed while scrolling rewards")
         return cap, p
@@ -507,12 +658,12 @@ class ReceiptReader:
         kind = None
         try:
             cap = self.capture()
-            p = page(cap.png, self.vision)
+            p = self.read(cap)
             kind = p.kind
             if p.expand_target:
                 self.input(cap, p.expand_target)
                 cap = self.capture()
-                p = page(cap.png, self.vision)
+                p = self.read(cap)
                 kind = p.kind
                 if kind != "grid":
                     self.r.fail("Full reward list did not open; receipt saved")
@@ -580,7 +731,7 @@ class ReceiptReader:
                     # are separate drops. Only the ordered overlap is reused.
                     icon_id = save_icon(self.r.config, card.icon)
                     cap = self.capture()
-                    current = page(cap.png, self.vision)
+                    current = self.read(cap)
                     if current.kind != kind or not any(
                         c.box == card.box and same_card(c, card) for c in current.cards
                     ):
@@ -611,12 +762,12 @@ class ReceiptReader:
                 self.r.fail("Reward receipt end could not be verified")
             if kind == "grid":
                 cap = self.capture()
-                p = page(cap.png, self.vision)
+                p = self.read(cap)
                 if p.kind != "grid":
                     self.r.fail("Full List changed before returning to sweep receipt")
                 self.input(cap, (640, 533))
                 cap = self.capture()
-                if page(cap.png, self.vision).kind != "sweep":
+                if self.read(cap).kind != "sweep":
                     self.r.fail("Sweep receipt did not return after Full List")
             return save_result(
                 self.r.config,

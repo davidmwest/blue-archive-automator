@@ -1,0 +1,312 @@
+[
+  {
+    "text": "Using an Assistant",
+    "confidence": 0.97752,
+    "box": [
+      494,
+      146,
+      789,
+      182
+    ]
+  },
+  {
+    "text": "Unit 1",
+    "confidence": 0.99874,
+    "box": [
+      28,
+      172,
+      108,
+      203
+    ]
+  },
+  {
+    "text": "Quick Formation",
+    "confidence": 0.99982,
+    "box": [
+      1145,
+      214,
+      1258,
+      234
+    ]
+  },
+  {
+    "text": "Would you like to borrow an assistant?",
+    "confidence": 0.99875,
+    "box": [
+      407,
+      236,
+      872,
+      271
+    ]
+  },
+  {
+    "text": "Unit 2",
+    "confidence": 0.93488,
+    "box": [
+      25,
+      249,
+      110,
+      284
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.97553,
+    "box": [
+      598,
+      307,
+      643,
+      328
+    ]
+  },
+  {
+    "text": "Starting Skill",
+    "confidence": 0.9998,
+    "box": [
+      1141,
+      312,
+      1260,
+      338
+    ]
+  },
+  {
+    "text": "Unit3",
+    "confidence": 0.98991,
+    "box": [
+      25,
+      329,
+      110,
+      363
+    ]
+  },
+  {
+    "text": "\u81ea",
+    "confidence": 0.743,
+    "box": [
+      1185,
+      358,
+      1220,
+      401
+    ]
+  },
+  {
+    "text": "5",
+    "confidence": 0.98402,
+    "box": [
+      592,
+      374,
+      610,
+      391
+    ]
+  },
+  {
+    "text": "Unit 4",
+    "confidence": 0.97281,
+    "box": [
+      25,
+      409,
+      109,
+      440
+    ]
+  },
+  {
+    "text": "40,000",
+    "confidence": 0.99998,
+    "box": [
+      609,
+      409,
+      696,
+      440
+    ]
+  },
+  {
+    "text": "Unit Info",
+    "confidence": 0.99869,
+    "box": [
+      1158,
+      412,
+      1244,
+      438
+    ]
+  },
+  {
+    "text": "BACK",
+    "confidence": 0.99988,
+    "box": [
+      244,
+      494,
+      291,
+      516
+    ]
+  },
+  {
+    "text": "Cancel",
+    "confidence": 0.99998,
+    "box": [
+      463,
+      491,
+      564,
+      525
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99988,
+    "box": [
+      707,
+      491,
+      830,
+      526
+    ]
+  },
+  {
+    "text": "NT",
+    "confidence": 0.91852,
+    "box": [
+      940,
+      495,
+      968,
+      516
+    ]
+  },
+  {
+    "text": "\u53e4",
+    "confidence": 0.82406,
+    "box": [
+      217,
+      525,
+      240,
+      547
+    ]
+  },
+  {
+    "text": "Aris (Ma",
+    "confidence": 0.96367,
+    "box": [
+      270,
+      529,
+      341,
+      557
+    ]
+  },
+  {
+    "text": "Izuna",
+    "confidence": 0.99654,
+    "box": [
+      964,
+      519,
+      1021,
+      546
+    ]
+  },
+  {
+    "text": "Presets",
+    "confidence": 0.99996,
+    "box": [
+      1166,
+      516,
+      1238,
+      539
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.99933,
+    "box": [
+      208,
+      547,
+      256,
+      568
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.99992,
+    "box": [
+      944,
+      540,
+      1040,
+      567
+    ]
+  },
+  {
+    "text": "STRIKER",
+    "confidence": 0.99946,
+    "box": [
+      28,
+      559,
+      149,
+      582
+    ]
+  },
+  {
+    "text": "Mobilize",
+    "confidence": 0.99998,
+    "box": [
+      1112,
+      640,
+      1242,
+      676
+    ]
+  },
+  {
+    "text": "4",
+    "confidence": 0.978,
+    "box": [
+      420,
+      654,
+      447,
+      680
+    ]
+  },
+  {
+    "text": "Ako",
+    "confidence": 0.99688,
+    "box": [
+      499,
+      660,
+      544,
+      688
+    ]
+  },
+  {
+    "text": "4",
+    "confidence": 0.89188,
+    "box": [
+      769,
+      654,
+      796,
+      680
+    ]
+  },
+  {
+    "text": "Yuzu (Armed)",
+    "confidence": 0.99842,
+    "box": [
+      809,
+      660,
+      930,
+      687
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.99752,
+    "box": [
+      411,
+      678,
+      459,
+      699
+    ]
+  },
+  {
+    "text": "Lv.78",
+    "confidence": 0.99792,
+    "box": [
+      759,
+      678,
+      808,
+      699
+    ]
+  }
+]

@@ -39,6 +39,7 @@ def main(argv=None) -> int:
     )
     inspect.add_argument("--image", type=Path)
     descriptions = {
+        "total_assault": "Mock-test the configured Total Assault difficulty before a real clear, then sweep remaining tickets",
         "tactical_rewards": "Collect Tactical Challenge time and daily rewards without fighting",
         "red_dots": "Check home notifications for daemon collection jobs",
         "free_pack": "Claim the Free daily pack when its home badge is visible, then collect mail",
@@ -54,7 +55,7 @@ def main(argv=None) -> int:
         "spend_ap": "Sweep selected Hard missions or commissions down to the AP floor",
         "scan_ap": "Survey three-star Hard missions and commissions without spending AP",
         "lessons": "Restart and use lesson tickets with the configured strategy",
-        "daily": "Run restart, free package, Club, enabled packs, mail, cafe, enabled ticket sweeps, Tactical Challenge rewards, lessons, AP spending and task rewards",
+        "daily": "Run restart, free package, Club, enabled packs, mail, cafe, enabled ticket sweeps, Tactical Challenge rewards, lessons, optional Total Assault, AP spending and task rewards",
     }
     for name, description in descriptions.items():
         command = commands.add_parser(name, help=description)
@@ -111,7 +112,11 @@ def main(argv=None) -> int:
             for task in task_plan(args.command, config):
                 if vision is None:
                     vision = StartupVision()
-                if task == "tactical_rewards":
+                if task == "total_assault":
+                    from .total_assault import run_total_assault
+
+                    runner = run_total_assault
+                elif task == "tactical_rewards":
                     from .tactical_rewards import run_tactical_rewards
 
                     runner = run_tactical_rewards

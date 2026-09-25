@@ -1,0 +1,62 @@
+[
+  {
+    "text": "Best Season Record Reached!",
+    "confidence": 0.99979,
+    "box": [
+      420,
+      149,
+      860,
+      184
+    ]
+  },
+  {
+    "text": "Best Record!",
+    "confidence": 0.96157,
+    "box": [
+      540,
+      203,
+      738,
+      246
+    ]
+  },
+  {
+    "text": "Best Rank Points",
+    "confidence": 0.99774,
+    "box": [
+      384,
+      380,
+      551,
+      402
+    ]
+  },
+  {
+    "text": "Total Season Points",
+    "confidence": 0.97458,
+    "box": [
+      384,
+      425,
+      577,
+      447
+    ]
+  },
+  {
+    "text": "NewSeason RewardsAvailable",
+    "confidence": 0.98078,
+    "box": [
+      482,
+      451,
+      802,
+      478
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99992,
+    "box": [
+      576,
+      510,
+      704,
+      547
+    ]
+  }
+]

@@ -8,7 +8,7 @@ Status: the local dashboard dispatches restart, Cafe, Lessons, Club, reward coll
 
 The Python 3.11+ core controls one explicit ADB endpoint. The initial profile is global English Blue Archive (`com.nexon.bluearchive`) at 1280×720 landscape and 320 DPI, running in BlueStacks Air on Apple Silicon macOS. BlueStacks 5 on Windows is the portability target; its live smoke test remains outstanding. The emulator instance must already be running.
 
-`restart` force-stops and launches Blue Archive, reuses its existing session, handles recognized startup states, and verifies a clear home screen. `tasks.py` owns the ordered plans. `daily` runs restart → Club → free pack → optional paid packs → mail → Cafe → Bounties → Scrimmages → Tactical Challenge rewards → Lessons → optional Spend AP → Tasks rewards. Bounties, Scrimmages, and Lessons have individual daily-inclusion settings; paid packs and automatic AP spending are off by default. Failure stops the sequence.
+`restart` force-stops and launches Blue Archive, reuses its existing session, handles recognized startup states, and verifies a clear home screen. `tasks.py` owns the ordered plans. `daily` runs restart → Club → free pack → optional paid packs → mail → Cafe → Bounties → Scrimmages → Tactical Challenge rewards → Lessons → optional Total Assault → optional Spend AP → Tasks rewards. Bounties, Scrimmages, and Lessons have individual daily-inclusion settings; Total Assault, paid packs, and automatic AP spending are off by default. Failure stops the sequence.
 
 `cafe` runs restart → Club → mail → Cafe, followed by Spend AP when enabled; `lessons` runs restart → Lessons. All successful task plans finish with a home-notification scan. The dashboard turns recognized red dots and eligible excess AP into serial follow-up jobs. Standalone Club and free-pack jobs collect mail after their own actions.
 
@@ -100,6 +100,10 @@ Lessons begins at verified home, reads the ticket counter, and cycles through un
 The pure planner defaults to the most owned students, then the highest sum of their relationship ranks. The alternate school-rank strategy chooses the lowest rank and fractional XP progress, then the most total students and highest owned relationship-rank sum. Stable identity resolves equal scores. It excludes completed rooms and distinguishes missing evidence from zero. If every eligible school is capped, the school-rank strategy falls back to relationship selection.
 
 Before spending, the runner reopens the selected room and checks its confirmation against the chosen observation. One ticket is confirmed at a time. Completion needs result evidence and the expected ticket decrement, with the location, room, strategy, counts, and readable rank/XP changes recorded in important actions. Ticket limits restrict existing tickets; there is no purchase path. See [Lessons](lessons.md) for the full policy, failure behavior, and current live-validation status.
+
+## Total Assault
+
+`total_assault` is an optional Daily step or standalone restart → raid → home task. The configured difficulty is the ceiling for any required unlock ladder. Auto formation must pass a mock battle with a configured time margin; a fallback assistant replaces the least-damage striker, matches its selected attack type, and must pass a second mock. Only the verified team can enter for real. Remaining tickets may be swept after a verified target clear and observed sweep availability. Failures require player review instead of blind ticket retries. See [Total Assault](total-assault.md) for the policy and validation limits.
 
 ## Tasks rewards
 

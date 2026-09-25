@@ -1,0 +1,312 @@
+[
+  {
+    "text": "09/21 19:00",
+    "confidence": 0.99617,
+    "box": [
+      1149,
+      88,
+      1245,
+      112
+    ]
+  },
+  {
+    "text": "Room Info",
+    "confidence": 0.98598,
+    "box": [
+      180,
+      122,
+      287,
+      149
+    ]
+  },
+  {
+    "text": "Strategy Info",
+    "confidence": 0.99969,
+    "box": [
+      340,
+      122,
+      470,
+      152
+    ]
+  },
+  {
+    "text": "Room Info",
+    "confidence": 0.99995,
+    "box": [
+      560,
+      120,
+      720,
+      154
+    ]
+  },
+  {
+    "text": "X",
+    "confidence": 0.83955,
+    "box": [
+      1108,
+      118,
+      1144,
+      155
+    ]
+  },
+  {
+    "text": "09/28 11:59",
+    "confidence": 0.98809,
+    "box": [
+      1153,
+      110,
+      1245,
+      133
+    ]
+  },
+  {
+    "text": "HARDCORE",
+    "confidence": 0.99995,
+    "box": [
+      154,
+      191,
+      266,
+      217
+    ]
+  },
+  {
+    "text": "Rec.",
+    "confidence": 0.97379,
+    "box": [
+      639,
+      195,
+      694,
+      226
+    ]
+  },
+  {
+    "text": "Drumbarka",
+    "confidence": 0.99975,
+    "box": [
+      151,
+      217,
+      385,
+      259
+    ]
+  },
+  {
+    "text": "Lv.50",
+    "confidence": 0.99986,
+    "box": [
+      632,
+      222,
+      699,
+      250
+    ]
+  },
+  {
+    "text": "Sweep",
+    "confidence": 0.99986,
+    "box": [
+      901,
+      218,
+      974,
+      251
+    ]
+  },
+  {
+    "text": "2,400,000/2,400,000",
+    "confidence": 0.99956,
+    "box": [
+      159,
+      268,
+      342,
+      297
+    ]
+  },
+  {
+    "text": "Normal",
+    "confidence": 0.99995,
+    "box": [
+      500,
+      267,
+      579,
+      294
+    ]
+  },
+  {
+    "text": "Light",
+    "confidence": 0.99994,
+    "box": [
+      636,
+      266,
+      700,
+      298
+    ]
+  },
+  {
+    "text": "Min",
+    "confidence": 0.99386,
+    "box": [
+      766,
+      273,
+      817,
+      306
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.99856,
+    "box": [
+      927,
+      275,
+      950,
+      305
+    ]
+  },
+  {
+    "text": "Max",
+    "confidence": 0.99974,
+    "box": [
+      1057,
+      276,
+      1113,
+      305
+    ]
+  },
+  {
+    "text": "Common Skill",
+    "confidence": 0.9989,
+    "box": [
+      150,
+      318,
+      256,
+      341
+    ]
+  },
+  {
+    "text": "Phase 1",
+    "confidence": 0.98794,
+    "box": [
+      559,
+      318,
+      621,
+      341
+    ]
+  },
+  {
+    "text": "Enhanced Skill",
+    "confidence": 0.99266,
+    "box": [
+      153,
+      354,
+      252,
+      377
+    ]
+  },
+  {
+    "text": "EX Skill",
+    "confidence": 0.98136,
+    "box": [
+      287,
+      353,
+      351,
+      377
+    ]
+  },
+  {
+    "text": "EX Skill",
+    "confidence": 0.97811,
+    "box": [
+      395,
+      353,
+      460,
+      377
+    ]
+  },
+  {
+    "text": "EX Skill",
+    "confidence": 0.99272,
+    "box": [
+      503,
+      353,
+      568,
+      378
+    ]
+  },
+  {
+    "text": "EX Skill",
+    "confidence": 0.9902,
+    "box": [
+      612,
+      353,
+      676,
+      378
+    ]
+  },
+  {
+    "text": "En",
+    "confidence": 0.99896,
+    "box": [
+      703,
+      358,
+      724,
+      375
+    ]
+  },
+  {
+    "text": "Start Sweep",
+    "confidence": 0.99991,
+    "box": [
+      852,
+      367,
+      1023,
+      403
+    ]
+  },
+  {
+    "text": "Expected Rewards",
+    "confidence": 0.99998,
+    "box": [
+      342,
+      469,
+      521,
+      495
+    ]
+  },
+  {
+    "text": "0 \u2192-",
+    "confidence": 0.86211,
+    "box": [
+      1076,
+      476,
+      1131,
+      504
+    ]
+  },
+  {
+    "text": "Mock Battle",
+    "confidence": 0.99998,
+    "box": [
+      735,
+      528,
+      879,
+      558
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.9999,
+    "box": [
+      967,
+      524,
+      1061,
+      562
+    ]
+  },
+  {
+    "text": "x100",
+    "confidence": 0.9688,
+    "box": [
+      237,
+      560,
+      276,
+      576
+    ]
+  }
+]

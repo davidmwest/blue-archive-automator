@@ -204,6 +204,38 @@ def test_settings_validate_before_write_and_preserve_device_and_paths(controlled
     assert error.value.status == 409
 
 
+def test_total_assault_settings_persist_and_reach_the_queued_snapshot(controlled, config_path):
+    controller, factory = controlled
+    controller.pause()
+    original = config_path.read_bytes()
+    for invalid in ({"total_assault_difficulty": "impossible"},
+                    {"total_assault_comfort_seconds": -1},
+                    {"total_assault_enabled_in_daily": "yes"}):
+        with pytest.raises(ApiError) as error:
+            controller.update_settings(invalid)
+        assert error.value.status == 400
+        assert config_path.read_bytes() == original
+    changes = {"total_assault_difficulty": "hardcore", "total_assault_comfort_seconds": 45,
+               "total_assault_enabled_in_daily": True}
+    controller.update_settings(changes)
+    saved = tomllib.loads(config_path.read_text())
+    assert saved["total_assault"] == {"difficulty": "hardcore", "comfort_seconds": 45,
+                                      "enabled_in_daily": True}
+    assert saved["device"]["adb_path"] == "../tools/adb"
+    assert {key: controller.status()["config"][key] for key in changes} == changes
+    controller.enqueue("total_assault")
+    with pytest.raises(ApiError) as error:
+        controller.update_settings({"total_assault_difficulty": "hard"})
+    assert error.value.status == 409
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    snapshot = Config.from_file(factory.processes[0].arguments[4])
+    assert factory.processes[0].arguments[-1] == "total_assault"
+    assert snapshot.total_assault_difficulty == "hardcore"
+    assert snapshot.total_assault_comfort_seconds == 45
+    assert snapshot.total_assault_enabled_in_daily is True
+
+
 def test_frames_are_scoped_to_current_job_and_clear_before_next_job(controlled, tmp_path):
     controller, factory = controlled
     old = controller.config.run_dir / "restart-old" / "home.png"

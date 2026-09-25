@@ -8,7 +8,8 @@ not grant rights to the game-related material listed below.
 
 `ba_automator/assets/*.png` contains recognition templates cropped from Blue
 Archive. `tests/fixtures/*.png` contains sanitized game screenshots and crops
-used for regression testing. Their provenance is recorded in
+used for regression testing, including the locally captured Total Assault
+formation, battle, and result screens. Their provenance is recorded in
 [`tests/fixtures/README.md`](tests/fixtures/README.md).
 
 `ba_automator/web/maid-arisu.png` is newly generated fan artwork depicting

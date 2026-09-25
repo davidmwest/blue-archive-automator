@@ -1,0 +1,82 @@
+[
+  {
+    "text": "REWARD ACQUIRED!",
+    "confidence": 0.99497,
+    "box": [
+      362,
+      124,
+      914,
+      192
+    ]
+  },
+  {
+    "text": "Advanced Total",
+    "confidence": 0.99957,
+    "box": [
+      659,
+      255,
+      781,
+      281
+    ]
+  },
+  {
+    "text": "Total Assault Coin",
+    "confidence": 0.98143,
+    "box": [
+      490,
+      269,
+      626,
+      289
+    ]
+  },
+  {
+    "text": "Assault Coin",
+    "confidence": 0.97899,
+    "box": [
+      671,
+      278,
+      771,
+      300
+    ]
+  },
+  {
+    "text": "x100",
+    "confidence": 0.99694,
+    "box": [
+      531,
+      432,
+      585,
+      461
+    ]
+  },
+  {
+    "text": "x10",
+    "confidence": 0.99877,
+    "box": [
+      699,
+      433,
+      742,
+      460
+    ]
+  },
+  {
+    "text": "Go to Lobby",
+    "confidence": 0.99952,
+    "box": [
+      414,
+      638,
+      601,
+      680
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99997,
+    "box": [
+      706,
+      637,
+      838,
+      676
+    ]
+  }
+]

@@ -46,11 +46,12 @@ open [the dashboard](http://127.0.0.1:8765). `serve --port 8767` selects a diffe
 | `serve` | runs the local dashboard and one-job-at-a-time queue |
 | `tasks` | checks the home Tasks red dot and collects completed rewards, including the daily bonus |
 | `restart` | closes the game and reaches a clear home screen |
-| `club` | records “awaiting reset test”; no game input while stubbed |
+| `club` | checks Social → Club once per game day when notified, then collects mail |
 | `cafe` | runs restart, collects Cafe earnings, and checks students |
 | `crafting` | runs restart, checks finished crafts, fills Quick Craft slots, and saves their collection times |
 | `lessons` | runs restart, surveys locations, and uses existing tickets with the configured strategy |
-| `daily` | runs restart → Club placeholder → enabled packs → mail → Cafe → enabled Lessons → enabled Spend AP |
+| `total_assault` | runs restart, tests the configured difficulty in mock battles, and uses tickets only after the team qualifies; see [Total Assault](total-assault.md) for current validation limits |
+| `daily` | runs restart → Club → free pack → enabled paid packs → mail → Cafe → enabled Bounties → enabled Scrimmages → Tactical rewards → enabled Lessons → enabled Total Assault → enabled Spend AP → Tasks |
 | `scan_ap` | surveys three-star Hard stages and commissions without spending AP |
 | `spend_ap` | sweeps the chosen stages without crossing the configured AP floor |
 | `probe` | checks the selected device, game, display size, and foreground app |
@@ -58,7 +59,7 @@ open [the dashboard](http://127.0.0.1:8765). `serve --port 8767` selects a diffe
 | `inspect --image data/capture.png` | classifies a saved screenshot without an emulator connection |
 | `inspect` | classifies the current game screen without game input |
 
-Club is currently a stub. Its step reports “awaiting reset test” and saves no attendance or reward claim; other steps continue. [The planned check-in flow](club.md) resets at 19:00 UTC.
+Club checks the Social and Club notification badges, saves a verified visit for the game day, and collects the attendance mail. the attendance notice and actual mailbox receipt are logged separately. [Club attendance](club.md) follows the 19:00 UTC reset.
 
 for example, `.venv/bin/python -m ba_automator --config config/local.toml restart` runs without the dashboard. the installed `ba` command is also available.
 
@@ -68,7 +69,7 @@ required game-data downloads are accepted automatically. add `--no-downloads` to
 
 Cafe scheduling and invitations are **off by default**. enable them in the dashboard or the `[cafe]` section of your local config. invitations need the exact English name, including variants such as `Yuuka (Track)`. only the free invitation path is supported. its full live flow still needs verification.
 
-collecting Cafe AP clears its storage. spending that AP still needs a mission/sweep job, which isn't built yet.
+collecting Cafe AP clears its storage. when automatic AP spending is enabled, a Cafe visit then runs Spend AP using your chosen strategy and AP floor. configure this on the dashboard's **Spend AP** page; see [AP spending](spend-ap.md).
 
 a successful Cafe job schedules the next visit for three hours and 15 seconds later. failures retry after 15 minutes; three consecutive failures pause retries until you press resume. the schedule survives server restarts. queued jobs don't. no login service or operating-system schedule is installed, so keep `serve` running for scheduled visits.
 
@@ -95,6 +96,10 @@ enabled_in_daily = true
 the dashboard's location list takes one name per line. an unknown name stops the job so a typo cannot redirect tickets somewhere else. a configured limit applies per run, not per day. the game counter and already-completed rooms determine what remains available.
 
 `enabled_in_daily = false` removes lessons from the daily plan; the standalone lessons button still works. this does **not** add a daily timer. the Cafe timer leaves lesson tickets alone. Crafting, paid packs, and AP spending have their own optional schedules. see [Lessons](lessons.md) for scoring, coverage checks, and receipt verification.
+
+## total assault
+
+choose a target difficulty and the required winning margin under **settings → total assault**. Hardcore and 30 seconds to spare are the defaults. queue it with the dashboard button or `.venv/bin/python -m ba_automator --config config/local.toml total_assault`. including it in Daily is a separate switch, off by default, and does not create a daily timer. the Cafe timer does not run it. [Total Assault](total-assault.md) describes the mock-first policy, assistant fallback, ticket safeguards, and which flows have actually been tested live.
 
 ## inspect a run
 

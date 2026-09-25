@@ -1,0 +1,212 @@
+[
+  {
+    "text": "Total Assault Formation",
+    "box": [
+      103,
+      5,
+      428,
+      34
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "?",
+    "box": [
+      428,
+      9,
+      454,
+      30
+    ],
+    "confidence": 0.99372
+  },
+  {
+    "text": "Unit 1",
+    "box": [
+      27,
+      171,
+      108,
+      202
+    ],
+    "confidence": 0.99929
+  },
+  {
+    "text": "Quick Formation",
+    "box": [
+      1144,
+      212,
+      1259,
+      235
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Unit 2",
+    "box": [
+      25,
+      251,
+      110,
+      283
+    ],
+    "confidence": 0.99582
+  },
+  {
+    "text": "Starting Skill",
+    "box": [
+      1141,
+      312,
+      1260,
+      338
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "Unit 3",
+    "box": [
+      25,
+      330,
+      109,
+      361
+    ],
+    "confidence": 0.99933
+  },
+  {
+    "text": "\u81ea",
+    "box": [
+      1182,
+      357,
+      1223,
+      402
+    ],
+    "confidence": 0.68602
+  },
+  {
+    "text": "Unit 4",
+    "box": [
+      25,
+      409,
+      109,
+      440
+    ],
+    "confidence": 0.99914
+  },
+  {
+    "text": "Unit Info",
+    "box": [
+      1159,
+      414,
+      1243,
+      437
+    ],
+    "confidence": 0.9987
+  },
+  {
+    "text": "Presets",
+    "box": [
+      1166,
+      516,
+      1238,
+      539
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "STRIKER Slot",
+    "box": [
+      241,
+      530,
+      361,
+      553
+    ],
+    "confidence": 0.99986
+  },
+  {
+    "text": "STRIKER Slot",
+    "box": [
+      465,
+      530,
+      586,
+      553
+    ],
+    "confidence": 0.99856
+  },
+  {
+    "text": "STRIKER Slot",
+    "box": [
+      689,
+      529,
+      809,
+      552
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "STRIKER Slot",
+    "box": [
+      913,
+      530,
+      1033,
+      553
+    ],
+    "confidence": 0.99904
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      27,
+      558,
+      151,
+      584
+    ],
+    "confidence": 0.99931
+  },
+  {
+    "text": "EMPTY",
+    "box": [
+      297,
+      646,
+      377,
+      673
+    ],
+    "confidence": 0.99862
+  },
+  {
+    "text": "EMPTY",
+    "box": [
+      645,
+      646,
+      727,
+      673
+    ],
+    "confidence": 0.99468
+  },
+  {
+    "text": "Mobilize",
+    "box": [
+      1112,
+      640,
+      1242,
+      676
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "SPECIAL Slot",
+    "box": [
+      448,
+      661,
+      567,
+      685
+    ],
+    "confidence": 0.99912
+  },
+  {
+    "text": "SPECIAL Slot",
+    "box": [
+      796,
+      661,
+      917,
+      685
+    ],
+    "confidence": 0.99946
+  }
+]

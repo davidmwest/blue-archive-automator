@@ -1,0 +1,82 @@
+[
+  {
+    "text": "Sweep Complete",
+    "confidence": 0.99997,
+    "box": [
+      511,
+      78,
+      768,
+      120
+    ]
+  },
+  {
+    "text": "5 time(s)",
+    "confidence": 0.99991,
+    "box": [
+      209,
+      284,
+      347,
+      324
+    ]
+  },
+  {
+    "text": "Rewards Earned",
+    "confidence": 0.9999,
+    "box": [
+      215,
+      322,
+      368,
+      345
+    ]
+  },
+  {
+    "text": "x100",
+    "confidence": 0.99244,
+    "box": [
+      403,
+      326,
+      443,
+      343
+    ]
+  },
+  {
+    "text": "Final",
+    "confidence": 0.99993,
+    "box": [
+      194,
+      450,
+      278,
+      489
+    ]
+  },
+  {
+    "text": "Rewards Earned",
+    "confidence": 0.99993,
+    "box": [
+      195,
+      484,
+      363,
+      514
+    ]
+  },
+  {
+    "text": "x500",
+    "confidence": 0.98722,
+    "box": [
+      396,
+      490,
+      439,
+      514
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99995,
+    "box": [
+      568,
+      562,
+      712,
+      602
+    ]
+  }
+]

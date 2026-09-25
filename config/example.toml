@@ -33,6 +33,13 @@ max_tickets = 0
 locations = []
 enabled_in_daily = true
 
+[total_assault]
+# Mock-test this difficulty before spending a ticket; stop if it cannot be verified.
+difficulty = "hardcore" # normal, hard, very_hard, hardcore, extreme, insane, torment, lunatic
+enabled_in_daily = false
+# Minimum seconds left in a winning mock battle before allowing the real attempt.
+comfort_seconds = 30
+
 [crafting]
 # Uses the preset already configured in game, spends available keystones, and
 # queues collection/refill visits when each slot finishes. No booster tickets.

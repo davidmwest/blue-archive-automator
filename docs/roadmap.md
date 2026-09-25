@@ -64,7 +64,7 @@ Free packs, mail, and completed Tasks have collection jobs. Successful runs scan
 
 Bounties and Scrimmages split available tickets across three areas, rotate extras by game-day weekday, and sweep the highest observed three-star stages. Both jobs completed live 15-ticket allocations of 5 / 5 / 5; Scrimmages cost zero AP on that account. Uneven allocations and nonzero Scrimmage AP costs remain offline-tested cases. [Ticket sweeps](tickets.md) records the receipt and recovery checks.
 
-Tactical Challenge collects available rewards and verifies that battle tickets are unchanged. Time Reward collection has passed live; an available Daily Reward still needs live validation. Fighting remains a no-input stub outside dispatch. See [Tactical Challenge rewards](tactical-challenge.md).
+Tactical Challenge collects available rewards and verifies that battle tickets are unchanged. Time Reward collection has passed live. A live Daily Reward was collected and its exact receipt recovered after a freshness timeout; the corrected reader has offline regression coverage. Fighting remains a no-input stub outside dispatch. See [Tactical Challenge rewards](tactical-challenge.md).
 
 ## 7. Durable execution
 
@@ -87,3 +87,7 @@ A dedicated planning page provides a minimum AP floor, report/credit commission 
 Loot Gathered now reads reward-card tooltips, stores exact names, quantities, and game icons, groups matching items, and orders categories by importance. Live checks covered ordinary sweep totals, expanded Full List receipts, and a Tactical Challenge reward card; three authorized sweeps used 60 AP while the configured 100 AP floor stayed unchanged. Long scrolling lists and other task integrations retain offline coverage. Older screenshots may lack item names or proof that every card was captured, so review notices distinguish unread details, an unverified full list, and missing details. Clearing totals preserves the evidence. See [Loot Gathered](loot.md).
 
 The Important Actions header links to a full plain-text log saved as `YYYY-MM-DD.log` using the computer's local calendar. Queue events, runtime decisions, resource outcomes, and important actions share that durable view; existing journals can be imported without duplicating events, with estimated historical timestamps marked. Local logs and account evidence remain outside the portfolio repository. See [daily logs](daily-logs.md).
+
+## Total Assault
+
+A dedicated Total Assault task adds target difficulty and mock-win margin settings, an optional Daily step, and a standalone queue action. The policy tests auto formation, optionally substitutes a matching assistant for the least-damage striker, requires a second mock for that new team, and reuses only a verified team for real entry. It then sweeps remaining tickets at the requested target. Staged live validation completed the Hardcore assistant mock, real clear, and five-ticket sweep, with **600 Total Assault Coins and 60 Advanced Total Assault Coins** verified and zero tickets remaining. Recognition fixes were added between these steps; a fresh uninterrupted daemon run remains unverified. Required easier-tier unlocks use the same policy checks but retain research and offline coverage only. The evidence and recognized battle-screen limits belong in [Total Assault](total-assault.md).

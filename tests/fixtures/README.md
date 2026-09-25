@@ -82,3 +82,108 @@ and the magnifier/Full List overflow layout. `ap-regenerated-detail.png` retains
 the AP values needed to reproduce the stale preview after natural regeneration,
 with other account balances removed. Game artwork remains subject to the
 third-party notices, outside the project's MIT grant.
+
+`loot-daily-receipt-before.png` and `loot-daily-receipt-after.png` preserve the
+same live Tactical Challenge daily receipt from September 25 UTC: 18 Pyroxenes
+and 70 Tactical Challenge Coins. Only the receipt heading and two reward cards
+remain; all account and opponent information is removed. The pair retains the
+Pyroxene artwork's animation so fast input revalidation can be tested without
+requiring identical animated icons or extending screenshot freshness deadlines.
+
+Total Assault navigation samples (`assault-menu`, `assault-detail`,
+`assault-formation`, `assault-formation-empty`, and `assault-quick`) were captured
+on September 25 UTC from the authorized staging instance. Account balances,
+season rank/points, and unrelated character backgrounds are masked. The menu
+retains event dates and the ticket counter; the formation retains its six student
+nameplates, levels, numbered stars, and damage-color bands. Paired JSON files
+contain only the retained controls' local OCR observations. These fixtures verify
+navigation and team reading, not a mock or real battle victory. Star digits are
+read together from enlarged crops in one additional local OCR invocation.
+
+`assault-battle-hud` retains the actual mock battle timer, boss name/HP ratio,
+and white (off) AUTO control. Best rank points and the battle scene are masked.
+`assault-battle-auto-on` retains the actual yellow enabled control and a clipped
+Mock Battle label during a skill cut-in. Missing mock text is not interpreted as
+a real battle. Both samples mask the battle scene and best rank points; neither
+fixture establishes a battle result.
+
+`assault-battle-result` and `assault-damage-report` preserve the first mock's
+Battle Complete heading, elapsed time, controls, and six exact student damage
+totals. The result's ranking points and character scene are masked. The first
+mock's subsequent Close Call achievement independently corroborated its victory.
+The win recognizer requires the gold Battle Complete heading and lower-right
+cyan Confirm together; the BAAS author's separate English defeat layout instead
+places Confirm centrally. Elapsed time is not remaining time, and the character
+models do not establish surviving-student counts.
+
+`assault-assistant-formation` retains the selected six student nameplates after
+the assistant selection. The two blue unique-equipment star counts establish
+base rarity five; animated switching between gold rarity and blue equipment
+stars must not change the selected team's fingerprint. This screen does not
+identify the lender, which must be bound from the assistant-selection evidence.
+
+`assault-assistant-{list,mystic-list,aris-preview,page2,page3,remove,mystic-filter,owned}`
+were captured from the same staging instance on September 25 UTC. Account bars
+are masked, and lender names are replaced with synthetic `Loan N` labels in both
+the images and paired OCR observations. They retain the observed assistant
+selection, attack-type filter, sort controls, and selected student preview.
+The three assistant sort/marker recognition assets are crops of these captures.
+`ba_automator/assets/assault_damage_report.png` is cropped from the sanitized
+`assault-battle-result` fixture. These local game-derived assets have the same
+license exclusion as the other recognition templates.
+
+The neutral loss-heading layout used by offline battle tests is synthesized;
+the report-control glyph comes from the captured winning result. It tests the
+loss recognizer's guards, not a live defeat or timeout recovery. No defeated
+mock result has been captured at this checkpoint.
+
+`assault-assistant-real-quick-empty` records real-entry formation resetting the
+borrowed slot on September 25, 2026. It retains the empty second striker slot;
+account bars are masked in the image and OCR. `assault-assistant-retained` records
+reopening Quick Formation after restoring the assistant. The left inspection
+panel is blank, but the selected offering and sole second-slot assistant badge
+remain visible. Lender labels are replaced with synthetic `Loan N` values.
+
+`assault-assistant-fee` records the real Mobilize confirmation: one assistant,
+40,000 credits, and a yellow Confirm. Account bars are masked. Three small
+`assault-assistant-fee-*` templates preserve its assistant badge, credit icon,
+and base-five-star marker. They are local game-derived recognition crops,
+excluded from the repository's source-code license like the other game assets.
+A confirmation screenshot alone does not establish that the fee was deducted.
+
+`assault-entry-confirmation` is the next live notice after the assistant fee:
+Hardcore, "Use Total Assault Ticket to enter?", and the observed 6→5 projection.
+The top account bar is masked. Entry recognition requires the difficulty and
+one-ticket projection; the battle driver separately matches them to the durable
+entry intent before acknowledging this notice.
+
+`assault-clear-receipt.png/json` is the first real Hardcore reward page captured
+locally on September 25, 2026. The dimmed battle score, time, and team strips
+are masked; matching OCR is removed. Its two item cards and the distinct Confirm
+and Go to Lobby controls remain unchanged. Reward quantities are parsed from
+the receipt, not inferred from difficulty.
+
+`assault-season-record.png/json` records the subsequent Best Season Record
+Reached notice from that real clear. Only the modal is retained; account rank
+and personal point totals inside it are masked in both pixels and OCR. Its
+Confirm acknowledges a record, not a reward claim.
+
+`assault-sweep-detail.png/json` is the post-clear Hardcore Room Info panel with
+one sweep selected, five tickets, the 5→4 projection, and an enabled Max button.
+Only Room Info and event dates are retained; the surrounding account and rank
+information are masked. The runner must independently verify the resulting
+count and ticket projection after changing the count.
+
+`assault-sweep-confirmation.png/json` is the following live five-ticket sweep
+notice. Only its modal and the visible Room Info tab, Hardcore label, and 5→0
+projection remain. These fields independently establish the requested sweep
+count and tier; the partially obscured boss name is masked and never inferred.
+The runner separately binds the notice to its persisted sweep intent.
+
+`assault-sweep-receipt.png/json` records the five completed sweeps on September
+25, 2026. The account name, experience strip, and background are masked. Only
+the Final row is totaled: 500 Total Assault Coins and 50 Advanced Total Assault
+Coins, independently read by the shared card reader.
+`assault-zero-detail.png/json` records the resulting Room Info panel, retaining
+only the room and event dates. Zero tickets require the explicit `0→-` entry
+projection and zero selected sweeps; absent text is never interpreted as zero.

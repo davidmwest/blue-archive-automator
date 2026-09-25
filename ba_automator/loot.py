@@ -29,6 +29,10 @@ ALIASES = {
     "credit points": "Credits",
     "pyroxene": "Pyroxenes",
     "pyroxenes": "Pyroxenes",
+    "total assault coin": "Total Assault Coin",
+    "total assault coins": "Total Assault Coin",
+    "advanced total assault coin": "Advanced Total Assault Coin",
+    "advanced total assault coins": "Advanced Total Assault Coin",
 }
 
 
@@ -421,6 +425,10 @@ SHOP_CURRENCIES = frozenset(
         "expert permits",
         "tactical challenge coin",
         "tactical challenge coins",
+        "total assault coin",
+        "total assault coins",
+        "advanced total assault coin",
+        "advanced total assault coins",
     }
 )
 
@@ -430,7 +438,7 @@ def category(name):
     # catalog must take precedence over general material-name rules.
     if is_gift(name):
         return "crafting"
-    n = name.casefold()
+    n = " ".join(name.split()).casefold()
     if "pyroxene" in n or "recruitment" in n:
         return "premium"
     if "eleph" in n or "eligma" in n:

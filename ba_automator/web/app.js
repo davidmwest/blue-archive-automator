@@ -3,9 +3,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const SVG_NS = "http://www.w3.org/2000/svg";
-  const booleanSettings = new Set(["bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "auto_download", "crafting_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle", "lessons_enabled_in_daily"]);
-  const stringSettings = new Set(["cafe_invite_student", "lessons_strategy"]);
-  const settingNames = ["bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "ap_floor","packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "packs_monthly_max_cents", "packs_half_monthly_max_cents", "packs_ap_max_cents", "auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "crafting_schedule_enabled", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
+  const booleanSettings = new Set(["total_assault_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "auto_download", "crafting_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle", "lessons_enabled_in_daily"]);
+  const stringSettings = new Set(["total_assault_difficulty", "cafe_invite_student", "lessons_strategy"]);
+  const settingNames = ["total_assault_enabled_in_daily", "total_assault_difficulty", "total_assault_comfort_seconds", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "ap_floor","packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "packs_monthly_max_cents", "packs_half_monthly_max_cents", "packs_ap_max_cents", "auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "crafting_schedule_enabled", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
   const fields = Object.fromEntries(settingNames.map((name) => [name, $(name.replaceAll("_", "-"))]));
   let status = null;
   let connected = false;
@@ -34,7 +34,7 @@
   let actionsLimit = 15;
   let noticeTimer = null;
 
-  const taskName = (task) => ({ tactical_rewards: "Tactical rewards", red_dots: "Collect red dots", free_pack: "Free pack + mail", tasks: "Collect Tasks", bounties: "Bounties", scrimmages: "Scrimmages", spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
+  const taskName = (task) => ({ total_assault: "Total Assault", tactical_rewards: "Tactical rewards", red_dots: "Collect red dots", free_pack: "Free pack + mail", tasks: "Collect Tasks", bounties: "Bounties", scrimmages: "Scrimmages", spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
   const isRunning = () => Boolean(status && (status.state === "running" || status.current_job));
   const queue = () => (Array.isArray(status?.queue) ? status.queue : []);
   const isDemo = () => status?.demo === true;
@@ -150,6 +150,7 @@
     $("run-tasks").disabled = unavailable;
     $("run-red-dots").disabled = unavailable;
     $("run-tactical").disabled = unavailable;
+    $("run-total-assault").disabled = unavailable;
     $("run-free-pack").disabled = unavailable;
     $("run-ap").disabled = unavailable;
     $("run-packs").disabled = unavailable;
@@ -175,7 +176,7 @@
       ? "lowest rank first, then lowest XP. recheck after each ticket. pick the room with the most students; higher owned relationships break ties."
       : "check every location first. use tickets on rooms with the most owned students; higher relationships break ties.";
     const packEnabled = ["monthly", "half_monthly", "ap"].some((key) => status?.config?.[`packs_${key}_enabled`]);
-    $("daily-plan").textContent = `daily does restart → club → free pack → ${packEnabled ? "packs → " : ""}mail → café${status?.config?.bounties_enabled_in_daily === false ? "" : " → bounties"}${status?.config?.scrimmages_enabled_in_daily === false ? "" : " → scrimmages"} → tactical rewards${status?.config?.lessons_enabled_in_daily === false ? "" : " → lessons"}${status?.config?.ap_schedule_enabled ? " → spend AP" : ""} → collect tasks. home red dots queue their collection jobs when a run finishes.`;
+    $("daily-plan").textContent = `daily does restart → club → free pack → ${packEnabled ? "packs → " : ""}mail → café${status?.config?.bounties_enabled_in_daily === false ? "" : " → bounties"}${status?.config?.scrimmages_enabled_in_daily === false ? "" : " → scrimmages"} → tactical rewards${status?.config?.lessons_enabled_in_daily === false ? "" : " → lessons"}${status?.config?.total_assault_enabled_in_daily ? " → total assault" : ""}${status?.config?.ap_schedule_enabled ? " → spend AP" : ""} → collect tasks. home red dots queue their collection jobs when a run finishes.`;
     const packs = status?.schedule?.packs;
     $("packs-status").textContent = packs?.blocked_reason
       ? `paused: ${packs.blocked_reason}. check the game, then queue a pack check.`
@@ -192,7 +193,7 @@
       if (booleanSettings.has(name)) fields[name].checked = Boolean(config[name] ?? (["lessons_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily"].includes(name)));
       else if (name.endsWith("_max_cents")) fields[name].value = ((config[name] ?? (name.includes("half_monthly") || name.includes("_ap_") ? 299 : 699)) / 100).toFixed(2);
       else if (name === "lessons_locations") fields[name].value = Array.isArray(config[name]) ? config[name].join("\n") : "";
-      else fields[name].value = config[name] ?? ({ ap_floor: 100, lessons_strategy: "relationship", lessons_max_tickets: 0 }[name] ?? "");
+      else fields[name].value = config[name] ?? ({ total_assault_difficulty: "hardcore", total_assault_comfort_seconds: 30, ap_floor: 100, lessons_strategy: "relationship", lessons_max_tickets: 0 }[name] ?? "");
     });
     settingsLoaded = true;
     $("settings-status").textContent = isDemo() ? "sample settings · read only" : "saved on this machine";
@@ -774,6 +775,7 @@
   $("run-club").addEventListener("click", () => void post("/api/run", { task: "club" }, "club check-in is in the queue."));
   $("run-cafe").addEventListener("click", () => void post("/api/run", { task: "cafe" }, "café’s in the queue."));
   $("run-ap").addEventListener("click", () => void post("/api/run", { task: "spend_ap" }, "AP spending is in the queue."));
+  $("run-total-assault").addEventListener("click", () => void post("/api/run", { task: "total_assault" }, "total assault is in the queue. mock battle first."));
   $("run-tactical").addEventListener("click", () => void post("/api/run", { task: "tactical_rewards" }, "tactical rewards are in the queue. battles come later."));
   $("run-red-dots").addEventListener("click", () => void post("/api/run", { task: "red_dots" }, "checking the red dots. anything to collect goes in the queue."));
   $("run-free-pack").addEventListener("click", () => void post("/api/run", { task: "free_pack" }, "free pack + mail are in the queue."));
