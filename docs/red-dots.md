@@ -19,7 +19,7 @@ Social can flag something other than attendance. the Club handler checks the Clu
 
 ## AP after collection
 
-a fresh home AP reading at least **20 AP above the configured floor** queues Spend AP immediately when automatic spending is on. it doesn't wait for the normal AP timer. the spending job reads each stage's actual cost and stops before crossing the floor; insufficient tickets or available stages can leave AP above the floor. the queue avoids duplicate spending jobs and only retries within a batch after a later reward raises observed AP by at least 20. it honors pending-spend and failure holds, and never uses the manual retry override. unreadable or inconsistent AP readings do not authorize a follow-up.
+a fresh home AP reading at least **20 AP above the configured floor** queues Spend AP immediately when automatic spending is on. it doesn't wait for the normal AP timer. the spending job reads each stage's actual cost and stops before crossing the floor; insufficient tickets or available stages can leave AP above the floor. the queue avoids duplicate spending jobs and only retries within a batch after later rewards raise observed AP by at least 20 in total. it honors pending-spend and failure holds, and never uses the manual retry override. unreadable or inconsistent AP readings do not authorize a follow-up.
 
 ## live verification
 

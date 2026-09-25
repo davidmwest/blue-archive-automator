@@ -66,11 +66,11 @@ def test_default_plans_include_lessons_only_in_daily_or_explicit_lessons_job():
     assert config.lessons_strategy == "relationship"
     assert config.lessons_max_tickets == 0
     assert config.lessons_locations == ()
-    assert task_plan("daily", config) == ("restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "lessons", "tasks", "red_dots")
+    assert task_plan("daily", config) == ("restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tactical_rewards", "lessons", "tasks", "red_dots")
     assert task_plan("cafe", config) == ("restart", "club", "mail", "cafe", "red_dots")
     assert task_plan("lessons", config) == ("restart", "lessons", "red_dots")
     disabled = replace(config, lessons_enabled_in_daily=False)
-    assert task_plan("daily", disabled) == ("restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tasks", "red_dots")
+    assert task_plan("daily", disabled) == ("restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tactical_rewards", "tasks", "red_dots")
     assert task_plan("lessons", disabled) == ("restart", "lessons", "red_dots")
 
 
@@ -83,14 +83,14 @@ class Result:
 
 
 @pytest.mark.parametrize(("command", "enabled", "expected"), [
-    ("daily", True, ["restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "lessons", "tasks", "red_dots"]),
-    ("daily", False, ["restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tasks", "red_dots"]),
+    ("daily", True, ["restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tactical_rewards", "lessons", "tasks", "red_dots"]),
+    ("daily", False, ["restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tactical_rewards", "tasks", "red_dots"]),
     ("lessons", True, ["restart", "lessons", "red_dots"]),
     ("lessons", False, ["restart", "lessons", "red_dots"]),
     ("cafe", True, ["restart", "club", "mail", "cafe", "red_dots"]),
 ])
 def test_cli_dispatches_sequential_plan_and_passes_lesson_config(monkeypatch, tmp_path, command, enabled, expected):
-    from ba_automator import cafe, club, mail, restart, tickets, task_rewards, free_pack, red_dots
+    from ba_automator import cafe, club, mail, restart, tickets, task_rewards, free_pack, red_dots, tactical_rewards
 
     config = selected(lessons_enabled_in_daily=enabled, lessons_strategy="school_rank", lessons_max_tickets=3)
     monkeypatch.setattr(cli.Config, "from_file", lambda _: config)
@@ -118,6 +118,7 @@ def test_cli_dispatches_sequential_plan_and_passes_lesson_config(monkeypatch, tm
     monkeypatch.setattr(mail, "run_mail", runner("mail"))
     monkeypatch.setattr(free_pack, "run_free_pack", runner("free_pack"))
     monkeypatch.setattr(red_dots, "run_red_dots", runner("red_dots"))
+    monkeypatch.setattr(tactical_rewards, "run_tactical_rewards", runner("tactical_rewards"))
     monkeypatch.setattr(task_rewards, "run_task_rewards", runner("tasks"))
     monkeypatch.setattr(tickets, "run_bounties", runner("bounties"))
     monkeypatch.setattr(tickets, "run_scrimmages", runner("scrimmages"))

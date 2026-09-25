@@ -34,7 +34,7 @@
   let actionsLimit = 15;
   let noticeTimer = null;
 
-  const taskName = (task) => ({ red_dots: "Collect red dots", free_pack: "Free pack + mail", tasks: "Collect Tasks", bounties: "Bounties", scrimmages: "Scrimmages", spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
+  const taskName = (task) => ({ tactical_rewards: "Tactical rewards", red_dots: "Collect red dots", free_pack: "Free pack + mail", tasks: "Collect Tasks", bounties: "Bounties", scrimmages: "Scrimmages", spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
   const isRunning = () => Boolean(status && (status.state === "running" || status.current_job));
   const queue = () => (Array.isArray(status?.queue) ? status.queue : []);
   const isDemo = () => status?.demo === true;
@@ -149,6 +149,7 @@
     $("run-mail").disabled = unavailable;
     $("run-tasks").disabled = unavailable;
     $("run-red-dots").disabled = unavailable;
+    $("run-tactical").disabled = unavailable;
     $("run-free-pack").disabled = unavailable;
     $("run-ap").disabled = unavailable;
     $("run-packs").disabled = unavailable;
@@ -174,7 +175,7 @@
       ? "lowest rank first, then lowest XP. recheck after each ticket. pick the room with the most students; higher owned relationships break ties."
       : "check every location first. use tickets on rooms with the most owned students; higher relationships break ties.";
     const packEnabled = ["monthly", "half_monthly", "ap"].some((key) => status?.config?.[`packs_${key}_enabled`]);
-    $("daily-plan").textContent = `daily does restart → club → free pack → ${packEnabled ? "packs → " : ""}mail → café${status?.config?.bounties_enabled_in_daily === false ? "" : " → bounties"}${status?.config?.scrimmages_enabled_in_daily === false ? "" : " → scrimmages"}${status?.config?.lessons_enabled_in_daily === false ? "" : " → lessons"}${status?.config?.ap_schedule_enabled ? " → spend AP" : ""} → collect tasks. home red dots queue their collection jobs when a run finishes.`;
+    $("daily-plan").textContent = `daily does restart → club → free pack → ${packEnabled ? "packs → " : ""}mail → café${status?.config?.bounties_enabled_in_daily === false ? "" : " → bounties"}${status?.config?.scrimmages_enabled_in_daily === false ? "" : " → scrimmages"} → tactical rewards${status?.config?.lessons_enabled_in_daily === false ? "" : " → lessons"}${status?.config?.ap_schedule_enabled ? " → spend AP" : ""} → collect tasks. home red dots queue their collection jobs when a run finishes.`;
     const packs = status?.schedule?.packs;
     $("packs-status").textContent = packs?.blocked_reason
       ? `paused: ${packs.blocked_reason}. check the game, then queue a pack check.`
@@ -698,6 +699,7 @@
   $("run-club").addEventListener("click", () => void post("/api/run", { task: "club" }, "club check-in is in the queue."));
   $("run-cafe").addEventListener("click", () => void post("/api/run", { task: "cafe" }, "café’s in the queue."));
   $("run-ap").addEventListener("click", () => void post("/api/run", { task: "spend_ap" }, "AP spending is in the queue."));
+  $("run-tactical").addEventListener("click", () => void post("/api/run", { task: "tactical_rewards" }, "tactical rewards are in the queue. battles come later."));
   $("run-red-dots").addEventListener("click", () => void post("/api/run", { task: "red_dots" }, "checking the red dots. anything to collect goes in the queue."));
   $("run-free-pack").addEventListener("click", () => void post("/api/run", { task: "free_pack" }, "free pack + mail are in the queue."));
   $("run-tasks").addEventListener("click", () => void post("/api/run", { task: "tasks" }, "task rewards are in the queue."));

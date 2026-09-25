@@ -1304,14 +1304,28 @@ def test_later_reward_can_trigger_another_ap_pass_but_unchanged_ap_cannot(contro
     output=json.dumps({'status':'success','run_dir':str(run),'duration':1,'actions':0})
     with controller._condition:
         controller._badge_attempted.add('spend_ap')
-        for amount in (117,117):
+        for amount in (117,127):
             (run/'requests.json').write_text(json.dumps({'version':1,'tasks':[],'ap':amount}))
             controller._enqueue_badges(output,root)
         assert not controller._queue
-        (run/'requests.json').write_text(json.dumps({'version':1,'tasks':[],'ap':417}))
+        (run/'requests.json').write_text(json.dumps({'version':1,'tasks':[],'ap':137}))
         controller._enqueue_badges(output,root)
         controller._enqueue_badges(output,root)
         assert [j['task'] for j in controller._queue]==['spend_ap']
         controller._queue.clear() # Simulate an exhausted-stage pass returning with unchanged AP.
         controller._enqueue_badges(output,root)
         assert not controller._queue
+
+
+def test_completed_ap_pass_with_no_available_stages_does_not_loop(controlled):
+    from ba_automator import ap_state
+    controller,_=controlled;controller.pause()
+    controller.update_settings({'ap_schedule_enabled':True,'ap_floor':100})
+    ap_state.write_state(controller.config,ap_state.empty_state())
+    root=controller.config.run_dir/'exhausted-test';run=root/'red_dots-test';run.mkdir(parents=True)
+    (run/'requests.json').write_text(json.dumps({'version':1,'tasks':[],'ap':437}))
+    output=json.dumps({'status':'success','run_dir':str(root/'spend_ap-test'),'duration':1,'actions':2})+'\n'+json.dumps({'status':'success','run_dir':str(run),'duration':1,'actions':0})
+    with controller._condition:
+        controller._badge_attempted.add('spend_ap');controller._ap_batch_observed=117
+        controller._enqueue_badges(output,root)
+        assert not controller._queue and controller._ap_batch_observed==437

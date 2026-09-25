@@ -27,7 +27,8 @@ def main(argv=None) -> int:
     capture.add_argument("--output", type=Path, default=Path("data/capture.png"))
     inspect = commands.add_parser("inspect", help="Classify a saved or live frame without game input")
     inspect.add_argument("--image", type=Path)
-    descriptions = {"red_dots": "Queue collection jobs for home notifications",
+    descriptions = {"tactical_rewards": "Collect Tactical Challenge time and daily rewards without fighting",
+                    "red_dots": "Check home notifications for daemon collection jobs",
                     "free_pack": "Claim the Free daily pack when its home badge is visible, then collect mail",
                     "tasks": "Collect completed Tasks rewards when the home red dot is visible",
                     "bounties": "Split available Bounty tickets across the three highest three-star clears",
@@ -41,7 +42,7 @@ def main(argv=None) -> int:
                     "spend_ap": "Sweep selected Hard missions or commissions down to the AP floor",
                     "scan_ap": "Survey three-star Hard missions and commissions without spending AP",
                     "lessons": "Restart and use lesson tickets with the configured strategy",
-                    "daily": "Run restart, free package, Club, enabled packs, mail, cafe, enabled ticket sweeps, lessons, AP spending and task rewards"}
+                    "daily": "Run restart, free package, Club, enabled packs, mail, cafe, enabled ticket sweeps, Tactical Challenge rewards, lessons, AP spending and task rewards"}
     for name, description in descriptions.items():
         command = commands.add_parser(name, help=description)
         command.add_argument("--no-downloads", action="store_true", help="Stop if game-data download consent is needed")
@@ -79,7 +80,10 @@ def main(argv=None) -> int:
             for task in task_plan(args.command, config):
                 if vision is None:
                     vision = StartupVision()
-                if task == "club":
+                if task == "tactical_rewards":
+                    from .tactical_rewards import run_tactical_rewards
+                    runner = run_tactical_rewards
+                elif task == "club":
                     from .club import run_club
                     runner = run_club
                 elif task == "red_dots":

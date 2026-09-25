@@ -9,6 +9,7 @@ import os
 from uuid import uuid4
 
 RECEIVED = {
+    "tactical_rewards_received",
     "free_pack_received",
     "task_rewards_received",
     "earnings_collected",

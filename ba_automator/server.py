@@ -528,7 +528,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info")
-                            marker = next((prefix for prefix in ("red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("tactical_rewards:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -645,8 +645,10 @@ class DashboardController:
         ap = value.get('ap')
         valid_ap = type(ap) is int and 0 <= ap <= 9999
         pending_ap = any('spend_ap' in task_plan(j['task'], self.config) for j in self._queue)
+        spent_here = self._parse_result(output, run_root, task='spend_ap') is not None
+        queued_ap = False
         new_ap = (self._ap_batch_observed is not None and valid_ap and ap >= self._ap_batch_observed + 20)
-        if (self.config.ap_schedule_enabled and valid_ap and not pending_ap
+        if (self.config.ap_schedule_enabled and valid_ap and not pending_ap and not spent_here
                 and ap >= self.config.ap_floor + 20
                 and ('spend_ap' not in self._badge_attempted or new_ap)):
             state = self._ap_status()
@@ -654,7 +656,8 @@ class DashboardController:
                 self._queue.append({'id': uuid4().hex, 'task': 'spend_ap',
                                     'created_at': _timestamp(), 'source': 'ap_balance'})
                 self._log(f'Queued Spend AP: {ap} AP observed, floor {self.config.ap_floor}')
-        if valid_ap:
+                queued_ap = True
+        if valid_ap and (spent_here or queued_ap or self._ap_batch_observed is None or ap < self._ap_batch_observed):
             self._ap_batch_observed = ap
 
     def _close_app_after_queue(self, selected: Config, process) -> None:
