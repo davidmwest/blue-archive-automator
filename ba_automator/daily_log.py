@@ -30,7 +30,11 @@ _SENSITIVE = re.compile(
     r"billing_details|billing_dump|raw|ocr|screenshot|image_data|screen_text)",
     re.I,
 )
-_EMAIL = re.compile(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}")
+# Only begin at a local-part boundary. Without this guard a failed match scans
+# every remaining suffix of a long word, making diagnostic sanitization O(n²).
+# The guard also covers long local parts followed by an invalid domain; merely
+# checking whether '@' occurs would leave that case quadratic.
+_EMAIL = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}")
 _SECRET_VALUE = re.compile(
     r"(?i)\b(password|passwd|secret|token|authorization|cookie|api[_ -]?key)\s*[:=]\s*(?:Bearer\s+)?[^\s,;]+"
 )

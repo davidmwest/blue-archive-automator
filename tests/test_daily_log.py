@@ -60,18 +60,26 @@ from ba_automator.daily_log import append_event
 for number in range(24):
     append_event(Path(sys.argv[1]), 'worker_event', task=sys.argv[2], number=number, detail='X' * 9000)
 """
-    children = [
-        subprocess.Popen(
-            [sys.executable, "-c", script, str(tmp_path), f"worker{index}"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        for index in range(4)
-    ]
-    for child in children:
-        output, error = child.communicate(timeout=30)
-        assert child.returncode == 0, (output, error)
+    children = []
+    try:
+        for index in range(4):
+            children.append(
+                subprocess.Popen(
+                    [sys.executable, "-c", script, str(tmp_path), f"worker{index}"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
+            )
+        for child in children:
+            output, error = child.communicate(timeout=30)
+            assert child.returncode == 0, (output, error)
+    finally:
+        for child in children:
+            if child.poll() is None:
+                child.kill()
+        for child in children:
+            child.communicate(timeout=5)
     lines = daily_log.read_day(tmp_path, daily_log.today()).splitlines()
     assert len(lines) == 96
     for worker in range(4):
@@ -592,3 +600,24 @@ with _locked(folder):
         assert future.result(timeout=20) == "complete record: café\n"
     _, error = child.communicate(timeout=20)
     assert child.returncode == 0, error
+
+
+def test_long_diagnostic_redaction_finishes_without_quadratic_email_scan():
+    # A subprocess bounds this regression if a future regex again tries every
+    # suffix. The guard is deliberately generous for CI startup; healthy work
+    # takes milliseconds and does not depend on filesystem/fsync performance.
+    script = """
+from ba_automator.daily_log import _safe_text
+long_word = 'X' * 100000
+assert _safe_text(long_word) == long_word
+invalid_domain = long_word + '@' + long_word
+assert _safe_text(invalid_domain) == invalid_domain
+invalid_suffix = long_word + '@' + long_word + '.12345'
+assert _safe_text(invalid_suffix) == invalid_suffix
+assert _safe_text(long_word + '@private.example') == '[redacted email]'
+assert _safe_text('message: user+tag@private.example; password=hidden') == 'message: [redacted email]; password=[redacted]'
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, timeout=10
+    )
+    assert result.returncode == 0, result.stderr
