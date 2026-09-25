@@ -9,6 +9,8 @@ import re
 import os
 from uuid import uuid4
 
+from .gifts import is_gift
+
 RECEIVED = {
     "loot_received",
     "tactical_rewards_received",
@@ -404,10 +406,10 @@ GROUPS = (
     ("energy", "AP + tickets"),
     ("shop", "shop currencies"),
     ("growth", "leveling + skills"),
-    ("equipment", "equipment"),
     ("crafting", "crafting + gifts"),
     ("credits", "credits"),
     ("other", "everything else"),
+    ("equipment", "equipment"),
 )
 
 # Add exact artifact names after an observed tooltip identifies a skill material.
@@ -424,6 +426,10 @@ SHOP_CURRENCIES = frozenset(
 
 
 def category(name):
+    # Named gifts can contain words such as "ticket" or "report"; the reviewed
+    # catalog must take precedence over general material-name rules.
+    if is_gift(name):
+        return "crafting"
     n = name.casefold()
     if "pyroxene" in n or "recruitment" in n:
         return "premium"

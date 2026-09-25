@@ -260,6 +260,9 @@ def test_priority_groups_and_icons_preserve_clear_history(config, tmp_path):
             {"name": "Hina's Eleph", "quantity": 1},
             {"name": "AP", "quantity": 40},
             {"name": "General Bag Blueprint", "quantity": 2},
+            {"name": "Brain Teaser Puzzle Cube", "quantity": 1},
+            {"name": "Wind-Up Music Box", "quantity": 1},
+            {"name": "Unknown Event Material", "quantity": 1},
         ],
         items_complete=True,
     )
@@ -268,8 +271,14 @@ def test_priority_groups_and_icons_preserve_clear_history(config, tmp_path):
         "premium",
         "students",
         "energy",
-        "equipment",
+        "crafting",
         "credits",
+        "other",
+        "equipment",
+    ]
+    assert [item["name"] for item in groups[3]["items"]] == [
+        "Brain Teaser Puzzle Cube",
+        "Wind-Up Music Box",
     ]
     assert groups[0]["items"][0]["icon_url"] == f"/api/loot/icons/{identifier}"
     assert loot.icon_path(config, "../private.png") is None
@@ -598,6 +607,30 @@ def test_shop_currency_priority_and_only_verified_artifact_names(config):
     ]
     assert groups[2]["items"][0]["name"] == "Crystal Haniwa Fragment"
     assert groups[3]["items"][0]["name"] == "Unknown Event Fragment"
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "Movie Ticket",
+        "Luxury Buffet Ticket",
+        "Music Concert Ticket",
+        "Extraordinary Cottontail Detective- Case of the Misty Hot Spring Slide -",
+        "  brain   teaser puzzle cube  ",
+        "Wind‑Up Music Box",
+        "World’s Most Useless Gadget",
+        "Samuela “The Beyond”",
+    ],
+)
+def test_named_gifts_take_precedence_over_material_keywords(name):
+    assert loot.category(name) == "crafting"
+
+
+def test_gift_names_do_not_fuzzily_reclassify_unrelated_rewards():
+    assert loot.category("Bounty Ticket") == "energy"
+    assert loot.category("Intact Spring") == "growth"
+    assert loot.category("Wind-Up Music Box Blueprint") == "equipment"
+    assert loot.category("Unidentified Music Box") == "other"
 
 
 def test_exact_catalog_name_enriches_old_receipt_without_changing_history(config):
