@@ -40,8 +40,9 @@ def main(argv=None) -> int:
     inspect.add_argument("--image", type=Path)
     descriptions = {
         "total_assault": "Mock-test the configured Total Assault difficulty before a real clear, then sweep remaining tickets",
+        "assault_rewards": "Collect available Total Assault rank and points rewards without entering a battle",
         "tactical_rewards": "Collect Tactical Challenge time and daily rewards without fighting",
-        "red_dots": "Check home notifications for daemon collection jobs",
+        "red_dots": "Check home and Campaign notifications for daemon collection jobs",
         "free_pack": "Claim the Free daily pack when its home badge is visible, then collect mail",
         "tasks": "Collect completed Tasks rewards when the home red dot is visible",
         "bounties": "Split available Bounty tickets across the three highest three-star clears",
@@ -55,7 +56,7 @@ def main(argv=None) -> int:
         "spend_ap": "Sweep selected Hard missions or commissions down to the AP floor",
         "scan_ap": "Survey three-star Hard missions and commissions without spending AP",
         "lessons": "Restart and use lesson tickets with the configured strategy",
-        "daily": "Run restart, free package, Club, enabled packs, mail, cafe, enabled ticket sweeps, Tactical Challenge rewards, lessons, optional Total Assault, AP spending and task rewards",
+        "daily": "Run restart, free package, Club, enabled packs, mail, cafe, enabled ticket sweeps, Tactical Challenge rewards, lessons, optional Total Assault, raid rewards, AP spending and task rewards",
     }
     for name, description in descriptions.items():
         command = commands.add_parser(name, help=description)
@@ -116,6 +117,10 @@ def main(argv=None) -> int:
                     from .total_assault import run_total_assault
 
                     runner = run_total_assault
+                elif task == "assault_rewards":
+                    from .assault_rewards import run_assault_rewards
+
+                    runner = run_assault_rewards
                 elif task == "tactical_rewards":
                     from .tactical_rewards import run_tactical_rewards
 

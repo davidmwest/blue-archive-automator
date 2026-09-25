@@ -1,6 +1,6 @@
 # collect the red dots
 
-when a job gets back home, check for two stable views of the notification dots. queue the matching jobs, one at a time:
+when a job gets back home, check the home screen and Campaign for two stable views of the notification dots. queue the matching jobs, one at a time:
 
 | notification | job |
 | --- | --- |
@@ -8,12 +8,16 @@ when a job gets back home, check for two stable views of the notification dots. 
 | Social | Club check-in, then mail |
 | Mail | collect product and ordinary mail |
 | Tasks | completed task rewards and the daily completion bonus |
+| Total Assault in Campaign | available rank and total-points rewards |
+| Tactical Challenge in Campaign | time and daily rewards |
 
 there's a **collect red dots** button for a manual check, and **collect free pack** for the package alone. the scanner doesn't keep the game open or wake an idle emulator to poll. Cafe and the other scheduled visits give it chances to check.
 
 free means free. the package handler recognizes **Free Daily Pack** and the separate **Cost: Free** confirmation. it cannot operate Google Play billing. paid renewals keep their own opt-in settings. missing labels, an unexpected screen, or a failed receipt stop the job and leave local screenshots.
 
 requests enter the normal serial queue. already queued work isn't duplicated. each associated task gets one attempt per busy queue batch, so a stubborn dot cannot keep the queue alive forever. later visits can check again. free packs and Club explicitly run Mail afterward, even if another job checked Mail earlier in the batch.
+
+Campaign badges only request reward collection; they never start battles or enable Total Assault combat. amber availability markers don't count as red dots. the scanner returns home before publishing its requests.
 
 Social can flag something other than attendance. the Club handler checks the Club card's own dot, then uses a per-instance checkpoint for the 19:00 UTC game day. it doesn't touch Friends, Assistant, or chat.
 

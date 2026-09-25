@@ -564,7 +564,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info", child=True)
-                            marker = next((prefix for prefix in ("total_assault:", "tactical_rewards:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("total_assault:", "assault_rewards:", "tactical_rewards:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -670,26 +670,29 @@ class DashboardController:
                     or any(not isinstance(task, str) or task not in PRIORITY for task in tasks)):
                 raise ValueError('Invalid badge request tasks')
         except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
-            self._log(f'Could not read home notification requests: {exc}', 'error')
+            self._log(f'Could not read notification requests: {exc}', 'error')
             return
         covered = set(self._badge_attempted)
         for queued in self._queue:
             covered.update(task_plan(queued['task'], self.config))
         for task in PRIORITY:
+            if len(self._queue) >= 100:
+                break
             if task not in tasks or task in covered:
                 continue
             self._queue.append({'id': uuid4().hex, 'task': task,
                                 'created_at': _timestamp(), 'source': 'red_dot'})
             self._queued(self._queue[-1])
             covered.update(task_plan(task, self.config))
-            self._log(f'Queued {task}: home notification detected')
+            self._log(f'Queued {task}: notification detected')
         ap = value.get('ap')
         valid_ap = type(ap) is int and 0 <= ap <= 9999
         pending_ap = any('spend_ap' in task_plan(j['task'], self.config) for j in self._queue)
         spent_here = self._parse_result(output, run_root, task='spend_ap') is not None
         queued_ap = False
         new_ap = (self._ap_batch_observed is not None and valid_ap and ap >= self._ap_batch_observed + 20)
-        if (self.config.ap_schedule_enabled and valid_ap and not pending_ap and not spent_here
+        if (len(self._queue) < 100
+                and self.config.ap_schedule_enabled and valid_ap and not pending_ap and not spent_here
                 and ap >= self.config.ap_floor + 20
                 and ('spend_ap' not in self._badge_attempted or new_ap)):
             state = self._ap_status()

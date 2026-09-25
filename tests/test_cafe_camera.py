@@ -3,8 +3,21 @@
 import cv2
 import numpy as np
 import pytest
+from pathlib import Path
 
 from ba_automator.cafe_camera import measure_camera_displacement
+
+
+def test_live_cafe_edge_drift_is_measured_as_perspective_not_stationary():
+    fixtures = Path(__file__).parent / "fixtures"
+    before, after = [
+        (fixtures / f"cafe-edge-drift-{suffix}.png").read_bytes()
+        for suffix in ("before", "after")
+    ]
+    diagnostics = {}
+    motion = measure_camera_displacement(before, after, diagnostics=diagnostics)
+    assert motion is not None and np.allclose(motion, (60, -31), atol=2)
+    assert diagnostics["method"] == "affine"
 
 
 def room(seed):

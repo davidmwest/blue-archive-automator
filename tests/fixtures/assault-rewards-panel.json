@@ -1,0 +1,122 @@
+[
+  {
+    "text": "Total Assault 2",
+    "box": [
+      104,
+      9,
+      313,
+      38
+    ],
+    "confidence": 0.93243
+  },
+  {
+    "text": "Total Assault Info",
+    "box": [
+      508,
+      92,
+      771,
+      121
+    ],
+    "confidence": 0.99974
+  },
+  {
+    "text": "19:00",
+    "box": [
+      1200,
+      88,
+      1246,
+      112
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "11:59",
+    "box": [
+      1197,
+      109,
+      1246,
+      134
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "Detailed Rank Info",
+    "box": [
+      257,
+      158,
+      472,
+      184
+    ],
+    "confidence": 0.9997
+  },
+  {
+    "text": "Reward Details",
+    "box": [
+      834,
+      158,
+      1010,
+      184
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Mo",
+    "box": [
+      47,
+      225,
+      81,
+      247
+    ],
+    "confidence": 0.99587
+  },
+  {
+    "text": "My Info",
+    "box": [
+      201,
+      217,
+      278,
+      250
+    ],
+    "confidence": 0.96839
+  },
+  {
+    "text": "Q",
+    "box": [
+      572,
+      206,
+      625,
+      259
+    ],
+    "confidence": 0.78058
+  },
+  {
+    "text": "All Difficulties",
+    "box": [
+      999,
+      219,
+      1131,
+      242
+    ],
+    "confidence": 0.99319
+  },
+  {
+    "text": "A",
+    "box": [
+      62,
+      246,
+      80,
+      265
+    ],
+    "confidence": 0.99662
+  },
+  {
+    "text": "Rewards",
+    "box": [
+      1127,
+      644,
+      1236,
+      670
+    ],
+    "confidence": 0.99997
+  }
+]

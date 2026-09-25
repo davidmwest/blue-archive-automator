@@ -1361,6 +1361,79 @@ def test_badge_manifest_cannot_enqueue_arbitrary_or_external_work(controlled, tm
     process.finish()
 
 
+def test_campaign_reward_badges_queue_without_enabling_raid_combat(controlled):
+    controller, factory = controlled
+    controller.enqueue('restart')
+    eventually(lambda: len(factory.processes) == 1)
+    process = factory.processes[0]
+    controller.pause()
+    assert controller.config.total_assault_enabled_in_daily is False
+    with controller._condition:
+        output = badge_output(process, ['assault_rewards', 'tactical_rewards'])
+        controller._enqueue_badges(output, process.run_dir.parent)
+        controller._enqueue_badges(output, process.run_dir.parent)
+    assert [job['task'] for job in controller.status()['queue']] == [
+        'assault_rewards', 'tactical_rewards',
+    ]
+    assert all(job['source'] == 'red_dot' for job in controller.status()['queue'])
+    assert 'total_assault' not in controller._badge_attempted
+    process.finish()
+
+
+@pytest.mark.parametrize('pending_count,tasks,expected', [
+    (100, ['assault_rewards', 'tactical_rewards'], []),
+    (99, ['assault_rewards', 'tactical_rewards'], ['assault_rewards']),
+    (98, ['assault_rewards', 'tactical_rewards'], ['assault_rewards', 'tactical_rewards']),
+    (97, ['assault_rewards', 'tactical_rewards'], ['assault_rewards', 'tactical_rewards', 'spend_ap']),
+    (100, [], []),
+    (99, [], ['spend_ap']),
+])
+def test_badge_and_ap_followups_share_queue_capacity(controlled, pending_count, tasks, expected):
+    controller, factory = controlled
+    controller.pause()
+    controller.update_settings({'ap_schedule_enabled': True, 'ap_floor': 100})
+    original = [controller.enqueue('restart')['id'] for _ in range(pending_count)]
+    root = controller.config.run_dir / 'capacity-test'
+    run = root / 'red_dots-test'
+    run.mkdir(parents=True)
+    (run / 'requests.json').write_text(json.dumps({'version': 1, 'tasks': tasks, 'ap': 200}))
+    output = json.dumps({'status': 'success', 'run_dir': str(run), 'duration': 1, 'actions': 0})
+    with controller._condition:
+        controller._enqueue_badges(output, root)
+        controller._enqueue_badges(output, root)
+    queue = controller.status()['queue']
+    assert len(queue) <= 100
+    assert [job['id'] for job in queue[:pending_count]] == original
+    assert [job['task'] for job in queue[pending_count:]] == expected
+    assert not factory.processes
+
+
+def test_full_queue_defers_followups_until_space_is_available(controlled):
+    controller, factory = controlled
+    controller.pause()
+    controller.update_settings({'ap_schedule_enabled': True, 'ap_floor': 100})
+    for _ in range(100):
+        controller.enqueue('restart')
+    root = controller.config.run_dir / 'deferred-capacity-test'
+    run = root / 'red_dots-test'
+    run.mkdir(parents=True)
+    (run / 'requests.json').write_text(json.dumps({
+        'version': 1, 'tasks': ['assault_rewards', 'tactical_rewards'], 'ap': 200,
+    }))
+    output = json.dumps({'status': 'success', 'run_dir': str(run), 'duration': 1, 'actions': 0})
+    with controller._condition:
+        controller._enqueue_badges(output, root)
+        assert len(controller._queue) == 100
+        assert all(job['task'] == 'restart' for job in controller._queue)
+        for expected in ('assault_rewards', 'tactical_rewards', 'spend_ap'):
+            controller._queue.popleft()  # A pending manual job leaves room for one follow-up.
+            controller._enqueue_badges(output, root)
+            assert len(controller._queue) == 100
+            assert controller._queue[-1]['task'] == expected
+        assert not controller._badge_attempted  # Capacity never marks an unrun job as attempted.
+    assert not factory.processes
+
+
 def test_scanner_does_not_replace_the_actual_job_result(controlled):
     controller,factory=controlled
     controller.enqueue('restart');eventually(lambda: len(factory.processes)==1)

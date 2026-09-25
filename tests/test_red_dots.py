@@ -26,7 +26,9 @@ from ba_automator.free_pack import (
     FreePackVision,
     classify_free_pack,
 )
-from ba_automator.home_badges import BadgeScreen, BadgeVision
+from ba_automator.home_badges import (
+    BADGE_BOUNDS, CAMPAIGN_BADGE_BOUNDS, PRIORITY, BadgeScreen, BadgeVision,
+)
 from ba_automator.mail import MailRunner
 from ba_automator.red_dots import RedDotsRunner
 from ba_automator.runtime import Capture, TaskError
@@ -92,6 +94,35 @@ def test_real_badges_and_overlay_rejection(startup):
     encoded = cv2.imencode(".png", frame)[1].tobytes()
     assert BadgeVision(startup).analyze(encoded).badges == ()
     assert ShopVision(startup).analyze(encoded).red_dot is False
+
+
+def test_campaign_reward_badge_requires_its_screen_and_red_marker(startup):
+    vision = BadgeVision(startup)
+    observed = vision.analyze(png("campaign"))
+    assert observed.kind == "campaign"
+    assert observed.badges == ("assault_rewards",)
+    # Amber in-progress markers (including Tactical Challenge) are not red dots.
+    old = vision.analyze((FIXTURES / "ap-campaign-stable.png").read_bytes())
+    assert old.kind == "campaign" and old.badges == ()
+    image = decode_frame(png("campaign"))
+    image[441:458, 949:966] = 0
+    assert vision.analyze(cv2.imencode(".png", image)[1].tobytes()).badges == ()
+    image = decode_frame(png("campaign"))
+    dimmed = cv2.imencode(".png", (image * .5).astype("uint8"))[1].tobytes()
+    assert vision.analyze(dimmed).kind == "unknown"
+    assert vision.analyze(png("campaign"), billing=True).kind == "unknown"
+    missing_label = SimpleNamespace(
+        read=lambda frame: [word for word in startup.read(frame)
+                            if word.normalized != "total assault"],
+        matches=startup.matches,
+    )
+    assert BadgeVision(missing_label).analyze(png("campaign")).badges == ()
+
+
+def test_campaign_badges_cannot_authorize_raid_combat():
+    assert "assault_rewards" in PRIORITY and "assault_rewards" not in BADGE_BOUNDS
+    assert "tactical_rewards" in CAMPAIGN_BADGE_BOUNDS
+    assert "total_assault" not in PRIORITY
 
 
 def test_joined_reward_header_over_mail_is_recognized(startup):
@@ -270,21 +301,47 @@ def test_free_claim_waits_for_receipt_without_repeating_confirmation(config):
         r.journal.close()
 
 
-def test_scanner_requires_two_observations_and_never_taps(config):
+def test_scanner_requires_two_observations_then_returns_home(config):
     r = runner(RedDotsRunner, config)
     frames = iter(
         [
             frame(config, BadgeScreen("home", ("free_pack", "club"))),
             frame(config, BadgeScreen("home", ("free_pack", "mail"))),
+            frame(config, BadgeScreen("campaign", ("assault_rewards",))),
         ]
     )
     r.wait = lambda *a, **k: next(frames)
-    r.tap = lambda *a: pytest.fail("scanner must be read-only")
+    navigation = []
+    r.navigate = lambda *args: navigation.append(args) or frame(
+        config, BadgeScreen("campaign", ("assault_rewards", "tactical_rewards"))
+    )
+    r.tap = lambda f, target, detail: navigation.append(target)
+    r.home = lambda: navigation.append("home verified")
     try:
         result = r.run()
         assert result.actions == 0
         assert json.loads((result.run_dir / "requests.json").read_text())["tasks"] == [
-            "free_pack"
+            "free_pack", "assault_rewards",
         ]
+        assert navigation == [("home", "campaign", (1200, 641)), (1237, 23), "home verified"]
+    finally:
+        r.journal.close()
+
+
+def test_failed_return_home_cannot_publish_badge_requests(config):
+    r = runner(RedDotsRunner, config)
+    frames = iter([
+        frame(config, BadgeScreen("home", ("mail",), 230)),
+        frame(config, BadgeScreen("home", ("mail",), 230)),
+        frame(config, BadgeScreen("campaign", ("assault_rewards",))),
+    ])
+    r.wait = lambda *a, **k: next(frames)
+    r.navigate = lambda *a: frame(config, BadgeScreen("campaign", ("assault_rewards",)))
+    r.tap = lambda *a: None
+    r.home = lambda: r.fail("Home unavailable")
+    try:
+        with pytest.raises(TaskError, match="Home unavailable"):
+            r.run()
+        assert not (r.run_dir / "requests.json").exists()
     finally:
         r.journal.close()

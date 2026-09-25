@@ -1,0 +1,262 @@
+[
+  {
+    "text": "Total Assault 2",
+    "box": [
+      103,
+      9,
+      312,
+      38
+    ],
+    "confidence": 0.92448
+  },
+  {
+    "text": "Total Assault Info",
+    "box": [
+      506,
+      89,
+      772,
+      123
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "19:00",
+    "box": [
+      1198,
+      88,
+      1246,
+      112
+    ],
+    "confidence": 0.99984
+  },
+  {
+    "text": "11:59",
+    "box": [
+      1197,
+      109,
+      1246,
+      134
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "Detailed Rank Info",
+    "box": [
+      257,
+      158,
+      472,
+      184
+    ],
+    "confidence": 0.99985
+  },
+  {
+    "text": "Reward Details",
+    "box": [
+      834,
+      157,
+      1010,
+      184
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Mo",
+    "box": [
+      45,
+      222,
+      82,
+      248
+    ],
+    "confidence": 0.98478
+  },
+  {
+    "text": "Rank Reward",
+    "box": [
+      163,
+      226,
+      317,
+      252
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "A",
+    "box": [
+      62,
+      245,
+      80,
+      264
+    ],
+    "confidence": 0.99846
+  },
+  {
+    "text": "Upon Season's End",
+    "box": [
+      480,
+      238,
+      648,
+      263
+    ],
+    "confidence": 0.99963
+  },
+  {
+    "text": "Rank 1-5000",
+    "box": [
+      480,
+      266,
+      614,
+      292
+    ],
+    "confidence": 0.99818
+  },
+  {
+    "text": "x1200",
+    "box": [
+      1019,
+      272,
+      1072,
+      296
+    ],
+    "confidence": 0.97713
+  },
+  {
+    "text": "Total Points Rewards",
+    "box": [
+      127,
+      294,
+      353,
+      320
+    ],
+    "confidence": 0.999
+  },
+  {
+    "text": "Upon Season's End",
+    "box": [
+      480,
+      348,
+      647,
+      375
+    ],
+    "confidence": 0.97468
+  },
+  {
+    "text": "Rank 5001-25000",
+    "box": [
+      479,
+      375,
+      660,
+      403
+    ],
+    "confidence": 0.99962
+  },
+  {
+    "text": "x500",
+    "box": [
+      883,
+      387,
+      921,
+      404
+    ],
+    "confidence": 0.99762
+  },
+  {
+    "text": "x1000",
+    "box": [
+      1020,
+      384,
+      1071,
+      406
+    ],
+    "confidence": 0.99106
+  },
+  {
+    "text": "Upon Season's End",
+    "box": [
+      479,
+      457,
+      647,
+      485
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Rank 25001-50000",
+    "box": [
+      479,
+      486,
+      671,
+      515
+    ],
+    "confidence": 0.98554
+  },
+  {
+    "text": "x425",
+    "box": [
+      967,
+      498,
+      1005,
+      515
+    ],
+    "confidence": 0.99174
+  },
+  {
+    "text": "x200",
+    "box": [
+      1039,
+      498,
+      1078,
+      516
+    ],
+    "confidence": 0.98069
+  },
+  {
+    "text": "x800",
+    "box": [
+      1110,
+      495,
+      1154,
+      517
+    ],
+    "confidence": 0.96879
+  },
+  {
+    "text": "Reward claim period:",
+    "box": [
+      412,
+      553,
+      614,
+      579
+    ],
+    "confidence": 0.99824
+  },
+  {
+    "text": "Claim",
+    "box": [
+      1012,
+      560,
+      1101,
+      595
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "09/29 07:59 \u2013 10/19 before next season",
+    "box": [
+      411,
+      580,
+      783,
+      608
+    ],
+    "confidence": 0.99664
+  },
+  {
+    "text": "Rewards",
+    "box": [
+      1125,
+      641,
+      1236,
+      670
+    ],
+    "confidence": 0.99998
+  }
+]

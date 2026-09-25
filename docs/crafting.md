@@ -50,4 +50,6 @@ an evening live check exposed the Max behavior: with three vacant slots and two 
 
 sanitized fixtures preserve the relevant UI controls and omit the account resource bar. raw traces and receipts stay in the ignored runtime directories.
 
+on September 25, an interrupted collection was reconciled using the saved overlapping receipt frames and a fresh settled view of empty slots 1 and 2. the receipt contained one **Brain Teaser Puzzle Cube** and one **Wind-Up Music Box**. animated highlights had made the old page-overlap check reject the same cards; the fix has captured regression coverage. recovery completed the original receipt and cleared its pending collection without pressing Claim again, starting another craft, or changing the preset. return home and the next three-hour recheck were verified. this does not establish live coverage of collection followed immediately by refill.
+
 Nexon's [Craft guide](https://forum.nexon.com/bluearchive-en/board_view?board=3222&thread=2523180) describes Quick Craft's node setup. the live English 1280×720 interface determines what the runner can recognize and spend.

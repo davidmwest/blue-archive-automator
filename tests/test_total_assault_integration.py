@@ -51,12 +51,41 @@ def test_total_assault_is_opt_in_daily_and_does_not_run_with_cafe(tmp_path):
     assert config.total_assault_difficulty == "hardcore"
     assert config.total_assault_comfort_seconds == 30
     assert "total_assault" not in task_plan("daily", config)
-    assert task_plan("total_assault", config) == ("restart", "total_assault", "red_dots")
+    assert "assault_rewards" in task_plan("daily", config)
+    assert task_plan("assault_rewards", config) == ("restart", "assault_rewards", "red_dots")
+    assert task_plan("total_assault", config) == ("restart", "total_assault", "assault_rewards", "red_dots")
     enabled = replace(config, total_assault_enabled_in_daily=True, ap_schedule_enabled=True)
-    assert task_plan("daily", enabled)[-5:] == (
-        "lessons", "total_assault", "spend_ap", "tasks", "red_dots",
+    assert task_plan("daily", enabled)[-6:] == (
+        "lessons", "total_assault", "assault_rewards", "spend_ap", "tasks", "red_dots",
     )
     assert "total_assault" not in task_plan("cafe", enabled)
+
+
+def test_rewards_cli_never_dispatches_combat(monkeypatch, tmp_path):
+    from ba_automator import restart, red_dots
+
+    config = selected(tmp_path, total_assault_enabled_in_daily=True)
+    monkeypatch.setattr(cli.Config, "from_file", lambda _: config)
+    monkeypatch.setattr(cli, "AdbDevice", lambda _: object())
+    monkeypatch.setattr(cli, "StartupVision", object)
+    calls = []
+
+    def runner(name):
+        def run(*args):
+            calls.append(name)
+            return Result("success", tmp_path / f"{name}-test")
+        return run
+
+    rewards = ModuleType("ba_automator.assault_rewards")
+    rewards.run_assault_rewards = runner("assault_rewards")
+    monkeypatch.setitem(sys.modules, "ba_automator.assault_rewards", rewards)
+    combat = ModuleType("ba_automator.total_assault")
+    combat.run_total_assault = lambda *a: pytest.fail("rewards must not enter combat")
+    monkeypatch.setitem(sys.modules, "ba_automator.total_assault", combat)
+    monkeypatch.setattr(restart, "run_restart", runner("restart"))
+    monkeypatch.setattr(red_dots, "run_red_dots", runner("red_dots"))
+    assert cli.main(["assault_rewards"]) == 0
+    assert calls == ["restart", "assault_rewards", "red_dots"]
 
 
 @dataclass
@@ -93,7 +122,10 @@ def test_total_assault_cli_dispatch_preserves_settings_and_startup_gate(monkeypa
     module = ModuleType("ba_automator.total_assault")
     module.run_total_assault = runner("total_assault")
     monkeypatch.setitem(sys.modules, "ba_automator.total_assault", module)
+    rewards = ModuleType("ba_automator.assault_rewards")
+    rewards.run_assault_rewards = runner("assault_rewards")
+    monkeypatch.setitem(sys.modules, "ba_automator.assault_rewards", rewards)
     monkeypatch.setattr(restart, "run_restart", runner("restart"))
     monkeypatch.setattr(red_dots, "run_red_dots", runner("red_dots"))
     assert cli.main(["total_assault", "--no-downloads"]) == (1 if restart_fails else 0)
-    assert calls == (["restart"] if restart_fails else ["restart", "total_assault", "red_dots"])
+    assert calls == (["restart"] if restart_fails else ["restart", "total_assault", "assault_rewards", "red_dots"])

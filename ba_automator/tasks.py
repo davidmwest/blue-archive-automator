@@ -7,8 +7,9 @@ from .config import Config
 
 TASK_LABELS = {
     "total_assault": "Total Assault complete",
+    "assault_rewards": "Total Assault rank and points rewards checked",
     "tactical_rewards": "Tactical Challenge rewards collected",
-    "red_dots": "Home notifications checked",
+    "red_dots": "Home and Campaign notifications checked",
     "free_pack": "Free package checked and mail collected",
     "tasks": "Task rewards collected",
     "bounties": "Bounty tickets swept",
@@ -25,7 +26,7 @@ TASK_LABELS = {
     "daily": "Daily tasks complete",
 }
 TASKS = frozenset(TASK_LABELS)
-RUN_PREFIXES = ("total_assault-", "tactical_rewards-", "red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
+RUN_PREFIXES = ("total_assault-", "assault_rewards-", "tactical_rewards-", "red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
 
 
 def _task_plan(command: str, config: Config) -> tuple[str, ...]:
@@ -38,6 +39,7 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
         plan = (*plan, "tactical_rewards")
         plan = (*plan, "lessons") if config.lessons_enabled_in_daily else plan
         plan = (*plan, "total_assault") if config.total_assault_enabled_in_daily else plan
+        plan = (*plan, "assault_rewards")
         plan = (*plan, "spend_ap") if config.ap_schedule_enabled else plan
         return (*plan, "tasks")
     if command == "cafe":
@@ -50,7 +52,9 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
         return ("restart", "packs", "mail", *(("spend_ap",) if config.ap_schedule_enabled else ()))
     if command == 'mail':
         return ('restart', 'mail', *(("spend_ap",) if config.ap_schedule_enabled else ()))
-    if command in {"total_assault", "tactical_rewards", "tasks", "bounties", "scrimmages", "lessons", "crafting", "spend_ap", "scan_ap"}:
+    if command == "total_assault":
+        return ("restart", "total_assault", "assault_rewards")
+    if command in {"assault_rewards", "tactical_rewards", "tasks", "bounties", "scrimmages", "lessons", "crafting", "spend_ap", "scan_ap"}:
         return ("restart", command)
     if command == "restart":
         return ("restart",)

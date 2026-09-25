@@ -66,11 +66,11 @@ def test_default_plans_include_lessons_only_in_daily_or_explicit_lessons_job():
     assert config.lessons_strategy == "relationship"
     assert config.lessons_max_tickets == 0
     assert config.lessons_locations == ()
-    assert task_plan("daily", config) == ("restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tactical_rewards", "lessons", "tasks", "red_dots")
+    assert task_plan("daily", config) == ("restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tactical_rewards", "lessons", "assault_rewards", "tasks", "red_dots")
     assert task_plan("cafe", config) == ("restart", "club", "mail", "cafe", "red_dots")
     assert task_plan("lessons", config) == ("restart", "lessons", "red_dots")
     disabled = replace(config, lessons_enabled_in_daily=False)
-    assert task_plan("daily", disabled) == ("restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tactical_rewards", "tasks", "red_dots")
+    assert task_plan("daily", disabled) == ("restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tactical_rewards", "assault_rewards", "tasks", "red_dots")
     assert task_plan("lessons", disabled) == ("restart", "lessons", "red_dots")
 
 
@@ -83,8 +83,8 @@ class Result:
 
 
 @pytest.mark.parametrize(("command", "enabled", "expected"), [
-    ("daily", True, ["restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tactical_rewards", "lessons", "tasks", "red_dots"]),
-    ("daily", False, ["restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tactical_rewards", "tasks", "red_dots"]),
+    ("daily", True, ["restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tactical_rewards", "lessons", "assault_rewards", "tasks", "red_dots"]),
+    ("daily", False, ["restart", "club", "free_pack", "mail", "cafe", "bounties", "scrimmages", "tactical_rewards", "assault_rewards", "tasks", "red_dots"]),
     ("lessons", True, ["restart", "lessons", "red_dots"]),
     ("lessons", False, ["restart", "lessons", "red_dots"]),
     ("cafe", True, ["restart", "club", "mail", "cafe", "red_dots"]),
@@ -112,6 +112,9 @@ def test_cli_dispatches_sequential_plan_and_passes_lesson_config(monkeypatch, tm
     module = ModuleType("ba_automator.lessons")
     module.run_lessons = runner("lessons")
     monkeypatch.setitem(sys.modules, "ba_automator.lessons", module)
+    rewards = ModuleType("ba_automator.assault_rewards")
+    rewards.run_assault_rewards = runner("assault_rewards")
+    monkeypatch.setitem(sys.modules, "ba_automator.assault_rewards", rewards)
     monkeypatch.setattr(restart, "run_restart", runner("restart"))
     monkeypatch.setattr(cafe, "run_cafe", runner("cafe"))
     monkeypatch.setattr(club, "run_club", runner("club"))
@@ -138,5 +141,8 @@ def test_restart_failure_prevents_lesson_ticket_use(monkeypatch, capsys):
     module = ModuleType("ba_automator.lessons")
     module.run_lessons = lambda *args: pytest.fail("lessons ran after restart failed")
     monkeypatch.setitem(sys.modules, "ba_automator.lessons", module)
+    rewards = ModuleType("ba_automator.assault_rewards")
+    rewards.run_assault_rewards = lambda *args: pytest.fail("rewards ran after restart failed")
+    monkeypatch.setitem(sys.modules, "ba_automator.assault_rewards", rewards)
     assert cli.main(["lessons"]) == 1
     assert "login required" in capsys.readouterr().err

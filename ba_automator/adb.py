@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import errno
+import logging
 import os
 import re
 import socket
@@ -12,6 +13,8 @@ import time
 from typing import Callable
 
 from .config import Config
+
+LOGGER = logging.getLogger(__name__)
 
 
 class DeviceError(RuntimeError):
@@ -129,8 +132,22 @@ class AdbDevice:
             raise DeviceError("Could not resolve the configured game's launcher activity")
         result = self._run("shell", "am", "start", "-W", "-n", component, timeout=45)
         text = result.decode("utf-8", errors="replace")
-        if re.search(r"(?im)^(?:error|exception|status:\s*(?:timeout|error))\b", text):
+        if re.search(r"(?im)^[ \t]*(?:error|exception|status:[ \t]*error)\b", text):
             raise DeviceError(f"Android could not launch Blue Archive: {text[:1000].strip()}")
+        if re.search(r"(?im)^status:[ \t]*timeout\b", text):
+            # Android's activity-draw wait can expire while the game is already
+            # foreground. This is not proof of readiness: restart still applies
+            # its own screen recognition, time limits, and one recovery attempt.
+            # Accept only the observed advisory status, never a transport timeout
+            # or a failed launch that leaves another app in the foreground.
+            statuses = re.findall(r"(?im)^status:[ \t]*([^\r\n]*)", text)
+            if ([status.strip().lower() for status in statuses] != ["timeout"]
+                    or self.foreground_package() != self.config.package):
+                raise DeviceError(f"Android could not launch Blue Archive: {text[:1000].strip()}")
+            LOGGER.warning(
+                "Android launch wait timed out with Blue Archive in the foreground; "
+                "continuing bounded startup recognition"
+            )
 
     def screenshot(self) -> bytes:
         output = self._run("exec-out", "screencap", "-p", timeout=20)

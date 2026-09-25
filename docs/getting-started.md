@@ -51,7 +51,8 @@ open [the dashboard](http://127.0.0.1:8765). `serve --port 8767` selects a diffe
 | `crafting` | runs restart, checks finished crafts, fills Quick Craft slots, and saves their collection times |
 | `lessons` | runs restart, surveys locations, and uses existing tickets with the configured strategy |
 | `total_assault` | runs restart, tests the configured difficulty in mock battles, and uses tickets only after the team qualifies; see [Total Assault](total-assault.md) for current validation limits |
-| `daily` | runs restart → Club → free pack → enabled paid packs → mail → Cafe → enabled Bounties → enabled Scrimmages → Tactical rewards → enabled Lessons → enabled Total Assault → enabled Spend AP → Tasks |
+| `assault_rewards` | checks both raid reward tabs and claims available rewards without entering a battle |
+| `daily` | runs restart → Club → free pack → enabled paid packs → mail → Cafe → enabled Bounties → enabled Scrimmages → Tactical rewards → enabled Lessons → enabled Total Assault → raid rewards → enabled Spend AP → Tasks |
 | `scan_ap` | surveys three-star Hard stages and commissions without spending AP |
 | `spend_ap` | sweeps the chosen stages without crossing the configured AP floor |
 | `probe` | checks the selected device, game, display size, and foreground app |

@@ -785,3 +785,91 @@ def test_catalog_symlink_is_not_read(config, tmp_path):
         items_complete=False,
     )
     assert loot.snapshot(config)["items"] == []
+
+
+def reward_icon(config, width, height, color=100):
+    import cv2
+    import numpy as np
+    from ba_automator.loot_receipts import save_icon
+
+    ok, png = cv2.imencode(".png", np.full((height, width, 3), color, dtype=np.uint8))
+    assert ok
+    return save_icon(config, png.tobytes())
+
+
+def reward(config, name, quantity, icon):
+    record_action(
+        config,
+        "loot_received",
+        "Verified reward",
+        items=[{"name": name, "quantity": quantity, "icon_id": icon}],
+        items_complete=True,
+    )
+
+
+def test_representative_icon_keeps_larger_card_with_normalized_name(config):
+    full = reward_icon(config, 127, 107)
+    compact = reward_icon(config, 70, 64)
+    strip = reward_icon(config, 600, 30)
+    reward(config, " Credit   Points ", 100, full)
+    reward(config, "Credits", 20, compact)
+    reward(config, "Credits", 5, strip)
+    data = loot.snapshot(config)
+    assert data["groups"][0]["items"] == [
+        {"name": "Credits", "quantity": 125, "icon_url": f"/api/loot/icons/{full}"}
+    ]
+    assert data["receipt_count"] == 3
+
+
+def test_representative_icon_uses_better_later_card_but_stays_stable_on_ties(config):
+    compact = reward_icon(config, 70, 64)
+    full = reward_icon(config, 127, 107)
+    same_size = reward_icon(config, 127, 107, color=200)
+    reward(config, "Lesser Enhancement Stone", 1, compact)
+    reward(config, "Lesser Enhancement Stone", 2, full)
+    reward(config, "Lesser Enhancement Stone", 3, same_size)
+    data = loot.snapshot(config)
+    assert data["groups"][0]["items"][0]["icon_url"] == f"/api/loot/icons/{full}"
+    assert data["items"] == [{"name": "Lesser Enhancement Stone", "quantity": 6}]
+
+
+def test_cleared_receipt_only_supplies_verified_same_name_icon(config):
+    full = reward_icon(config, 127, 107)
+    compact = reward_icon(config, 70, 64)
+    reward(config, "Credits", 100, full)
+    reward(config, "Pyroxenes", 30, full)
+    history = config.state_dir / "important-actions.jsonl"
+    loot.clear(config)
+    reward(config, "Credit Points", 20, compact)
+    before = history.read_bytes()
+    data = loot.snapshot(config)
+    assert data["groups"][0]["items"] == [
+        {"name": "Credits", "quantity": 20, "icon_url": f"/api/loot/icons/{full}"}
+    ]
+    assert data["items"] == [{"name": "Credits", "quantity": 20}]
+    assert data["receipt_count"] == 1
+    assert data["cleared_at"] and history.read_bytes() == before
+
+
+def test_icon_ranking_ignores_tampering_and_caches_each_file(config, monkeypatch):
+    full = reward_icon(config, 127, 107)
+    forged = reward_icon(config, 200, 200)
+    malformed = reward_icon(config, 80, 80)
+    icon_directory = config.state_dir / "loot-icons"
+    (icon_directory / f"{forged}.png").write_bytes(b"replaced")
+    (icon_directory / f"{malformed}.png").write_bytes(b"invalid png")
+    for icon in (full, full, forged, malformed):
+        reward(config, "Credits", 10, icon)
+    original_read = Path.read_bytes
+    reads = []
+
+    def read_bytes(path):
+        if path.parent == icon_directory:
+            reads.append(path.name)
+        return original_read(path)
+
+    monkeypatch.setattr(Path, "read_bytes", read_bytes)
+    data = loot.snapshot(config)
+    assert data["groups"][0]["items"][0]["icon_url"] == f"/api/loot/icons/{full}"
+    assert data["items"] == [{"name": "Credits", "quantity": 40}]
+    assert sorted(reads) == sorted([f"{full}.png", f"{forged}.png", f"{malformed}.png"])

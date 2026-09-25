@@ -34,7 +34,7 @@
   let actionsLimit = 15;
   let noticeTimer = null;
 
-  const taskName = (task) => ({ total_assault: "Total Assault", tactical_rewards: "Tactical rewards", red_dots: "Collect red dots", free_pack: "Free pack + mail", tasks: "Collect Tasks", bounties: "Bounties", scrimmages: "Scrimmages", spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
+  const taskName = (task) => ({ total_assault: "Total Assault", assault_rewards: "Total Assault rewards", tactical_rewards: "Tactical rewards", red_dots: "Collect red dots", free_pack: "Free pack + mail", tasks: "Collect Tasks", bounties: "Bounties", scrimmages: "Scrimmages", spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
   const isRunning = () => Boolean(status && (status.state === "running" || status.current_job));
   const queue = () => (Array.isArray(status?.queue) ? status.queue : []);
   const isDemo = () => status?.demo === true;
@@ -176,7 +176,7 @@
       ? "lowest rank first, then lowest XP. recheck after each ticket. pick the room with the most students; higher owned relationships break ties."
       : "check every location first. use tickets on rooms with the most owned students; higher relationships break ties.";
     const packEnabled = ["monthly", "half_monthly", "ap"].some((key) => status?.config?.[`packs_${key}_enabled`]);
-    $("daily-plan").textContent = `daily does restart → club → free pack → ${packEnabled ? "packs → " : ""}mail → café${status?.config?.bounties_enabled_in_daily === false ? "" : " → bounties"}${status?.config?.scrimmages_enabled_in_daily === false ? "" : " → scrimmages"} → tactical rewards${status?.config?.lessons_enabled_in_daily === false ? "" : " → lessons"}${status?.config?.total_assault_enabled_in_daily ? " → total assault" : ""}${status?.config?.ap_schedule_enabled ? " → spend AP" : ""} → collect tasks. home red dots queue their collection jobs when a run finishes.`;
+    $("daily-plan").textContent = `daily does restart → club → free pack → ${packEnabled ? "packs → " : ""}mail → café${status?.config?.bounties_enabled_in_daily === false ? "" : " → bounties"}${status?.config?.scrimmages_enabled_in_daily === false ? "" : " → scrimmages"} → tactical rewards${status?.config?.lessons_enabled_in_daily === false ? "" : " → lessons"}${status?.config?.total_assault_enabled_in_daily ? " → total assault" : ""} → raid rewards${status?.config?.ap_schedule_enabled ? " → spend AP" : ""} → collect tasks. home and campaign red dots queue their collection jobs when a run finishes.`;
     const packs = status?.schedule?.packs;
     $("packs-status").textContent = packs?.blocked_reason
       ? `paused: ${packs.blocked_reason}. check the game, then queue a pack check.`
@@ -668,28 +668,35 @@
       const quantityText = (quantity) => Number.isSafeInteger(quantity) && quantity > 0 ? `+${quantity.toLocaleString()}` : "?";
       const makeItem = (item, unresolved = false) => {
         const card = document.createElement("article"); card.className = "loot-item";
-        const text = document.createElement("div"); text.className = "loot-item-text";
         const quantity = document.createElement("strong"); quantity.textContent = quantityText(item.quantity);
         const label = document.createElement("span"); label.textContent = item.name; label.title = item.name;
+        if (!unresolved) {
+          card.classList.add("loot-item-tile");
+          label.className = "loot-item-name";
+          card.append(label, makeIcon(item), quantity);
+          return card;
+        }
+        const text = document.createElement("div"); text.className = "loot-item-text";
         text.append(quantity, label); card.append(makeIcon(item), text);
-        if (unresolved && /^\/api\/loot\/[a-f0-9]{32}\/receipt$/.test(item.receipt_url || "")) {
+        if (/^\/api\/loot\/[a-f0-9]{32}\/receipt$/.test(item.receipt_url || "")) {
           const link = document.createElement("a"); link.href = item.receipt_url; link.target = "_blank"; link.rel = "noopener"; link.textContent = "check receipt";
           text.append(link);
         }
         return card;
       };
       if (data.unresolved_items?.length) groups.push({ id: "unresolved", label: "needs a closer look", items: data.unresolved_items });
-      const unresolvedOpen = Boolean(document.querySelector('details[data-loot-group="unresolved"]')?.open);
+      const openGroups = new Set([...document.querySelectorAll('details[data-loot-group][open]')].map((section) => section.dataset.lootGroup));
       groups.forEach((group) => {
         const unresolved = group.id === "unresolved";
-        const section = document.createElement(unresolved ? "details" : "section"); section.className = "loot-group"; section.dataset.lootGroup = group.id;
+        const collapsible = ["equipment", "other", "unresolved"].includes(group.id);
+        const section = document.createElement(collapsible ? "details" : "section"); section.className = "loot-group"; section.dataset.lootGroup = group.id;
         section.classList.toggle("loot-group-highlight", ["premium", "students", "energy"].includes(group.id) && group.items.length <= 3);
-        if (unresolved) section.open = unresolvedOpen;
-        const heading = document.createElement(unresolved ? "summary" : "h3"); heading.textContent = group.label;
+        if (collapsible) section.open = openGroups.has(group.id);
+        const heading = document.createElement(collapsible ? "summary" : "h3"); heading.textContent = group.label;
         const count = document.createElement("span");
         const unit = unresolved ? (group.items.length === 1 ? "entry" : "entries") : (group.items.length === 1 ? "item" : "items");
         count.textContent = `${group.items.length} ${unit}`; heading.append(count);
-        const grid = document.createElement("div"); grid.className = "loot-grid";
+        const grid = document.createElement("div"); grid.className = unresolved ? "loot-grid" : "loot-grid loot-grid-tiles";
         group.items.forEach((item) => grid.append(makeItem(item, unresolved)));
         section.append(heading, grid); totals.append(section);
       });

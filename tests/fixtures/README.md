@@ -27,6 +27,12 @@ the student and newly visible relationship heart. `cafe_earnings` and `cafe_rece
 retain the earnings dialog and the verified 81 AP / 73,957 credit receipt. The
 account's top bar, name, total balances, and other personal information are removed.
 
+`cafe-edge-drift-before/after.png` retain only the camera-measurement scene crop
+from a September 25 UTC Cafe 2 normalization failure. A commanded rightward
+drag moved the isometric scene approximately 60 pixels right and 31 pixels up.
+They preserve arbitrary furniture and moving students while removing the entire
+HUD, account resource bar, and visit timer.
+
 Lessons samples (`lesson-*.png`) were captured on 2026-09-24 UTC from the same
 authorized instance. They retain only the location headers, ticket/XP controls,
 room grid, or lesson confirmation needed for recognition. The top account resource
@@ -89,6 +95,52 @@ and 70 Tactical Challenge Coins. Only the receipt heading and two reward cards
 remain; all account and opponent information is removed. The pair retains the
 Pyroxene artwork's animation so fast input revalidation can be tested without
 requiring identical animated icons or extending screenshot freshness deadlines.
+
+`loot-craft-gifts-before/after.png` retain the two-gift receipt from a September 25
+UTC Crafting failure: one Brain Teaser Puzzle Cube and one Wind-Up Music Box.
+The cube artwork sparkled between no-op end-of-list swipes, causing the old
+exact-icon comparison to reject overlap even though both labels and quantities
+were unchanged. Only the receipt heading, cards, and continue label remain;
+the account resource bar and crafting background are removed.
+
+`loot-compact-fedora.png`, `loot-compact-helmet.png`, and
+`loot-compact-broken-outline.png` are compact item-card crops from saved local
+staging receipts, preserved without pixel alteration. Fedora and Helmet come
+from a September 25 UTC sweep Full List; the broken outline is a Tech Notes
+card from a September 24 UTC Lesson Report. They retain item artwork, visible
+tier/quantity overlays, and neighboring card-edge fragments; no account identity
+or resource balances are present. The Fedora and Helmet crops test removal of
+adjacent-card fragments without cutting the complete white frame, artwork,
+tier badge, or quantity.
+The broken-outline crop tests the conservative fallback that keeps the original
+image when the outline cannot be established. Masking changes alpha only;
+regression checks preserve all BGR pixels used for receipt comparison. These
+game-derived fixtures are excluded from the source-code MIT grant, like the
+other recognition samples.
+
+`loot-assault-points-before/after.png` and
+`loot-assault-points-merged-heading-before/after.png` retain stationary Total
+Assault point-reward receipts captured on September 25 UTC. A sparkle crossing
+the heading changes its yellow pixels; OCR also switches between one text box
+and two while preserving the exact heading and its position. All complete card
+names, quantities, and rectangles stay unchanged. The partial seventh card must
+remain uncounted until a later overlapping page reveals it fully.
+`loot-assault-points-rebound-before/after.png` instead records the elastic scroll
+rebound at the left edge: fractional motion changes card positions and label
+pixels, so input freshness must reject it and the reader must wait for settling.
+`loot-assault-points-tooltip-return-before/after.png` captures the same receipt
+after the second item tooltip was dismissed. Tight heading OCR invents an
+accented character where a sparkle crosses the slanted text; full-frame OCR
+reads the exact heading at high confidence without relaxing card identity.
+These eight images retain only the heading, card viewport, and continue label;
+the account bar and the background rank/points are removed.
+
+`loot-assault-points-overlap-before/after.png` retains two overlapping pages
+from the same points receipt. The Advanced Activity Report border rasterizes
+at 147px wide before scrolling and 148px after scrolling; its complete name and
+quantity remain unchanged. The four-card ordered overlap must remain valid
+without counting those drops twice. Only the heading, card viewport, and
+continue label remain; private account and rank/points information is masked.
 
 Total Assault navigation samples (`assault-menu`, `assault-detail`,
 `assault-formation`, `assault-formation-empty`, and `assault-quick`) were captured
@@ -187,3 +239,59 @@ Coins, independently read by the shared card reader.
 `assault-zero-detail.png/json` records the resulting Room Info panel, retaining
 only the room and event dates. Zero tickets require the explicit `0→-` entry
 projection and zero selected sweeps; absent text is never interpreted as zero.
+
+## Campaign reward notification fixture
+
+`loot-assault-points-heading-space-{before,after}.png` preserve the September 25,
+2026 11:33 UTC receipt recovery's final stationary refresh pair. A heading
+sparkle makes OCR join `REWARDACQUIRED!` before reading `REWARD ACQUIRED!` in
+the next frame, with unchanged heading bounds, card labels, and quantities.
+Only the receipt heading, item viewport, and continue label remain; account
+balances and rank/points background data are masked. Whitespace normalization
+does not relax the exact phrase, high confidence, geometry, or fresh input guards.
+
+`loot-assault-points-clipped-edge-{before,after}.png` preserve a September 25,
+2026 partial page from the 11:24 UTC recovery and a subsequent stationary
+capture. Broken Quimbaya Relic loses its right border and final label pixels
+in the viewport fade, giving a misleading 139–140-pixel fragment. It must stay
+unread until a later overlapping page exposes its whole card. Only the receipt
+heading, item viewport, and continue label remain; account and rank data are
+masked.
+
+`loot-assault-points-delayed-tooltip-{before,after}.png` preserve the September
+25, 2026 11:17 UTC recovery's first Credit Points inspection. The screenshot
+immediately after its input was still the receipt; its tooltip appeared while
+page OCR ran. The pair verifies that this expected transition needs a newly
+observed tooltip, never another input authorized by the old receipt. Only the
+heading, cards, continue label, and tooltip remain; account and rank background
+data are masked.
+
+`loot-assault-points-resumed-scroll-{before,after}.png` show a September 25,
+2026 receipt row that resumed moving while OCR ran after a forward swipe.
+Its 107-pixel movement must invalidate the old tap rectangles. The five-card
+ordered overlap remains readable after observing the new position, including
+the split first line of "Broken Quimbaya Relic". Only the receipt heading,
+item viewport, and continue label remain; account and rank background data are
+masked. These fixtures support re-observation without additional device input.
+
+`loot-assault-points-name-raster-{before,after}.png` preserve a stationary
+September 25, 2026 Total Assault points receipt from the 11:00 UTC recovery.
+The Advanced Enhancement Stone label differs by at most four RGB values due
+to text rasterization; its wording, amount, and card rectangle are unchanged.
+Only the receipt heading, item viewport, and continue label remain; account
+balances and the rank/points background are masked. They verify exact fresh
+name/amount OCR as a fallback when named text pixels change, while altered
+wording and missing quantities still fail closed.
+
+`assault-rewards-{menu,panel,rank,points}.png/json` are September 25, 2026
+staging captures of the independent reward collector. The resource header,
+leaderboard identities, and personal rank/points are masked in pixels and OCR.
+This includes the rank/points strip behind and below the reward modal; the
+adjacent Rewards control and its notification marker remain visible.
+The retained controls show the Total Assault menu, Detailed Rank Info, a disabled
+Rank Reward claim, and an enabled Total Points Reward claim. They establish
+navigation and claim availability, not receipt delivery. Enabled rank rewards
+are tested offline by modifying the captured control; no live rank reward was
+available during this checkpoint.
+
+`red-dots-campaign.png` is a September 25, 2026 staging capture. The private AP and currency header is masked. Its Total Assault marker is red and its Tactical Challenge marker is amber. Tests also compare the earlier `ap-campaign-stable.png` amber markers, reject dimmed screens, and remove the red marker to verify that a Campaign label alone cannot request collection. The fixture shows notification evidence, not a reward receipt or a completed claim.

@@ -1,4 +1,4 @@
-"""Read home badges and leave a bounded queue request for the local daemon."""
+"""Read home and Campaign badges and request bounded serial collection jobs."""
 
 import json
 from .home_badges import BadgeVision, PRIORITY
@@ -17,11 +17,11 @@ class RedDotsRunner(ShopRunner):
         first = self.wait("home")
         self.sleep(1)
         second = self.wait("home")
-        tasks = [
+        found = {
             task
             for task in PRIORITY
             if task in first.screen.badges and task in second.screen.badges
-        ]
+        }
         amounts = (first.screen.ap, second.screen.ap)
         ap = (
             min(amounts)
@@ -30,13 +30,24 @@ class RedDotsRunner(ShopRunner):
             else None
         )
         self.journal.save_image("home.png", second.capture.png)
+        first_campaign = self.navigate("home", "campaign", (1200, 641))
+        self.sleep(1)
+        second_campaign = self.wait("campaign")
+        found.update(
+            task for task in PRIORITY
+            if task in first_campaign.screen.badges and task in second_campaign.screen.badges
+        )
+        self.journal.save_image("campaign.png", second_campaign.capture.png)
+        self.tap(second_campaign, (1237, 23), "Return home after Campaign badge check")
+        self.home()
+        tasks = [task for task in PRIORITY if task in found]
         self.journal.record("badges", tasks=tasks)
         # The parent consumes this only after a successful child exit, below
         # that child's private run root; it never accepts arbitrary job names.
         (self.run_dir / "requests.json").write_text(
             json.dumps({"version": 1, "tasks": tasks, "ap": ap})
         )
-        self.phase("Home notifications: " + (", ".join(tasks) or "none"))
+        self.phase("Home and Campaign notifications: " + (", ".join(tasks) or "none"))
         return self.finish()
 
 

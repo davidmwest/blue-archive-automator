@@ -1,0 +1,232 @@
+[
+  {
+    "text": "Total Assault 7",
+    "box": [
+      101,
+      6,
+      314,
+      40
+    ],
+    "confidence": 0.94494
+  },
+  {
+    "text": "Pr",
+    "box": [
+      58,
+      92,
+      81,
+      112
+    ],
+    "confidence": 0.99883
+  },
+  {
+    "text": "Total Assault Info",
+    "box": [
+      506,
+      89,
+      773,
+      123
+    ],
+    "confidence": 0.99991
+  },
+  {
+    "text": "19:00",
+    "box": [
+      1197,
+      88,
+      1246,
+      112
+    ],
+    "confidence": 0.99957
+  },
+  {
+    "text": "11:59",
+    "box": [
+      1196,
+      109,
+      1246,
+      134
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "Detailed Rank Info",
+    "box": [
+      257,
+      158,
+      472,
+      184
+    ],
+    "confidence": 0.99993
+  },
+  {
+    "text": "Reward Details",
+    "box": [
+      833,
+      157,
+      1011,
+      186
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Moo",
+    "box": [
+      47,
+      224,
+      82,
+      248
+    ],
+    "confidence": 0.79462
+  },
+  {
+    "text": "Rank Reward",
+    "box": [
+      163,
+      226,
+      317,
+      252
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "A",
+    "box": [
+      60,
+      244,
+      82,
+      266
+    ],
+    "confidence": 0.99671
+  },
+  {
+    "text": "Total Season Rank Points:",
+    "box": [
+      414,
+      237,
+      656,
+      262
+    ],
+    "confidence": 0.99646
+  },
+  {
+    "text": "38,000,000",
+    "box": [
+      417,
+      263,
+      516,
+      290
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Total Points Rewards",
+    "box": [
+      119,
+      293,
+      360,
+      320
+    ],
+    "confidence": 0.99664
+  },
+  {
+    "text": "Total Season Rank Points:",
+    "box": [
+      415,
+      348,
+      655,
+      371
+    ],
+    "confidence": 0.99297
+  },
+  {
+    "text": "41,000,000",
+    "box": [
+      417,
+      375,
+      516,
+      401
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "x3000K",
+    "box": [
+      1093,
+      384,
+      1154,
+      405
+    ],
+    "confidence": 0.99697
+  },
+  {
+    "text": "Total Season Rank Points:",
+    "box": [
+      414,
+      458,
+      655,
+      483
+    ],
+    "confidence": 0.99699
+  },
+  {
+    "text": "44,000,000",
+    "box": [
+      417,
+      485,
+      515,
+      513
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "x16",
+    "box": [
+      1046,
+      497,
+      1080,
+      516
+    ],
+    "confidence": 0.93368
+  },
+  {
+    "text": "Reward claim period:",
+    "box": [
+      412,
+      553,
+      614,
+      579
+    ],
+    "confidence": 0.99918
+  },
+  {
+    "text": "Claim",
+    "box": [
+      1011,
+      560,
+      1101,
+      595
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "09/21 19:00 \u2013 10/19 before next season",
+    "box": [
+      410,
+      580,
+      783,
+      608
+    ],
+    "confidence": 0.97191
+  },
+  {
+    "text": "Rewards",
+    "box": [
+      1125,
+      641,
+      1237,
+      670
+    ],
+    "confidence": 0.99998
+  }
+]

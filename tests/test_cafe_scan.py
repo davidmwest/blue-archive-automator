@@ -11,6 +11,8 @@ def runner_with_motion(motions):
     runner = CafeRunner.__new__(CafeRunner)
     iterator = iter(motions)
     runner.motions_seen, runner.scanned_after = [], []
+    runner.journal = SimpleNamespace(record=lambda *args, **kwargs: None)
+    runner.last_frame = "after.png"
 
     def pan(vector):
         motion = next(iterator)
@@ -74,6 +76,39 @@ def test_failed_scan_after_unknown_motion_sends_no_further_drag():
 def test_unexpected_motion_stops_scan(motion):
     with pytest.raises(RuntimeError, match="unexpectedly"):
         runner_with_motion([motion]).pan_region(PAN_LEFT)
+
+
+def test_small_edge_perspective_drift_is_scanned_and_needs_new_boundary_proof():
+    runner = runner_with_motion([(0, 0), (60, -31), (0, 0), (0, 0)])
+    assert runner.pan_region(PAN_RIGHT, to_edge=True) is True
+    assert runner.scanned_after == [2]
+    assert len(runner.motions_seen) == 4
+
+
+@pytest.mark.parametrize("motion", [(-60, -31), (60, -41), (0, 31)])
+def test_edge_recovery_rejects_reverse_large_or_uncommanded_motion(motion):
+    with pytest.raises(RuntimeError, match="unexpectedly"):
+        runner_with_motion([motion]).pan_region(PAN_RIGHT, to_edge=True)
+
+
+def test_edge_corrections_are_bounded_and_cannot_prove_camera_coverage():
+    runner = runner_with_motion([(60, -31)] * 3)
+    with pytest.raises(RuntimeError, match="unexpectedly"):
+        runner.pan_region(PAN_RIGHT, to_edge=True)
+    assert runner.scanned_after == [1, 2]
+
+
+def test_small_perspective_drift_does_not_relax_normal_row_coverage():
+    with pytest.raises(RuntimeError, match="unexpectedly"):
+        runner_with_motion([(60, -31)]).pan_region(PAN_RIGHT)
+
+
+def test_failed_scan_after_edge_correction_sends_no_more_input():
+    runner = runner_with_motion([(60, -31), (0, 0), (0, 0)])
+    runner.pet_visible = lambda: runner.fail("Student view could not be verified")
+    with pytest.raises(RuntimeError, match="Student view could not be verified"):
+        runner.pan_region(PAN_RIGHT, to_edge=True)
+    assert len(runner.motions_seen) == 1
 
 
 def test_vertical_step_is_smaller_than_visible_scene_height():

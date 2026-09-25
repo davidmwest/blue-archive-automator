@@ -224,6 +224,62 @@ class DeviceTests(unittest.TestCase):
                 device.launch()
             self.assertEqual(run.call_count, 1)
 
+    def test_launch_draw_timeout_continues_only_with_verified_game_foreground(self):
+        # Exact September 25 staging response: Android's 11-second draw wait
+        # expired, while our 45-second transport deadline had not expired.
+        component = b"com.nexon.bluearchive/.MxUnityPlayerActivity\n"
+        response = (
+            b"Starting: Intent { cmp=com.nexon.bluearchive/.MxUnityPlayerActivity }\n"
+            b"Status: timeout\nLaunchState: UNKNOWN (-1)\n"
+            b"Activity: com.nexon.bluearchive/.MxUnityPlayerActivity\n"
+            b"WaitTime: 11058\nComplete\n"
+        )
+        for foreground in ("com.nexon.bluearchive", "com.uncube.launcher3", None):
+            with self.subTest(foreground=foreground):
+                device = AdbDevice(config())
+                with patch.object(device, "_run", side_effect=[component, response]) as run, \
+                        patch.object(device, "foreground_package", return_value=foreground) as focus:
+                    if foreground == device.config.package:
+                        with self.assertLogs("ba_automator.adb", level="WARNING"):
+                            device.launch()
+                    else:
+                        with self.assertRaisesRegex(DeviceError, "Android could not launch"):
+                            device.launch()
+                    focus.assert_called_once_with()
+                    self.assertEqual(run.call_count, 2)
+                    self.assertEqual(run.call_args.args,
+                                     ("shell", "am", "start", "-W", "-n", component.decode().strip()))
+                    self.assertEqual(run.call_args.kwargs, {"timeout": 45})
+
+    def test_launch_timeout_does_not_hide_explicit_or_malformed_errors(self):
+        for response in (
+            b"Status: timeout\nError: Activity not started\n",
+            b"Status: timeout\n  Exception: permission denied\n",
+            b"Status: error\n",
+            b"Status: timeout because launch failed\n",
+            b"Status: timeout\nStatus: error\n",
+            b"Status: timeout\nStatus: ok\n",
+        ):
+            with self.subTest(response=response):
+                device = AdbDevice(config())
+                with patch.object(device, "_run", side_effect=[
+                    b"com.nexon.bluearchive/.MainActivity\n", response,
+                ]), patch.object(device, "foreground_package", return_value=device.config.package) as focus:
+                    with self.assertRaisesRegex(DeviceError, "Android could not launch"):
+                        device.launch()
+                    focus.assert_not_called()
+
+    def test_launch_transport_timeout_still_fails_without_foreground_fallback(self):
+        device = AdbDevice(config())
+        with patch.object(device, "_check_shared_server"), \
+                patch("ba_automator.adb.subprocess.run", side_effect=[
+                    subprocess.CompletedProcess([], 0, b"com.nexon.bluearchive/.MainActivity\n", b""),
+                    subprocess.TimeoutExpired(["adb", "shell", "am", "start"], 45),
+                ]), patch.object(device, "foreground_package") as focus:
+            with self.assertRaisesRegex(DeviceError, "ADB command failed"):
+                device.launch()
+            focus.assert_not_called()
+
     def test_out_of_bounds_taps_are_rejected_without_adb(self):
         device = AdbDevice(config())
         with patch.object(device, "_check_shared_server") as check, \

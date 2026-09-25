@@ -1,0 +1,232 @@
+[
+  {
+    "text": "Total Assault ",
+    "box": [
+      103,
+      9,
+      312,
+      38
+    ],
+    "confidence": 0.98506
+  },
+  {
+    "text": "Preservation Count 1/1",
+    "box": [
+      54,
+      89,
+      284,
+      115
+    ],
+    "confidence": 0.9827
+  },
+  {
+    "text": "AAssistant Settings",
+    "box": [
+      312,
+      85,
+      526,
+      119
+    ],
+    "confidence": 0.9937
+  },
+  {
+    "text": "Battle Select",
+    "box": [
+      657,
+      88,
+      900,
+      130
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Total Assault Ticket",
+    "box": [
+      913,
+      87,
+      1072,
+      111
+    ],
+    "confidence": 0.9992
+  },
+  {
+    "text": "09/21 19:00",
+    "box": [
+      1148,
+      88,
+      1244,
+      112
+    ],
+    "confidence": 0.99833
+  },
+  {
+    "text": "0/6",
+    "box": [
+      937,
+      109,
+      978,
+      139
+    ],
+    "confidence": 0.99892
+  },
+  {
+    "text": "- 09/28 11:59",
+    "box": [
+      1141,
+      110,
+      1244,
+      133
+    ],
+    "confidence": 0.97723
+  },
+  {
+    "text": "Very Hard",
+    "box": [
+      674,
+      204,
+      786,
+      235
+    ],
+    "confidence": 0.98086
+  },
+  {
+    "text": "Mock.Total",
+    "box": [
+      47,
+      224,
+      146,
+      247
+    ],
+    "confidence": 0.95804
+  },
+  {
+    "text": "Assault",
+    "box": [
+      60,
+      243,
+      132,
+      266
+    ],
+    "confidence": 0.94245
+  },
+  {
+    "text": "Drumbarka",
+    "box": [
+      671,
+      233,
+      896,
+      275
+    ],
+    "confidence": 0.99937
+  },
+  {
+    "text": "Enter",
+    "box": [
+      1113,
+      240,
+      1203,
+      277
+    ],
+    "confidence": 0.99989
+  },
+  {
+    "text": "Hardcore",
+    "box": [
+      675,
+      340,
+      778,
+      368
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Drumbarka",
+    "box": [
+      672,
+      367,
+      898,
+      409
+    ],
+    "confidence": 0.9995
+  },
+  {
+    "text": "Enter",
+    "box": [
+      1112,
+      373,
+      1205,
+      413
+    ],
+    "confidence": 0.99987
+  },
+  {
+    "text": "Extreme",
+    "box": [
+      675,
+      473,
+      770,
+      503
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Drumbarka",
+    "box": [
+      672,
+      501,
+      897,
+      543
+    ],
+    "confidence": 0.99975
+  },
+  {
+    "text": "Enter",
+    "box": [
+      1114,
+      511,
+      1204,
+      545
+    ],
+    "confidence": 0.99964
+  },
+  {
+    "text": "You know what'd make me happy?",
+    "box": [
+      145,
+      581,
+      542,
+      616
+    ],
+    "confidence": 0.9841
+  },
+  {
+    "text": "Schale taking care of Kivotos'",
+    "box": [
+      181,
+      615,
+      505,
+      645
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "problems.",
+    "box": [
+      284,
+      647,
+      407,
+      680
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Rewards",
+    "box": [
+      1125,
+      641,
+      1238,
+      671
+    ],
+    "confidence": 0.99998
+  }
+]

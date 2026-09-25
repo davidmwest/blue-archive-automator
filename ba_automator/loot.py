@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import re
 import os
+import struct
 from uuid import uuid4
 
 from .gifts import is_gift
@@ -306,6 +307,51 @@ def _receipt_event(config, events, path, catalog):
     return event
 
 
+def _icon_quality(config, identifier, cache):
+    """Prefer a full reward card over a small sweep crop, once per snapshot."""
+    if not isinstance(identifier, str):
+        return None
+    if identifier not in cache:
+        cache[identifier] = None
+        path = icon_path(config, identifier)
+        if path is not None:
+            try:
+                data = path.read_bytes()
+                if sha256(data).hexdigest() == identifier:
+                    # Reading the PNG header avoids decoding every image on each
+                    # dashboard refresh. Unknown legacy formats rank last.
+                    quality = (0, 0)
+                    if (
+                        len(data) >= 24
+                        and data[:8] == b"\x89PNG\r\n\x1a\n"
+                        and data[8:16] == b"\x00\x00\x00\rIHDR"
+                    ):
+                        width, height = struct.unpack(">II", data[16:24])
+                        if 0 < width <= 1280 and 0 < height <= 720:
+                            # The shortest side prevents a wide, shallow strip
+                            # from outranking a complete card by area alone.
+                            quality = (min(width, height), width * height)
+                    cache[identifier] = quality
+            except OSError:
+                pass
+    return cache[identifier]
+
+
+def _select_icons(config, event, selected, cache):
+    for item in _items(event):
+        if not isinstance(item, dict) or not (name := _name(item.get("name"))):
+            continue
+        icon = item.get("icon_id")
+        quality = _icon_quality(config, icon, cache)
+        if quality is None:
+            continue
+        previous = _icon_quality(config, selected.get(name), cache)
+        # Keep the first equally good candidate so the icon does not flicker
+        # between cards merely because a new quantity was received.
+        if previous is None or quality > previous:
+            selected[name] = icon
+
+
 def snapshot(config):
     data = _source(config)
     cursor = _cursor(config)
@@ -322,10 +368,22 @@ def snapshot(config):
         "unverified_coverage": 0,
     }
     icon_by_name = {}
+    icon_quality = {}
     unresolved = []
     catalog = {}
     seen_ids = set()
     before = list(_events(data[: cursor["offset"]], seen_ids))
+    # A cleared receipt can supply a previously verified picture, never loot.
+    # Merge its sidecar just like current receipts so corrected names win.
+    prior_receipts = {}
+    for event in before:
+        key = _receipt_key(config, event) or event["id"]
+        prior_receipts.setdefault(key, []).append(event)
+    for events in prior_receipts.values():
+        event = _receipt_event(
+            config, events, receipt_path(config, events[0]), catalog
+        )
+        _select_icons(config, event, icon_by_name, icon_quality)
     seen_receipts = {_receipt_key(config, event) for event in before}
     seen_receipts.discard(None)
     receipts = {}
@@ -337,12 +395,10 @@ def snapshot(config):
     for events in receipts.values():
         path = receipt_path(config, events[0])
         event = _receipt_event(config, events, path, catalog)
+        _select_icons(config, event, icon_by_name, icon_quality)
         invalid = False
         for item in _items(event):
             name = _name(item.get("name"))
-            icon = item.get("icon_id")
-            if name and icon_path(config, icon):
-                icon_by_name[name] = icon
             if not name or not _quantity(item.get("quantity")):
                 invalid = True
                 unresolved.append({**item, "receipt_id": event["id"]})

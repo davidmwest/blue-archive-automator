@@ -44,7 +44,12 @@
 .loot-group h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 14px; color: #354967; }
 .loot-group h3::before { content: ""; width: 5px; height: 15px; border-radius: 3px; background: var(--loot-accent); }
 .loot-group h3 span { font-size: 10px; font-weight: 500; color: #6f8099; background: #f0f4f9; border-radius: 9px; padding: 2px 7px; }
+.loot-group > summary { font-size: 14px; color: #354967; }
+.loot-group > summary::marker { color: var(--loot-accent); }
+.loot-group > summary:focus-visible { outline: 3px solid #68b5ff; outline-offset: 4px; border-radius: 3px; }
+.loot-group > summary span { display: inline-block; font-size: 10px; font-weight: 500; color: #6f8099; background: #f0f4f9; border-radius: 9px; padding: 2px 7px; margin-left: 10px; }
 .loot-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,235px),1fr)); gap: 10px; }
+.loot-grid-tiles { grid-template-columns: repeat(auto-fill,minmax(min(100%,136px),1fr)); gap: 12px; }
 .loot-item { display: flex; align-items: center; gap: 13px; min-width: 0; padding: 14px; background: #f7f9fd; border: 1px solid #e2e9f3; border-radius: 12px; }
 .loot-group[data-loot-group="premium"] { --loot-accent: #6875db; }
 .loot-group[data-loot-group="premium"] .loot-item { background: linear-gradient(120deg,#eff1ff,#eefaff); border-color: #cddbf5; }
@@ -60,13 +65,17 @@
 .loot-group[data-loot-group="unresolved"] > summary span { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 7px; margin-left: 10px; background: #faf3e7; border-radius: 9px; }
 .loot-group[data-loot-group="unresolved"] > .loot-grid { max-height: 480px; overflow: auto; padding: 2px; }
 .loot-group[data-loot-group="unresolved"] .loot-item { background: #fcfaf5; border-style: dashed; border-color: #e2d8c5; }
-.loot-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 72px; width: 72px; height: 72px; border-radius: 10px; background: #e9f0f9; overflow: hidden; }
+.loot-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 72px; width: 72px; height: 72px; border-radius: 6px; background: #e9f0f9; }
 .loot-icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .loot-icon-missing { color: #91a1b8; font-size: 25px; }
 .loot-item-text { min-width: 0; display: grid; gap: 4px; }
 .loot-item strong { font-size: clamp(20px,1.8vw,26px); line-height: 1.1; letter-spacing: -.6px; color: #244c8c; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .loot-item span { font-size: 12px; line-height: 1.4; color: #4b5e79; overflow-wrap: anywhere; }
 .loot-item a { font-size: 12px; }
+.loot-item-tile { display: grid; grid-template-rows: minmax(3.9em,auto) 100px auto; justify-items: center; align-content: start; gap: 10px; padding: 12px 10px 10px; text-align: center; border-radius: 8px; background: linear-gradient(#fff,#f1f5fb); }
+.loot-item-tile .loot-item-name { align-self: center; font-size: 12px; line-height: 1.3; font-weight: 600; color: #354967; }
+.loot-item-tile .loot-icon { width: 100px; height: 100px; flex-basis: auto; padding: 4px; background: transparent; }
+.loot-item-tile strong { align-self: end; width: 100%; padding-top: 10px; border-top: 1px solid #dce5f0; font-size: 22px; line-height: 1.2; letter-spacing: -.4px; }
 .loot-card summary { cursor: pointer; color: #326be8; padding: 10px 0; font-weight: 600; }
 .loot-receipts { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,320px),1fr)); gap: 16px; max-height: 650px; overflow: auto; padding: 8px 2px; }
 .loot-receipt { min-width: 0; border: 1px solid #e0e6ef; border-radius: 12px; padding: 14px; font-size: 13px; }
@@ -102,5 +111,8 @@
   .loot-totals { grid-template-columns: minmax(0,1fr); gap: 20px; }
   .loot-item { padding: 12px; }
   .loot-item strong { font-size: 24px; }
+  .loot-grid-tiles { grid-template-columns: repeat(auto-fill,minmax(min(100%,122px),1fr)); gap: 10px; }
+  .loot-item-tile { padding: 10px 8px; }
+  .loot-item-tile strong { font-size: 22px; }
   .loot-receipts { grid-template-columns: minmax(0,1fr); }
 }

@@ -452,6 +452,7 @@ class CafeRunner:
         direction = 1 if vector[1][axis] > vector[0][axis] else -1
         distance = 0.0
         stationary = 0
+        edge_corrections = 0
         # Scene interior is 1010 by 440 pixels; these steps overlap generously.
         step = 450 if axis == 0 else 220
         for _ in range(12):
@@ -465,6 +466,21 @@ class CafeRunner:
                 continue
             movement = motion[axis] * direction
             if abs(motion[1-axis]) > max(12, abs(movement) * .3) or movement < -5:
+                # The isometric camera can lift the scene slightly while
+                # approaching a horizontal edge. The captured Cafe 2 failure
+                # moved (+60, -31) pixels: real movement, but not a pure pan.
+                # Only corner normalization may recover this small drift.
+                # Scan the new view and discard all distance/boundary evidence;
+                # ordinary row coverage, reverse motion, and large drift stop.
+                if (to_edge and axis == 0 and movement > 4
+                        and abs(motion[1-axis]) <= 40 and edge_corrections < 2):
+                    edge_corrections += 1
+                    self.journal.record("camera_edge_correction", displacement=motion,
+                                        attempt=edge_corrections, frame=self.last_frame)
+                    self.pet_visible()
+                    distance = 0.0
+                    stationary = 0
+                    continue
                 self.fail("Cafe camera moved unexpectedly; inspect the saved view")
             if abs(movement) < 4:
                 stationary += 1

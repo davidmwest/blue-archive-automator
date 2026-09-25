@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from ba_automator import loot_receipts as lr
-from ba_automator.vision import VisionError, decode_frame
+from ba_automator.vision import VisionError, Word, decode_frame
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -59,6 +59,34 @@ def test_unreadable_name_requires_unchanged_artwork_too():
     assert not lr.same_receipt_view(before, after, unknown)
 
 
+@pytest.mark.parametrize("field", ["name", "quantity"])
+@pytest.mark.parametrize("reading,confidence,accepted", [
+    ("exact", .99, True), ("different", .99, False),
+    ("exact", .84, False), ("missing", 1, False),
+])
+def test_changed_card_text_requires_exact_confident_reparse(
+    monkeypatch, field, reading, confidence, accepted
+):
+    before, after = daily_frames()
+    image = decode_frame(after)
+    if field == "name":
+        image[262:288, 634:660] = 235
+        text = "Tactical Challenge Coin" if reading == "exact" else "Other Coin"
+    else:
+        image[432:458, 634:660] = 235
+        text = "x70" if reading == "exact" else "x71"
+    words = [] if reading == "missing" else [Word(text, confidence, (0, 0, 20, 20))]
+    calls = []
+
+    def read_crop(*args):
+        calls.append(True)
+        return words
+
+    monkeypatch.setattr(lr, "read_crop", read_crop)
+    assert lr.same_receipt_view(before, lr.encode(image), DAILY, vision=object()) is accepted
+    assert calls == [True]
+
+
 def test_named_card_identity_allows_animation_but_not_changed_name_count_or_size():
     before, after = (decode_frame(png) for png in daily_frames())
     cards = [
@@ -71,7 +99,7 @@ def test_named_card_identity_allows_animation_but_not_changed_name_count_or_size
     for changed in (
         replace(cards[1], name="Other item"),
         replace(cards[1], quantity=19),
-        replace(cards[1], box=(458, 254, 147, 222)),
+        replace(cards[1], box=(458, 254, 146, 222)),
     ):
         assert not lr.same_card(cards[0], changed)
 
@@ -134,3 +162,17 @@ def test_unknown_and_wrong_size_frames_cannot_be_refreshed():
         lr.same_receipt_view(
             before, lr.encode(np.zeros((100, 100, 3), np.uint8)), DAILY
         )
+
+
+def test_scroll_rebound_must_settle_before_reading_labels():
+    before, after = [
+        (FIXTURES / f"loot-assault-points-rebound-{suffix}.png").read_bytes()
+        for suffix in ("before", "after")
+    ]
+    assert not lr.reward_layout_stable(before, after)
+    assert lr.reward_layout_stable(after, after)
+    stationary = [
+        (FIXTURES / f"loot-assault-points-{suffix}.png").read_bytes()
+        for suffix in ("before", "after")
+    ]
+    assert lr.reward_layout_stable(*stationary)
