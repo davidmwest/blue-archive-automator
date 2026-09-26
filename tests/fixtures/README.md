@@ -331,3 +331,43 @@ lower-rarity tests mask later stars and are synthetic variations, not live
 captures of all rarities. The complete boundary-rank lookup and invitation
 reselection remains offline-tested. These game-derived crops remain outside
 the MIT grant described in the third-party notices.
+
+`loot-grid-tier-pulse-{before,after}.png` retain the Full List modal from the
+September 25 Hard 13-1 receipt. Both frames show the same ten cards; the outer
+cyan outlines of T5/T3 tier badges differ during animation. Regression tests
+require independently read, matching tier labels before ignoring those badge
+pixels, and keep artwork, quantity, position, and clipped edges guarded.
+
+`loot-grid-dismiss-pulse-{before,after}.png` retain the Full List modal from the
+September 26 Bounty receipt. The white tooltip-dismiss pulse fades in unused
+space near (350, 545); the twelve full cards and clipped bottom row remain
+unchanged. The entire reward viewport and heading/Okay controls remain strict.
+All pixels outside these four receipt modals are masked, including account
+name, balances, experience, and background. These game-derived fixtures are
+excluded from the MIT grant as described in the third-party notices.
+
+`loot-sweep-task-notice-{clear,before,after}.png` retain the September 26 live
+Hard 12-1 receipt heading, Final reward row, Confirm button, and transient
+task-completion notice. The clear frame precedes the notice; the other two
+show its animation over the heading after the third Hard sweep. The Final
+rewards remain three Novice Activity Reports and 1,263 Credits. Tests require
+bounded observation without input until this notice leaves, followed by the
+unchanged strict receipt guard. Account identifiers, resource balances, and
+experience are masked. These game-derived crops are excluded from MIT.
+
+`loot-tooltip-pointer-pulse-{before,after}.png` retain only the General Hairpin
+Blueprint tooltip, nearby Final reward cards, and receipt heading/Confirm
+control from the September 26 live Hard 11-3 receipt. The selected-card glow
+briefly disconnects the cyan pointer from the tooltip outline. Its rectangular text panel remains unchanged.
+Tests anchor that panel to its long bottom border and preserve exact name,
+Owned quantity, description, and position checks. Account identifiers,
+balances, experience, and other game UI are masked. These game-derived crops
+are excluded from MIT.
+
+`loot-grid-hard-eleph.png` retains the settled Full List from the September 26
+Hard 11-1 receipt. An initial card-layout parse was empty while this modal was
+opening; the later saved frame proves all ten cards are readable, including
+one Eleph and 1,439 Credits. Runtime tests separately simulate the unsaved
+opening transition and require bounded observation without input before
+scanning and returning to Sweep Complete. All pixels outside the modal are
+masked. This game-derived fixture is excluded from MIT.

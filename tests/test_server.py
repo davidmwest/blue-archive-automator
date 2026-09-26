@@ -1285,7 +1285,7 @@ def test_ap_schedule_respects_persisted_holds_and_due_time(controlled):
         controller._paused=True
 
 
-def test_ap_restart_failure_persists_hold_and_manual_retry_is_explicit(controlled):
+def test_ap_restart_failure_backs_off_without_permanent_spending_hold(controlled):
     from ba_automator.ap_state import read_state
     controller,factory=controlled
     controller.enqueue('spend_ap')
@@ -1293,9 +1293,14 @@ def test_ap_restart_failure_persists_hold_and_manual_retry_is_explicit(controlle
     assert factory.processes[0].arguments[-2:]==['spend_ap','--retry-ap']
     factory.processes[0].finish(1)
     eventually(lambda:controller.status()['current_job'] is None)
-    assert read_state(controller.config)['blocked_reason']
+    state = read_state(controller.config)
+    assert state['blocked_reason'] is None
+    assert datetime.fromisoformat(state['next_check_at']) > controller._wall_clock()
     controller.resume()
-    assert read_state(controller.config)['blocked_reason']
+    assert read_state(controller.config)['blocked_reason'] is None
+    with controller._condition:
+        controller._enqueue_ap()
+        assert not controller._queue
 
 
 @pytest.mark.parametrize('terminal_status', ['failed', 'stopped', None])
@@ -1455,6 +1460,149 @@ def test_scanner_does_not_replace_the_actual_job_result(controlled):
     assert controller._parse_result(output,process.run_dir.parent,exclude_scan=True)['duration']==42
     assert controller._parse_result(output,process.run_dir.parent,task='red_dots')['actions']==0
     process.finish()
+
+
+@pytest.mark.parametrize("terminal", ["success", "partial_failure", "failed", "stopped"])
+def test_daily_summary_preserves_completed_work_and_identifies_failed_steps(config_path, terminal):
+    class SummaryOutput(FakeOutput):
+        def __iter__(self):
+            self.process.done.wait()
+            # The latest ordinary result is successful, even when the overall
+            # Daily had a failed spending task earlier in the plan.
+            root = self.process.run_dir.parent
+            yield json.dumps({"status": "success", "run_dir": str(root / "red_dots-final"),
+                              "duration": 1, "actions": 0}) + "\n"
+            failures = [] if terminal in {"success", "stopped"} else [{
+                "task": "bounties", "error": "Earlier ticket sweep needs receipt review",
+                "error_type": "TaskError", "run_dir": str(root / "bounties-held"),
+                "recoverable": True, "recovery": False,
+            }]
+            yield json.dumps({"type": "command_summary", "command": "daily", "status": terminal,
+                              "completed_tasks": ["restart", "cafe", "scrimmages"],
+                              "failed_tasks": failures, "deferred_tasks": [],
+                              "skipped_tasks": ["lessons"] if terminal in {"failed", "stopped"} else [],
+                              "aborted": terminal in {"failed", "stopped"}}) + "\n"
+
+    class SummaryFactory(ProcessFactory):
+        def __call__(self, arguments, **options):
+            process = super().__call__(arguments, **options)
+            process.stdout = SummaryOutput(process)
+            return process
+
+    factory = SummaryFactory()
+    now = datetime(2026, 9, 26, 3, 0, tzinfo=timezone.utc)
+    controller = DashboardController(config_path, process_factory=factory, wall_clock=lambda: now)
+    try:
+        controller.enqueue("daily")
+        eventually(lambda: len(factory.processes) == 1)
+        factory.processes[0].finish(0 if terminal == "success" else 130 if terminal == "stopped" else 1)
+        eventually(lambda: controller.status()["current_job"] is None)
+        status = controller.status()
+        expected = "failed" if terminal == "partial_failure" else terminal
+        assert status["state"] == expected
+        assert status["result"]["status"] == terminal
+        assert status["result"]["completed_tasks"] == ["restart", "cafe", "scrimmages"]
+        assert status["result"]["actions"] is None  # A scanner's zero is not the day's total.
+        assert status["schedule"]["cafe"]["last_success_at"] == now.isoformat()
+        assert status["schedule"]["cafe"]["consecutive_failures"] == 0
+        assert status["schedule"]["daily"]["status"] == expected
+        if terminal in {"partial_failure", "failed"}:
+            assert status["result"]["failed_tasks"][0]["task"] == "bounties"
+            notice = status["failed_jobs"][0]["detail"]
+            assert "3 tasks completed" in notice
+            assert "bounties: Earlier ticket sweep needs receipt review" in notice
+        else:
+            assert status["failed_jobs"] == []
+        text = controller.daily_log_text("2026-09-25").decode()
+        assert '"completed_tasks":["restart","cafe","scrimmages"]' in text
+        assert len(factory.processes) == 1
+    finally:
+        controller.close()
+
+
+@pytest.mark.parametrize("scan_completed,scan_status,held,stopped,expected", [
+    (True, "success", False, False, ["spend_ap"]),
+    (False, "success", False, False, []),
+    (True, "failed", False, False, []),
+    (True, None, False, False, []),
+    (True, "success", True, False, []),
+    (True, "success", False, True, []),
+])
+def test_partial_daily_badges_require_completed_scan_and_preserve_holds(
+    config_path, scan_completed, scan_status, held, stopped, expected,
+):
+    from ba_automator import ap_state
+
+    class SummaryOutput(FakeOutput):
+        def __iter__(self):
+            self.process.done.wait()
+            root = self.process.run_dir.parent
+            if scan_status:
+                run = root / "red_dots-final"
+                run.mkdir()
+                (run / "requests.json").write_text(json.dumps({
+                    "version": 1, "tasks": ["free_pack", "mail"], "ap": 200,
+                }))
+                yield json.dumps({"status": scan_status, "run_dir": str(run),
+                                  "duration": 1, "actions": 0}) + "\n"
+            yield json.dumps({"type": "command_summary", "command": "daily",
+                              "status": "partial_failure", "completed_tasks": ["restart"] +
+                              (["red_dots"] if scan_completed else []),
+                              "failed_tasks": [{"task": "free_pack", "error": "Receipt needs review",
+                                  "error_type": "TaskError", "run_dir": None,
+                                  "recoverable": True, "recovery": False}],
+                              "deferred_tasks": [], "skipped_tasks": [], "aborted": False}) + "\n"
+
+    class SummaryFactory(ProcessFactory):
+        def __call__(self, arguments, **options):
+            process = super().__call__(arguments, **options)
+            process.stdout = SummaryOutput(process)
+            return process
+
+    factory = SummaryFactory()
+    controller = DashboardController(config_path, process_factory=factory)
+    try:
+        controller.update_settings({"ap_schedule_enabled": True, "ap_floor": 100})
+        controller.enqueue("daily")
+        eventually(lambda: len(factory.processes) == 1)
+        controller.pause()
+        # A previous balance observation in the busy batch was below this
+        # scan's balance. Only genuinely new AP can bypass batch deduplication;
+        # a persistent spending hold must still win.
+        with controller._condition:
+            controller._ap_batch_observed = 100
+        state = ap_state.empty_state()
+        state["blocked_reason"] = "Earlier AP sweep needs receipt review" if held else None
+        ap_state.write_state(controller.config, state)
+        if stopped:
+            controller.stop()
+        else:
+            factory.processes[0].finish(1)
+        eventually(lambda: controller.status()["current_job"] is None)
+        status = controller.status()
+        assert [job["task"] for job in status["queue"]] == expected
+        assert all(job["source"] == "ap_balance" for job in status["queue"])
+        assert status["state"] == ("stopped" if stopped else "failed")
+        assert not any(job["task"] == "free_pack" for job in status["queue"])
+        assert ap_state.read_state(controller.config)["blocked_reason"] == state["blocked_reason"]
+        assert len(factory.processes) == 1
+    finally:
+        controller.close()
+
+
+@pytest.mark.parametrize("bad_field", ["command", "completed_tasks", "failed_tasks", "status", "aborted", "evidence"])
+def test_daily_summary_rejects_invalid_payload_or_external_evidence(tmp_path, bad_field):
+    summary = {"type": "command_summary", "command": "daily", "status": "partial_failure",
+               "completed_tasks": ["restart"], "failed_tasks": [{"task": "bounties", "error": "review",
+                   "error_type": "TaskError", "run_dir": str(tmp_path / "bounties-current"),
+                   "recoverable": True, "recovery": False}],
+               "deferred_tasks": [], "skipped_tasks": [], "aborted": False}
+    if bad_field == "evidence":
+        summary["failed_tasks"][0]["run_dir"] = str(tmp_path.parent / "outside")
+    else:
+        summary[bad_field] = {"command": "restart", "completed_tasks": ["unknown"],
+                              "failed_tasks": [], "status": "success", "aborted": "false"}[bad_field]
+    assert DashboardController._parse_command_summary(json.dumps(summary), tmp_path) is None
 
 
 @pytest.mark.parametrize('amount,blocked,expected', [(437,False,True),(119,False,False),(120,False,True),(437,True,False),(None,False,False),(True,False,False)])

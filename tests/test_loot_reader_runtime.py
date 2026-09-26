@@ -245,6 +245,96 @@ def test_parsed_page_reuse_still_revalidates_every_new_item(harness):
     assert len(h.inputs) == 4
 
 
+@pytest.mark.parametrize("opening_kind", ["grid", "unknown", "sweep"])
+def test_full_list_opening_waits_for_cards_then_scans_and_returns(harness, opening_kind):
+    h = harness
+    h.pages = [lr.Page("sweep", (), True, (1039, 482)), lr.Page(opening_kind),
+               lr.Page("grid", (card("A", 100), card("B", 300, 2)))]
+    original_tap = h.runner.device.tap
+    opening_captures = 0
+
+    def opening(number):
+        nonlocal opening_captures
+        if h.position == 1:
+            opening_captures += 1
+            if opening_captures == 3:
+                # No blind tap/scroll was sent during the transition.
+                assert h.inputs == [("tap", (1039, 482))]
+                h.position = 2
+
+    def modal_tap(x, y, *, deadline, monotonic):
+        assert monotonic() <= deadline
+        if (x, y) == (1039, 482):
+            assert h.position == 0
+            h.inputs.append(("tap", (x, y)))
+            h.position = 1
+            return True
+        if (x, y) == (640, 533):
+            assert h.position == 2 and not h.tip
+            h.inputs.append(("tap", (x, y)))
+            h.position = 0
+            return True
+        return original_tap(x, y, deadline=deadline, monotonic=monotonic)
+
+    h.on_capture = opening
+    h.runner.device.tap = modal_tap
+    result = h.reader().run()
+    assert h.position == 0 and h.inputs[-1] == ("tap", (640, 533))
+    assert result["items_complete"]
+    assert [(i["name"], i["quantity"]) for i in result["items"]] == [("A", 1), ("B", 2)]
+    assert (h.evidence.parent / "receipt-full-list-opening.png").exists()
+
+
+@pytest.mark.parametrize("failure", ["empty", "unknown", "foreign"])
+def test_unreadable_full_list_never_returns_success_or_sends_blind_input(harness, failure):
+    h = harness
+    h.pages = [lr.Page("grid" if failure != "unknown" else "unknown")]
+    if failure == "foreign":
+        def foreign(number):
+            if number == 2:
+                h.foreground = "com.android.settings"
+        h.on_capture = foreign
+    reader = h.reader()
+    # Exercise the known expand transition, including the reader's durable
+    # incomplete result path when the nested layout never becomes readable.
+    original_read = reader.read
+    first_read = True
+    def expanded(cap):
+        nonlocal first_read
+        if first_read:
+            first_read = False
+            return lr.Page("sweep", (), True, (1039, 482))
+        return original_read(cap)
+    reader.read = expanded
+    h.runner.device.tap = lambda x, y, **kw: h.inputs.append(("tap", (x, y))) or True
+    with pytest.raises(TaskError, match="no readable cards|Foreground changed"):
+        reader.run()
+    assert h.inputs == [("tap", (1039, 482))]
+    assert not h.result()["items_complete"] and not h.result()["items"]
+    assert h.now < lr.GRID_ENTRY_TIMEOUT + 3
+
+
+def test_optional_recovery_waits_for_full_list_cards_before_closing(harness, monkeypatch):
+    h = harness
+    original = optional_sweep_failure(h, monkeypatch)
+    full_grid = h.pages[1]
+    h.pages[1] = lr.Page("grid")
+    opening_captures = 0
+    def settle(number):
+        nonlocal opening_captures
+        if h.position == 1:
+            opening_captures += 1
+            if opening_captures == 3:
+                assert not h.inputs
+                h.pages[1] = full_grid
+    h.on_capture = settle
+    result = lr.inspect_receipt(h.runner, original, h.evidence)
+    assert result.screen.count == 1 and h.position == 0
+    assert h.inputs == [("tap", (640, 533))]
+    assert h.runner.state["pending"] == {"count": 1, "ap_before": 129}
+    assert not h.result()["items_complete"]
+
+
 def test_reward_end_left_partial_was_counted_on_previous_overlapping_page(harness):
     h = harness
     a, b, c = card("AA", 100), card("BB", 300), card("CC", 500)
@@ -324,6 +414,249 @@ def test_inspect_receipt_returns_fresh_caller_frame_after_real_reader(harness):
     assert not original.capture.is_fresh(h.runner.clock())
     assert result.screen.target == (640, 630)
     assert h.result()["items_complete"] is True
+
+
+def optional_sweep_failure(h, monkeypatch, *, surface="grid", count=1, task="spend_ap"):
+    """A confirmed spend exists; only its optional detail pass raises TaskError."""
+    h.runner.task = task
+    h.pages = [h.pages[0], lr.Page("grid", (card("A", 100),)), lr.Page("unknown"),
+               lr.Page("sweep", (card("Different receipt", 100),))]
+    h.runner.state = {"pending": {"count": 1, "ap_before": 129}}
+    original = ShopFrame(
+        Capture(h.runner.device.screenshot(), h.now, h.runner.config.package),
+        SimpleNamespace(kind="receipt", count=count, task=task if task != "spend_ap" else None),
+    )
+
+    def failed_inspection(reader):
+        icon_id = lr.save_icon(reader.r.config, b"saved icon")
+        lr.save_result(reader.r.config, reader.evidence,
+                       [{"name": "A", "quantity": 1, "icon_id": icon_id}],
+                       False, task=task, note="Receipt pages did not overlap")
+        h.position = {"sweep": 0, "grid": 1, "unknown": 2, "changed": 3}[surface]
+        h.runner.fail("Receipt pages did not overlap")
+
+    def close_grid(x, y, *, deadline, monotonic):
+        assert monotonic() <= deadline and h.position == 1 and (x, y) == (640, 533)
+        h.inputs.append(("tap", (x, y)))
+        h.position = 0
+        return True
+
+    h.runner.device.tap = close_grid
+    h.runner.wait = lambda kind: ShopFrame(
+        Capture(h.runner.device.screenshot(), h.now, h.runner.config.package), original.screen)
+    monkeypatch.setattr(lr.ReceiptReader, "run", failed_inspection)
+    return original
+
+
+@pytest.mark.parametrize("surface", ["sweep", "grid"])
+@pytest.mark.parametrize("task", ["spend_ap", "bounties", "scrimmages"])
+def test_optional_loot_failure_returns_same_sweep_for_resource_verification(
+    harness, monkeypatch, surface, task
+):
+    h = harness
+    original = optional_sweep_failure(h, monkeypatch, surface=surface, task=task)
+    result = lr.inspect_receipt(h.runner, original, h.evidence)
+    assert result is not original and result.screen.count == 1
+    assert h.inputs == ([("tap", (640, 533))] if surface == "grid" else [])
+    assert h.runner.state["pending"] == {"count": 1, "ap_before": 129}
+    assert not h.result()["items_complete"]
+    assert h.result()["items"][0]["name"] == "A"
+    assert h.result()["note"] == "Receipt pages did not overlap"
+    assert [e["action"] for e in h.events()] == ["loot_received", "loot_inspection_incomplete"]
+    assert (h.evidence.parent / "receipt-inspection-incomplete.png").exists()
+
+
+@pytest.mark.parametrize("surface", ["unknown", "changed"])
+def test_optional_loot_failure_keeps_hold_and_sends_no_input_on_unknown_or_changed_receipt(
+    harness, monkeypatch, surface
+):
+    h = harness
+    original = optional_sweep_failure(h, monkeypatch, surface=surface)
+    with pytest.raises(TaskError, match="original sweep receipt"):
+        lr.inspect_receipt(h.runner, original, h.evidence)
+    assert h.inputs == [] and h.runner.state["pending"]
+    assert not h.result()["items_complete"]
+    assert [e["action"] for e in h.events()] == ["loot_received"]
+
+
+def test_optional_loot_failure_cannot_recover_in_foreign_foreground(harness, monkeypatch):
+    h = harness
+    original = optional_sweep_failure(h, monkeypatch)
+    h.foreground = "com.android.settings"
+    with pytest.raises(TaskError, match="Foreground changed"):
+        lr.inspect_receipt(h.runner, original, h.evidence)
+    assert h.inputs == [] and h.runner.state["pending"]
+
+
+@pytest.mark.parametrize("field,value", [("count", 2), ("task", "scrimmages")])
+def test_optional_loot_failure_must_return_same_task_and_sweep_count(harness, monkeypatch, field, value):
+    h = harness
+    original = optional_sweep_failure(h, monkeypatch, surface="sweep", task="bounties")
+    changed = SimpleNamespace(**{**vars(original.screen), field: value})
+    h.runner.wait = lambda kind: ShopFrame(original.capture, changed)
+    with pytest.raises(TaskError, match="changed after incomplete"):
+        lr.inspect_receipt(h.runner, original, h.evidence)
+    assert h.inputs == [] and h.runner.state["pending"]
+
+
+def test_optional_loot_failure_needs_original_sweep_count(harness, monkeypatch):
+    h = harness
+    original = optional_sweep_failure(h, monkeypatch, count=None)
+    with pytest.raises(TaskError, match="pages did not overlap"):
+        lr.inspect_receipt(h.runner, original, h.evidence)
+    assert h.inputs == [] and h.runner.state["pending"]
+
+
+def test_optional_loot_failure_is_not_enabled_for_other_claim_tasks(harness, monkeypatch):
+    h = harness
+    original = optional_sweep_failure(h, monkeypatch, task="tasks")
+    with pytest.raises(TaskError, match="pages did not overlap"):
+        lr.inspect_receipt(h.runner, original, h.evidence)
+    assert h.inputs == []
+
+
+def test_optional_loot_failure_never_catches_device_or_storage_errors(harness, monkeypatch):
+    h = harness
+    original = optional_sweep_failure(h, monkeypatch)
+    def fail(reader):
+        raise OSError("Evidence could not be written")
+    monkeypatch.setattr(lr.ReceiptReader, "run", fail)
+    with pytest.raises(OSError, match="could not be written"):
+        lr.inspect_receipt(h.runner, original, h.evidence)
+    assert h.inputs == [] and h.runner.state["pending"]
+
+
+@pytest.mark.parametrize("change", [None, "tooltip", "receipt"])
+def test_optional_failure_only_dismisses_its_own_unchanged_tooltip(harness, monkeypatch, change):
+    h = harness
+    h.runner.task = "spend_ap"
+    h.runner.state = {"pending": {"count": 1, "ap_before": 129}}
+    original = ShopFrame(h.reader().capture(), SimpleNamespace(kind="receipt", count=1))
+    h.runner.wait = lambda kind: ShopFrame(h.reader().capture(), original.screen)
+    original_dismiss = lr.ReceiptReader.dismiss_tooltip
+    calls = []
+    original_tap = h.runner.device.tap
+
+    def change_after_dismissal(*args, **kwargs):
+        result = original_tap(*args, **kwargs)
+        if change == "receipt" and h.tip is None:
+            h.position = 1
+        return result
+
+    h.runner.device.tap = change_after_dismissal
+
+    def fail_once(reader, cap, kind):
+        calls.append(True)
+        if len(calls) == 1:
+            if change == "tooltip":
+                h.tip = "Changed tooltip"
+            if change == "receipt":
+                h.pages.append(lr.Page("sweep", (card("Changed receipt", 100),)))
+            reader.r.fail("Optional detail refresh failed")
+        return original_dismiss(reader, cap, kind)
+
+    monkeypatch.setattr(lr.ReceiptReader, "dismiss_tooltip", fail_once)
+    if change:
+        with pytest.raises(TaskError, match="tooltip changed|original sweep receipt"):
+            lr.inspect_receipt(h.runner, original, h.evidence)
+    else:
+        result = lr.inspect_receipt(h.runner, original, h.evidence)
+        assert result.screen.count == 1
+    expected_inputs = [("tap", h.pages[0].cards[0].target)]
+    if change != "tooltip":
+        expected_inputs.append(("tap", (270, 550)))
+    assert h.inputs == expected_inputs
+    assert h.runner.state["pending"] == {"count": 1, "ap_before": 129}
+    assert not h.result()["items_complete"]
+
+
+def test_optional_failure_never_dismisses_a_tooltip_it_did_not_open(harness, monkeypatch):
+    h = harness
+    original = optional_sweep_failure(h, monkeypatch, surface="sweep")
+    failed_inspection = lr.ReceiptReader.run
+    def unexpected_tooltip(reader):
+        try:
+            failed_inspection(reader)
+        finally:
+            h.tip = "Unrelated tooltip"
+    monkeypatch.setattr(lr.ReceiptReader, "run", unexpected_tooltip)
+    with pytest.raises(TaskError, match="original sweep receipt"):
+        lr.inspect_receipt(h.runner, original, h.evidence)
+    assert h.inputs == [] and h.runner.state["pending"]
+
+
+def initial_notice_frame(h, monkeypatch):
+    original = optional_sweep_failure(h, monkeypatch)
+    notice = json.dumps({**json.loads(original.capture.png), "notice": True}).encode()
+    original = replace(original, capture=replace(original.capture, png=notice))
+    monkeypatch.setattr(lr, "task_notice_visible", lambda image: image.get("notice", False))
+    def same_below(before, after):
+        assert h.inputs == []
+        first, second = json.loads(before), json.loads(after)
+        first.pop("notice", None)
+        return first == second
+    monkeypatch.setattr(lr, "same_sweep_below_notice", same_below)
+    return original
+
+
+def test_initial_notice_is_bound_before_inspection_and_clean_reference_recovers(harness, monkeypatch):
+    h = harness
+    original = initial_notice_frame(h, monkeypatch)
+    result = lr.inspect_receipt(h.runner, original, h.evidence)
+    assert result.screen.count == original.screen.count == 1
+    assert h.inputs == [("tap", (640, 533))]
+    assert h.evidence.read_bytes() == b"original receipt"
+    saved = h.evidence.parent / "receipt-notice-cleared-reference.png"
+    assert saved.is_file() and not json.loads(saved.read_bytes()).get("notice")
+    assert h.runner.state["pending"] and not h.result()["items_complete"]
+
+
+@pytest.mark.parametrize("field,value", [("count", 2), ("task", "scrimmages")])
+def test_initial_notice_cannot_change_task_or_count_before_inspection(harness, monkeypatch, field, value):
+    h = harness
+    original = initial_notice_frame(h, monkeypatch)
+    changed = SimpleNamespace(**{**vars(original.screen), field: value})
+    h.runner.wait = lambda kind: ShopFrame(
+        Capture(h.runner.device.screenshot(), h.now, h.runner.config.package), changed)
+    with pytest.raises(TaskError, match="identity changed after its initial"):
+        lr.inspect_receipt(h.runner, original, h.evidence)
+    assert h.inputs == [] and h.runner.state["pending"]
+    assert not h.evidence.with_suffix(".loot.json").exists()
+
+
+def test_receipt_waits_without_input_until_task_notice_leaves(harness, monkeypatch):
+    h = harness
+    h.tip = "task notice"
+    monkeypatch.setattr(lr, "task_notice_visible", lambda image: image["tip"] == "task notice")
+    def clear_notice(number):
+        if number <= 4:
+            assert h.inputs == []
+        if number == 4:
+            h.tip = None
+    h.on_capture = clear_notice
+    result = h.reader().run()
+    assert result["items_complete"]
+    assert [(i["name"], i["quantity"]) for i in result["items"]] == [("A", 1), ("B", 2)]
+    assert (h.evidence.parent / "receipt-task-notice.png").exists()
+    events = [json.loads(line) for line in (h.evidence.parent / "events.jsonl").read_text().splitlines()]
+    assert [e["event"] for e in events[:2]] == [
+        "receipt_waiting_for_task_notice", "receipt_task_notice_cleared"]
+
+
+@pytest.mark.parametrize("failure", ["persistent", "foreign_foreground"])
+def test_notice_wait_is_bounded_and_preserves_foreground_guard(harness, monkeypatch, failure):
+    h = harness
+    h.tip = "task notice"
+    monkeypatch.setattr(lr, "task_notice_visible", lambda image: image["tip"] == "task notice")
+    if failure == "foreign_foreground":
+        def switch_foreground(number):
+            if number == 2:
+                h.foreground = "com.android.settings"
+        h.on_capture = switch_foreground
+    with pytest.raises(TaskError, match="notice did not clear|Foreground changed"):
+        h.reader().run()
+    assert h.inputs == [] and h.now <= lr.TASK_NOTICE_TIMEOUT + 1
+    assert h.result()["items"] == [] and not h.result()["items_complete"]
 
 
 def test_bare_receipt_cannot_authorize_tooltip_dismissal(harness):

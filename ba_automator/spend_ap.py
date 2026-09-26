@@ -7,7 +7,16 @@ from .ap_policy import choose_hard, default_order, sweep_count
 from .ap_state import read_state, write_state
 from .ap_vision import APVision
 from .locking import InstanceLock
+from .runtime import TaskError
 from .shop_runtime import ShopRunner
+
+
+VISIT_SECONDS = 1800
+VISIT_INPUTS = 1200
+# A receipt may need 90 seconds to appear and 240 seconds to inspect. Keep
+# enough room to close it, verify the spend, and return to a stable Home.
+SWEEP_SECONDS_RESERVE = 480
+SWEEP_INPUTS_RESERVE = 200
 
 
 class APRunner(ShopRunner):
@@ -23,8 +32,14 @@ class APRunner(ShopRunner):
         self.state = None
 
     def budget(self):
-        if self.clock() - self.started > 1800 or self.actions >= 1200:
+        if self.clock() - self.started > VISIT_SECONDS or self.actions >= VISIT_INPUTS:
             self.fail("AP task reached its time or input limit")
+
+    def can_start_sweep(self):
+        return (
+            VISIT_SECONDS - (self.clock() - self.started) > SWEEP_SECONDS_RESERVE
+            and VISIT_INPUTS - self.actions > SWEEP_INPUTS_RESERVE
+        )
 
     def save(self):
         write_state(self.config, self.state)
@@ -408,6 +423,7 @@ class APRunner(ShopRunner):
             )
         frame = self.wait("home", predicate=lambda s: s.ap is not None)
         summary = "AP is already at or below the floor"
+        continue_soon = False
         if frame.screen.ap > self.config.ap_floor:
             strategy = self.config.ap_strategy
             self.phase(
@@ -455,6 +471,9 @@ class APRunner(ShopRunner):
                     choice = choose_hard(order, self.state["next_stage"], unavailable)
                     if choice is None:
                         break
+                    if not self.can_start_sweep():
+                        continue_soon = True
+                        break
                     self.phase(f"Checking Hard {choice.stage}")
                     frame = self.hard_area(frame, choice.stage)
                     stage = next(s for s in frame.screen.stages if s.id == choice.stage)
@@ -485,11 +504,19 @@ class APRunner(ShopRunner):
                         frame = detail
                         summary = "Remaining AP cannot cover another Hard sweep above the floor"
                         break
+                    # Navigation and OCR can use the reserve since the previous
+                    # check. Yield on this unpaid detail screen, never mid-spend.
+                    if not self.can_start_sweep():
+                        frame = detail
+                        continue_soon = True
+                        break
                     detail = self.sweep(detail, 1, next_stage=choice.next_stage)
                     self.tap(detail, (1127, 109), "Return to Hard stage list")
                     frame = self.wait("hard_list")
                 else:
                     self.fail("Hard rotation exceeded the observed daily attempt limit")
+                if continue_soon:
+                    summary = "AP visit paused before its limit; continuing in one minute"
                 self.go_home(frame)
         else:
             self.home()
@@ -498,9 +525,17 @@ class APRunner(ShopRunner):
             last_ap=frame.screen.ap,
             last_summary=summary,
             blocked_reason=None,
-            next_check_at=(self.wall_clock() + timedelta(hours=1)).isoformat(),
+            next_check_at=(self.wall_clock() + (
+                timedelta(minutes=1) if continue_soon else timedelta(hours=1)
+            )).isoformat(),
         )
         self.save()
+        if continue_soon:
+            self.important(
+                "ap_visit_yielded", summary, ap_left=frame.screen.ap,
+                next_stage=self.state["next_stage"],
+                next_check_at=self.state["next_check_at"],
+            )
         self.phase(
             f"{summary}. {frame.screen.ap} AP left; floor {self.config.ap_floor}."
         )
@@ -527,9 +562,22 @@ def _run(config, device, startup, cls, **kwargs):
             return runner.run()
         except BaseException as exc:
             if runner.state is not None and cls is APRunner:
-                runner.state["blocked_reason"] = (
-                    str(exc) or "AP job interrupted; review the saved receipt"
-                )
+                # A navigation/recognition miss before spending (or after a
+                # fully verified sweep) is safe to retry on a later visit.
+                # Never release an existing hold or an unreconciled intent.
+                if (isinstance(exc, TaskError) and not runner.state["pending"]
+                        and not runner.state["blocked_reason"]):
+                    runner.state["next_check_at"] = (
+                        runner.wall_clock() + timedelta(minutes=15)
+                    ).isoformat()
+                    runner.state["last_summary"] = f"AP visit interrupted; retry in 15 minutes: {exc}"
+                    runner.journal.record("retry_scheduled", task="spend_ap",
+                                          next_check_at=runner.state["next_check_at"],
+                                          detail=str(exc))
+                else:
+                    runner.state["blocked_reason"] = (
+                        str(exc) or "AP job interrupted; review the saved receipt"
+                    )
                 runner.save()
             runner.journal.record("finished", status="failed", detail=str(exc))
             raise

@@ -106,6 +106,8 @@ The optional Daily schedule uses the Global reset at 19:00 UTC plus a configurab
 
 An instance-scoped occurrence is persisted before Daily dispatch and finalized with its result. A completed, failed, stopped, or interrupted occurrence suppresses automatic replay for that game day. Failed or interrupted work needs review followed by an explicit manual Daily retry; cancellation of an automatically queued Daily records a skipped occurrence. A fresh game day permits new work. This controls scheduling, not exactly-once game actions or resumption of individual steps. Existing resource-intent holds remain authoritative. The dashboard exposes the latest result, any blocking reason, and the next due time. The local server and awake host are still required; no system service or wake timer is installed.
 
+Within Daily, a recognized task failure or resource hold is isolated to that step. The runner records it, uses the bounded restart task to verify home, then continues with later independent tasks, including Spend AP. It never retries the failed step or releases its resource hold. Device, lock, configuration, filesystem, unexpected errors, and unsuccessful recovery still stop the plan. A structured summary lists completed, failed, deferred, and skipped steps; partial completion remains a failed occurrence with its actual failures visible in the dashboard.
+
 After the final worker exits, an optional idle policy closes only Blue Archive if the queue is empty. It leaves the emulator, dashboard, and shared ADB server running. This is a once-per-finished-queue action, not a timer that repeatedly closes a manually opened game.
 
 ### AP spending

@@ -11,6 +11,53 @@ from ba_automator.runtime import Capture, TaskError
 from ba_automator.tasks import task_plan
 
 
+@pytest.mark.parametrize("failure,pending,existing_hold,retry", [
+    ("navigation", False, False, True),
+    ("navigation", True, False, False),
+    ("navigation", False, True, False),
+    ("unexpected", False, False, False),
+    ("stopped", False, False, False),
+])
+def test_transient_failure_retries_only_without_unresolved_spend(
+    tmp_path, monkeypatch, failure, pending, existing_hold, retry
+):
+    from datetime import datetime, timezone, timedelta
+    from ba_automator.spend_ap import run_spend_ap
+
+    now = datetime(2026, 9, 26, tzinfo=timezone.utc)
+    c = Config(serial="127.0.0.1:5695", package="com.nexon.bluearchive",
+               state_dir=tmp_path / "state", run_dir=tmp_path / "runs",
+               lock_dir=tmp_path / "locks")
+    state = read_state(c)
+    if pending:
+        state["pending"] = dict(strategy="elephs", stage="1-1", ap_before=160,
+                                cost=20, count=1, floor=100)
+    if existing_hold:
+        state["blocked_reason"] = "earlier uncertain result"
+    write_state(c, state)
+
+    def fail_run(self):
+        self.state = read_state(c)
+        if failure == "unexpected":
+            raise ValueError("unexpected bug")
+        if failure == "stopped":
+            raise KeyboardInterrupt()
+        self.fail("spend_ap did not reach detail")
+
+    monkeypatch.setattr(APRunner, "run", fail_run)
+    device = SimpleNamespace(connect=lambda: None, verify_package=lambda: None)
+    with pytest.raises((TaskError, ValueError, KeyboardInterrupt)):
+        run_spend_ap(c, device, None, vision=object(), wall_clock=lambda: now)
+    saved = read_state(c)
+    assert saved["pending"] == state["pending"]
+    if retry:
+        assert saved["blocked_reason"] is None
+        assert datetime.fromisoformat(saved["next_check_at"]) == now + timedelta(minutes=15)
+        assert "retry in 15 minutes" in saved["last_summary"]
+    else:
+        assert saved["blocked_reason"]
+
+
 @pytest.fixture
 def runner(tmp_path):
     c = Config(
@@ -130,6 +177,137 @@ def detail(**kw):
     )
     values.update(kw)
     return APScreen(**values)
+
+
+@pytest.mark.parametrize("limit", ["time", "inputs"])
+def test_hard_visit_yields_after_verified_sweep_and_resumes_next_stage(runner, limit):
+    from datetime import datetime, timezone, timedelta
+    from ba_automator.ap_vision import APStage
+    from ba_automator.spend_ap import (
+        SWEEP_INPUTS_RESERVE, SWEEP_SECONDS_RESERVE, VISIT_INPUTS, VISIT_SECONDS,
+    )
+
+    now = datetime(2026, 9, 26, tzinfo=timezone.utc)
+    runner.state.update(hard_stages=["13-3", "13-2"], surveyed_at=now.isoformat(),
+                        next_stage="13-3")
+    runner.save()
+    paid_stages = []
+
+    def visit(r, stage, ap, current_time):
+        elapsed = [0]
+        r.clock = lambda: elapsed[0]
+        r.started = 0
+        r.wall_clock = lambda: current_time
+        listing = APScreen("hard_list", area=13, stages=(
+            APStage("13-3", 3, (100, 200), remaining=3),
+            APStage("13-2", 3, (100, 300), remaining=3),
+        ))
+        screens = iter([
+            APScreen("home", ap=ap), detail(stage=stage, ap=ap, after=ap-20),
+            APScreen("confirm", ap=ap, cost=20, count=1, target=(767, 505)),
+            APScreen("receipt", ap=ap-20, count=1, target=(640, 583)),
+            detail(stage=stage, ap=ap-20, after=ap-40, remaining=2), listing,
+            *[APScreen("home", ap=ap-20) for _ in range(3)],
+        ])
+        observed = []
+
+        def wait(kinds, *, predicate=lambda s: True, **kwargs):
+            screen = next(screens)
+            assert screen.kind in ({kinds} if isinstance(kinds, str) else kinds)
+            assert predicate(screen)
+            observed.append(screen.kind)
+            return frame(r, screen)
+
+        def tap(f, target, description):
+            r.budget()
+            if f.screen.kind == "confirm":
+                pending = read_state(r.config)["pending"]
+                assert pending["stage"] == stage and pending["count"] == 1
+                paid_stages.append(stage)
+            r.actions += 1
+
+        r.wait, r.tap = wait, tap
+        r.enter_hard = lambda: frame(r, listing)
+        r.hard_area = lambda f, requested: f
+        actual_sweep = r.sweep
+
+        def sweep(*args, **kwargs):
+            result = actual_sweep(*args, **kwargs)
+            # The previous receipt used the remaining visit budget. The next
+            # stage must be left unpaid, with enough room to verify Home.
+            if limit == "time":
+                elapsed[0] = VISIT_SECONDS - SWEEP_SECONDS_RESERVE
+            else:
+                r.actions = VISIT_INPUTS - SWEEP_INPUTS_RESERVE
+            return result
+
+        r.sweep = sweep
+        result = r.run()
+        assert result.status == "success"
+        assert observed[-3:] == ["home"] * 3
+        saved = read_state(r.config)
+        assert saved["pending"] is None and saved["blocked_reason"] is None
+        assert saved["last_ap"] == ap - 20
+        assert datetime.fromisoformat(saved["next_check_at"]) == current_time + timedelta(minutes=1)
+        assert "continuing in one minute" in saved["last_summary"]
+        assert "ap_visit_yielded" in (r.config.state_dir / "important-actions.jsonl").read_text()
+        return saved
+
+    assert visit(runner, "13-3", 180, now)["next_stage"] == "13-2"
+    following = APRunner(runner.config, None, None, vision=object(),
+                         monotonic=lambda: 0, sleep=lambda _: None)
+    try:
+        assert visit(following, "13-2", 160, now + timedelta(minutes=1))["next_stage"] == "13-3"
+    finally:
+        following.journal.close()
+    assert paid_stages == ["13-3", "13-2"]
+
+
+@pytest.mark.parametrize("limit", ["time", "inputs"])
+def test_hard_navigation_consuming_reserve_yields_before_spending(runner, limit):
+    from datetime import datetime, timezone, timedelta
+    from ba_automator.ap_vision import APStage
+    from ba_automator.spend_ap import (
+        SWEEP_INPUTS_RESERVE, SWEEP_SECONDS_RESERVE, VISIT_INPUTS, VISIT_SECONDS,
+    )
+
+    now = datetime(2026, 9, 26, tzinfo=timezone.utc)
+    runner.wall_clock = lambda: now
+    elapsed = [0]
+    runner.clock = lambda: elapsed[0]
+    runner.state.update(hard_stages=["13-3"], surveyed_at=now.isoformat(), next_stage="13-3")
+    runner.save()
+    listing = APScreen("hard_list", area=13, stages=(APStage("13-3", 3, (100, 200), remaining=3),))
+    screens = iter([APScreen("home", ap=160), detail(), listing,
+                    *[APScreen("home", ap=160) for _ in range(3)]])
+    taps = []
+
+    def wait(kinds, *, predicate=lambda s: True, **kwargs):
+        screen = next(screens)
+        assert screen.kind in ({kinds} if isinstance(kinds, str) else kinds)
+        assert predicate(screen)
+        if screen.kind == "detail":
+            if limit == "time":
+                elapsed[0] = VISIT_SECONDS - SWEEP_SECONDS_RESERVE
+            else:
+                runner.actions = VISIT_INPUTS - SWEEP_INPUTS_RESERVE
+        return frame(runner, screen)
+
+    def tap(f, target, description):
+        runner.budget()
+        taps.append(description)
+        runner.actions += 1
+
+    runner.wait, runner.tap = wait, tap
+    runner.enter_hard = lambda: frame(runner, listing)
+    runner.hard_area = lambda f, stage: f
+    runner.sweep = lambda *args, **kwargs: pytest.fail("must reserve receipt time before spending")
+    assert runner.run().status == "success"
+    saved = read_state(runner.config)
+    assert taps == ["Inspect Hard 13-3", "Close mission info", "Return home"]
+    assert saved["next_stage"] == "13-3" and saved["last_ap"] == 160
+    assert saved["pending"] is None and saved["blocked_reason"] is None
+    assert datetime.fromisoformat(saved["next_check_at"]) == now + timedelta(minutes=1)
 
 
 @pytest.mark.parametrize(

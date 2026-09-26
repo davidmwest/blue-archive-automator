@@ -109,10 +109,9 @@ def main(argv=None) -> int:
             if args.no_downloads:
                 config = replace(config, auto_download=False)
                 device = AdbDevice(config)
-            vision = None
-            for task in task_plan(args.command, config):
-                if vision is None:
-                    vision = StartupVision()
+            vision = StartupVision()
+
+            def run_task(task):
                 if task == "total_assault":
                     from .total_assault import run_total_assault
 
@@ -188,6 +187,41 @@ def main(argv=None) -> int:
                     actions=result.actions,
                 )
                 print(json.dumps(asdict(result), default=str, indent=2))
+                return result
+
+            plan = task_plan(args.command, config)
+            if args.command == "daily":
+                from .task_execution import run_daily_plan
+
+                def emit_daily(event):
+                    fields = {key: value for key, value in event.items() if key != "type"}
+                    task = fields.pop("task", "daily")
+                    level = ("ERROR" if event["type"] == "task_failure"
+                             or event.get("status") in {"failed", "partial_failure"} else "INFO")
+                    append_event(config.state_dir, event["type"], task=task,
+                                 level=level, **fields)
+                    print(json.dumps(event, default=str, indent=2))
+                    if event["type"] == "task_failure":
+                        logging.getLogger(__name__).warning(
+                            "Daily step %s failed: %s", task, event["error"]
+                        )
+                    elif event["type"] == "daily_recovery_started":
+                        logging.getLogger(__name__).info(
+                            "Daily: returning to verified home before %s", event["next_task"]
+                        )
+
+                summary = run_daily_plan(plan, run_task, emit_daily)
+                command_status = ("failed" if summary["status"] == "partial_failure"
+                                  else summary["status"])
+                if summary["status"] == "partial_failure":
+                    detail = "; ".join(f"{item['task']}: {item['error']}"
+                                       for item in summary["failed_tasks"])
+                    print(f"Error: Daily completed with failures: {detail}", file=sys.stderr)
+                    return 1
+                return 130 if summary["status"] == "stopped" else 0
+
+            for task in plan:
+                result = run_task(task)
                 if result.status != "success":
                     command_status = result.status
                     break

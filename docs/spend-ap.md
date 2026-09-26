@@ -18,6 +18,8 @@ The floor is a minimum, not an exact target. With 137 AP, a floor of 100, and a 
 
 When enabled, Spend AP checks hourly and follows Cafe, Mail, and the full Daily plan. A pack visit already ends with Mail, so it also reaches Spend AP. These remain serial tasks; there is no second worker issuing game inputs. Keep the local dashboard running for scheduling to work.
 
+A large AP balance can take more than one visit. Before each Hard sweep, the runner reserves eight minutes and 200 inputs for its receipt and the trip home. If the visit is running out of room, it returns to verified Home, keeps the next stage in the rotation, and makes another check due in one minute. Dispatch still respects the queue and retry backoff. Completed sweeps stay completed; the continuation does not repeat them. Automatic continuation requires AP scheduling to be enabled.
+
 ```toml
 [ap]
 schedule_enabled = false
@@ -38,7 +40,7 @@ python -m ba_automator --config config/local.toml spend_ap
 
 Each spend records the stage, sweep count, cost, AP before/after, and a saved receipt. Important actions distinguish a requested sweep from a verified result. Raw game captures stay in local run directories and may contain account information.
 
-Before confirming, the runner persists an intent in its per-instance `ap-*.json` state. It then verifies the completion receipt, AP change, and (for Hard missions) remaining attempt count before advancing the rotation. Unknown screens or changed costs stop input. A failed visit pauses automatic spending; after resolving its cause, explicitly queue Spend AP to retry. The CLI equivalent is `spend_ap --retry-ap`.
+Before confirming, the runner persists an intent in its per-instance `ap-*.json` state. It then verifies the completion receipt, AP change, and (for Hard missions) remaining attempt count before advancing the rotation. Unknown screens or changed costs stop input. A bounded recognition/navigation failure with no unresolved spend schedules another visit in 15 minutes. Startup failures also back off instead of disabling automatic AP spending. Existing holds, unresolved spends, unexpected runner errors, and an explicit stop still require review; the manual retry is **Spend AP** or `spend_ap --retry-ap`.
 
 An unresolved spending intent blocks even an explicit retry. Inspect the actual game, saved receipt, and ledger before reconciling it; restarting the dashboard never silently repeats the sweep. Level-ups that refund AP are currently an inspection case because the result no longer matches the expected AP decrement.
 
@@ -51,6 +53,10 @@ Recognition is for the English Global client at 1280×720 and 320 DPI. All runti
 ## Validation
 
 Offline tests cover floor arithmetic, persistent rotation order, current versus projected Hard attempts, incomplete surveys, ignored scrolls, changed confirmations, missing receipts, and serial task integration. Sanitized live fixtures cover commission lists/details, Hard areas, confirmation, and sweep receipt recognition. The September 24, 2026 live survey found 39 three-star Hard stages (13-3 through 1-1), Base Defense J, and Item Retrieval G. A calibrated credit sweep used 35 AP; the automated report runner selected J and verified a 40 AP sweep. Thirteen Hard sweeps used 260 AP, skipped exhausted higher stages, persisted their cursor across interrupted runs, and stopped at 101 AP with a 100 AP floor. The next saved stage was 4-2. A complete queued rerun, including restart, returned home at 102 AP after natural regeneration, recorded no further spend, and preserved that cursor. Every completed Hard sweep verified a receipt and the current daily-attempt decrement; the completed visit returned home.
+
+On September 26, earlier unresolved sweeps were reconciled from saved receipts and live counters without replaying them. Fresh, uninterrupted Hard 11-2 and 10-3 sweeps each verified a 20 AP spend, identifying nine and ten item types respectively. Between them, Hard 11-1 required staged receipt recovery: ten item types were named, full-list coverage remained incomplete, and the original sweep's AP decrement and two remaining attempts were verified. The fresh 10-3 sweep completed Full List inspection and advanced the cursor to 10-2.
+
+The bounded-visit continuation has offline coverage for elapsed-time and input limits, navigation consuming the remaining reserve, and resuming the next stage without repeating a verified sweep. It has not yet been exercised through a complete live handoff between visits.
 
 Calibration also found an ignored-scroll bug that selected report stage E for one 25 AP sweep. Consecutive boundary observations and a guard against downgrading a known clear now cover that failure. Real-screen regressions cover small/missing stage indices, split title boxes, and the distinction between projected and current Hard attempts.
 

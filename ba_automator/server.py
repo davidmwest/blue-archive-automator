@@ -724,8 +724,12 @@ class DashboardController:
                 with self._condition:
                     self._duration = max(0.0, time.monotonic() - self._started_clock)
                     self._completed_at = _timestamp()
-                    self._result = self._parse_result(output, run_root, exclude_scan=job["task"] != "red_dots")
-                    if self._stop_requested or self._shutdown:
+                    summary = (self._parse_command_summary(output, run_root)
+                               if job["task"] == "daily" else None)
+                    self._result = ({**summary, "run_dir": str(run_root.resolve()),
+                                     "duration": self._duration, "actions": None} if summary else
+                                    self._parse_result(output, run_root, exclude_scan=job["task"] != "red_dots"))
+                    if self._stop_requested or self._shutdown or (summary and summary["status"] == "stopped"):
                         self._state, self._phase = "stopped", "Stopped"
                     elif exit_code == 0 and self._result and self._result.get("status") == "disabled":
                         self._state, self._phase = "disabled", "Crafting disabled; check Quick Craft setup"
@@ -733,9 +737,16 @@ class DashboardController:
                         self._state = "success"
                         self._phase = TASK_LABELS[job["task"]]
                     else:
-                        self._state, self._phase = "failed", "Task failed; check the log"
-                    if self._state in {"failed", "stopped"}:
+                        self._state = "failed"
+                        self._phase = ("Daily finished with failures; check failed jobs"
+                                       if summary and summary["status"] == "partial_failure"
+                                       else "Task failed; check the log")
+                    if self._state in {"failed", "stopped"} and not summary:
                         self._result = self._unfinished_result(run_root, self._state)
+                    elif summary and self._state == "stopped":
+                        self._result["status"] = "stopped"
+                    elif summary and self._state == "failed" and summary["status"] == "success":
+                        self._result["status"] = "failed"
                     self._daily("job_finished", task=job["task"], run=job["id"],
                                 level="ERROR" if self._state == "failed" else "INFO",
                                 status=self._state, duration=round(self._duration, 3),
@@ -744,8 +755,9 @@ class DashboardController:
                                               "state": self._state, "completed_at": self._completed_at})
                     self._finish_daily(job)
                     if self._state == 'failed':
-                        detail = next((entry['message'] for entry in reversed(self._logs)
-                                       if entry['message'].startswith('Error:')), 'Task failed; check the runner log and screenshots')
+                        detail = (self._summary_failure_detail(summary) if summary else
+                                  next((entry['message'] for entry in reversed(self._logs)
+                                        if entry['message'].startswith('Error:')), 'Task failed; check the runner log and screenshots'))
                         self._failures.append({'id': job['id'], 'task': job['task'],
                                                'time': self._completed_at, 'detail': detail[:1500]})
                         self._failures = self._failures[-50:]
@@ -757,7 +769,8 @@ class DashboardController:
                     cafe_result = (self._parse_result(output, run_root, task="cafe")
                                    if job["task"] in {"daily", "cafe"} else None)
                     # A later lesson failure or stop does not undo a verified cafe visit.
-                    cafe_state = ("success" if cafe_result and cafe_result.get("status") == "success"
+                    cafe_state = ("success" if (cafe_result and cafe_result.get("status") == "success")
+                                  or (summary and "cafe" in summary["completed_tasks"])
                                   else self._state)
                     self._record_schedule(job["task"], cafe_state)
                     self._record_crafting(job["task"], self._state)
@@ -765,7 +778,15 @@ class DashboardController:
                         try:
                             with InstanceLock(selected):
                                 state = ap_state.read_state(selected)
-                                state['blocked_reason'] = state['blocked_reason'] or 'AP job failed or stopped; review the log, then explicitly queue Spend AP'
+                                if state['pending'] or self._state == 'stopped':
+                                    state['blocked_reason'] = state['blocked_reason'] or (
+                                        'AP job has an unresolved spend; inspect its saved receipt'
+                                        if state['pending'] else 'AP job was stopped; explicitly queue Spend AP to retry'
+                                    )
+                                elif not state['blocked_reason']:
+                                    # Startup/navigation failures with no spend
+                                    # intent must not permanently stop AP use.
+                                    state['next_check_at'] = (self._wall_clock() + timedelta(minutes=15)).isoformat()
                                 ap_state.write_state(selected, state)
                         except (RuntimeError, OSError) as exc:
                             self._log(f'Could not save AP failure hold: {exc}', 'error')
@@ -777,7 +798,13 @@ class DashboardController:
                                 packs_state.write_state(selected, pack_state)
                         except (RuntimeError, OSError) as exc:
                             self._log(f'Could not save pack failure hold: {exc}', 'error')
-                    if self._state == "success":
+                    if self._state == "success" or (
+                        self._state == "failed" and summary
+                        and summary["status"] == "partial_failure"
+                        and "red_dots" in summary["completed_tasks"]
+                    ):
+                        # An isolated Daily failure does not discard a verified
+                        # final scan. Batch deduplication still prevents retries.
                         self._enqueue_badges(output, run_root)
                     self._current = None
                     self._process = None
@@ -936,6 +963,77 @@ class DashboardController:
             return result
         except OSError:
             return result
+
+    @staticmethod
+    def _parse_command_summary(output: str, run_root: Path) -> dict | None:
+        """Keep Daily's aggregate outcome separate from its last successful step."""
+        decoder = json.JSONDecoder()
+        tasks = TASKS - {"daily"}
+        for index in range(len(output) - 1, -1, -1):
+            if output[index] != "{":
+                continue
+            try:
+                value, _ = decoder.raw_decode(output[index:])
+                if (not isinstance(value, dict) or value.get("type") != "command_summary"
+                        or value.get("command") != "daily"
+                        or value.get("status") not in {"success", "partial_failure", "failed", "stopped"}
+                        or type(value.get("aborted")) is not bool):
+                    continue
+                names = {}
+                for key in ("completed_tasks", "skipped_tasks"):
+                    entries = value.get(key)
+                    if (not isinstance(entries, list) or len(entries) > len(tasks)
+                            or any(not isinstance(task, str) or task not in tasks for task in entries)
+                            or len(entries) != len(set(entries))):
+                        raise ValueError("Invalid task list")
+                    names[key] = entries
+                failures = value.get("failed_tasks")
+                deferred = value.get("deferred_tasks")
+                if (not isinstance(failures, list) or len(failures) > len(tasks) * 2
+                        or not isinstance(deferred, list) or len(deferred) > len(tasks)):
+                    continue
+                clean_failures = []
+                for failure in failures:
+                    if (not isinstance(failure, dict) or failure.get("task") not in tasks
+                            or any(not isinstance(failure.get(key), str) for key in ("error", "error_type"))
+                            or any(type(failure.get(key)) is not bool for key in ("recoverable", "recovery"))):
+                        raise ValueError("Invalid task failure")
+                    failed_run = failure.get("run_dir")
+                    if failed_run is not None:
+                        if not isinstance(failed_run, str):
+                            raise ValueError("Invalid task evidence")
+                        resolved = Path(failed_run).resolve()
+                        if not resolved.is_relative_to(run_root.resolve()):
+                            raise ValueError("Task evidence is outside this job")
+                        failed_run = str(resolved)
+                    clean_failures.append({"task": failure["task"], "error": failure["error"][:2000],
+                                           "error_type": failure["error_type"][:100], "run_dir": failed_run,
+                                           "recoverable": failure["recoverable"], "recovery": failure["recovery"]})
+                clean_deferred = []
+                for entry in deferred:
+                    if (not isinstance(entry, dict) or entry.get("task") not in tasks
+                            or not isinstance(entry.get("status"), str)):
+                        raise ValueError("Invalid deferred task")
+                    clean_deferred.append({"task": entry["task"], "status": entry["status"][:100]})
+                if ((value["status"] == "success" and (failures or value["aborted"]))
+                        or (value["status"] == "partial_failure" and (not failures or value["aborted"]))):
+                    continue
+                return {"type": "command_summary", "command": "daily", "status": value["status"],
+                        **names, "failed_tasks": clean_failures, "deferred_tasks": clean_deferred,
+                        "aborted": value["aborted"]}
+            except (ValueError, TypeError, OSError):
+                continue
+        return None
+
+    @staticmethod
+    def _summary_failure_detail(summary: dict) -> str:
+        prefix = "Daily stopped early" if summary["aborted"] else "Daily finished with failures"
+        completed = len(summary["completed_tasks"])
+        failures = "; ".join(
+            f"{item['task'].replace('_', ' ')}{' recovery' if item['recovery'] else ''}: {item['error']}"
+            for item in summary["failed_tasks"]
+        )
+        return f"{prefix}; {completed} tasks completed. {failures or 'Check the runner log.'}"
 
     @staticmethod
     def _parse_result(output: str, run_root: Path, *, task: str | None = None, exclude_scan=False) -> dict | None:

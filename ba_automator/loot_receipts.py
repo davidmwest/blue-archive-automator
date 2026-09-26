@@ -15,11 +15,13 @@ import numpy as np
 
 from .actions import record_action
 from .loot_icon_mask import isolate_compact_card
-from .runtime import Capture
+from .runtime import Capture, TaskError
 from .vision import decode_frame
 
 RECEIPT_TIMEOUT = 240
 REWARD_RECEIPT_TIMEOUT = 900
+TASK_NOTICE_TIMEOUT = 12
+GRID_ENTRY_TIMEOUT = 8
 # The horizontal receipt viewport ends at x=100/1180. Its four-pixel fade
 # bands can make a clipped card look almost full and change width each frame.
 # Discover only within the opaque interior; anything touching it is partial.
@@ -32,6 +34,7 @@ class Card:
     quantity: int | None
     name: str | None
     icon: bytes
+    tier: str | None = None
 
     @property
     def target(self):
@@ -95,6 +98,20 @@ def amount(words):
     return next(iter(values)) if len(values) == 1 else None
 
 
+def grid_tier(words):
+    """Read only an exact, confident tier label in a compact card's badge.
+
+    Coordinates belong to read_crop's 3x image with its 25px border. The
+    artwork can contain unrelated lettering, so only the lower-left badge
+    supplies this identity; neither a guessed tier nor a quantity qualifies.
+    """
+    labels = [w.text.strip() for w in words
+              if w.confidence >= .95 and re.fullmatch(r"T[1-9][0-9]?", w.text.strip())
+              and 25 <= w.box[0] < w.box[2] <= 145
+              and 195 <= w.box[1] < w.box[3] <= 305]
+    return labels[0] if len(labels) == 1 else None
+
+
 def complete_name(name):
     """Only a complete high-confidence label may stand in for animated artwork."""
     return bool(
@@ -149,6 +166,15 @@ def tooltip_boxes(image):
         x, y, w, h = cv2.boundingRect(contour)
         if not (170 <= w <= 700 and 70 <= h <= 420):
             continue
+        # A tap glow can disconnect the pointer from this cyan contour. Bind
+        # identity to the rectangular body, whose long bottom border stays put,
+        # rather than allowing the decorative pointer to change its height.
+        borders = np.flatnonzero(
+            np.count_nonzero(mask[y + 65:y + h, x:x + w], axis=1) >= .9 * w
+        )
+        if not len(borders):
+            continue
+        h = 65 + int(borders[-1]) + 1
         if image[y + 8 : y + min(h - 8, 45), x + 8 : x + w - 8].mean() < 180:
             continue
         stripe = mask[y + 8 : y + h - 12, x + 10 : x + 31]
@@ -285,7 +311,8 @@ def page(png, vision):
             x += 321
             y += 178
             crop = image[y : y + h, x : x + w]
-            qty = amount(read_crop(vision, crop))
+            words = read_crop(vision, crop)
+            qty = amount(words)
             if qty is None:
                 qty = amount(
                     read_crop(vision, image[y + h - 27 : y + h, x + 6 : x + w - 2], 4)
@@ -296,6 +323,7 @@ def page(png, vision):
                     qty,
                     None,
                     card_icon(image, (x, y, w, h), kind),
+                    grid_tier(words),
                 )
             )
         clipped = any(
@@ -404,6 +432,68 @@ def same_pixels(first, second):
     return float(delta.mean()) <= 0.1 and float(np.mean(delta * delta)) <= 1.0
 
 
+def task_notice_visible(image):
+    """Detect the transient task-progress banner only to wait without input.
+
+    Its dark panel and gold progress strip overlap Sweep Complete's heading.
+    No text or receipt identity is inferred here: once the banner leaves, the
+    normal receipt parser and strict input guard still have to pass.
+    """
+    if getattr(image, "shape", None) != (720, 1280, 3):
+        return False
+    if image[5:49, 420:930].mean() >= 90:
+        return False
+    strip = cv2.cvtColor(image[54:76, 487:794], cv2.COLOR_BGR2HSV)
+    gold = ((strip[:, :, 0] >= 16) & (strip[:, :, 0] <= 38)
+            & (strip[:, :, 1] > 130) & (strip[:, :, 2] > 170))
+    return float(gold.mean()) > .45
+
+
+def same_grid_icon(a, b):
+    """Keep compact artwork exact while a separately read tier badge pulses.
+
+    A full white card outline supplies the existing alpha mask. Pixels outside
+    that outline belong to neighboring cards and cannot identify this card.
+    Every visible pixel remains strict except a badge whose Tn label was read
+    independently in both captures. The quantity lies outside that badge.
+    """
+    first, second = [cv2.imdecode(np.frombuffer(c.icon, np.uint8), cv2.IMREAD_UNCHANGED)
+                     for c in (a, b)]
+    if (first is None or second is None or first.shape != second.shape
+            or first.ndim != 3 or first.shape[2] != 4
+            or not (83 <= first.shape[0] <= 94 and 95 <= first.shape[1] <= 115)
+            or not np.array_equal(first[:, :, 3], second[:, :, 3])):
+        return False
+    visible = first[:, :, 3] != 0
+    if a.tier is not None and a.tier == b.tier:
+        visible[-30:, :40] = False
+    return same_pixels(first[:, :, :3][visible], second[:, :, :3][visible])
+
+
+def same_grid_view(first, second, expected, vision):
+    # The neutral tooltip-dismiss point (350,545) can leave a fading pulse.
+    # Keep the title/close control, entire item viewport, and Okay button.
+    for x, y, w, h in ((314, 114, 650, 64), (515, 490, 255, 85)):
+        if not same_pixels(first[y:y+h, x:x+w], second[y:y+h, x:x+w]):
+            return False
+    old, new = first[178:459, 321:959].copy(), second[178:459, 321:959].copy()
+    if same_pixels(old, new):
+        return True
+    if vision is None:
+        return False
+    for card in expected.cards:
+        x, y, w, h = card.box
+        if card.tier is None or not (83 <= h <= 94 and 95 <= w <= 115):
+            continue
+        # Never carry an old tier across a changed badge. Fresh local OCR must
+        # read exactly the same label before its decorative outline is ignored.
+        if grid_tier(read_crop(vision, second[y:y+h, x:x+w])) != card.tier:
+            return False
+        rx, ry = x - 321, y + h - 30 - 178
+        old[ry:ry+30, rx:rx+40] = new[ry:ry+30, rx:rx+40] = 0
+    return same_pixels(old, new)
+
+
 def reward_card_boxes(image):
     roi = image[250:490, REWARD_LEFT:REWARD_RIGHT]
     mask = (np.min(roi, axis=2) > 180).astype(np.uint8) * 255
@@ -460,15 +550,16 @@ def same_receipt_view(before, after, expected, *, vision=None):
         # Its original receipt is parsed again immediately after dismissal.
         return all(
             same_pixels(
-                first[y + 4 : y + h - 16, x + 4 : x + w - 4],
-                second[y + 4 : y + h - 16, x + 4 : x + w - 4],
+                first[y + 4 : y + h - 4, x + 4 : x + w - 4],
+                second[y + 4 : y + h - 4, x + 4 : x + w - 4],
             )
             for x, y, w, h in old_tips
         )
     if expected is None:
         return False
+    if expected.kind == "grid":
+        return same_grid_view(first, second, expected, vision)
     panels = {
-        "grid": ((314, 114, 650, 489),),
         # Keep the complete Final card row and Confirm button. The decorative
         # label column contains the neutral tooltip-dismiss click pulse, which
         # can fade while the receipt itself remains unchanged.
@@ -571,6 +662,8 @@ def same_receipt_view(before, after, expected, *, vision=None):
 
 
 def same_card(a, b):
+    if a.tier is not None and b.tier is not None and a.tier != b.tier:
+        return False
     if a.quantity != b.quantity:
         return False
     if a.quantity is not None and complete_name(a.name) and complete_name(b.name):
@@ -582,7 +675,9 @@ def same_card(a, b):
         return a.name == b.name and all(
             abs(first - second) <= 1 for first, second in zip(a.box[2:], b.box[2:])
         )
-    return same_icon(a.icon, b.icon)
+    return same_icon(a.icon, b.icon) or (
+        a.box[2:] == b.box[2:] and same_grid_icon(a, b)
+    )
 
 
 def save_icon(config, png):
@@ -649,18 +744,32 @@ class ReceiptReader:
         self.started, self.inputs = runner.clock(), 0
         self.sequence = 0
         self.observed = None
+        self.tooltip_origin = None
         self.timeout = RECEIPT_TIMEOUT
 
     def capture(self):
         r = self.r
-        if r.clock() - self.started > self.timeout or self.inputs >= 160:
-            r.fail("Reward inspection reached its bounded limit; receipt saved")
-        if r.device.foreground_package() != r.config.package:
-            r.fail("Foreground changed during reward inspection")
-        at = r.clock()
-        cap = Capture(r.device.screenshot(), at, r.config.package)
-        # Timestamp must precede capture: the caller's freshness rules still apply.
-        return cap
+        notice_started = None
+        while True:
+            if r.clock() - self.started > self.timeout or self.inputs >= 160:
+                r.fail("Reward inspection reached its bounded limit; receipt saved")
+            if r.device.foreground_package() != r.config.package:
+                r.fail("Foreground changed during reward inspection")
+            at = r.clock()
+            cap = Capture(r.device.screenshot(), at, r.config.package)
+            # Timestamp must precede capture: the caller's freshness rules still apply.
+            if not task_notice_visible(decode_frame(cap.png)):
+                if notice_started is not None:
+                    r.journal.record("receipt_task_notice_cleared",
+                                     waited=r.clock() - notice_started)
+                return cap
+            if notice_started is None:
+                notice_started = at
+                self.evidence_frame(cap, "task-notice")
+                r.journal.record("receipt_waiting_for_task_notice")
+            if r.clock() - notice_started >= TASK_NOTICE_TIMEOUT:
+                r.fail("Task progress notice did not clear before reward inspection")
+            r.sleep(.25)
 
     def read(self, cap):
         result = page(cap.png, self.vision)
@@ -763,6 +872,7 @@ class ReceiptReader:
             for _ in range(3):
                 p = self.read(cap)
                 if p.kind == kind and p.cards:
+                    self.tooltip_origin = None
                     return cap
                 if p.kind == "tooltip":
                     break
@@ -782,6 +892,9 @@ class ReceiptReader:
         self.evidence_frame(cap, f"item-{self.sequence:03d}")
         self.sequence += 1
         if has_tooltip(decode_frame(cap.png)):
+            # Provenance for optional recovery: this reader opened this exact
+            # tooltip through a guarded input on a recognized receipt card.
+            self.tooltip_origin = (cap.png, kind)
             cap = self.dismiss_tooltip(cap, kind)
         elif observed_kind != kind:
             self.r.fail("Unrecognized item detail; receipt evidence saved for review")
@@ -882,6 +995,34 @@ class ReceiptReader:
             )
         )
 
+    def opened_grid(self, cap):
+        """Wait without input for cards inside a just-opened Full List.
+
+        Its heading can appear before the card borders finish fading in. An
+        empty initial parse must not return success and leave this nested
+        modal above the sweep receipt the caller expects to dismiss.
+        """
+        started = self.r.clock()
+        waiting = False
+        while True:
+            p = self.read(cap)
+            if p.kind == "grid" and p.cards:
+                if waiting:
+                    self.r.journal.record("receipt_full_list_ready",
+                                          waited=self.r.clock() - started,
+                                          cards=len(p.cards))
+                return cap, p
+            if not waiting:
+                self.evidence_frame(cap, "full-list-opening")
+                self.r.journal.record("receipt_waiting_for_full_list",
+                                      observed_kind=p.kind, cards=len(p.cards))
+                waiting = True
+            if self.r.clock() - started >= GRID_ENTRY_TIMEOUT:
+                self.evidence_frame(cap, "full-list-unreadable")
+                self.r.fail("Full reward list has no readable cards; receipt saved")
+            self.r.sleep(.25)
+            cap = self.capture()
+
     def run(self):
         items = []
         complete = False
@@ -893,10 +1034,10 @@ class ReceiptReader:
             if p.expand_target:
                 self.input(cap, p.expand_target)
                 cap = self.capture()
-                p = self.read(cap)
+                cap, p = self.opened_grid(cap)
                 kind = p.kind
-                if kind != "grid":
-                    self.r.fail("Full reward list did not open; receipt saved")
+            elif kind == "grid" and not p.cards:
+                cap, p = self.opened_grid(cap)
             if not p.cards:
                 return save_result(
                     self.r.config,
@@ -1044,6 +1185,96 @@ class ReceiptReader:
             raise
 
 
+def same_sweep_below_notice(before, after):
+    """Bind an obscured initial receipt to its clean view before any input.
+
+    This exception is only for a positively detected task notice that has left.
+    Preserve the uncovered heading, close control, complete Final row and
+    Confirm button. Both views still require independent sweep recognition.
+    """
+    first, second = decode_frame(before), decode_frame(after)
+    if (not task_notice_visible(first) or task_notice_visible(second)
+            or getattr(second, "shape", None) != (720, 1280, 3)
+            or has_tooltip(first) or has_tooltip(second)):
+        return False
+    return all(same_pixels(first[y:y+h, x:x+w], second[y:y+h, x:x+w])
+               for x, y, w, h in ((170, 100, 940, 35), (170, 70, 140, 30),
+                                  (960, 70, 150, 30), (370, 440, 718, 190)))
+
+
+def settle_initial_sweep_notice(runner, frame, vision, evidence):
+    """Save a clean recovery reference without changing the original evidence."""
+    if (getattr(runner, "task", None) not in {"spend_ap", "bounties", "scrimmages"}
+            or getattr(frame.screen, "kind", None) != "receipt"
+            or getattr(frame.screen, "count", None) is None
+            or not task_notice_visible(decode_frame(frame.capture.png))):
+        return frame
+    original = page(frame.capture.png, vision)
+    reader = ReceiptReader(runner, vision, evidence)
+    reader.timeout = 30
+    cap = reader.capture()
+    current = reader.read(cap)
+    if (original.kind != "sweep" or current.kind != "sweep"
+            or not same_sweep_below_notice(frame.capture.png, cap.png)):
+        runner.fail("Sweep receipt changed while its initial task notice cleared")
+    fresh = runner.wait("receipt")
+    if (fresh.screen.count != frame.screen.count
+            or getattr(fresh.screen, "task", None) != getattr(frame.screen, "task", None)
+            or not same_receipt_view(cap.png, fresh.capture.png, current, vision=vision)):
+        runner.fail("Sweep identity changed after its initial task notice cleared")
+    reader.evidence_frame(fresh.capture, "notice-cleared-reference")
+    runner.journal.record("receipt_initial_task_notice_cleared")
+    return fresh
+
+
+def recover_sweep_receipt(runner, frame, vision, evidence, error, *, tooltip_origin=None):
+    """Leave optional loot details only when the original sweep is still proven.
+
+    This never retries a sweep or clears its pending spend. The caller must
+    still dismiss the returned receipt and verify its actual AP/ticket balance.
+    The reader already persisted all confirmed items and its incomplete note.
+    """
+    original = page(frame.capture.png, vision)
+    if original.kind != "sweep" or getattr(frame.screen, "count", None) is None:
+        raise error
+    reader = ReceiptReader(runner, vision, evidence)
+    reader.timeout = 30
+    cap = reader.capture()
+    current = reader.read(cap)
+    reader.evidence_frame(cap, "inspection-incomplete")
+    if current.kind == "tooltip" and tooltip_origin is not None:
+        tooltip_png, origin_kind = tooltip_origin
+        if (origin_kind not in {"sweep", "grid"}
+                or not same_receipt_view(tooltip_png, cap.png, current, vision=vision)):
+            runner.fail("Item tooltip changed after incomplete loot inspection")
+        cap = reader.dismiss_tooltip(cap, origin_kind)
+        current = reader.read(cap)
+    if current.kind == "grid" and not current.cards:
+        cap, current = reader.opened_grid(cap)
+    if current.kind == "grid" and current.cards:
+        # A fresh, recognized Full List has exactly one safe exit. Keep the
+        # normal identity/deadline/foreground guard for this input as well.
+        cap = reader.revalidate(cap, force=True)
+        reader.input(cap, (640, 533))
+        cap = reader.capture()
+        current = reader.read(cap)
+    if current.kind != "sweep" or not same_receipt_view(
+        frame.capture.png, cap.png, original, vision=vision
+    ):
+        runner.fail("Incomplete loot inspection did not return to the original sweep receipt")
+    fresh = runner.wait("receipt")
+    if (fresh.screen.count != frame.screen.count
+            or getattr(fresh.screen, "task", None) != getattr(frame.screen, "task", None)
+            or not same_receipt_view(frame.capture.png, fresh.capture.png, original, vision=vision)):
+        runner.fail("Sweep receipt changed after incomplete loot inspection")
+    runner.journal.record("loot_inspection_incomplete", error=str(error),
+                          evidence=str(evidence), next_step="verify_spent_resources")
+    record_action(runner.config, "loot_inspection_incomplete",
+                  "Some reward details could not be read; checking the completed sweep's resource balance",
+                  task=runner.task, evidence=str(evidence), error=str(error))
+    return fresh
+
+
 def inspect_receipt(runner, frame, evidence):
     """Inspect then return a fresh task-specific frame for the existing dismissal."""
     vision = getattr(runner.vision, "startup", None)
@@ -1051,5 +1282,14 @@ def inspect_receipt(runner, frame, evidence):
         # Injected offline runner doubles do not provide OCR; their existing
         # transition tests remain independent of the separately replayed reader.
         return frame
-    ReceiptReader(runner, vision, evidence).run()
+    frame = settle_initial_sweep_notice(runner, frame, vision, evidence)
+    reader = ReceiptReader(runner, vision, evidence)
+    try:
+        reader.run()
+    except TaskError as error:
+        if (getattr(runner, "task", None) not in {"spend_ap", "bounties", "scrimmages"}
+                or getattr(frame.screen, "kind", None) != "receipt"):
+            raise
+        return recover_sweep_receipt(runner, frame, vision, evidence, error,
+                                     tooltip_origin=reader.tooltip_origin)
     return runner.wait("receipt")
