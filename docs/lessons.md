@@ -76,11 +76,11 @@ enabled_in_daily = true
 
 An explicit location list restricts optimization to those locations. An unknown configured name is an error rather than a silent fallback to all locations. `max_tickets` limits the current visit; it never authorizes purchasing tickets or exceeding the observed counter.
 
-Lessons can run as its own queued job or as the Lessons step of a daily plan. The default daily plan is restart → Club placeholder → Cafe → Lessons; disabling `enabled_in_daily` removes only that final step. A standalone Lessons visit runs restart → Lessons. The Cafe job is restart → Club placeholder → Cafe, so its three-hour automatic schedule does not enqueue Lessons.
+Lessons can run as its own queued job or as the Lessons step of the [Daily plan](getting-started.md#start-the-dashboard). Disabling `enabled_in_daily` removes Lessons from that plan; its standalone job remains available and runs restart → Lessons. The Cafe schedule checks Club attendance and mail, visits the Cafe, and optionally spends excess AP; it does not spend lesson tickets.
 
-Including Lessons in the daily plan does not itself install a daily schedule: the existing automatic timer is the Cafe cooldown schedule.
+To run the full Daily plan automatically, enable **run daily after reset** in Settings, or set `[daily] schedule_enabled = true`. This separate switch is off by default. The timer uses the Global 19:00 UTC reset plus a configurable delay (one minute by default), catches up only on the current game day, and persists the occurrence before dispatch. It does not automatically repeat a failed or interrupted Daily that day. Inspect the log before manually queueing a retry; keep the local server running and computer awake. See [daily scheduling](getting-started.md#daily-schedule).
 
-Daily ticket availability is read from the game. A later daily scheduler must identify the server reset and persist the occurrence key; a fixed interval measured from the previous lesson is not equivalent to a server day.
+Ticket availability is still read from the game before every lesson. The Daily occurrence record prevents automatic replay of the plan; it does not replace ticket, room, or receipt verification and does not provide per-step resumption.
 
 ## Validation status
 

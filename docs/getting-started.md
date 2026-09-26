@@ -66,6 +66,22 @@ for example, `.venv/bin/python -m ba_automator --config config/local.toml restar
 
 required game-data downloads are accepted automatically. add `--no-downloads` to `restart`, `cafe`, `lessons`, or `daily` to stop at a download prompt, or turn off automatic downloads in settings. external sign-in, passwords, 2FA, maintenance, and store app updates stop for attention. after handling the screen, run the task again.
 
+## daily schedule
+
+turn on **settings → daily routine → run daily after reset** to queue the full daily plan once per Global game day. it is off by default. the plan uses your existing inclusion and spending settings; enabling the timer doesn't enable paid packs or Total Assault battles.
+
+```toml
+[daily]
+schedule_enabled = true
+reset_delay_minutes = 1  # 0–120 minutes after the 19:00 UTC Global reset
+```
+
+the default run is at **19:01 UTC**, which is noon plus one minute during Pacific daylight time or 11:01 AM during Pacific standard time. the queue shows the next run in your browser's local time. Global reset stays fixed in UTC when your local clocks change.
+
+keep `serve` running and the computer awake. if the server starts late or the computer wakes after reset, it queues the current game day's run; it doesn't replay every missed day. a paused queue waits for resume, and an active job finishes before Daily starts.
+
+the server saves an occurrence before dispatch and records its result, so restarting it won't automatically repeat a completed or interrupted daily run. manually queueing **daily** from the dashboard counts for that game day too. if a run fails or stops, inspect its log and any spending holds, then queue **daily** yourself to retry. cancelling a scheduled Daily skips that game day's automatic run. the next reset permits a fresh occurrence. queued jobs in general still live only in memory; this occurrence record doesn't provide resumable game actions.
+
 ## Cafe and scheduling
 
 Cafe scheduling and invitations are **off by default**. enable them in the dashboard or the `[cafe]` section of your local config. leave the invitation name blank to pick the student with the highest relationship below their current cap, or enter an exact English name, including variants such as `Yuuka (Track)`, to pick someone yourself. only normal free invitations are supported; bonus invitations aren't used.
@@ -100,11 +116,11 @@ enabled_in_daily = true
 
 the dashboard's location list takes one name per line. an unknown name stops the job so a typo cannot redirect tickets somewhere else. a configured limit applies per run, not per day. the game counter and already-completed rooms determine what remains available.
 
-`enabled_in_daily = false` removes lessons from the daily plan; the standalone lessons button still works. this does **not** add a daily timer. the Cafe timer leaves lesson tickets alone. Crafting, paid packs, and AP spending have their own optional schedules. see [Lessons](lessons.md) for scoring, coverage checks, and receipt verification.
+`enabled_in_daily = false` removes lessons from the daily plan; the standalone lessons button still works. the **daily routine** schedule controls when the full plan runs. the Cafe timer leaves lesson tickets alone. Crafting, paid packs, and AP spending have their own optional schedules. see [Lessons](lessons.md) for scoring, coverage checks, and receipt verification.
 
 ## total assault
 
-choose a target difficulty and the required winning margin under **settings → total assault**. Hardcore and 30 seconds to spare are the defaults. queue it with the dashboard button or `.venv/bin/python -m ba_automator --config config/local.toml total_assault`. including it in Daily is a separate switch, off by default, and does not create a daily timer. the Cafe timer does not run it. [Total Assault](total-assault.md) describes the mock-first policy, assistant fallback, ticket safeguards, and which flows have actually been tested live.
+choose a target difficulty and the required winning margin under **settings → total assault**. Hardcore and 30 seconds to spare are the defaults. queue it with the dashboard button or `.venv/bin/python -m ba_automator --config config/local.toml total_assault`. including it in Daily is a separate switch, off by default. the **daily routine** schedule controls when that full plan runs; the Cafe timer does not run Total Assault. [Total Assault](total-assault.md) describes the mock-first policy, assistant fallback, ticket safeguards, and which flows have actually been tested live.
 
 ## inspect a run
 

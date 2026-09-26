@@ -3,9 +3,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const SVG_NS = "http://www.w3.org/2000/svg";
-  const booleanSettings = new Set(["total_assault_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "auto_download", "crafting_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle", "lessons_enabled_in_daily"]);
+  const booleanSettings = new Set(["daily_schedule_enabled", "total_assault_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "auto_download", "crafting_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle", "lessons_enabled_in_daily"]);
   const stringSettings = new Set(["total_assault_difficulty", "cafe_invite_student", "lessons_strategy"]);
-  const settingNames = ["total_assault_enabled_in_daily", "total_assault_difficulty", "total_assault_comfort_seconds", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "ap_floor","packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "packs_monthly_max_cents", "packs_half_monthly_max_cents", "packs_ap_max_cents", "auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "crafting_schedule_enabled", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
+  const settingNames = ["daily_schedule_enabled", "daily_reset_delay_minutes", "total_assault_enabled_in_daily", "total_assault_difficulty", "total_assault_comfort_seconds", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "ap_floor","packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "packs_monthly_max_cents", "packs_half_monthly_max_cents", "packs_ap_max_cents", "auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "crafting_schedule_enabled", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
   const fields = Object.fromEntries(settingNames.map((name) => [name, $(name.replaceAll("_", "-"))]));
   let status = null;
   let connected = false;
@@ -83,7 +83,33 @@
     renderSchedule();
   }
 
+  function renderDailySchedule() {
+    const schedule = status?.schedule?.daily;
+    const enabled = schedule?.enabled ?? status?.config?.daily_schedule_enabled ?? false;
+    const summary = $("daily-schedule-status");
+    $("daily-schedule-title").textContent = enabled ? "daily routine" : "daily schedule";
+    const queued = queue().some((job) => job.task === "daily");
+    const running = status?.current_job?.task === "daily";
+    const next = dateValue(schedule?.next_due_at);
+    const nextLabel = next?.toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    const currentOccurrence = Boolean(schedule?.game_day) && schedule.game_day === schedule.current_game_day;
+    const notes = [];
+    if (running) notes.push("running now");
+    else if (queued) notes.push(status?.queue_paused ? "queued · waiting for resume" : "queued · runs in order");
+    else if (schedule?.blocked_reason) notes.push(`needs a look: ${schedule.blocked_reason}`);
+    else if (["failed", "stopped"].includes(schedule?.status)) notes.push(currentOccurrence ? "didn't finish. check the log, then queue daily to retry." : "last daily didn't finish");
+    else if (schedule?.status === "success") notes.push(currentOccurrence ? "done for this game day" : "last daily finished");
+    else if (schedule?.status === "skipped") notes.push(currentOccurrence ? "skipped for this game day" : "last scheduled daily was skipped");
+    if (!enabled) notes.push("schedule off · queue daily for a single run");
+    else if (next && next.getTime() <= Date.now()) {
+      if (!queued && !running) notes.push(status?.queue_paused ? "due now · queue is paused" : "due now · goes in the queue");
+    } else if (nextLabel) notes.push(`next: ${nextLabel}`);
+    else if (!queued && !running && !schedule?.blocked_reason) notes.push("waiting for the next game reset");
+    summary.textContent = notes.join(" · ");
+  }
+
   function renderSchedule() {
+    renderDailySchedule();
     const crafting = status?.schedule?.crafting;
     const craftEnabled = crafting?.enabled ?? status?.config?.crafting_schedule_enabled ?? false;
     $("crafting-status").textContent = crafting?.disabled_reason
@@ -192,7 +218,7 @@
       if (booleanSettings.has(name)) fields[name].checked = Boolean(config[name] ?? (["lessons_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily"].includes(name)));
       else if (name.endsWith("_max_cents")) fields[name].value = ((config[name] ?? (name.includes("half_monthly") || name.includes("_ap_") ? 299 : 699)) / 100).toFixed(2);
       else if (name === "lessons_locations") fields[name].value = Array.isArray(config[name]) ? config[name].join("\n") : "";
-      else fields[name].value = config[name] ?? ({ total_assault_difficulty: "hardcore", total_assault_comfort_seconds: 30, ap_floor: 100, lessons_strategy: "relationship", lessons_max_tickets: 0 }[name] ?? "");
+      else fields[name].value = config[name] ?? ({ daily_reset_delay_minutes: 1, total_assault_difficulty: "hardcore", total_assault_comfort_seconds: 30, ap_floor: 100, lessons_strategy: "relationship", lessons_max_tickets: 0 }[name] ?? "");
     });
     settingsLoaded = true;
     $("settings-status").textContent = isDemo() ? "sample settings · read only" : "saved on this machine";

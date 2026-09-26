@@ -17,6 +17,14 @@ action_cooldown = 3.0
 # Close only Blue Archive after the final queued task; the emulator stays open.
 close_app_when_idle = false
 
+[daily]
+# Queue the daily routine once per Global game day, after the 19:00 UTC reset.
+# Catches up on the current game day when serve restarts; never replays missed days.
+# Failed/interrupted runs wait for a manual Daily retry or the next game day.
+# Keep serve running and the computer awake. This does not install an OS service.
+schedule_enabled = false
+reset_delay_minutes = 1 # 0..120 minutes after reset
+
 [cafe]
 schedule_enabled = false
 invite_enabled = false

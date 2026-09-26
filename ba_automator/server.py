@@ -3,7 +3,8 @@
 Queued jobs do not survive server shutdown. Each dispatched job receives a private
 configuration snapshot and run directory, so its frames cannot be confused with
 earlier runs or an independently started CLI runner. Startup runs no manual job;
-an explicitly enabled cafe schedule can enqueue work when due. Failed cafe jobs
+explicitly enabled daily and cafe schedules can enqueue work when due. Daily
+attempts survive restarts and require a manual retry after failure. Failed cafe jobs
 retry after 15 minutes, up to three consecutive failures, then require Resume.
 """
 
@@ -37,11 +38,12 @@ from .adb import AdbDevice
 from .actions import record_action
 from .config import Config, ConfigError
 from .crafting_state import CraftStateError, read_state, scheduled_jobs, timestamp
-from .locking import InstanceLock
+from .locking import InstanceLock, LockError
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS, task_plan
 from .home_badges import PRIORITY
 from . import packs_state
-from . import ap_state, loot, daily_log
+from . import ap_state, loot, daily_log, daily_schedule
+from .club import game_day
 from .vision import decode_frame
 
 
@@ -52,6 +54,8 @@ CAFE_SETTINGS = {"cafe_schedule_enabled": "schedule_enabled", "cafe_invite_enabl
 LESSONS_SETTINGS = {"lessons_strategy": "strategy", "lessons_max_tickets": "max_tickets",
                     "lessons_locations": "locations", "lessons_enabled_in_daily": "enabled_in_daily"}
 AUTOMATION_SETTINGS = {"close_app_when_idle"}
+DAILY_SETTINGS = {"daily_schedule_enabled": "schedule_enabled",
+                  "daily_reset_delay_minutes": "reset_delay_minutes"}
 CRAFTING_SETTINGS = {"crafting_schedule_enabled": "schedule_enabled"}
 PACKS_SETTINGS = {f'packs_{key}_{suffix}': f'{key}_{suffix}'
                   for key in packs_state.PACKS for suffix in ('enabled', 'max_cents')}
@@ -60,7 +64,7 @@ AP_SETTINGS = {f'ap_{key}': key for key in
 TOTAL_ASSAULT_SETTINGS = {f"total_assault_{key}": key
                           for key in ("difficulty", "enabled_in_daily", "comfort_seconds")}
 TICKET_SETTINGS = {"bounties_enabled_in_daily", "scrimmages_enabled_in_daily"}
-SETTINGS = TOTAL_ASSAULT_SETTINGS.keys() | TICKET_SETTINGS | RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
+SETTINGS = DAILY_SETTINGS.keys() | TOTAL_ASSAULT_SETTINGS.keys() | TICKET_SETTINGS | RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
 CAFE_INTERVAL = timedelta(hours=3, seconds=15)
 CAFE_RETRY_INTERVAL = timedelta(minutes=15)
 MAX_SCHEDULE_FAILURES = 3
@@ -110,6 +114,7 @@ def _config_document(config: Config) -> dict:
         )},
         "storage": {"run_dir": str(config.run_dir), "lock_dir": str(config.lock_dir)},
         "automation": {name: getattr(config, name) for name in AUTOMATION_SETTINGS},
+        "daily": {name: getattr(config, attribute) for attribute, name in DAILY_SETTINGS.items()},
         "lessons": {name: getattr(config, attribute) for attribute, name in LESSONS_SETTINGS.items()},
         "crafting": {"schedule_enabled": config.crafting_schedule_enabled},
         "packs": {name: getattr(config, attribute) for attribute, name in PACKS_SETTINGS.items()},
@@ -164,6 +169,8 @@ class DashboardController:
         self._job_roots: dict[str, Path] = {}
         self._popup_cache: dict[Path, tuple[tuple[int, int], list[dict]]] = {}
         self._schedule = self._load_schedule()
+        self._daily_schedule_error = None
+        self._daily_not_before = None
         self._packs_not_before = None
         self._ap_not_before = None
         self._failures = self._load_failures()
@@ -195,6 +202,7 @@ class DashboardController:
         values.update({name: getattr(self.config, name, "" if name.endswith("student") else False)
                        for name in CAFE_SETTINGS})
         values.update({name: getattr(self.config, name) for name in AUTOMATION_SETTINGS})
+        values.update({name: getattr(self.config, name) for name in DAILY_SETTINGS})
         values.update({name: getattr(self.config, name) for name in LESSONS_SETTINGS})
         values.update({name: getattr(self.config, name) for name in CRAFTING_SETTINGS})
         values.update({name: getattr(self.config, name) for name in PACKS_SETTINGS})
@@ -257,7 +265,119 @@ class DashboardController:
         except OSError as exc:
             self._log(f"Could not persist task schedules: {exc}", "error")
 
+    def _daily_status(self) -> dict:
+        now = self._wall_clock()
+        delay = self.config.daily_reset_delay_minutes
+        status = {"enabled": self.config.daily_schedule_enabled, "reset_hour_utc": 19,
+                  "reset_delay_minutes": delay, "catch_up": True,
+                  "current_game_day": game_day(now),
+                  "next_due_at": daily_schedule.next_due(now, delay).isoformat(),
+                  "blocked_reason": self._daily_schedule_error}
+        try:
+            saved = daily_schedule.read_state(self.config)
+            status.update(saved)
+            if daily_schedule.is_due(saved, now, delay):
+                day = daily_schedule.due_day(now, delay)
+                status["next_due_at"] = (datetime.fromisoformat(day).replace(
+                    hour=19, tzinfo=timezone.utc) + timedelta(minutes=delay)).isoformat()
+            if (saved["game_day"] == game_day(now) and saved["status"] == "running"
+                    and not (self._current and self._current["id"] == saved["run_id"])):
+                status["blocked_reason"] = "Previous Daily was interrupted; inspect the log before manually retrying Daily"
+            elif saved["game_day"] == game_day(now) and saved["status"] in {"failed", "stopped"}:
+                status["blocked_reason"] = "Daily did not finish; inspect the log and queue Daily to retry. The next game day still runs automatically."
+            if self._daily_not_before and now < self._daily_not_before:
+                status["next_due_at"] = max(datetime.fromisoformat(status["next_due_at"]),
+                                             self._daily_not_before).isoformat()
+        except (RuntimeError, OSError) as exc:
+            status["blocked_reason"] = str(exc)
+        return status
+
+    def _enqueue_daily(self) -> None:
+        if (self._paused or self._shutdown or not self.config.daily_schedule_enabled
+                or self._daily_schedule_error or len(self._queue) >= 100
+                or (self._current and self._current["task"] == "daily")
+                or any(job["task"] == "daily" for job in self._queue)):
+            return
+        try:
+            now = self._wall_clock()
+            if self._daily_not_before and now < self._daily_not_before:
+                return
+            if not daily_schedule.is_due(daily_schedule.read_state(self.config), now,
+                                         self.config.daily_reset_delay_minutes):
+                return
+        except (RuntimeError, OSError) as exc:
+            self._daily_schedule_error = str(exc)
+            self._log(f"Daily scheduling paused: {exc}", "error")
+            return
+        job = {"id": uuid4().hex, "task": "daily", "created_at": _timestamp(),
+               "source": "schedule", "game_day": daily_schedule.due_day(
+                   now, self.config.daily_reset_delay_minutes)}
+        self._queue.append(job)
+        self._queued(job)
+
+    def _daily_state_lock(self):
+        # A distinct short-lived lock protects occurrence claims across dashboard
+        # processes without competing with a child that owns the device lock.
+        return InstanceLock(replace(self.config, lock_dir=self.config.lock_dir / "daily-schedule"))
+
+    def _claim_daily(self, job: dict) -> bool:
+        """Persist before launching a child; a crash must never replay spending."""
+        try:
+            with InstanceLock(self.config), self._daily_state_lock():
+                now = self._wall_clock()
+                state = daily_schedule.read_state(self.config)
+                if job.get("source") == "schedule":
+                    if not self.config.daily_schedule_enabled or not daily_schedule.is_due(
+                            state, now, self.config.daily_reset_delay_minutes):
+                        self._daily("daily_occurrence_superseded", run=job["id"], task="daily")
+                        return False
+                # Recompute at dispatch: a job waiting across reset belongs to
+                # the new game day, never an old backlog entry.
+                day = game_day(now)
+                daily_schedule.write_state(self.config, {
+                    "version": 1, "game_day": day, "status": "running", "run_id": job["id"],
+                    "started_at": now.isoformat(), "completed_at": None,
+                })
+                self._daily_schedule_error = None
+                self._daily_not_before = None
+                self._daily("daily_occurrence_started", task="daily", run=job["id"], game_day=day)
+                return True
+        except LockError:
+            # A standalone CLI job may own the device. No Daily occurrence was
+            # consumed, so wait briefly and let the timer try again.
+            self._daily_not_before = self._wall_clock() + timedelta(minutes=1)
+            self._log("Daily deferred for one minute: another runner owns the instance")
+            return False
+        except (RuntimeError, OSError) as exc:
+            self._daily_schedule_error = str(exc)
+            detail = f"Daily did not start because its saved schedule could not be updated: {exc}"
+            self._log(detail, "error")
+            self._failures.append({"id": job["id"], "task": "daily",
+                                   "time": _timestamp(), "detail": detail})
+            self._failures = self._failures[-50:]
+            self._save_failures()
+            return False
+
+    def _finish_daily(self, job: dict) -> None:
+        if job["task"] != "daily":
+            return
+        try:
+            with self._daily_state_lock():
+                state = daily_schedule.read_state(self.config)
+                if state["run_id"] != job["id"]:
+                    raise RuntimeError("Daily occurrence changed while the job was running")
+                state.update(status=self._state if self._state in {"success", "stopped"} else "failed",
+                             completed_at=self._wall_clock().isoformat())
+                daily_schedule.write_state(self.config, state)
+                self._daily("daily_occurrence_finished", task="daily", run=job["id"],
+                            game_day=state["game_day"], status=state["status"])
+        except (RuntimeError, OSError) as exc:
+            self._daily_schedule_error = str(exc)
+            self._log(f"Could not save Daily completion; automatic retries remain held: {exc}", "error")
+
     def _enqueue_scheduled(self) -> None:
+        # Daily covers cafe, packs and AP; enqueue it first so those timers defer.
+        self._enqueue_daily()
         self._enqueue_crafting()
         self._enqueue_packs()
         self._enqueue_ap()
@@ -405,6 +525,9 @@ class DashboardController:
                 raise ApiError(409, "The server is shutting down")
             if len(self._queue) >= 100:
                 raise ApiError(409, "The queue already contains 100 jobs")
+            if task == "daily" and ((self._current and self._current["task"] == "daily")
+                                    or any(job["task"] == "daily" for job in self._queue)):
+                raise ApiError(409, "Daily is already running or queued")
             job = {"id": uuid4().hex, "task": task, "created_at": _timestamp()}
             self._queue.append(job)
             self._queued(job)
@@ -417,6 +540,18 @@ class DashboardController:
                 raise ApiError(409, "This job is already running; use Stop to interrupt it")
             for job in self._queue:
                 if job["id"] == job_id:
+                    if job.get("source") == "schedule" and job["task"] == "daily":
+                        try:
+                            with self._daily_state_lock():
+                                saved = daily_schedule.read_state(self.config)
+                                if saved["game_day"] is None or saved["game_day"] < job["game_day"]:
+                                    daily_schedule.write_state(self.config, {
+                                        "version": 1, "game_day": job["game_day"], "status": "skipped",
+                                        "run_id": job["id"], "started_at": None,
+                                        "completed_at": self._wall_clock().isoformat(),
+                                    })
+                        except (RuntimeError, OSError) as exc:
+                            raise ApiError(409, f"Could not save Daily cancellation: {exc}") from exc
                     self._queue.remove(job)
                     if job.get("source") == "schedule" and job["task"] == "cafe":
                         # Cancel skips this occurrence; leaving it overdue would
@@ -504,6 +639,8 @@ class DashboardController:
                 if self._shutdown:
                     return
                 job = self._queue.popleft()
+                if job["task"] == "daily" and not self._claim_daily(job):
+                    continue
                 self._started_at = _timestamp()
                 self._current = {"id": job["id"], "task": job["task"], "started_at": self._started_at}
                 self._task = job["task"]
@@ -605,6 +742,7 @@ class DashboardController:
                                 exit_code=exit_code, result=self._result)
                     self._history.appendleft({"id": job["id"], "task": job["task"],
                                               "state": self._state, "completed_at": self._completed_at})
+                    self._finish_daily(job)
                     if self._state == 'failed':
                         detail = next((entry['message'] for entry in reversed(self._logs)
                                        if entry['message'].startswith('Error:')), 'Task failed; check the runner log and screenshots')
@@ -865,7 +1003,7 @@ class DashboardController:
                     "history": list(self._history), "queue_paused": self._paused,
                     "failed_jobs": list(reversed(self._failures)),
                     "app_closed": self._app_closed,
-                    "schedule": {"ap": self._ap_status(), "packs": self._packs_status(), "crafting": self._crafting_status(), "cafe": {**self._schedule["cafe"],
+                    "schedule": {"daily": self._daily_status(), "ap": self._ap_status(), "packs": self._packs_status(), "crafting": self._crafting_status(), "cafe": {**self._schedule["cafe"],
                                           "enabled": getattr(self.config, "cafe_schedule_enabled", False)}}}
 
     def actions(self) -> dict:
@@ -1067,6 +1205,7 @@ class DashboardController:
                     document = tomllib.load(stream)
                 for name, value in changes.items():
                     section = (name.split("_")[0] if name in TICKET_SETTINGS else
+                               "daily" if name in DAILY_SETTINGS else
                                "total_assault" if name in TOTAL_ASSAULT_SETTINGS else
                                "cafe" if name in CAFE_SETTINGS else
                                "ap" if name in AP_SETTINGS else
@@ -1076,6 +1215,7 @@ class DashboardController:
                                "automation" if name in AUTOMATION_SETTINGS else "restart")
                     key = AP_SETTINGS.get(name, PACKS_SETTINGS.get(name, CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, CRAFTING_SETTINGS.get(name, name)))))
                     if name in TOTAL_ASSAULT_SETTINGS: key = TOTAL_ASSAULT_SETTINGS[name]
+                    if name in DAILY_SETTINGS: key = DAILY_SETTINGS[name]
                     if name in TICKET_SETTINGS: key = "enabled_in_daily"
                     document.setdefault(section, {})[key] = value
                 _write_atomic(self.config_path, _toml(document))

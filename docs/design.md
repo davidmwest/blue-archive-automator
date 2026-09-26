@@ -100,7 +100,11 @@ stateDiagram-v2
 
 Queue pause is separate from job state. Pause allows the active job to finish; Stop interrupts it and pauses further dispatch. Resume permits queued work again. The current dashboard rejects settings changes while any job is active or queued. Accepted changes apply to future work, and a running job keeps its configuration snapshot.
 
-The Cafe schedule runs three hours and 15 seconds after a successful visit. Duplicate due visits are suppressed while equivalent work is active or queued. Failed visits retry after 15 minutes, then pause after three consecutive failures. Future daily schedules must use an explicit game-server reset timezone and date, with an occurrence key that prevents a daily task from being enqueued twice for the same server day.
+The Cafe schedule runs three hours and 15 seconds after a successful visit. Duplicate due visits are suppressed while equivalent work is active or queued. Failed visits retry after 15 minutes, then pause after three consecutive failures.
+
+The optional Daily schedule uses the Global reset at 19:00 UTC plus a configurable delay of 0–120 minutes (default one minute). The server queues the current game day's plan after that deadline, including after downtime; older missed days are not replayed. UTC reset arithmetic avoids local daylight-saving shifts. Manual dashboard Daily runs also count toward that game day's occurrence. Daily and timer work share the serial queue and honor queue pause.
+
+An instance-scoped occurrence is persisted before Daily dispatch and finalized with its result. A completed, failed, stopped, or interrupted occurrence suppresses automatic replay for that game day. Failed or interrupted work needs review followed by an explicit manual Daily retry; cancellation of an automatically queued Daily records a skipped occurrence. A fresh game day permits new work. This controls scheduling, not exactly-once game actions or resumption of individual steps. Existing resource-intent holds remain authoritative. The dashboard exposes the latest result, any blocking reason, and the next due time. The local server and awake host are still required; no system service or wake timer is installed.
 
 After the final worker exits, an optional idle policy closes only Blue Archive if the queue is empty. It leaves the emulator, dashboard, and shared ADB server running. This is a once-per-finished-queue action, not a timer that repeatedly closes a manually opened game.
 
@@ -148,7 +152,7 @@ Lessons has two configurable policies. **Relationship** is the default: compare 
 
 The dashboard should answer: **what is running, what is next, what changed, and what needs attention?** Keep important actions separate from diagnostic logs, with screenshots reachable from the relevant run. A completed job needs a concise verified outcome; failures need their last recognized state and reason.
 
-Today, purchase intent, failed-job notices, schedules, and important actions persist in JSON/JSONL, evidence lives in per-run directories, and the queue/recent job list are in memory. Preserve this simple storage while the first routines settle. Before promising durable unattended execution, add transactional job persistence—SQLite is the intended local option—with queued jobs restored and interrupted jobs marked for reconciliation. Do not claim exactly-once game actions: a crash can occur between a successful tap and recording its receipt. Recovery must inspect the game's state before deciding whether to repeat an operation.
+Today, purchase intent, daily occurrences, failed-job notices, schedules, and important actions persist in JSON/JSONL, evidence lives in per-run directories, and the queue/recent job list are in memory. Preserve this simple storage while the first routines settle. Before promising durable unattended execution, add transactional job persistence—SQLite is the intended local option—with queued jobs restored and interrupted jobs marked for reconciliation. Do not claim exactly-once game actions: a crash can occur between a successful tap and recording its receipt. Recovery must inspect the game's state before deciding whether to repeat an operation.
 
 Failed-job notices persist separately from the live runner log and remain visible until acknowledged. Acknowledging a notice does not clear a paid-purchase hold or re-enable its schedule.
 

@@ -134,7 +134,9 @@ Crafting scheduling is separately enabled and off by default. The dispatcher rea
 
 Cafe scheduling is explicitly enabled and off by default. A successful cafe job or verified Cafe step within daily records the next due time three hours and 15 seconds later. A later Lessons failure or interruption does not undo the completed Cafe visit. A Cafe failure sets a 15-minute retry; three consecutive failures pause retries until Resume. Pending cafe/daily work prevents a duplicate scheduled cafe job. Canceling a scheduled occurrence skips that occurrence instead of immediately recreating it.
 
-The Cafe timer enqueues `cafe`, so recurring visits check Club and mail and may spend excess AP when enabled, but do not spend lesson tickets. Lessons can be queued directly or included in a manually queued daily plan. A daily-reset-aware Lessons scheduler is not implemented. Separate opt-in schedules check AP hourly and permanent paid-pack ownership once per game day; unresolved spending or payment holds block automatic retries.
+The Cafe timer enqueues `cafe`, so recurring visits check Club and mail and may spend excess AP when enabled, but do not spend lesson tickets. Lessons can be queued directly or included in the full Daily plan. Separate opt-in schedules check AP hourly and permanent paid-pack ownership once per game day; unresolved spending or payment holds block automatic retries.
+
+Daily scheduling is opt-in under `[daily]`. `daily_schedule.py` determines the Global game day from the fixed 19:00 UTC reset, with a configurable delay of 0–120 minutes (default one). The dashboard queues only the current game day's occurrence after its deadline, including after downtime. Before dispatch, it saves an instance-scoped occurrence; completion, failure, or interruption prevents automatic same-day replay. Manual dashboard Daily runs also record an occurrence and can explicitly retry reviewed failures. Cancelling an automatically queued Daily records that day as skipped. Queue pause and serial dispatch still apply; this is scheduling persistence, not per-step Daily resumption.
 
 Cafe/Crafting retry state persists in `data/state/schedule.json`; task-specific files retain craft deadlines and AP/pack check times. Failed-job notices persist separately and can be dismissed without deleting their diagnostic history or clearing a spending hold. The FIFO job queue and dashboard's recent job list are in memory and disappear at shutdown. `serve` must remain running for schedules to execute; no system service or login item is installed.
 
@@ -151,6 +153,7 @@ Storage paths are relative to the TOML file. With the example configuration:
 | `data/state/important-actions.jsonl` | Persistent important actions, including separate attempts and verified results |
 | `data/state/logs/YYYY-MM-DD.log` | Full daily text log with local timestamps, task diagnostics, actions, and queue events |
 | `data/state/schedule.json` | Cafe due time and Cafe/Crafting failure counts, retry pauses, and backoff |
+| `data/state/daily-<instance hash>.json` | Latest Daily game-day occurrence, run identity, timestamps, and outcome |
 | `data/state/crafting-<instance hash>.json` | Craft slot deadlines, inventory recheck time, setup-disable reason, and pending action |
 | `data/state/club-<instance hash>.json` | Verified Club attendance check for the current game day |
 | `data/state/ap-<instance hash>.json` | Stage catalog, Hard-stage rotation, spending hold, and next AP check |
