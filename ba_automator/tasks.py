@@ -55,6 +55,18 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
     if command == 'mail':
         return ('restart', 'mail', *(("spend_ap",) if config.ap_schedule_enabled else ()))
     if command == "tactical_battles":
+        from .tactical_state import TacticalStateError, read_state
+
+        # A result still on screen must reach the battle runner before any
+        # restart can erase it. Recovery verifies the pending intent again
+        # under the instance lock before deciding whether input is safe.
+        try:
+            if read_state(config)["pending"] is not None:
+                return ("tactical_battles", "tactical_rewards")
+        except TacticalStateError:
+            # Plans also appear in dashboard previews. Keep those readable;
+            # Restart's guarded execution rejects corrupt state without input.
+            pass
         return ("restart", "tactical_battles", "tactical_rewards")
     if command == "total_assault":
         return ("restart", "total_assault", "assault_rewards")

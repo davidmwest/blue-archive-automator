@@ -289,9 +289,57 @@ class TicketRunner(ShopRunner):
         self.tap(frame, (55, 35), "Return to ticket areas")
         return self.wait("menu", predicate=lambda s: s.task == self.task)
 
+    def reconcile_unspent_pending(self, menu):
+        """Recover an ignored confirmation only from an unchanged ticket balance.
+
+        Ticket debits and receipts are never inferred here. A same-day intent
+        can be released only after two fresh menu observations prove all of its
+        tickets remain. Any possible debit stays unresolved for review.
+        """
+        pending = self.state["pending"]
+        if pending is None:
+            return menu
+        unresolved = "An earlier ticket sweep has an unresolved receipt; inspect it before spending again"
+        if self.state["day"] != game_day(self.wall_clock()):
+            self.fail(unresolved)
+        index = AREAS[self.task].index(pending["area"])
+        remaining = sum(self.state["quotas"]) - sum(self.state["done"])
+        if (pending["tickets_before"] != remaining
+                or pending["count"] > self.state["quotas"][index] - self.state["done"][index]):
+            self.fail(unresolved)
+        evidence = []
+        previous_capture = None
+        for observation in range(2):
+            if (self.state["day"] != game_day(self.wall_clock())
+                    or menu.screen.kind != "menu" or menu.screen.task != self.task
+                    or menu.screen.tickets != pending["tickets_before"]
+                    or menu.capture.foreground != self.config.package
+                    or not menu.capture.is_fresh(self.clock())
+                    or menu.capture.deadline - self.clock() < 1
+                    or (previous_capture is not None and menu.capture.captured_at <= previous_capture)):
+                self.fail(unresolved)
+            name = f"pending-unspent-{observation}.png"
+            self.journal.save_image(name, menu.capture.png)
+            evidence.append(str(self.run_dir / name))
+            previous_capture = menu.capture.captured_at
+            if observation == 0:
+                self.sleep(2)
+                menu = self.wait("menu", predicate=lambda s: s.task == self.task)
+        self.state["pending"] = None
+        self.save()
+        self.important(
+            "ticket_sweep_unspent",
+            f"{pending['area']} {pending['stage']}: {pending['count']} requested tickets "
+            "were not spent; two fresh menu checks verified the unchanged balance.",
+            area=pending["area"], stage=pending["stage"], count=pending["count"],
+            tickets=pending["tickets_before"], previous_run=pending["run_dir"],
+            evidence=evidence,
+        )
+        return menu
+
     def run(self):
         self.state = read_state(self.config, self.task)
-        if self.state["pending"]:
+        if self.state["pending"] and self.state["day"] != game_day(self.wall_clock()):
             self.fail(
                 "An earlier ticket sweep has an unresolved receipt; inspect it before spending again"
             )
@@ -299,6 +347,7 @@ class TicketRunner(ShopRunner):
         menu = self.enter_menu()
         if menu.screen.task != self.task:
             self.fail("Wrong ticket task opened")
+        menu = self.reconcile_unspent_pending(menu)
         day = game_day(self.wall_clock())
         if self.state["day"] != day:
             self.state.update(

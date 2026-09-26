@@ -31,6 +31,21 @@ def fixture(name):
     return frame, words
 
 
+def test_delayed_entry_trace_has_real_campaign_then_opponent_detail(vision):
+    campaign = vision.classify(*fixture('delayed-entry-campaign'))
+    assert (campaign.kind, campaign.target) == ('campaign', (868, 581))
+    # The next saved frame was already an opponent modal. Campaign had stayed
+    # visible after the first accepted input; repeating its coordinate opened
+    # this modal. It must never authorize another Campaign navigation input.
+    image, words = fixture('delayed-entry-opponent')
+    assert any(w.normalized == 'battle opponent' for w in words)
+    assert any(w.normalized == 'attack formation' for w in words)
+    detail = vision.classify(image, words)
+    # Uncertain unit-level OCR prevents entry authorization on this capture.
+    assert detail.kind == 'unknown'
+    assert detail.target is None
+
+
 def test_observed_menu_reads_all_visible_levels_and_hidden_cards(vision):
     result = vision.classify(*fixture('opponents'))
     assert result.kind == 'tactical'
@@ -196,10 +211,19 @@ def test_cooldown_requires_observed_clock_and_rejects_invalid_seconds():
     assert _cooldown((Word('e -:--', .75, (166, 518, 214, 538)),)) is None
 
 
+@pytest.mark.parametrize('text,score,expected', [
+    ('Standby Time --:--', .97, 0), ('Standby Time 01:52', .97, 112),
+    ('Standby Time 01:72', .97, None), ('Standby Time --:--', .8, None),
+])
+def test_cooldown_accepts_complete_label_and_clock_in_one_ocr_box(text, score, expected):
+    assert _cooldown((Word(text, score, (57, 515, 216, 541)),)) == expected
+
+
 @pytest.mark.parametrize('text,confidence,expected', [
     ('Time Left 01:56', .99, 116), ('Time Left 02:00', .99, 120),
     ('Time Left 00:00', .99, 0), ('Time Left 01:59', .8, None),
-    ('Time Left 01:69', .99, None), ('Time Left 02:01', .99, None),
+    ('Time Left 01:69', .99, None), ('Time Left 02:01', .99, 121),
+    ('Time Left 02:02', .99, None),
     ('01:59', .99, None)])
 def test_refresh_timer_requires_complete_valid_label(vision, text, confidence, expected):
     frame, words = fixture('opponents')
@@ -220,6 +244,34 @@ def test_observed_menu_refresh_clock_is_independent_of_team_ocr(vision, name):
     assert result.kind == 'tactical' and result.refresh_seconds is None
 
 
+def test_repeated_complete_glyph_conflicts_veto_confident_clipped_label():
+    readings = [('', 0.)] * 13
+    readings[8] = ('Lv.30', .95409)
+    readings[9:11] = [('80', .79954), ('80', .81476)]
+    assert _read_level(readings, 81) is None
+    # An uncertain contradictory reading alone does not override the label.
+    readings[10] = ('80', .7)
+    assert _read_level(readings, 81) == 30
+    # Conversely, these low-confidence reads cannot authorize a level.
+    readings[8] = ('', 0.)
+    assert _read_level(readings, 81) is None
+
+
+def test_actual_confident_clipped_label_cannot_discount_level_80(vision):
+    frame, words = fixture('clipped-eight-label')
+    result = vision.classify(frame, words)
+    assert result.kind == 'tactical'
+    assert result.sampled_ranks == (448, 456, 534)
+    assert 534 not in [op.choice.rank for op in result.opponents]
+
+
+def test_observed_refresh_can_display_two_minutes_and_one_second(vision):
+    frame, _ = fixture('refresh-121')
+    result = vision.classify(frame, tuple(vision.startup.read(frame)))
+    assert result.kind == 'tactical'
+    assert result.refresh_seconds == 121
+
+
 def test_missing_formation_timer_or_unreadable_checkbox_does_not_authorize_entry(vision):
     frame, words = fixture('formation-settled')
     words = tuple(w for w in words if w.text != '01:35')
@@ -238,6 +290,24 @@ def test_observed_defeat_and_following_tip_have_separate_confirm_states(vision):
     frame, words = fixture('defeat-tip')
     words = tuple(w for w in words if w.text != 'Special Effects')
     assert vision.classify(frame, words).kind == 'unknown'
+
+
+def test_observed_skipped_victory_requires_reward_modal_evidence(vision):
+    frame, words = fixture('skip-win')
+    result = vision.classify(frame, words)
+    assert (result.kind, result.won, result.target) == ('result', True, (640, 531))
+    assert vision.analyze((FIXTURES / 'tactical-battles-skip-win.png').read_bytes()).kind == 'result'
+    for text in ('Battle Result', 'WIN!', 'Rewards', 'Confirm'):
+        assert vision.classify(frame, tuple(w for w in words if w.text != text)).kind == 'unknown'
+    for changes in ({'text': 'LOSE!'}, {'text': 'WINNER'}, {'confidence': .96},
+                    {'box': (530, 225, 590, 250)}):
+        changed = tuple(replace(w, **changes) if w.text == 'WIN!' else w for w in words)
+        assert vision.classify(frame, changed).kind == 'unknown'
+    for bounds in ((205, 327, 505, 775), (498, 561, 533, 752)):
+        changed = frame.copy()
+        y1, y2, x1, x2 = bounds
+        changed[y1:y2, x1:x2] = 0
+        assert vision.classify(changed, words).kind == 'unknown'
 
 
 def test_synthetic_win_counterpart_requires_large_exact_title_and_result_controls(vision):

@@ -45,7 +45,7 @@ from .locking import InstanceLock, LockError
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS, task_plan
 from .home_badges import PRIORITY
 from . import packs_state
-from . import ap_state, loot, daily_log, daily_schedule, checkin_schedule, tactical_survey
+from . import ap_state, loot, daily_log, daily_schedule, checkin_schedule, tactical_survey, tactical_retry
 from .club import game_day
 from .tactical_state import TacticalStateError, ensure_restart_safe
 from .vision import decode_frame
@@ -70,7 +70,7 @@ AP_SETTINGS = {f'ap_{key}': key for key in
 TOTAL_ASSAULT_SETTINGS = {f"total_assault_{key}": key
                           for key in ("difficulty", "enabled_in_daily", "comfort_seconds")}
 TACTICAL_BATTLE_SETTINGS = {f"tactical_battles_{key}": key
-                           for key in ("enabled_in_daily", "skip_battles", "preserve_tickets", "refresh_limit", "confidence_percent")}
+                           for key in ("enabled_in_daily", "skip_battles", "preserve_tickets", "search_minutes", "refresh_limit", "confidence_percent")}
 TICKET_SETTINGS = {"bounties_enabled_in_daily", "scrimmages_enabled_in_daily"}
 SETTINGS = TACTICAL_BATTLE_SETTINGS.keys() | CHECKIN_SETTINGS.keys() | DAILY_SETTINGS.keys() | TOTAL_ASSAULT_SETTINGS.keys() | TICKET_SETTINGS | RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
 CAFE_INTERVAL = timedelta(hours=3, seconds=15)
@@ -194,6 +194,8 @@ class DashboardController:
         self._packs_not_before = None
         self._ap_not_before = None
         self._tactical_continuation_error = None
+        self._tactical_retry_error = None
+        self._tactical_retry_not_before = 0
         self._failures = self._load_failures()
         self._daily("dashboard_started", detail="Local serial queue started")
         self._initialize_checkin()
@@ -594,8 +596,42 @@ class DashboardController:
             self._queued(job)
             self._daily("available_work_queued", tasks=[job["task"] for job in self._queue])
         self._enqueue_tactical_continuation(self._wall_clock().timestamp())
+        self._enqueue_tactical_retry(self._wall_clock().timestamp())
         if not available:
             self._enqueue_checkin()
+
+    def _enqueue_tactical_retry(self, now: float) -> None:
+        """A failed search may resume its remaining budget after backoff."""
+        if (self._paused or self._shutdown or self._capturing or len(self._queue) >= 100
+                or self._tactical_retry_error or now < self._tactical_retry_not_before
+                or (self._current and self._current["task"] in {"daily", "tactical_battles"})
+                or any(job["task"] in {"daily", "tactical_battles"} for job in self._queue)
+                or not tactical_retry.retry_due(self.config, now=now)):
+            return
+        job = {"id": uuid4().hex, "task": "tactical_battles", "source": "tactical_retry",
+               "created_at": _timestamp()}
+        self._queue.append(job)
+        self._queued(job)
+
+    def _claim_tactical_retry(self, job: dict) -> bool:
+        if self._paused or self._shutdown or self._capturing or self._tactical_retry_error:
+            return False
+        try:
+            with InstanceLock(self.config):
+                claimed = tactical_retry.claim_retry(self.config, now=self._wall_clock().timestamp())
+            self._daily("tactical_survey_retry_started" if claimed else "tactical_survey_retry_skipped",
+                        task="tactical_battles", run=job["id"])
+            return claimed
+        except LockError:
+            # Leave the due dispatch intact, but do not spin while a CLI job
+            # owns the instance. No additional retry allowance is consumed.
+            self._tactical_retry_not_before = self._wall_clock().timestamp() + 60
+            self._log("Tactical survey retry deferred: another runner owns the instance")
+            return False
+        except (RuntimeError, OSError) as exc:
+            self._tactical_retry_error = str(exc)
+            self._log(f"Tactical survey retry paused: {exc}", "error")
+            return False
 
     def _tactical_continuation_due(self, now: float) -> bool:
         if not self.config.tactical_battles_enabled_in_daily or self._tactical_continuation_error:
@@ -624,14 +660,14 @@ class DashboardController:
             return
         try:
             with InstanceLock(selected):
-                tactical_survey.clear_survey(selected)
-            self._daily("tactical_survey_continuation_cleared", level="WARNING", run=job["id"],
-                        detail="Failed continuation discarded its survey; battle intent and history were preserved")
+                tactical_survey.block_survey(selected, now=self._wall_clock().timestamp())
+            self._daily("tactical_survey_continuation_blocked", level="WARNING", run=job["id"],
+                        detail="Failed continuation paused its search; elapsed budget, battle intent and history were preserved")
         except (RuntimeError, OSError) as exc:
-            # A failed cleanup must not let the same due file create a tight
+            # A failed state write must not let the same due file create a tight
             # retry loop. Other schedules keep running and the failure stays visible.
             self._tactical_continuation_error = str(exc)
-            self._log(f"Could not clear failed Tactical survey; automatic continuation paused: {exc}", "error")
+            self._log(f"Could not block failed Tactical survey; automatic continuation paused: {exc}", "error")
 
     def _enqueue_cafe(self) -> None:
         if (self._paused or self._shutdown or not getattr(self.config, "cafe_schedule_enabled", False)
@@ -819,9 +855,15 @@ class DashboardController:
                     if job.get("source") == "tactical_continuation":
                         try:
                             with InstanceLock(self.config):
-                                tactical_survey.clear_survey(self.config)
+                                tactical_survey.block_survey(self.config, now=self._wall_clock().timestamp())
                         except (RuntimeError, OSError) as exc:
                             raise ApiError(409, f"Could not cancel Tactical survey continuation: {exc}") from exc
+                    if job.get("source") == "tactical_retry":
+                        try:
+                            with InstanceLock(self.config):
+                                tactical_retry.clear_retry(self.config)
+                        except (RuntimeError, OSError) as exc:
+                            raise ApiError(409, f"Could not cancel Tactical survey retry: {exc}") from exc
                     if job.get("source") == "schedule" and job["task"] == "daily":
                         try:
                             with self._daily_state_lock():
@@ -948,6 +990,8 @@ class DashboardController:
                 if job["task"] == "daily" and not self._claim_daily(job):
                     continue
                 if job.get("source") == "checkin" and not self._claim_checkin(job):
+                    continue
+                if job.get("source") == "tactical_retry" and not self._claim_tactical_retry(job):
                     continue
                 if (job.get("source") == "tactical_continuation"
                         and not self._tactical_continuation_due(self._wall_clock().timestamp())):

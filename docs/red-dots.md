@@ -17,6 +17,8 @@ scheduled check-ins launch the game on an already running emulator, then scan Ho
 
 free means free. the package handler recognizes **Free Daily Pack** and the separate **Cost: Free** confirmation. it cannot operate Google Play billing. paid renewals keep their own opt-in settings. missing labels, an unexpected screen, or a failed receipt stop the job and leave local screenshots.
 
+reward inspection waits for the initial cards to stop scaling before using their positions for input. a failed inspection after collection retains the receipt for recovery; it does not authorize repeating the claim.
+
 requests enter the normal serial queue. already queued work isn't duplicated. each associated task gets one attempt per busy queue batch, so a stubborn dot cannot keep the queue alive forever. later visits can check again. free packs and Club explicitly run Mail afterward, even if another job checked Mail earlier in the batch.
 
 Campaign badges only request reward collection; they never start battles or enable Total Assault combat. amber availability markers don't count as red dots. the scanner returns home before publishing its requests.

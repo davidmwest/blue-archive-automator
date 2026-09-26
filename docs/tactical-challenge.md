@@ -1,12 +1,12 @@
 # Tactical Challenge
 
-**collect tactical rewards** checks the Time Reward and Daily Reward buttons, claims whichever are available, logs the receipts, and heads home. it's also part of Daily. the game can start accumulating time credits again immediately, so each reward gets one claim per visit.
+**collect tactical rewards** checks the Time Reward and Daily Reward buttons, claims what's available, logs the receipts, and heads home. it's also part of Daily. time credits can start accumulating again immediately, so each reward gets one claim per visit.
 
-**climb tactical challenge** is the separate battle job. it uses the saved formation and spends existing tickets down to your reserve: one ticket for manual play by default, so four of a fresh five-ticket balance can be automated. reward red dots only queue the reward collector.
+**climb tactical challenge** is the separate battle job. it uses your saved formation and spends existing tickets down to your reserve: one ticket for manual play by default. reward red dots only queue the collector.
 
-## ladder strategy
+## picking an opponent
 
-scout the opponent list using free refreshes and keep every fully verified candidate ahead of your rank. compare a weighted team-level score:
+compare teams ahead of your rank using this score:
 
 ```text
 estimated team levels = sum(visible levels) + hidden slots * player level
@@ -14,61 +14,67 @@ account multiplier = 2 when player level is 90 or higher; otherwise player level
 weighted score = estimated team levels * account multiplier
 ```
 
-lower scores come first. level-90+ accounts get a deliberate extra penalty: the multiplier jumps to 2. this is a rough strength estimate, not a measurement of relationship bonuses or battle outcome. hidden units use the player's level, rather than counting as zero. equal scores use a random tie break. a readable rank alone is enough for the sampling estimate below, but it does not make an opponent eligible: selection also needs verified identity and visible student levels. the runtime makes these decisions locally; no AI is involved.
+lower scores come first. level-90+ accounts get an extra penalty because account level stops telling us much about their investment. hidden units count at the opponent's account level. this is a strength heuristic, not a prediction of who will win. exact score ties use a random choice. identity, rank, account level, and visible student levels all need to be readable before someone is eligible. contradictory level readings exclude the candidate instead of picking the friendlier number.
 
-**never fight the same opponent twice in one game day.** a win, loss, or recovered result all count. the history persists across visits and server restarts, so **do everything** cannot rematch someone who was already challenged. at the next 19:00 UTC reset, completed opponent history clears. an unresolved ticket expenditure remains held for review across reset rather than being blindly replayed.
+**never fight the same opponent twice in one game day.** wins and losses both count. history survives daemon restarts and **do everything**, then resets at 19:00 UTC. an unresolved battle stays held for review across reset rather than being replayed.
 
-a win triggers a fresh survey at the new player rank. before opening formation, the opponent detail must still show the same identity and visible team levels, an opponent ahead of you, your unchanged rank, and exactly one projected ticket spent. a changed game day invalidates the pending selection too. stop at the ticket reserve and never buy tickets.
+## ten minutes per match
 
-keep every occupied slot in the saved attacking formation. only fill blanks, using the highest-level eligible owned students for that role. both Striker and Special slots must be complete before entry. missing or ambiguous roster evidence stops the job.
+search time defaults to **10 active minutes**, adjustable from 1 to 30 minutes, including fractions. refresh speed varies with the emulator and OCR, so time controls the budget. the journal reports a refresh-count estimate based on the speed actually observed.
 
-battle animations are skipped by default. turn **skip battle animations** off to watch the full fight. both modes spend the same ticket and require a result plus the expected ticket decrement before recording completion. the game imposes standby time between battles; the runner waits for the displayed countdown.
+1. spend the first 37% of the budget establishing a benchmark: **3 minutes 42 seconds** at the default.
+2. take a currently visible opponent whose score is at least as good as the benchmark's best score.
+3. gradually relax that threshold toward the weakest quarter of the benchmark population as the remaining time runs out.
+4. if nobody visible qualifies at the deadline, keep the ticket. reaching the deadline never means fighting whoever happens to be on screen.
 
-## what the scouting estimate means
+repeated opponents have one entry in the benchmark. later conflicting scores retain the higher estimate. the benchmark needs at least two readable list observations; unreadable teams consume time without inventing a score. there is no second search to relocate someone seen earlier: the selected opponent must be on the current screen and pass another check in their detail view.
 
-the initial sample is **50 valid refreshed lists** by default. each list has three rank positions. the model treats each row as drawing uniformly from its own fixed pool, independently over successive refreshes; the rows do not need to be independent of each other. observed rank positions and repeat sightings estimate the size of those pools. a larger, conservative upper bound sets the remaining sampling budget and a later search budget for the chosen opponent.
+this borrows the observation-then-selection idea from the [secretary problem](https://www.or.mist.i.u-tokyo.ac.jp/takeda/FreshmanCourse/Ferguson.pdf). repeated opponents, changing ranks, and the relaxed threshold make this a practical heuristic; it does not claim the classical rule's optimality or a 99% coverage guarantee. the former confidence and pool-estimation settings are retired from the runtime.
 
-**the selected confidence is conditional on that model, not a guarantee about Blue Archive.** the default is 99%; choose 90% for a shorter search, or any value from 80% to 99.9%. a lower setting allows a greater chance of unseen opponents under the model. the game does not publish the sampling probabilities. our saved screens show different rank ranges in the three rows, which is why they are modeled separately. a changing ladder, weighted selection, or refreshes that did not actually occur can invalidate the estimate. the claim concerns coverage of eligible rank positions; it does not prove that every team's level or identity was readable.
+searches yield to other queued work after five minutes or 100 refreshes. the local daemon resumes after at least a minute, carrying forward elapsed time and the benchmark. queue waiting and battle time do not consume the search allowance. failures, cancelled continuations, and passive rank changes retain consumed time. an exhausted allowance stays exhausted for that game day; restarting the daemon or losing a defensive battle cannot turn it into another ten minutes. a completed battle starts a new search for the next match, whether it was a win or loss.
 
-only an observed refresh with all three readable, distinct rank labels supplies a draw. an unreadable or duplicate rank label ends that survey, rather than silently dropping a potentially biased sample. team OCR failures do not remove otherwise valid rank samples. the initial screen and repeated screenshots of one refresh are not extra draws. the displayed refresh countdown must visibly reset to acknowledge the input, so an acknowledged redraw of the same list remains a valid repeat. an unacknowledged refresh ends the survey without a confidence claim or battle entry.
+countdown resets acknowledge refreshes even when the same opponents reappear. unreadable refresh controls defer the search without input. if a fresh screen proves that a tap was ignored—the same opponent rows, three rank labels, player rank, tickets, and a naturally falling timer—the runner retries once within the remaining allowance. identical row images can prove an unchanged list even when student levels are unreadable; they cannot authorize a battle. ignored taps never count as new draws. a second ignored tap, an ambiguous reset, or persistently unreadable rank labels records a failure and allows up to three delayed retries per game day, 15 minutes apart, using the remaining search time. transport errors and unresolved battles do not automatically replay. other queued work can continue.
 
-pool bounds are calculated at predetermined checkpoints, starting at the configured sample size and doubling. this avoids repeatedly fitting until the result happens to look favorable. the remaining error allowance (1% at the default 99% confidence) is divided between pool estimation, coverage, and one chosen-opponent lookup. **this confidence applies to one survey and its lookup, not the entire job or day.** a fresh survey after a rank change starts a new estimate; the implementation does not claim a combined 99% success probability across those searches. the implementation uses the [occupancy distribution](https://arxiv.org/abs/2209.02220) for the bounds and a [union bound](https://www.cl.cam.ac.uk/teaching/2122/RandAlgthm/lec1_intro.pdf) for the chance of unseen positions.
+active search evidence expires after four hours and blocks that search while preserving the time already spent. a changed game day or search-time setting starts a new allowance. rank changes retain the benchmark; every candidate must still be ahead of the freshly observed rank. completed battle history is separate. pausing the queue or disabling automatic Tactical Challenge stops continuation dispatch.
 
-long searches run in chunks of **five minutes or 100 refreshes**, then return home and let the other jobs run. the local daemon resumes the saved survey or opponent lookup after at least a minute. it saves the original rank draws and replays the same statistical calculation when loading them; restarting the daemon does not manufacture a completed survey. each survey and target lookup is capped at 1,000 refreshes. each visit still has a 30-minute hard limit, with at least 12 minutes reserved before entering a battle for combat and result handling.
+## entering and finishing
 
-unfinished surveys keep their tickets and log their progress without claiming the selected confidence. saved searches expire after four hours; a changed game day, player rank, confidence setting, or initial sample size also discards them. pausing the queue pauses continuations, and turning off automatic Tactical Challenge stops them. rank positions can change hands while the queue does other work, so the stable-pool assumption still applies and the exact opponent is checked again before entry. if a chosen opponent cannot be found within the supported lookup budget, start a fresh survey. this is a conservative stale-selection policy, not proof that the opponent moved.
+before formation, the detail must still show the selected identity and visible team levels, an opponent ahead of you, your unchanged rank, and exactly one projected ticket spent. a changed game day also invalidates entry. stop at the reserve and never buy tickets.
+
+keep every occupied slot in the saved attacking formation. only fill blanks, using the highest-level eligible owned students for each role. all Striker and Special slots must be complete. ambiguous roster evidence stops entry.
+
+battle animations are skipped by default. turn **skip battle animations** off to watch. both modes require a result and the expected ticket decrement before recording completion. the runner waits through the game's standby countdown between matches. each visit has a 30-minute limit and reserves 12 minutes of headroom before battle entry for combat and result handling.
+
+if a battle is interrupted, its persisted entry prevents another ticket from being spent. retrying **climb tactical challenge** checks the current result before restarting or navigating away, saves the result screenshot, then verifies the one-ticket decrement. an unknown result stays held for inspection. both the compact skipped-victory dialog and the full battle result are recognized.
 
 ## settings and queue
 
 ```toml
 [tactical_battles]
 enabled_in_daily = true
-skip_battles = true # false watches the full battle
+skip_battles = true
 preserve_tickets = 1 # 0..5
-refresh_limit = 50 # 2..100 valid refreshed lists before the first estimate
-confidence_percent = 99.0 # 80..99.9; try 90 for a shorter search
+search_minutes = 10.0 # 1..30 active minutes per match
 ```
 
-these settings are also under **settings → tactical challenge**. `refresh_limit` is the initial sample size, not the maximum number of refreshes for the visit. Daily fights before collecting Tactical Challenge rewards, so the reward claim uses the achieved rank. **do everything** also queues this job when enabled; it still respects the reserve and opponent history if Daily has already run. the periodic red-dot check never queues combat. an explicit manual run uses `ba --config config/local.toml tactical_battles`.
+these are also under **settings → tactical challenge**. older `refresh_limit` and `confidence_percent` values remain readable for compatibility but no longer control search. Daily fights before collecting Tactical Challenge rewards. **do everything** queues battles when enabled and respects the reserve and daily history. periodic red-dot checks never queue combat. manual CLI entry is `ba --config config/local.toml tactical_battles`.
 
-## reward collection
+## rewards and evidence
 
-the route is home → Campaign → Tactical Challenge. the runner recognizes the page heading, Season, both reward labels, both Claim controls, and the ticket counter. only yellow Claim buttons authorize collection. gray buttons are skipped. each claim must produce a Reward Acquired receipt; an unknown screen or missing receipt stops the job instead of retrying the claim. tickets must stay unchanged before returning home.
+the route is home → Campaign → Tactical Challenge. the runner sends one entry tap, then waits for the page to load; repeating that coordinate during loading can accidentally open an opponent. only yellow Claim buttons authorize reward collection. gray buttons are skipped. each claim requires a Reward Acquired receipt and unchanged tickets before returning home.
 
-receipts appear in Important Actions and Loot Gathered, with retained evidence for review. time credits are counted from the actual receipt, not the rounded total displayed on the menu.
+receipts appear in Important Actions and Loot Gathered. credits come from the actual receipt, not the rounded menu total. battle journals retain the selected list, opponent detail, and result screenshot, so level readings and ticket use can be reviewed.
 
 ## validation
 
-September 24, 2026: the live staging account collected **70,570 credits** from Time Reward, verified the receipt, returned home, and kept **5/5 battle tickets**. both claim buttons were disabled afterward. a second complete restart → collection → home run collected 240 credits that had accumulated since, again retaining all five tickets. Daily Reward was unavailable during those runs.
+live reward checks on September 24–25, 2026 collected time credits, verified receipts, returned home, and retained all five battle tickets. an interrupted Daily Reward claim was recovered from its existing receipt as 18 Pyroxenes and 70 Tactical Challenge Coins, without claiming again.
 
-September 25 UTC: another visit collected **22,560 credits**, then claimed Daily Reward. automatic inspection stopped at a stale-frame guard. recovery verified the existing receipt as **18 Pyroxenes and 70 Tactical Challenge Coins**, recorded those rewards, and returned home without claiming again. paired sanitized captures now cover animated-icon freshness checks. the receipt-reader fix passed offline regression tests; this recovered visit is not an uninterrupted end-to-end run of the corrected daily-claim path.
+on September 26, an unskipped battle completed as a loss. recovery handled the post-battle Tip screen and verified the ticket balance changing from 5 to 4. this was a staged check, not an uninterrupted run of the final implementation. the noon Pacific reset then restored five tickets, explaining why the balance later appeared unchanged.
 
-sanitized fixtures remove account and opponent identities. regression tests cover separate time/daily controls, dimmed screens, unavailable rewards, credits accumulating after collection, failure without blind retries, unchanged tickets, and separation between reward-only dispatch and ticket-spending battle dispatch.
+the corrected refresh acknowledgment completed a normal five-minute daemon visit with 22 verified refreshes, saved progress, returned home, and let the queue run its AP check. this covered slow OCR capture and the transient 2:01 countdown. a subsequent continuation exposed the duplicate Campaign-entry tap, now covered by sanitized loading and opponent-preview fixtures.
 
-September 26: one live battle with animations enabled completed as a loss. the post-battle Tip screen required recovery, after which the ticket balance was verified changing from **5 to 4** and the result was retained for same-day opponent exclusion. this was a staged check, not an uninterrupted run of the final implementation. this verifies the unskipped loss path; a live skipped completion and a live victory remain pending.
+the new time policy completed a live daemon visit with 22 acknowledged refreshes in 4 minutes 51 seconds of active searching, crossed the 3-minute-42-second benchmark, saved 5 minutes 9 seconds of remaining search time, and returned home. observed throughput projected about 45 refreshes per ten minutes. this visit also verified the single-tap Campaign entry fix; all five tickets remained available because no opponent qualified during that portion of the search.
 
-the corrected refresh acknowledgement passed three actual refreshes: each countdown reset was observed, all three rank labels were readable, and the ticket balance stayed at **4**. two lists had no fully readable teams and were excluded from opponent selection while still supplying valid rank samples. the third included verified candidates. this validates the refresh acknowledgement, not completion of the statistical coverage model or its lookup budget. skipped battle completion and victory recognition remain unverified live; the WIN counterpart has explicitly synthetic regression coverage.
+a continuation selected a level-75 opponent after 8 minutes 53 seconds of accumulated active search, with visible student levels 74, 72, and 65. the selected list and detail screenshots preserved those readings. the saved formation won with animations skipped: rank 571 → 541 and tickets 5 → 4. the initial runner did not recognize the compact WIN dialog; the corrected recognizer recovered it after a daemon reload, saved the result, reconciled exactly one spent ticket, and began the next search. this verifies interrupted skipped-victory recovery, not uninterrupted completion of that original run. the ignored-refresh and result-timeout notices were dismissed after their fixes were verified.
 
-two short live survey visits then verified persistence: the first saved three acknowledged refreshes and returned home; the second loaded those observations, reached six cumulative draws, retained the original checkpoint age, and returned home again. both kept all four remaining tickets. these visits used a three-refresh test chunk limit with battle entry prohibited; they validate checkpoint and navigation behavior, not completion of a full survey.
-
-offline tests also cover the conditional confidence estimate, settings, both skip modes, entry guards, formation preservation, the shared visit limit, interrupted result recovery, and returning home without spending when insufficient budget remains. the earlier reward checks do not establish battle coverage.
+offline tests cover the time policy, deadline behavior, persistent consumed time, repeated identities, contradictory levels, settings, both skip modes, entry guards, formation preservation, result recovery, and ticket reserves. the earlier live sampling checks used the retired confidence strategy.

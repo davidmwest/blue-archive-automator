@@ -1,0 +1,272 @@
+[
+  {
+    "text": "Tactical Challenge",
+    "confidence": 0.99988,
+    "box": [
+      102,
+      7,
+      359,
+      42
+    ]
+  },
+  {
+    "text": "Season",
+    "confidence": 0.9997,
+    "box": [
+      449,
+      130,
+      550,
+      163
+    ]
+  },
+  {
+    "text": "Time Left 02:01",
+    "confidence": 0.99096,
+    "box": [
+      964,
+      134,
+      1093,
+      160
+    ]
+  },
+  {
+    "text": "Refresh List",
+    "confidence": 0.99933,
+    "box": [
+      1121,
+      134,
+      1231,
+      158
+    ]
+  },
+  {
+    "text": "Rank 445",
+    "confidence": 0.96961,
+    "box": [
+      557,
+      206,
+      705,
+      243
+    ]
+  },
+  {
+    "text": "Outdoor Zone 4",
+    "confidence": 0.97672,
+    "box": [
+      1126,
+      261,
+      1229,
+      281
+    ]
+  },
+  {
+    "text": "Rank 571",
+    "confidence": 0.98602,
+    "box": [
+      134,
+      293,
+      284,
+      331
+    ]
+  },
+  {
+    "text": "Time Reward +60/ minute(s)",
+    "confidence": 0.98231,
+    "box": [
+      59,
+      358,
+      284,
+      383
+    ]
+  },
+  {
+    "text": "Claim",
+    "confidence": 0.99996,
+    "box": [
+      319,
+      374,
+      387,
+      402
+    ]
+  },
+  {
+    "text": "Rank 480",
+    "confidence": 0.97084,
+    "box": [
+      557,
+      365,
+      705,
+      402
+    ]
+  },
+  {
+    "text": "Total 2,940/1,000K",
+    "confidence": 0.97683,
+    "box": [
+      59,
+      398,
+      214,
+      422
+    ]
+  },
+  {
+    "text": "Outdoor Zone 4",
+    "confidence": 0.97452,
+    "box": [
+      1126,
+      421,
+      1229,
+      440
+    ]
+  },
+  {
+    "text": "Daily Reward 09:33",
+    "confidence": 0.99352,
+    "box": [
+      58,
+      437,
+      222,
+      463
+    ]
+  },
+  {
+    "text": "Claim",
+    "confidence": 0.99997,
+    "box": [
+      319,
+      453,
+      387,
+      481
+    ]
+  },
+  {
+    "text": "Tickets Owned 5/5",
+    "confidence": 0.99125,
+    "box": [
+      82,
+      475,
+      248,
+      502
+    ]
+  },
+  {
+    "text": "Standby Time",
+    "confidence": 0.98146,
+    "box": [
+      57,
+      515,
+      177,
+      541
+    ]
+  },
+  {
+    "text": "--:--",
+    "confidence": 0.9604,
+    "box": [
+      175,
+      518,
+      213,
+      537
+    ]
+  },
+  {
+    "text": "Rank 528",
+    "confidence": 0.98843,
+    "box": [
+      557,
+      523,
+      705,
+      560
+    ]
+  },
+  {
+    "text": "Battle",
+    "confidence": 0.99999,
+    "box": [
+      101,
+      562,
+      187,
+      594
+    ]
+  },
+  {
+    "text": "Defense",
+    "confidence": 0.97278,
+    "box": [
+      265,
+      558,
+      381,
+      595
+    ]
+  },
+  {
+    "text": "History",
+    "confidence": 0.99998,
+    "box": [
+      91,
+      587,
+      197,
+      627
+    ]
+  },
+  {
+    "text": "Formation",
+    "confidence": 0.99998,
+    "box": [
+      253,
+      590,
+      393,
+      620
+    ]
+  },
+  {
+    "text": "Outdoor Zone 4",
+    "confidence": 0.97138,
+    "box": [
+      1126,
+      579,
+      1229,
+      599
+    ]
+  },
+  {
+    "text": "Lv.79 Scout",
+    "confidence": 0.99,
+    "box": [
+      167,
+      192,
+      345,
+      215
+    ]
+  },
+  {
+    "text": "Lv.90 Rival1",
+    "confidence": 0.99,
+    "box": [
+      461,
+      288,
+      701,
+      319
+    ]
+  },
+  {
+    "text": "Lv.90 Rival2",
+    "confidence": 0.99,
+    "box": [
+      461,
+      447,
+      701,
+      478
+    ]
+  },
+  {
+    "text": "Lv.81 Rival3",
+    "confidence": 0.99,
+    "box": [
+      461,
+      605,
+      701,
+      636
+    ]
+  }
+]

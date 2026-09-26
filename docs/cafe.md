@@ -32,6 +32,8 @@ Saved September 26 entry failures showed all three taps hitting the cup illustra
 
 The Visiting Student List notice requires its exact English headings and Confirm control in the known panel, plus three Cafe HUD anchors with consistent dimming. Its dismissal is bounded to three attempts and uses the same before/after popup history as startup announcements. An arbitrary Guide or Confirm dialog does not qualify.
 
+The same handler also checks for a delayed visitor notice after a floor has already appeared clear. A September 26 failure showed that sequence on floor two; OCR also picked up the notice's close icon. The reader now permits that optional `X` only in its known corner. Fresh frames authorize at most three dismissal attempts, spaced five seconds apart, and an unknown overlay still stops input. Sanitized captures and offline tests cover this recovery; the specific delayed-notice recovery has not yet been verified live.
+
 ## Student interactions
 
 The detector matches the yellow attention rays using local color and template checks, then selects a point near the student's head inside the room. HUD controls and the floor-switch strip are excluded. It rereads the screen after each action, waits briefly for feedback, and moves the camera to cover more of the room.

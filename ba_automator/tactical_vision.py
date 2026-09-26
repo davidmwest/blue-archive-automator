@@ -100,9 +100,14 @@ def _rank(words, bounds):
 
 
 def _cooldown(words):
-    if not has(words, 'standby time', (45, 503, 180, 550)):
-        return None
     clocks = []
+    for word in within(words, (45, 503, 275, 550)):
+        combined = re.fullmatch(
+            r'Standby Time\s+([-–—]+\s*:\s*[-–—]+|\d{1,2}:\d{2})', word.text.strip(), re.I)
+        if combined and word.confidence >= .9:
+            clocks.append(combined[1])
+    if not clocks and not has(words, 'standby time', (45, 503, 180, 550)):
+        return None
     for word in within(words, (178, 503, 275, 550)):
         value = word.text.strip()
         if word.confidence >= .8 and re.fullmatch(r'(?:[-–—]+\s*:\s*[-–—]+|\d{1,2}:\d{2})', value):
@@ -184,14 +189,23 @@ def _read_level(values, maximum):
         # complete labels read 75 just below the acceptance threshold.
         return None
     guards = []
+    possible_guards = []
     for text, score in values[9:]:
         match = re.fullmatch(r'(?:[vV][. :]*|[. ])?([0-9]{1,3})', text)
+        if match and score >= .75:
+            possible_guards.append(int(match[1]))
         if match and score >= .94:
             guards.append(int(match[1]))
         if match and score >= .94 and int(match[1]) != value:
             # Never resolve contradictory font interpretations by voting:
             # multiple resized copies share the same missing-pixel error.
             return None
+    if any(guard != value and possible_guards.count(guard) >= 2
+           for guard in possible_guards):
+        # A clipped whole label can confidently read Lv.30 while complete
+        # glyph crops read 80 at lower confidence. Those repeated conflicts
+        # veto the candidate; they never authorize the alternative level.
+        return None
     if not anchored and (value is None or value not in guards):
         # Digit-only recognition needs confirmation with the full glyph
         # bounds; agreement among clipped versions alone is insufficient.
@@ -266,6 +280,23 @@ class TacticalBattleVision:
         unknown = TacticalBattleScreen('unknown', words=tuple(words))
         if frame.shape[:2] != (720, 1280):
             return unknown
+        # Skipped victories use a compact reward modal rather than the full
+        # combat result page. Keep its evidence and target separate.
+        compact_win = [w for w in within(words, (490, 190, 790, 335))
+                       if w.text.strip() == 'WIN!' and w.confidence >= .97
+                       and w.box[2] - w.box[0] >= 180
+                       and w.box[3] - w.box[1] >= 85]
+        title_hsv = cv2.cvtColor(frame[205:327, 505:775], cv2.COLOR_BGR2HSV)
+        gold = ((title_hsv[:, :, 0] >= 18) & (title_hsv[:, :, 0] <= 40)
+                & (title_hsv[:, :, 1] >= 100) & (title_hsv[:, :, 2] >= 180))
+        if (len(compact_win) == 1 and gold.mean() > .15
+                and _match(words, r'Battle Result', (510, 120, 775, 173))
+                and _match(words, r'Rewards', (560, 340, 730, 389))
+                and _match(words, r'Confirm', (540, 494, 747, 559))
+                and cyan(frame, (533, 498, 752, 561))
+                and bright(frame, (390, 118, 523, 167))):
+            return TacticalBattleScreen('result', words=tuple(words),
+                                        won=True, target=(640, 531))
         if (has(words, 'tip', (270, 65, 430, 170))
                 and has(words, 'buff', (430, 145, 630, 195))
                 and has(words, 'debuff', (430, 210, 635, 265))
@@ -356,8 +387,11 @@ class TacticalBattleVision:
         if base.kind == 'tactical':
             rank = _rank(words, (120, 280, 325, 346))
             cooldown = _cooldown(words)
-            if (rank is None or cooldown is None
-                    or not has(words, 'refresh list', (1110, 119, 1250, 171))):
+            refresh_control = any(
+                re.fullmatch(r'Q?\s*Refresh List', w.text.strip(), re.I) and w.confidence >= .9
+                for w in within(words, (1110, 119, 1250, 171)))
+            # OCR can join the circular refresh icon to the label as "Q".
+            if rank is None or cooldown is None or not refresh_control:
                 return unknown
             opponents = self._opponents(frame, words)
             ranks = tuple(_rank(words, (549, y - 7, 729, y + 45)) for y in (206, 365, 523))
@@ -367,7 +401,8 @@ class TacticalBattleVision:
                                    (945, 125, 1100, 171))
             refresh_seconds = (int(refresh_timer[1]) * 60 + int(refresh_timer[2])
                                if refresh_timer else None)
-            if refresh_seconds is not None and refresh_seconds > 120:
+            # The observed post-refresh countdown can display 02:01.
+            if refresh_seconds is not None and refresh_seconds > 121:
                 refresh_seconds = None
             return TacticalBattleScreen('tactical', words=tuple(words), rank=rank,
                 sampled_ranks=sampled, all_ahead=all_ahead,

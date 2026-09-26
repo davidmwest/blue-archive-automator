@@ -82,6 +82,8 @@ To run the full Daily plan automatically, enable **run daily after reset** in Se
 
 Ticket availability is still read from the game before every lesson. The Daily occurrence record prevents automatic replay of the plan; it does not replace ticket, room, or receipt verification and does not provide per-step resumption.
 
+If the device rejects an expired screenshot before sending a tap, Lessons can refresh the screen and retry up to twice. The school, room, ticket balance, students, and other observed decision fields must still match. Sent inputs and transport errors are never replayed this way.
+
 ## Validation status
 
 On September 24, 2026 UTC, the authorized BlueStacks Air staging instance completed the following checks:
@@ -95,6 +97,8 @@ On September 24, 2026 UTC, the authorized BlueStacks Air staging instance comple
 The final local run is `lessons-20260924T064611-02b9e014`. Full screenshots, survey JSON, receipt evidence, and important-action history remain local; the repository contains sanitized replay fixtures.
 
 September 26 saved room grids exposed a thin relationship-rank `1` that remained below the OCR confidence threshold in the original crops. A fallback now checks the complete heart label at two scales and requires agreement. Sanitized Shiratori and Red Winter replays recover both missed ranks, and planner tests preserve the correct relationship tie-break. Conflicting or unreadable ranks still block comparisons that need them. The live retry (`lessons-20260926T152150-bcf1051a`) surveyed all 94 rooms across 12 schools before each selection, completed seven verified lessons, confirmed zero tickets remaining, and returned home.
+
+After the September 26 daily reset, a device preflight rejected an expired frame without sending its tap. The recovery run (`lessons-20260926T215356-7107c68b`) used the remaining four tickets, surveyed all 94 rooms across 12 schools before each selection, verified each receipt and ticket decrement, and returned home at zero tickets. Those four lessons provided eight owned-student opportunities. The narrowly bounded stale-frame retry is covered offline; this successful recovery did not require triggering that timing race again.
 
 All live spending used the relationship policy. The school-rank policy is covered by observed-data and multi-ticket rank/XP tests, including switching schools after each ticket, but a real school rank-up popup remains unverified as described above. Live Windows execution and broader account/layout coverage remain future checks.
 

@@ -1,0 +1,212 @@
+[
+  {
+    "text": "Campaign",
+    "confidence": 0.99997,
+    "box": [
+      101,
+      6,
+      246,
+      46
+    ]
+  },
+  {
+    "text": "2 day(s) remaining",
+    "confidence": 0.97888,
+    "box": [
+      28,
+      94,
+      172,
+      122
+    ]
+  },
+  {
+    "text": "Lore Pursuit",
+    "confidence": 0.96019,
+    "box": [
+      64,
+      192,
+      140,
+      205
+    ]
+  },
+  {
+    "text": "Mission",
+    "confidence": 0.99998,
+    "box": [
+      705,
+      215,
+      824,
+      252
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99987,
+    "box": [
+      984,
+      214,
+      1079,
+      260
+    ]
+  },
+  {
+    "text": "Area 14 14th Mission",
+    "confidence": 0.98824,
+    "box": [
+      704,
+      253,
+      859,
+      276
+    ]
+  },
+  {
+    "text": "Tales of Youth and School Days",
+    "confidence": 0.99925,
+    "box": [
+      986,
+      254,
+      1185,
+      277
+    ]
+  },
+  {
+    "text": "Another day means another clear sky.",
+    "confidence": 0.99869,
+    "box": [
+      164,
+      325,
+      495,
+      353
+    ]
+  },
+  {
+    "text": "1 day(s) left",
+    "confidence": 0.9405,
+    "box": [
+      885,
+      330,
+      984,
+      356
+    ]
+  },
+  {
+    "text": "Bounty",
+    "confidence": 0.99999,
+    "box": [
+      674,
+      397,
+      738,
+      424
+    ]
+  },
+  {
+    "text": "In Progress",
+    "confidence": 0.99924,
+    "box": [
+      730,
+      433,
+      813,
+      457
+    ]
+  },
+  {
+    "text": "Total Assault",
+    "confidence": 0.99993,
+    "box": [
+      841,
+      445,
+      955,
+      469
+    ]
+  },
+  {
+    "text": "Joint Firing Drill",
+    "confidence": 0.99934,
+    "box": [
+      973,
+      445,
+      1088,
+      471
+    ]
+  },
+  {
+    "text": "Grand Assault",
+    "confidence": 0.99163,
+    "box": [
+      1107,
+      446,
+      1218,
+      469
+    ]
+  },
+  {
+    "text": "In Progress!",
+    "confidence": 0.99845,
+    "box": [
+      985,
+      484,
+      1092,
+      513
+    ]
+  },
+  {
+    "text": "Commissions",
+    "confidence": 0.99998,
+    "box": [
+      659,
+      501,
+      766,
+      523
+    ]
+  },
+  {
+    "text": "Clear: 34",
+    "confidence": 0.98256,
+    "box": [
+      950,
+      577,
+      1011,
+      598
+    ]
+  },
+  {
+    "text": "Scrimmage",
+    "confidence": 0.99993,
+    "box": [
+      636,
+      602,
+      733,
+      629
+    ]
+  },
+  {
+    "text": "Tactical Challenge",
+    "confidence": 0.98894,
+    "box": [
+      815,
+      602,
+      926,
+      624
+    ]
+  },
+  {
+    "text": "Final Restriction",
+    "confidence": 0.99448,
+    "box": [
+      947,
+      597,
+      1058,
+      616
+    ]
+  },
+  {
+    "text": "Release",
+    "confidence": 0.99996,
+    "box": [
+      946,
+      612,
+      1005,
+      633
+    ]
+  }
+]

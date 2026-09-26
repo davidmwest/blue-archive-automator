@@ -790,6 +790,50 @@ def test_visitor_notice_that_does_not_close_has_bounded_retries(cafe, monkeypatc
     assert cafe.device.taps == [(97, 691)] + [(640, 458)] * 3
 
 
+@pytest.mark.parametrize("dismissals", [1, 2])
+def test_delayed_visitor_notice_is_dismissed_while_waiting_for_cafe(cafe, monkeypatch, dismissals):
+    navigation_screen(cafe, monkeypatch,
+                      lambda: "cafe_2" if len(cafe.device.taps) >= dismissals else "unknown")
+    cafe.vision.visitor_notice = lambda frame, words: (640, 458)
+    cafe.runner.wait_cafe()
+    assert cafe.device.taps == [(640, 458)] * dismissals
+    records = [json.loads(line) for line in (cafe.runner.run_dir / "events.jsonl").read_text().splitlines()]
+    popups = [r for r in records if r["event"] == "popup_dismissal"]
+    assert popups[-1]["result"] == "changed"
+    assert popups[-1]["after_state"] == "cafe"
+    assert (cafe.runner.run_dir / popups[-1]["before"]).is_file()
+    assert (cafe.runner.run_dir / popups[-1]["after"]).is_file()
+    if dismissals == 2:
+        assert cafe.clock.now >= 5
+        assert any(p["result"] == "unchanged" for p in popups)
+
+
+def test_wait_cafe_bounds_known_notice_dismissals(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: "unknown")
+    cafe.vision.visitor_notice = lambda frame, words: (640, 458)
+    with pytest.raises(RestartError, match="notice remained after three"):
+        cafe.runner.wait_cafe()
+    assert cafe.device.taps == [(640, 458)] * 3
+
+
+def test_wait_cafe_does_not_dismiss_unknown_overlays(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: "unknown")
+    with pytest.raises(RestartError, match="unobstructed"):
+        cafe.runner.wait_cafe(timeout=3)
+    assert cafe.device.taps == []
+
+
+def test_wait_cafe_recaptures_notice_after_slow_ocr(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: "unknown")
+    def notice(frame, words):
+        cafe.clock.sleep(4.5)
+        return (640, 458)
+    cafe.vision.visitor_notice = notice
+    with pytest.raises(RestartError, match="unobstructed"):
+        cafe.runner.wait_cafe(timeout=8)
+    assert cafe.device.taps == []
+
+
 def test_navigation_recaptures_slow_ocr_instead_of_retrying_on_old_frame(cafe, monkeypatch):
     navigation_screen(cafe, monkeypatch, lambda: "home")
     original = cafe.runner.capture

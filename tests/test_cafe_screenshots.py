@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import pytest
 
@@ -78,3 +79,18 @@ def test_visitor_notice_requires_exact_labels_and_dimmed_cafe_hud(vision):
     # The same text over a different screen or an inconsistent dimming is insufficient.
     dimmed[:45] = room[:45]
     assert vision.visitor_notice(dimmed, visitor_words()) is None
+
+
+def test_delayed_visitor_notice_accepts_ocr_close_glyph_only_in_its_corner(vision):
+    image = frame("cafe-delayed-visitors")
+    # Masking the surrounding room changes OCR's detection of the tiny X.
+    # Replay the original panel-only words against the unchanged control pixels.
+    words = [Word(**value) for value in json.loads(
+        (FIXTURES / "cafe-delayed-visitors.json").read_text())]
+    assert any(w.normalized == "x" for w in words)
+    assert not vision.is_cafe(image)
+    assert vision.visitor_notice(image, words) == (640, 458)
+    labels = [w for w in words if w.normalized != "x"]
+    assert vision.visitor_notice(image, labels) == (640, 458)
+    assert vision.visitor_notice(image, labels + [Word("X", .99, (590, 330, 610, 350))]) is None
+    assert vision.visitor_notice(image, labels + [Word("Purchase", .99, (590, 330, 680, 350))]) is None

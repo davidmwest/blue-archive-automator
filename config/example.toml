@@ -57,12 +57,11 @@ enabled_in_daily = true
 preserve_tickets = 1 # 0..5
 # Skip the battle animation; false watches the full fight before reading its result.
 skip_battles = true
-# Valid refreshed lists before the first conditional sampling estimate.
-# Long searches save progress in five-minute / 100-refresh queue visits.
-# Each survey / target lookup is capped at 1,000 refreshes.
-refresh_limit = 50 # 2..100
-# Model-based coverage confidence. 90 allows a shorter search; 99 is the default.
-confidence_percent = 99.0 # 80..99.9; actual game sampling odds are unpublished
+# Per-match search time. Observe the first 37% to set a benchmark, then
+# gradually accept teams up to the weakest quarter observed. If no team
+# qualifies before the deadline, keep the ticket instead of forcing a fight.
+search_minutes = 10 # 1..30; fractional minutes are supported
+# Older refresh_limit and confidence_percent keys remain readable, but are unused.
 
 [total_assault]
 # Mock-test this difficulty before spending a ticket; stop if it cannot be verified.

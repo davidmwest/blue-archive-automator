@@ -1,0 +1,42 @@
+[
+  {
+    "text": "Guide",
+    "confidence": 0.99995,
+    "box": [
+      592,
+      166,
+      689,
+      204
+    ]
+  },
+  {
+    "text": "X",
+    "confidence": 0.96507,
+    "box": [
+      905,
+      171,
+      936,
+      202
+    ]
+  },
+  {
+    "text": "Visiting Student List",
+    "confidence": 0.99959,
+    "box": [
+      549,
+      242,
+      733,
+      268
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99991,
+    "box": [
+      575,
+      438,
+      705,
+      478
+    ]
+  }
+]

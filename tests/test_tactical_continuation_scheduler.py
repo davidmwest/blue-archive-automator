@@ -8,7 +8,7 @@ import pytest
 from ba_automator import daily_schedule, tactical_state, tactical_survey
 from ba_automator.club import game_day
 from ba_automator.server import DashboardController
-from ba_automator.tactical_refresh import RefreshPlanner
+from ba_automator.tactical_search import SearchPolicy, SearchState
 from ba_automator.tactical_survey import continuation_due as saved_continuation_due
 from test_server import ProcessFactory, eventually
 
@@ -43,12 +43,11 @@ def enqueue_due(controller):
 
 
 def save_survey(config, now):
-    confidence = config.tactical_battles_confidence_percent / 100
-    pilot = config.tactical_battles_refresh_limit
+    search = SearchState(SearchPolicy(config.tactical_battles_search_minutes * 60))
+    search.advance(120)
     tactical_survey.save_survey(
-        config, day_key=game_day(now), own_rank=500, confidence=confidence, pilot=pilot,
-        planner=RefreshPlanner(pilot=pilot, confidence=confidence), candidates=[], identities={},
-        now=now.timestamp())
+        config, day_key=game_day(now), own_rank=500, search=search,
+        identities={}, now=now.timestamp())
 
 
 def test_due_continuation_is_single_and_runs_as_its_own_task(controlled):
@@ -109,16 +108,20 @@ def test_continuation_honors_dispatch_and_enable_gates(controlled, gate):
 
 def test_continuation_goes_after_existing_and_due_resource_jobs(controlled, monkeypatch):
     controller, _, due, _ = controlled
-    due[0] = True
-    controller.enqueue("crafting")
-    controller.config = replace(controller.config, cafe_schedule_enabled=True, ap_schedule_enabled=True)
-    checkin_seen = []
-    monkeypatch.setattr(controller, "_enqueue_checkin",
-                        lambda: checkin_seen.append([job["task"] for job in controller._queue]))
-    enqueue_due(controller)
-    assert [job["task"] for job in controller.status()["queue"]] == [
-        "crafting", "spend_ap", "cafe", "tactical_battles"]
-    assert checkin_seen == [["crafting", "spend_ap", "cafe", "tactical_battles"]]
+    # The real worker also polls schedules while paused. Keep this unguarded
+    # observation probe inside one locked pass, restoring it before that worker
+    # can wake and record a second (otherwise harmless) observation.
+    with controller._condition, monkeypatch.context() as scoped:
+        due[0] = True
+        controller.enqueue("crafting")
+        controller.config = replace(controller.config, cafe_schedule_enabled=True, ap_schedule_enabled=True)
+        checkin_seen = []
+        scoped.setattr(controller, "_enqueue_checkin",
+                       lambda: checkin_seen.append([job["task"] for job in controller._queue]))
+        enqueue_due(controller)
+        assert [job["task"] for job in controller.status()["queue"]] == [
+            "crafting", "spend_ap", "cafe", "tactical_battles"]
+        assert checkin_seen == [["crafting", "spend_ap", "cafe", "tactical_battles"]]
 
 
 @pytest.mark.parametrize("change", ["disabled", "expired"])
@@ -136,17 +139,17 @@ def test_queued_continuation_rechecks_enable_and_due_before_dispatch(controlled,
     assert not factory.processes
 
 
-def test_failed_continuation_clears_survey_and_preserves_battle_intent(controlled, monkeypatch):
+def test_failed_continuation_blocks_survey_and_preserves_battle_intent(controlled, monkeypatch):
     controller, factory, due, _ = controlled
     tactical_state.begin_battle(controller.config, game_day(NOW), "opponent", 5, 500, now=NOW)
     intent_before = tactical_state.state_path(controller.config).read_bytes()
-    cleared = []
+    blocked = []
 
-    def clear(config):
-        cleared.append(config)
+    def block(config, *, now):
+        blocked.append((config, now))
         due[0] = False
 
-    monkeypatch.setattr(tactical_survey, "clear_survey", clear)
+    monkeypatch.setattr(tactical_survey, "block_survey", block)
     due[0] = True
     enqueue_due(controller)
     controller.resume()
@@ -155,21 +158,22 @@ def test_failed_continuation_clears_survey_and_preserves_battle_intent(controlle
     eventually(lambda: controller.status()["state"] == "failed")
     with controller._condition:
         controller._enqueue_scheduled()
-    assert len(cleared) == 1
+    assert len(blocked) == 1
+    assert blocked[0][1] == NOW.timestamp()
     assert tactical_state.state_path(controller.config).read_bytes() == intent_before
     assert not controller.status()["queue"]
     assert len(factory.processes) == 1
     logs = list(controller.config.state_dir.rglob("*.log"))
-    assert any("tactical_survey_continuation_cleared" in path.read_text() for path in logs)
+    assert any("tactical_survey_continuation_blocked" in path.read_text() for path in logs)
 
 
-def test_failed_survey_cleanup_holds_continuations_without_stopping_other_work(controlled, monkeypatch):
+def test_failed_survey_block_holds_continuations_without_stopping_other_work(controlled, monkeypatch):
     controller, factory, due, _ = controlled
 
-    def fail_clear(config):
+    def fail_block(config, *, now):
         raise OSError("storage unavailable")
 
-    monkeypatch.setattr(tactical_survey, "clear_survey", fail_clear)
+    monkeypatch.setattr(tactical_survey, "block_survey", fail_block)
     due[0] = True
     enqueue_due(controller)
     controller.resume()
@@ -185,7 +189,7 @@ def test_failed_survey_cleanup_holds_continuations_without_stopping_other_work(c
 
 def test_cancelled_continuation_does_not_reappear(controlled, monkeypatch):
     controller, factory, due, _ = controlled
-    monkeypatch.setattr(tactical_survey, "clear_survey", lambda config: due.__setitem__(0, False))
+    monkeypatch.setattr(tactical_survey, "block_survey", lambda config, *, now: due.__setitem__(0, False))
     due[0] = True
     enqueue_due(controller)
     identifier = controller.status()["queue"][0]["id"]
@@ -195,16 +199,16 @@ def test_cancelled_continuation_does_not_reappear(controlled, monkeypatch):
     assert not factory.processes
 
 
-def test_manual_tactical_failure_does_not_clear_saved_survey(controlled, monkeypatch):
+def test_manual_tactical_failure_does_not_change_survey_in_scheduler(controlled, monkeypatch):
     controller, factory, _, _ = controlled
-    cleared = []
-    monkeypatch.setattr(tactical_survey, "clear_survey", cleared.append)
+    blocked = []
+    monkeypatch.setattr(tactical_survey, "block_survey", lambda config, *, now: blocked.append(config))
     controller.enqueue("tactical_battles")
     controller.resume()
     eventually(lambda: len(factory.processes) == 1)
     factory.processes[0].finish(1)
     eventually(lambda: controller.status()["state"] == "failed")
-    assert not cleared
+    assert not blocked
 
 
 @pytest.mark.parametrize("elapsed, expected", [(59, False), (60, True), (4 * 3600, False)])
@@ -229,19 +233,25 @@ def test_real_checkpoint_cannot_continue_after_daily_reset(controlled, monkeypat
     assert not factory.processes
 
 
-def test_real_failed_continuation_removes_only_survey_file(controlled, monkeypatch):
+def test_real_failed_continuation_blocks_search_and_preserves_budget(controlled, monkeypatch):
     controller, factory, _, _ = controlled
     monkeypatch.setattr(tactical_survey, "continuation_due", saved_continuation_due)
     save_survey(controller.config, NOW - timedelta(minutes=1))
     enqueue_due(controller)
     controller.resume()
     eventually(lambda: len(factory.processes) == 1)
-    # The child may fail after creating an unresolved entry. Disposable survey
-    # cleanup cannot turn that into permission to use another ticket.
+    # A failed child may leave an unresolved entry. Blocking its search must
+    # preserve both the consumed allowance and the durable spending intent.
     tactical_state.begin_battle(controller.config, game_day(NOW), "opponent", 5, 500, now=NOW)
     intent_before = tactical_state.state_path(controller.config).read_bytes()
     factory.processes[0].finish(1)
     eventually(lambda: controller.status()["state"] == "failed")
-    assert not tactical_survey.survey_path(controller.config).exists()
+    saved = tactical_survey.load_survey(
+        controller.config, day_key=game_day(NOW), own_rank=500,
+        time_budget_seconds=controller.config.tactical_battles_search_minutes * 60,
+        now=NOW.timestamp())
+    assert saved["status"] == "blocked"
+    assert saved["search"].elapsed_seconds == 120
+    assert not saved_continuation_due(controller.config, now=NOW.timestamp() + 900)
     assert tactical_state.state_path(controller.config).read_bytes() == intent_before
     assert not controller.status()["queue"]

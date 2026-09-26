@@ -468,6 +468,35 @@ digit-only fallback also needs a matching full-height reading. The first row is 
 85/75/90. Its names and account balances are masked as above. Uncertain OCR does
 not provide a discounted opponent score.
 
+`tactical-battles-clipped-eight-label` preserves a later level-80 card whose
+clipped whole label confidently reads `Lv.30`. Wider full-height reads agree
+on 80 below the acceptance threshold. Repeated such contradictions now veto
+the candidate without authorizing an alternative value. This extends the
+earlier digit-crop regression to whole-label errors. Names, club badges, and
+account balances are masked or replaced with synthetic labels.
+
+`tactical-battles-refresh-121` preserves an actual post-refresh countdown of
+`02:01`. The timer parser accepts that observed value while rejecting larger
+counts; live acknowledgement still requires elapsed-time evidence in the
+runtime. The fixture has the same privacy masks as the other menu samples.
+
+`tactical-battles-ignored-refresh-before.png` and `-after.png` preserve a
+September 26 ignored refresh: the same three opponent rows, own rank 571,
+five tickets, and a countdown from 1:51 to 1:48 over 5.192 seconds. The rows
+are pixel-identical while strict unit-level recognition excludes every team.
+This evidence permits one bounded refresh retry without authorizing a battle
+or inferring missing student levels. Names use synthetic labels; account
+balances, the player banner, and club badges are masked consistently in both.
+
+`tactical-battles-delayed-entry-campaign` and `tactical-battles-delayed-entry-opponent`
+come from the September 26 continuation navigation failure. Campaign remained
+visible roughly four seconds after the first input. A repeated input landed on
+an opponent as Tactical Challenge opened, leaving its detail modal on screen.
+The first fixture removes account balances; the second retains only the modal
+with synthetic account names and masked club badges. Its uncertain student-level
+OCR does not authorize battle entry. The runtime regression sends one navigation
+input and waits for the destination, including a bounded timeout case.
+
 `tactical-battles-live-hud`, `tactical-battles-defeat`, and
 `tactical-battles-defeat-tip` retain the first non-skipped battle's timer HUD,
 actual loss result, and following effect-type tutorial. HUD player/opponent names
@@ -496,3 +525,29 @@ student requires proven role, filter, sort, and roster position. They do not
 establish an automated live fill or victory. The ordinary-formation blank-slot
 text in its parser test is synthetic; the Quick Formation empty slot is real.
 These game-derived fixtures remain outside the project's MIT grant.
+
+`loot-free-pack-entrance-before.png` and `loot-free-pack-entrance-after.png`
+preserve the September 26 Free Daily Pack receipt that delivered 10,000 Credit
+Points and 10 AP. The AP card is still scaling into place in the first capture; its final
+rectangle is smaller in the second. Initial reward inspection now waits for
+stationary cards before establishing its input reference, while the strict
+rectangle guard continues to reject the animated-to-settled pair. Only the
+reward heading, cards, and continuation hint areas remain; account identity,
+balances, and surrounding game content are masked. These are observed receipt fixtures;
+the complete recovery flow is tested offline.
+
+`cafe-delayed-visitors.png` preserves the September 26 Visiting Student List
+notice that appeared after floor two had briefly become unobstructed. Only the
+notice and three Cafe HUD anchors remain; the room, account balances, and other
+HUD content are masked. Its paired JSON retains the original notice OCR,
+including the optional close icon. The regression accepts that icon only in its
+known corner and rejects unrelated dialog content. Delayed dismissal is tested
+offline and is not evidence of a completed live recovery.
+
+`tactical-battles-skip-win` preserves the September 26 skipped victory's compact
+Battle Result modal, including its WIN! title, reward card, and cyan Confirm
+button. Everything outside the modal is masked; no account name, opponent
+identity, rank, or balance remains. Paired JSON retains only the modal's OCR.
+The live match changed rank 571 to 541 and tickets 5 to 4. This fixture covers
+the actual skipped victory layout; the full combat-page WIN test remains
+synthetic. Negative tests remove its required anchors or corrupt the title.

@@ -52,6 +52,23 @@ def test_delayed_tooltip_is_expected_transition_but_not_the_same_input_evidence(
     assert not lr.same_receipt_view(before, after, parsed, vision=vision)
 
 
+def test_free_pack_entrance_animation_needs_a_settled_initial_reference(vision):
+    before, after = [(FIXTURES / f'loot-free-pack-entrance-{suffix}.png').read_bytes()
+                     for suffix in ('before', 'after')]
+    original, settled = [lr.page(png, vision) for png in (before, after)]
+    assert original.kind == settled.kind == 'reward'
+    assert original.cards[1].box == (644, 251, 153, 229)
+    assert settled.cards[1].box == (647, 254, 148, 222)
+    assert [(card.name, card.quantity) for card in settled.cards] == [
+        ('Credit Points', 10000), ('AP', 10)]
+    assert not lr.reward_layout_stable(before, after)
+    assert lr.reward_layout_stable(after, after)
+    # Waiting may replace the provisional discovery capture, but an old card
+    # rectangle must never itself authorize a tap after its scale changes.
+    assert not lr.same_receipt_view(before, after, original, vision=vision)
+    assert lr.same_receipt_view(after, after, settled, vision=vision)
+
+
 def test_final_row_only_and_owned_is_never_quantity(vision):
     p = lr.page((FIXTURES / "loot-sweep.png").read_bytes(), vision)
     assert p.kind == "sweep" and len(p.cards) == 9 and not p.clipped

@@ -1,7 +1,7 @@
 """Survey all schools, choose one verified lesson, and reconcile its ticket receipt."""
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 import json
 import logging
@@ -25,6 +25,7 @@ LESSONS_TIMEOUT = 1800
 MAX_SCHOOLS = 50
 MAX_INPUTS = 2500
 INPUT_TIME_RESERVE = 1.0
+MAX_STALE_INPUT_RETRIES = 2
 
 
 def identity(name: str) -> str:
@@ -95,18 +96,33 @@ class LessonsRunner:
                 or any(type(n) is not int for n in target)
                 or not 0 <= target[0] < 1280 or not 0 <= target[1] < 720):
             self.fail('Lessons has no valid recognized input target')
-        if not frame.capture.is_fresh(self.clock()):
-            self.fail('Lessons frame expired before input; no tap was sent')
-        if self.device.foreground_package() != self.config.package:
-            self.fail('Blue Archive left the foreground before Lesson input; no tap was sent')
-        self.journal.record('intent', operation='tap', task='lessons', detail=detail,
-                            target=list(target), frame=self.last_frame)
-        sent = self.device.tap(*target, deadline=frame.capture.deadline, monotonic=self.clock)
-        self.journal.record('outcome', operation='tap', result='ok' if sent else 'skipped_stale')
-        if not sent:
-            self.fail('Lessons frame expired during device preflight; no tap was sent')
-        self.actions += 1
-        self.sleep(.35)
+        original = frame.screen
+        for attempt in range(MAX_STALE_INPUT_RETRIES + 1):
+            if not frame.capture.is_fresh(self.clock()):
+                self.fail('Lessons frame expired before input; no tap was sent')
+            if self.device.foreground_package() != self.config.package:
+                self.fail('Blue Archive left the foreground before Lesson input; no tap was sent')
+            self.journal.record('intent', operation='tap', task='lessons', detail=detail,
+                                target=list(target), frame=self.last_frame)
+            sent = self.device.tap(*target, deadline=frame.capture.deadline, monotonic=self.clock)
+            self.journal.record('outcome', operation='tap', result='ok' if sent else 'skipped_stale')
+            if sent:
+                self.actions += 1
+                self.sleep(.35)
+                return
+            # False means the adapter rejected this input before dispatch. An
+            # exception or an already-sent input is never replayed. Refresh only
+            # a known Lessons screen and require all observed decision fields
+            # (including tickets, students, room and school progress) unchanged.
+            if (attempt == MAX_STALE_INPUT_RETRIES or frame.capture.is_fresh(self.clock())
+                    or original.kind not in {'overview', 'map', 'rooms', 'confirm', 'receipt'}):
+                self.fail('Lessons frame expired during device preflight; no tap was sent')
+            fresh = self.wait(original.kind)
+            if replace(fresh.screen, words=(), detail='') != replace(original, words=(), detail=''):
+                self.fail('Lessons screen changed while refreshing an unsent input; no tap was sent')
+            self.journal.record('lesson_unsent_input_refreshed', attempt=attempt + 1,
+                                detail=detail, frame=self.last_frame)
+            frame = fresh
 
     def wait(self, kinds, predicate=None, timeout=30):
         if isinstance(kinds, str):

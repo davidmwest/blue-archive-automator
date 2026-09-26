@@ -136,6 +136,104 @@ def test_device_deadline_rejects_frame_that_expires_during_preflight(harness):
     assert journal(runner)[-1]["result"] == "skipped_stale"
 
 
+@pytest.mark.parametrize('screen,target', [
+    (map_screen(), (1156, 663)),
+    (LessonScreen('confirm', tickets=4, tickets_after=3, room_name='Arcade',
+                  students=(LessonStudent('0', True, 10),), start_target=(760, 592)), (760, 592)),
+])
+def test_unsent_expired_input_reobserves_same_decision_before_one_tap(harness, screen, target):
+    runner = harness.make()
+    harness.screens[:] = [screen]
+    tap = harness.device.tap
+    calls = 0
+
+    def slow_first_preflight(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            harness.clock.sleep(6)
+        return tap(*args, **kwargs)
+
+    harness.device.tap = slow_first_preflight
+    runner.tap(harness.frame(screen), target, 'Navigation or verified ticket spend')
+    assert calls == 2
+    assert harness.device.taps == [target]
+    assert runner.actions == 1
+    assert len([e for e in journal(runner) if e['event'] == 'lesson_unsent_input_refreshed']) == 1
+
+
+@pytest.mark.parametrize('changed', [
+    map_screen(name='Different school'), map_screen(tickets=1), map_screen(xp=200),
+])
+def test_unsent_input_refresh_rejects_changed_school_tickets_or_progress(harness, changed):
+    runner = harness.make()
+    harness.screens[:] = [changed]
+    calls = []
+
+    def expire(*args, **kwargs):
+        calls.append(args)
+        harness.clock.sleep(6)
+        return False
+
+    harness.device.tap = expire
+    with pytest.raises(TaskError, match='screen changed while refreshing'):
+        runner.tap(harness.frame(map_screen()), (1156, 663), 'Open room list')
+    assert len(calls) == 1 and not harness.device.taps and runner.actions == 0
+
+
+@pytest.mark.parametrize('field,value', [
+    ('tickets', 3), ('tickets_after', 2), ('room_name', 'Different room'),
+    ('students', (LessonStudent('0', True, 11),)), ('start_target', (700, 592)),
+])
+def test_unsent_spend_cannot_refresh_changed_ticket_cost_students_or_target(harness, field, value):
+    runner = harness.make()
+    screen = LessonScreen('confirm', tickets=4, tickets_after=3, room_name='Arcade',
+                          students=(LessonStudent('0', True, 10),), start_target=(760, 592))
+    harness.screens[:] = [replace(screen, **{field: value})]
+    calls = []
+
+    def expire(*args, **kwargs):
+        calls.append(args)
+        harness.clock.sleep(6)
+        return False
+
+    harness.device.tap = expire
+    with pytest.raises(TaskError, match='screen changed while refreshing'):
+        runner.tap(harness.frame(screen), (760, 592), 'Spend one verified ticket')
+    assert len(calls) == 1 and not harness.device.taps and runner.actions == 0
+
+
+def test_unsent_input_retry_remains_bounded(harness):
+    runner = harness.make()
+    harness.screens[:] = [map_screen()]
+    calls = []
+
+    def expire(*args, **kwargs):
+        calls.append(args)
+        harness.clock.sleep(6)
+        return False
+
+    harness.device.tap = expire
+    with pytest.raises(TaskError, match='device preflight'):
+        runner.tap(harness.frame(map_screen()), (1156, 663), 'Open room list')
+    assert len(calls) == 3 and not harness.device.taps and runner.actions == 0
+
+
+def test_transport_error_after_possible_dispatch_is_never_retried(harness):
+    runner = harness.make()
+    harness.screens[:] = [map_screen()]
+    calls = []
+
+    def uncertain(*args, **kwargs):
+        calls.append(args)
+        raise RuntimeError('ADB response lost')
+
+    harness.device.tap = uncertain
+    with pytest.raises(RuntimeError, match='response lost'):
+        runner.tap(harness.frame(map_screen()), (1156, 663), 'Open room list')
+    assert len(calls) == 1 and runner.actions == 0
+
+
 @pytest.mark.parametrize("target", [None, (True, 0), (-1, 0), (1280, 0), (0, 720), [10, 20]])
 def test_invalid_input_targets_do_not_reach_device(harness, target):
     runner = harness.make()

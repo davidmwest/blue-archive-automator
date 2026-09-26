@@ -248,12 +248,54 @@ class CafeRunner:
 
     def wait_cafe(self, timeout=30):
         end = self.clock() + timeout
+        notice_attempts = 0
+        notice_retry_at = 0
+        pending_notice = None
         while self.clock() < end:
             cap = self.capture()
             if self.vision.is_cafe(cap[2]):
+                if pending_notice is not None:
+                    self.visitor_notice_after(pending_notice, cap, "cafe", "changed")
                 return cap
+            # The new floor can appear before its visitor list arrives. The
+            # same exact notice handled during navigation also needs handling
+            # here, without treating other overlays as permission to tap.
+            notice = self.vision.visitor_notice(cap[2], self.vision.words(cap[2]))
+            now = self.clock()
+            if notice is not None and now >= notice_retry_at:
+                if notice_attempts >= NAVIGATION_ATTEMPTS:
+                    self.fail("Cafe visiting-student notice remained after three dismissal attempts")
+                if now - cap[0] < FRAME_MAX_AGE - 1:
+                    if pending_notice is not None:
+                        self.visitor_notice_after(pending_notice, cap, "visitor_notice", "unchanged")
+                    pending_notice = self.dismiss_visitor_notice(cap, notice)
+                    notice_attempts += 1
+                    notice_retry_at = self.clock() + NAVIGATION_RETRY_DELAY
+            elif notice is None and pending_notice is not None:
+                self.visitor_notice_after(pending_notice, cap, "unknown", "changed")
+                pending_notice = None
             self.sleep(.8)
         self.fail("Cafe screen did not become unobstructed; review the screenshot trace")
+
+    def dismiss_visitor_notice(self, cap, target):
+        popup_id = uuid4().hex
+        before = f"popups/{popup_id}-before.png"
+        self.journal.save_image(before, cap[1])
+        self.tap(cap, target, "Dismiss the verified Cafe visiting-student list")
+        pending = {
+            "id": popup_id, "detail": "Dismiss the Cafe visiting-student list",
+            "detector": "cafe_visitors", "time": datetime.now(timezone.utc).isoformat(),
+            "before": before, "after": None, "result": "pending",
+        }
+        self.journal.record("popup_dismissal", **pending)
+        return pending
+
+    def visitor_notice_after(self, pending, cap, state, result):
+        after = f"popups/{pending['id']}-after.png"
+        self.journal.save_image(after, cap[1])
+        self.journal.record("popup_dismissal", **{
+            **pending, "after": after, "after_state": state, "result": result,
+        })
 
     def wait_words(self, predicate, timeout=20, *, require_cafe=False,
                    failure="Expected Cafe dialog did not appear; review the screenshot trace"):
@@ -325,11 +367,7 @@ class CafeRunner:
                         state = "visitor_notice"
             now = self.clock()
             if pending_notice is not None and state != "visitor_notice":
-                after = f"popups/{pending_notice['id']}-after.png"
-                self.journal.save_image(after, cap[1])
-                self.journal.record("popup_dismissal", **{
-                    **pending_notice, "after": after, "after_state": state, "result": "changed",
-                })
+                self.visitor_notice_after(pending_notice, cap, state, "changed")
                 pending_notice = None
             if state != last_state:
                 self.phase(f"{detail}: {state.replace('_', ' ')}")
@@ -347,21 +385,8 @@ class CafeRunner:
                         self.fail("Cafe visiting-student notice remained after three dismissal attempts")
                     if now - cap[0] < FRAME_MAX_AGE - 1:
                         if pending_notice is not None:
-                            after = f"popups/{pending_notice['id']}-after.png"
-                            self.journal.save_image(after, cap[1])
-                            self.journal.record("popup_dismissal", **{
-                                **pending_notice, "after": after, "after_state": state, "result": "unchanged",
-                            })
-                        popup_id = uuid4().hex
-                        before = f"popups/{popup_id}-before.png"
-                        self.journal.save_image(before, cap[1])
-                        self.tap(cap, notice, "Dismiss the verified Cafe visiting-student list")
-                        pending_notice = {
-                            "id": popup_id, "detail": "Dismiss the Cafe visiting-student list",
-                            "detector": "cafe_visitors", "time": datetime.now(timezone.utc).isoformat(),
-                            "before": before, "after": None, "result": "pending",
-                        }
-                        self.journal.record("popup_dismissal", **pending_notice)
+                            self.visitor_notice_after(pending_notice, cap, state, "unchanged")
+                        pending_notice = self.dismiss_visitor_notice(cap, notice)
                         notice_attempts += 1
                         notice_retry_at = self.clock() + NAVIGATION_RETRY_DELAY
             elif state == source:

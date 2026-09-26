@@ -221,7 +221,7 @@ def test_settings_remain_locked_during_active_or_ready_work(controlled, config_p
             assert controller.status()["capturing"] is True
         try:
             with pytest.raises(ApiError) as error:
-                controller.update_settings({"tactical_battles_confidence_percent": 90})
+                controller.update_settings({"tactical_battles_search_minutes": 5})
             assert error.value.status == 409
             assert config_path.read_bytes() == original
         finally:
@@ -267,6 +267,11 @@ def test_tactical_battle_settings_persist_and_reach_the_queued_snapshot(controll
     original = config_path.read_bytes()
     for invalid in ({"tactical_battles_preserve_tickets": -1},
                     {"tactical_battles_preserve_tickets": 6},
+                    {"tactical_battles_search_minutes": 0.5},
+                    {"tactical_battles_search_minutes": 31},
+                    {"tactical_battles_search_minutes": True},
+                    {"tactical_battles_search_minutes": "10"},
+                    {"tactical_battles_search_minutes": None},
                     {"tactical_battles_refresh_limit": 0},
                     {"tactical_battles_refresh_limit": 101},
                     {"tactical_battles_confidence_percent": 79.9},
@@ -281,12 +286,14 @@ def test_tactical_battle_settings_persist_and_reach_the_queued_snapshot(controll
         assert error.value.status == 400
         assert config_path.read_bytes() == original
     changes = {"tactical_battles_preserve_tickets": 2, "tactical_battles_refresh_limit": 8,
+               "tactical_battles_search_minutes": 12.5,
                "tactical_battles_confidence_percent": 90.5,
                "tactical_battles_skip_battles": False,
                "tactical_battles_enabled_in_daily": True}
     controller.update_settings(changes)
     saved = tomllib.loads(config_path.read_text())
     assert saved["tactical_battles"] == {"preserve_tickets": 2, "refresh_limit": 8,
+                                       "search_minutes": 12.5,
                                        "confidence_percent": 90.5,
                                        "skip_battles": False,
                                        "enabled_in_daily": True}
@@ -296,7 +303,7 @@ def test_tactical_battle_settings_persist_and_reach_the_queued_snapshot(controll
     schedules = json.loads(json.dumps(controller._schedule))
     schedule_path = controller._state_dir() / "schedule.json"
     persisted_schedules = schedule_path.read_bytes()
-    controller.update_settings({"tactical_battles_confidence_percent": 90})
+    controller.update_settings({"tactical_battles_search_minutes": 5.5})
     assert controller.status()["queue_paused"] is True
     assert [entry["id"] for entry in controller.status()["queue"]] == [job["id"]]
     assert factory.processes == []
@@ -311,7 +318,8 @@ def test_tactical_battle_settings_persist_and_reach_the_queued_snapshot(controll
     assert factory.processes[0].arguments[-1] == "tactical_battles"
     assert snapshot.tactical_battles_preserve_tickets == 2
     assert snapshot.tactical_battles_refresh_limit == 8
-    assert snapshot.tactical_battles_confidence_percent == 90
+    assert snapshot.tactical_battles_confidence_percent == 90.5
+    assert snapshot.tactical_battles_search_minutes == 5.5
     assert snapshot.tactical_battles_enabled_in_daily is True
     assert snapshot.tactical_battles_skip_battles is False
 
@@ -402,6 +410,23 @@ def test_http_rejects_arbitrary_commands_settings_and_file_paths(http_server):
     assert request("GET", "/../../etc/passwd")[0] == 404
     assert request("GET", "/config/local.toml")[0] == 404
     assert request("GET", "/api/frame?v=anything")[0] == 404
+
+
+def test_http_search_time_setting_validates_and_persists_without_dispatch(http_server, config_path):
+    request, controller, factory, _ = http_server
+    token = {"X-CSRF-Token": controller.csrf_token}
+    assert request("POST", "/api/pause", {}, token)[0] == 200
+    assert request("POST", "/api/settings", {"tactical_battles_search_minutes": 12.5}, token)[0] == 200
+    code, status = request("GET", "/api/status")
+    assert code == 200
+    assert status["config"]["tactical_battles_search_minutes"] == 12.5
+    assert Config.from_file(config_path).tactical_battles_search_minutes == 12.5
+    saved = config_path.read_bytes()
+    for invalid in (True, "10", None, 0, 30.1):
+        assert request("POST", "/api/settings", {"tactical_battles_search_minutes": invalid}, token)[0] == 400
+        assert config_path.read_bytes() == saved
+    assert factory.processes == []
+    assert controller.status()["queue_paused"] is True
 
 
 def test_dashboard_serves_branded_page_and_only_the_explicit_mascot_asset(http_server):

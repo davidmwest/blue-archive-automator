@@ -65,6 +65,8 @@ between jobs, it checks red dots and AP every 30 minutes by default. change that
 
 most of the time, the controls are just **do everything** and **pause queue**. do everything resumes the queue, finishes anything already in progress, runs enabled jobs that are due, then checks for red dots and extra AP right away. it also uses remaining Tactical Challenge tickets above your reserve when enabled. it keeps your AP floor and spending settings. individual jobs and the immediate stop button are under **manual controls**. failed jobs show up underneath, when there's something to look at.
 
+tactical challenge gets 10 minutes of search time per match by default, adjustable in settings. it spends the first 37% setting a benchmark, then gradually relaxes toward the weakest quarter of teams it has seen. no qualifying opponent before the deadline? keep the ticket. [tactical settings →](docs/getting-started.md#tactical-challenge)
+
 the first profile is the global English game at **1280×720, 320 DPI**. use a dedicated BlueStacks instance and sign in manually once. Blue Archive and Azur Lane get different ADB endpoints; they can share a compatible host ADB server. [setup and commands →](docs/getting-started.md)
 
 ## why it's built this way

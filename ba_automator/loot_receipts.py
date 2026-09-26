@@ -1135,6 +1135,14 @@ class ReceiptReader:
             cap = self.capture()
             p = self.read(cap)
             kind = p.kind
+            if kind == "reward":
+                # The heading appears while the last card is still scaling in.
+                # Do not make that moving rectangle the reference for our first
+                # input. Observe a settled row and validate it through OCR just
+                # as after a swipe; the strict input identity guard is unchanged.
+                cap, p = self.settled_reward_page(cap)
+                self.evidence_frame(cap, "initial-settled")
+                self.r.journal.record("receipt_initial_settled", cards=len(p.cards))
             original_sweep = (cap.png, p) if kind == "sweep" else None
             if p.expand_target:
                 self.input(cap, p.expand_target)

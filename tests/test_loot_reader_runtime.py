@@ -977,6 +977,44 @@ def test_reward_scroll_waits_for_two_stationary_samples_before_ocr(harness, monk
     assert reader.observed == (cap.png, page)
 
 
+def test_initial_reward_animation_settles_before_first_inspection_input(harness, monkeypatch):
+    h = harness
+    h.pages = [lr.Page('reward', (card('Credit Points', 485, 10000), card('AP', 647, 10)))]
+    original_page = lr.page
+    animated = replace(h.pages[0], cards=(h.pages[0].cards[0],
+                       replace(h.pages[0].cards[1], box=(644, 251, 153, 229))))
+    checks = 0
+
+    def first_animated(png, vision):
+        parsed = original_page(png, vision)
+        return animated if h.page_reads == 1 else parsed
+
+    def stabilizes(before, after):
+        nonlocal checks
+        checks += 1
+        if checks <= 4:
+            assert h.inputs == []
+        return checks >= 3
+
+    monkeypatch.setattr(lr, 'page', first_animated)
+    monkeypatch.setattr(lr, 'reward_layout_stable', stabilizes)
+    result = h.reader().run()
+    assert result['items_complete']
+    assert [(item['name'], item['quantity']) for item in result['items']] == [
+        ('Credit Points', 10000), ('AP', 10)]
+    assert checks >= 4
+    assert (h.evidence.parent / 'receipt-initial-settled.png').is_file()
+
+
+def test_initial_reward_that_keeps_moving_sends_no_inspection_input(harness, monkeypatch):
+    h = harness
+    h.pages = [replace(h.pages[0], kind='reward')]
+    monkeypatch.setattr(lr, 'reward_layout_stable', lambda *args: False)
+    with pytest.raises(TaskError, match='did not settle'):
+        h.reader().run()
+    assert h.inputs == [] and not h.result()['items_complete']
+
+
 def test_reward_scroll_that_never_settles_stops_without_more_inputs(harness, monkeypatch):
     h = harness
     monkeypatch.setattr(lr, "reward_layout_stable", lambda *args: False)

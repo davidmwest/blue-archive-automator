@@ -62,9 +62,15 @@ class CafeVision:
             if len(hits) != 1:
                 return None
             targets.append(hits[0].center)
+        # OCR sometimes reads the close glyph. Accept it only at this dialog's
+        # upper-right corner; an X elsewhere is not evidence of this notice.
+        close = [w for w in panel if w.normalized == "x"
+                 and 905 <= w.center[0] <= 935 and 170 <= w.center[1] <= 210]
+        if len(close) > 1:
+            return None
         # This notice has only a heading, list label, button, and bond numbers.
         if any(w.normalized not in {item[0] for item in required}
-               and not w.normalized.isdecimal() for w in panel):
+               and not w.normalized.isdecimal() and w not in close for w in panel):
             return None
         gains = []
         for name, bounds in (("title", (102, 6, 173, 40)),

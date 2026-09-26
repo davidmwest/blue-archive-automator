@@ -316,6 +316,10 @@ def test_uncertain_result_blocks_replay(runner, receipt, after):
     with pytest.raises(TaskError):
         runner.sweep(frame(runner, detail()), 5, 0)
     assert read_state(runner.config, runner.task)["pending"] is not None
+    # A new run can inspect the balance, but the observed debit must keep the
+    # receipt unresolved. It cannot infer which rewards were received.
+    runner.wait = lambda *args, **kwargs: frame(runner, TicketScreen("home"))
+    runner.enter_menu = lambda: frame(runner, TicketScreen("menu", task=runner.task, tickets=10))
     with pytest.raises(TaskError, match="unresolved"):
         runner.run()
 
@@ -329,6 +333,86 @@ def test_pending_blocks_even_after_reset(runner):
     runner.wall_clock = lambda: datetime.fromisoformat("2026-09-25T20:00:00+00:00")
     with pytest.raises(TaskError, match="unresolved"):
         runner.run()
+
+
+def unspent_pending(runner):
+    runner.state["done"] = [5, 0, 0]
+    runner.state["pending"] = dict(
+        area="Desert Railroad", stage="H", count=5, tickets_before=10,
+        ap_before=150, ap_cost=0, run_dir=str(runner.run_dir / "previous"),
+    )
+    runner.save()
+    clock = [0.0]
+    runner.clock = lambda: clock[0]
+    runner.sleep = lambda seconds: clock.__setitem__(0, clock[0] + seconds)
+    def menu(**changes):
+        screen = TicketScreen(**(dict(kind="menu", task=runner.task, tickets=10) | changes))
+        return ShopFrame(Capture(b"fixture", clock[0], runner.config.package), screen)
+    runner.wait = lambda *args, **kwargs: menu()
+    runner.tap = lambda *args: pytest.fail("Reconciliation must not spend or navigate")
+    return menu, clock
+
+
+def test_ignored_confirm_reconciles_two_fresh_unchanged_menu_balances(runner):
+    import json
+    menu, clock = unspent_pending(runner)
+    observed = runner.reconcile_unspent_pending(menu())
+    saved = read_state(runner.config, runner.task)
+    assert saved["pending"] is None
+    assert saved["done"] == [5, 0, 0]
+    assert observed.screen.tickets == 10 and clock[0] == 2
+    assert all((runner.run_dir / f"pending-unspent-{n}.png").is_file() for n in range(2))
+    actions = [json.loads(line) for line in
+               (runner.config.state_dir / "important-actions.jsonl").read_text().splitlines()]
+    assert actions[-1]["action"] == "ticket_sweep_unspent"
+
+
+@pytest.mark.parametrize("changes", [
+    {"tickets": 5}, {"tickets": 9}, {"tickets": 11}, {"tickets": None},
+    {"kind": "confirm"}, {"task": "scrimmages"},
+])
+def test_unspent_reconciliation_rejects_unproven_ticket_balance(runner, changes):
+    menu, _ = unspent_pending(runner)
+    with pytest.raises(TaskError, match="unresolved"):
+        runner.reconcile_unspent_pending(menu(**changes))
+    assert read_state(runner.config, runner.task)["pending"] is not None
+
+
+@pytest.mark.parametrize("change", ["debit", "reset", "stale", "reuse", "foreground"])
+def test_unspent_reconciliation_rechecks_second_observation(runner, change):
+    menu, clock = unspent_pending(runner)
+    first = menu()
+    def second(*args, **kwargs):
+        if change == "debit":
+            return menu(tickets=5)
+        if change == "reset":
+            runner.wall_clock = lambda: datetime.fromisoformat("2026-09-25T20:00:00+00:00")
+        result = menu()
+        if change == "stale":
+            clock[0] += 10
+        if change == "reuse":
+            return first
+        if change == "foreground":
+            return replace(result, capture=replace(result.capture, foreground="other.package"))
+        return result
+    runner.wait = second
+    with pytest.raises(TaskError, match="unresolved"):
+        runner.reconcile_unspent_pending(first)
+    assert read_state(runner.config, runner.task)["pending"] is not None
+
+
+@pytest.mark.parametrize("change", ["allocation", "quota", "reset"])
+def test_unspent_reconciliation_preserves_inconsistent_or_old_intent(runner, change):
+    menu, _ = unspent_pending(runner)
+    if change == "allocation":
+        runner.state["pending"]["tickets_before"] = 11
+    elif change == "quota":
+        runner.state["pending"]["count"] = 6
+    else:
+        runner.wall_clock = lambda: datetime.fromisoformat("2026-09-25T20:00:00+00:00")
+    with pytest.raises(TaskError, match="unresolved"):
+        runner.reconcile_unspent_pending(menu())
+    assert read_state(runner.config, runner.task)["pending"] is not None
 
 
 def test_daily_ticket_plan_and_optional_toggles(runner):

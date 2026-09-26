@@ -52,6 +52,8 @@ class Config:
     tactical_battles_enabled_in_daily: bool = True
     tactical_battles_skip_battles: bool = True
     tactical_battles_preserve_tickets: int = 1
+    tactical_battles_search_minutes: float = 10.0
+    # Retained for older configuration files; time-based scouting does not use them.
     tactical_battles_refresh_limit: int = 50
     tactical_battles_confidence_percent: float = 99.0
     total_assault_difficulty: str = "hardcore"
@@ -149,6 +151,10 @@ class Config:
         if (type(self.tactical_battles_preserve_tickets) is not int
                 or not 0 <= self.tactical_battles_preserve_tickets <= 5):
             raise ConfigError("tactical_battles.preserve_tickets must be an integer from 0 to 5")
+        if (type(self.tactical_battles_search_minutes) not in (int, float)
+                or not math.isfinite(self.tactical_battles_search_minutes)
+                or not 1 <= self.tactical_battles_search_minutes <= 30):
+            raise ConfigError("tactical_battles.search_minutes must be a number from 1 to 30")
         if (type(self.tactical_battles_refresh_limit) is not int
                 or not 2 <= self.tactical_battles_refresh_limit <= 100):
             raise ConfigError("tactical_battles.refresh_limit must be an integer from 2 to 100")
@@ -205,7 +211,7 @@ class Config:
                       "monthly_max_cents", "half_monthly_max_cents", "ap_max_cents"},
             "bounties": {"enabled_in_daily"},
             "scrimmages": {"enabled_in_daily"},
-            "tactical_battles": {"enabled_in_daily", "skip_battles", "preserve_tickets", "refresh_limit", "confidence_percent"},
+            "tactical_battles": {"enabled_in_daily", "skip_battles", "preserve_tickets", "search_minutes", "refresh_limit", "confidence_percent"},
             "total_assault": {"difficulty", "enabled_in_daily", "comfort_seconds"},
             "lessons": {"strategy", "max_tickets", "locations", "enabled_in_daily"},
             "automation": {"close_app_when_idle"},

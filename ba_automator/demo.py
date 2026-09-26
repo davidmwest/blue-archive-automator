@@ -116,6 +116,7 @@ def _routes(now: datetime) -> dict[str, tuple[str, bytes]]:
             "tactical_battles_enabled_in_daily": True,
             "tactical_battles_skip_battles": True,
             "tactical_battles_preserve_tickets": 1,
+            "tactical_battles_search_minutes": 10,
             "tactical_battles_refresh_limit": 50,
             "tactical_battles_confidence_percent": 99.0,
             "total_assault_difficulty": "hardcore",

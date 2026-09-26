@@ -1,10 +1,9 @@
 """Disposable, bounded Tactical Challenge survey checkpoints.
 
-These files contain observations, never ticket-spending permission. The battle
-intent remains in tactical_state. A checkpoint expires four hours after its
-original creation: an unchanged own rank is only a working assumption that the
-row pools remain stable, not proof that opponents have not moved. Mutating
-callers hold the instance lock; the scheduler may read atomic snapshots.
+These files contain search progress, never ticket-spending permission. The
+battle intent remains in tactical_state. Active evidence blocks after four
+hours; its consumed budget remains recorded for the game day across rank changes.
+Mutating callers hold the instance lock; the scheduler reads atomic snapshots.
 """
 
 from datetime import datetime, timezone
@@ -19,15 +18,18 @@ from uuid import uuid4
 
 from .club import game_day
 from .tactical_battles import Opponent
-from .tactical_refresh import RefreshPlanner
+from .tactical_search import SearchState
 from . import tactical_state
 
 
 MAX_AGE_SECONDS = 4 * 60 * 60
 MAX_FILE_BYTES = 10 * 1024 * 1024
 MAX_ENTRIES = 1000
-_KEYS = {"version", "day_key", "own_rank", "confidence", "pilot", "planner",
-         "candidates", "identities", "lookup", "created_at", "updated_at", "due_at"}
+# Version 3 replaces confidence sampling with a finite-time search. Durable
+# battle history and daily exclusions live in a separate file and are retained.
+CHECKPOINT_VERSION = 3
+_KEYS = {"version", "day_key", "own_rank", "status", "search", "identities",
+         "created_at", "updated_at", "due_at"}
 
 
 def survey_path(config):
@@ -78,7 +80,7 @@ def _identities(value):
 
 def _validate(value, now, *, fresh=True):
     if (not isinstance(value, dict) or set(value) != _KEYS
-            or type(value["version"]) is not int or value["version"] != 1):
+            or type(value["version"]) is not int or value["version"] != CHECKPOINT_VERSION):
         raise ValueError("Invalid saved Tactical Challenge survey")
     if type(value["own_rank"]) is not int or value["own_rank"] < 1:
         raise ValueError("Invalid saved player rank")
@@ -87,35 +89,19 @@ def _validate(value, now, *, fresh=True):
         raise ValueError("Invalid saved survey times")
     if value["day_key"] != _day(created):
         raise ValueError("Saved survey day does not match its observations")
-    if fresh and (now - created >= MAX_AGE_SECONDS or value["day_key"] != _day(now)):
-        raise ValueError("Saved survey expired or crossed daily reset")
-    planner = RefreshPlanner.from_dict(value["planner"])
-    if (type(value["pilot"]) is not int or not 2 <= value["pilot"] <= 100
-            or value["pilot"] != planner.pilot
-            or type(value["confidence"]) not in (int, float)
-            or value["confidence"] != planner.confidence):
-        raise ValueError("Saved survey settings disagree with its observations")
+    if value["status"] not in {"active", "blocked"}:
+        raise ValueError("Invalid saved search status")
+    search = SearchState.from_dict(value["search"])
+    if fresh and value["day_key"] != _day(now):
+        raise ValueError("Saved search crossed daily reset")
+    if fresh and not search.exhausted and now - created >= MAX_AGE_SECONDS:
+        # Stale evidence cannot schedule work, but forgetting its consumed time
+        # would grant another full allowance on a manual or bounded retry.
+        value = dict(value, status="blocked")
     identities = _identities(value["identities"])
-    candidates = value["candidates"]
-    if not isinstance(candidates, list) or len(candidates) > MAX_ENTRIES:
-        raise ValueError("Too many saved candidates")
-    parsed = [_opponent(candidate) for candidate in candidates]
-    if len({p.opponent_id for p in parsed}) != len(parsed):
-        raise ValueError("Saved survey has duplicate candidates")
-    if any(p.opponent_id not in identities or p.rank >= value["own_rank"] for p in parsed):
-        raise ValueError("Saved candidate lacks an identity or higher rank")
-    lookup = value["lookup"]
-    if lookup is not None:
-        if (not isinstance(lookup, dict) or set(lookup) != {"opponent_id", "valid_draws"}
-                or type(lookup["valid_draws"]) is not int or lookup["valid_draws"] < 0):
-            raise ValueError("Invalid saved opponent lookup")
-        candidate = next((p for p in parsed if p.opponent_id == lookup["opponent_id"]), None)
-        if candidate is None:
-            raise ValueError("Saved lookup target is missing")
-        plan = planner.lookup_plan(candidate.rank)
-        if not plan.within_limit or lookup["valid_draws"] > plan.required_refreshes:
-            raise ValueError("Saved lookup exceeds its confidence budget")
-    return dict(value, planner=planner)
+    if any(key not in identities for key in search.scores):
+        raise ValueError("Saved search candidate lacks an identity")
+    return dict(value, search=search)
 
 
 def _read_json(path):
@@ -145,43 +131,44 @@ def _read(config, now, *, fresh=True):
 
 @lru_cache(maxsize=16)
 def _continuation_metadata(path, fingerprint):
-    """Cache only validated scheduling metadata, never a mutable planner."""
+    """Cache only validated scheduling metadata, never mutable search state."""
     try:
         raw = _read_json(Path(path))
         value = _validate(raw, _number(raw["updated_at"]), fresh=False)
         return {key: value[key] for key in (
-            "day_key", "confidence", "pilot", "created_at", "updated_at", "due_at"
-        )} | {"status": value["planner"].plan().status}
+            "day_key", "own_rank", "status", "created_at", "updated_at", "due_at"
+        )} | {"time_budget_seconds": value["search"].policy.time_budget_seconds,
+              "remaining_seconds": value["search"].remaining_seconds}
     except (OSError, ValueError, TypeError, KeyError, OverflowError, RecursionError):
         return None
 
 
-def _matches(value, day_key, own_rank, confidence, pilot):
+def _matches(value, day_key, time_budget_seconds):
     return (value is not None and value["day_key"] == day_key
-            and value["own_rank"] == own_rank and value["confidence"] == confidence
-            and value["pilot"] == pilot)
+            and value["search"].policy.time_budget_seconds == time_budget_seconds)
 
 
-def save_survey(config, *, day_key, own_rank, confidence, pilot, planner,
-                candidates, identities, lookup=None, now, delay_seconds=60):
-    """Atomically save a continuation, retaining its original four-hour age.
-
-    Clear an abandoned checkpoint before deliberately starting a new survey.
-    The delay is scheduling metadata and does not contribute statistical draws.
-    """
+def save_survey(config, *, day_key, own_rank, search, identities, now,
+                delay_seconds=60, status="active"):
+    """Save progress without restoring elapsed time or extending its age."""
     _number(now)
     _number(delay_seconds)
     if day_key != _day(now) or delay_seconds > MAX_AGE_SECONDS:
         raise ValueError("A survey must be saved for the current game day with a bounded delay")
-    if not isinstance(planner, RefreshPlanner):
-        raise ValueError("A refresh planner is required")
-    previous = _read(config, now, fresh=False)
-    created = (previous["created_at"] if _matches(previous, day_key, own_rank, confidence, pilot)
-               else now)
-    value = {"version": 1, "day_key": day_key, "own_rank": own_rank,
-             "confidence": confidence, "pilot": pilot, "planner": planner.to_dict(),
-             "candidates": candidates, "identities": identities, "lookup": lookup,
+    if not isinstance(search, SearchState):
+        raise ValueError("A search state is required")
+    previous = _read(config, now)
+    matching = _matches(previous, day_key, search.policy.time_budget_seconds)
+    if matching and search.elapsed_seconds < previous["search"].elapsed_seconds:
+        raise ValueError("Saved search cannot restore an already used time budget")
+    created = previous["created_at"] if matching else now
+    value = {"version": CHECKPOINT_VERSION, "day_key": day_key, "own_rank": own_rank,
+             "status": status, "search": search.to_dict(), "identities": identities,
              "created_at": created, "updated_at": now, "due_at": now + delay_seconds}
+    _write(config, value, now)
+
+
+def _write(config, value, now):
     # A JSON roundtrip copies mutable caller data and catches NaN/non-JSON data.
     encoded = json.dumps(value, allow_nan=False, separators=(",", ":")).encode("utf-8")
     if len(encoded) > MAX_FILE_BYTES:
@@ -201,11 +188,29 @@ def save_survey(config, *, day_key, own_rank, confidence, pilot, planner,
         temporary.unlink(missing_ok=True)
 
 
-def load_survey(config, *, day_key, own_rank, confidence, pilot, now):
-    """Return a replayed matching checkpoint, or None for unusable evidence."""
+def load_survey(config, *, day_key, own_rank, time_budget_seconds, now):
+    """Keep same-day progress across passive rank changes, including exhaustion.
+
+    The stored rank remains provenance. The runner checks current candidates
+    against the freshly observed rank; a defensive loss cannot renew a budget.
+    """
+    _number(now)
+    if type(own_rank) is not int or own_rank < 1:
+        raise ValueError("A current player rank is required")
+    value = _read(config, now)
+    return value if _matches(value, day_key, time_budget_seconds) else None
+
+
+def block_survey(config, *, now):
+    """Stop automatic continuation while preserving the consumed search budget."""
     _number(now)
     value = _read(config, now)
-    return value if _matches(value, day_key, own_rank, confidence, pilot) else None
+    if value is None:
+        return False
+    value.update(status="blocked", updated_at=now, due_at=max(now, value["due_at"]),
+                 search=value["search"].to_dict())
+    _write(config, value, now)
+    return True
 
 
 def clear_survey(config):
@@ -227,9 +232,9 @@ def continuation_due(config, *, now):
         return False
     if (value is None or value["due_at"] > now or value["updated_at"] > now
             or now - value["created_at"] >= MAX_AGE_SECONDS
-            or value["day_key"] != _day(now) or value["status"] == "deferred"
-            or value["confidence"] != round(config.tactical_battles_confidence_percent / 100, 12)
-            or value["pilot"] != config.tactical_battles_refresh_limit):
+            or value["day_key"] != _day(now) or value["status"] != "active"
+            or value["remaining_seconds"] <= 0
+            or value["time_budget_seconds"] != config.tactical_battles_search_minutes * 60):
         return False
     try:
         history = tactical_state.read_state(config)
