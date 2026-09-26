@@ -108,7 +108,9 @@ collecting Cafe AP clears its storage. when automatic AP spending is enabled, a 
 
 a successful Cafe job schedules the next visit for three hours and 15 seconds later. failures retry after 15 minutes; three consecutive failures pause retries until you press resume. the schedule survives server restarts. queued jobs don't. no login service or operating-system schedule is installed, so keep `serve` running for scheduled visits.
 
-pause lets the current job finish. stop interrupts it and pauses the queue. resume allows queued and due work to run again. settings changes are rejected while any job is active or queued. press **Ctrl+C** to stop a CLI run or the server.
+**do everything** resumes the queue and checks what can run. the current batch finishes first, then enabled jobs that are due run in order, followed by a fresh check for red dots and excess AP. clicking again while that pass is pending or running doesn't add another pass. your AP floor, spending settings, and unresolved spending holds still apply; a Daily already attempted this game day isn't repeated.
+
+**pause queue** lets the current job finish. open **manual controls** to pick one task, just resume queued work, or **stop now + pause** to interrupt the active job. failed-job notices appear below these controls. settings changes are rejected while any job is active or queued. press **Ctrl+C** to stop a CLI run or the server.
 
 to close the game between dashboard visits, enable the idle-close setting or set `close_app_when_idle = true` under `[automation]`. it closes the configured Blue Archive app once the queue has finished, including after a failed or stopped final job. it doesn't change standalone CLI runs or shut down BlueStacks. this setting is off by default.
 

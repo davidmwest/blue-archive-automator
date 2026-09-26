@@ -42,20 +42,59 @@
     <div id="error-banner" class="error-banner" role="alert" hidden><span id="error-message"></span><button id="dismiss-error" class="icon-button" type="button" aria-label="Dismiss error">×</button></div>
     <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 
+    <section class="run-card card" aria-labelledby="run-title">
+      <div class="run-main">
+        <div class="run-intro">
+          <div class="run-copy">
+            <div class="section-heading compact"><span class="section-kicker">START HERE</span><span id="state-badge" class="badge neutral">Connecting</span></div>
+            <h2 id="run-title">the daily stuff</h2>
+            <p id="run-phase" class="run-description">close the game, open it again, get to home. deal with the popups on the way.</p>
+          </div>
+          <img class="arisu-checklist" src="/maid-arisu-checklist.png" alt="" width="96" height="96" decoding="async">
+        </div>
+        <div class="run-actions primary-controls" aria-label="Automation controls">
+          <button id="run-available" class="button primary" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z"/></svg>do everything</button>
+          <button id="pause-queue" class="button secondary" type="button" disabled>pause queue</button>
+        </div>
+        <p id="queue-control-note" class="microcopy">run the enabled jobs that are due, then check red dots and AP. your settings and AP floor still apply.</p>
+        <details id="manual-controls" class="manual-controls">
+          <summary>manual controls</summary>
+          <div class="manual-controls-body">
+            <p class="microcopy">pick a specific task. everything runs one at a time.</p>
+            <div class="manual-task-actions" aria-label="Queue a specific task">
+              <button id="run-restart" class="button secondary" type="button" disabled><span>restart game</span></button>
+              <button id="run-daily" class="button secondary" type="button" disabled>daily routine</button>
+              <button id="run-club" class="button secondary" type="button" disabled>club</button>
+              <button id="run-cafe" class="button secondary" type="button" disabled>café</button>
+              <button id="run-crafting" class="button secondary" type="button" disabled>crafting</button>
+              <button id="run-red-dots" class="button secondary" type="button" disabled>collect red dots</button>
+              <button id="run-free-pack" class="button secondary" type="button" disabled>collect free pack</button>
+              <button id="run-tasks" class="button secondary" type="button" disabled>collect tasks</button>
+              <button id="run-mail" class="button secondary" type="button" disabled>collect mail</button>
+              <button id="run-packs" class="button secondary" type="button" disabled>check packs + mail</button>
+              <button id="run-ap" class="button secondary" type="button" disabled>spend AP</button>
+              <button id="run-total-assault" class="button secondary" type="button" disabled>total assault</button>
+              <button id="run-tactical" class="button secondary" type="button" disabled>collect tactical rewards</button>
+              <button id="run-bounties" class="button secondary" type="button" disabled>bounties</button>
+              <button id="run-scrimmages" class="button secondary" type="button" disabled>scrimmages</button>
+              <button id="run-lessons" class="button secondary" type="button" disabled>lessons</button>
+            </div>
+            <p id="daily-plan" class="microcopy">daily does restart → club → free pack → mail → café → bounties → scrimmages → tactical rewards → lessons → collect tasks. home red dots queue their collection jobs when a run finishes.</p>
+            <div class="manual-queue-actions">
+              <button id="resume-queue" class="button secondary small" type="button" hidden disabled>just resume the queue</button>
+              <button id="stop-run" class="button danger small" type="button" disabled><span class="stop-icon" aria-hidden="true"></span>stop now + pause</button>
+            </div>
+            <p class="microcopy">stop now interrupts the current task. anything waiting stays in the queue.</p>
+          </div>
+        </details>
+      </div>
+      <dl class="run-facts"><div><dt>CURRENT TASK</dt><dd id="current-task">—</dd></div><div><dt>ELAPSED</dt><dd id="elapsed">—</dd></div><div><dt>INSTANCE</dt><dd id="device-serial" class="mono">—</dd></div><div><dt>DISPLAY</dt><dd>1280 × 720<span class="fact-note">required · English</span></dd></div></dl>
+    </section>
+
     <section id="failed-jobs-card" class="card failed-jobs-card" aria-labelledby="failed-jobs-title" hidden>
       <div class="card-header"><div><p class="section-kicker">NEEDS A LOOK</p><h2 id="failed-jobs-title">failed jobs</h2></div></div>
       <p class="microcopy">something didn’t finish. payment failures disable automatic pack purchases. dismissing this notice doesn’t retry the job or turn spending back on.</p>
       <ul id="failed-jobs-list" class="failure-list"></ul>
-    </section>
-    <section class="run-card card" aria-labelledby="run-title">
-      <div class="run-main">
-        <div class="section-heading compact"><span class="section-kicker">START HERE</span><span id="state-badge" class="badge neutral">Connecting</span></div>
-        <h2 id="run-title">the daily stuff</h2>
-        <p id="run-phase" class="run-description">close the game, open it again, get to home. deal with the popups on the way.</p>
-        <div class="run-actions"><button id="run-restart" class="button primary" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z"/></svg><span>queue restart</span></button><button id="run-daily" class="button secondary" type="button" disabled>queue daily</button><button id="run-club" class="button secondary" type="button" disabled>queue club</button><button id="run-cafe" class="button secondary" type="button" disabled>queue café</button><button id="run-crafting" class="button secondary" type="button" disabled>queue crafting</button><button id="run-red-dots" class="button secondary" type="button" disabled>collect red dots</button><button id="run-free-pack" class="button secondary" type="button" disabled>collect free pack</button><button id="run-tasks" class="button secondary" type="button" disabled>collect tasks</button><button id="run-mail" class="button secondary" type="button" disabled>collect mail</button><button id="run-packs" class="button secondary" type="button" disabled>check packs + mail</button><button id="run-ap" class="button secondary" type="button" disabled>spend AP</button><button id="run-total-assault" class="button secondary" type="button" disabled>queue total assault</button><button id="run-tactical" class="button secondary" type="button" disabled>collect tactical rewards</button><button id="run-bounties" class="button secondary" type="button" disabled>queue bounties</button><button id="run-scrimmages" class="button secondary" type="button" disabled>queue scrimmages</button><button id="run-lessons" class="button secondary" type="button" disabled>queue lessons</button><button id="stop-run" class="button danger" type="button" disabled><span class="stop-icon" aria-hidden="true"></span>stop + pause queue</button></div>
-        <p id="daily-plan" class="microcopy">daily does restart → club → free pack → mail → café → bounties → scrimmages → tactical rewards → lessons → collect tasks. home red dots queue their collection jobs when a run finishes.</p>
-      </div>
-      <dl class="run-facts"><div><dt>CURRENT TASK</dt><dd id="current-task">—</dd></div><div><dt>ELAPSED</dt><dd id="elapsed">—</dd></div><div><dt>INSTANCE</dt><dd id="device-serial" class="mono">—</dd></div><div><dt>DISPLAY</dt><dd>1280 × 720<span class="fact-note">required · English</span></dd></div></dl>
     </section>
 
     <div class="workspace-grid">
@@ -64,7 +103,7 @@
         <div class="screen-stage" id="screen-stage">
           <img id="game-frame" alt="Latest screenshot from the selected Blue Archive instance" hidden>
           <svg id="map-overlay" class="map-overlay" viewBox="0 0 1280 720" role="group" aria-label="Home screen button map" hidden></svg>
-          <div id="frame-placeholder" class="frame-placeholder"><span class="screen-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8M12 18v4M7 11h10M12 7v8"/></svg></span><strong id="frame-placeholder-title">nothing to look at yet.</strong><p id="frame-placeholder-text">grab a screenshot, or queue something.</p><span class="frame-format">1280 × 720 · ADB CAPTURE</span></div>
+          <div id="frame-placeholder" class="frame-placeholder"><span class="screen-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8M12 18v4M7 11h10M12 7v8"/></svg></span><strong id="frame-placeholder-title">nothing to look at yet.</strong><p id="frame-placeholder-text">grab a screenshot, or hit do everything.</p><span class="frame-format">1280 × 720 · ADB CAPTURE</span></div>
         </div>
         <div class="screen-toolbar"><span id="frame-caption" class="muted">no screenshot yet</span><label class="toggle-row map-toggle"><input id="map-toggle" type="checkbox" disabled><span class="switch" aria-hidden="true"></span><span>home button map</span></label></div>
         <div id="map-hint" class="map-hint" hidden>home screen positions. click a label to see where it goes.</div>
@@ -75,8 +114,7 @@
         <div class="card-header"><div><p class="section-kicker">IN ORDER</p><h2 id="queue-title">the queue <span id="queue-count" class="count">0</span></h2></div><span id="queue-state" class="badge neutral">—</span></div>
         <div id="current-job" class="current-job" hidden><span class="job-indicator" aria-hidden="true"></span><div><span class="section-kicker">RUNNING NOW</span><strong id="current-job-title"></strong><span id="current-job-phase" class="muted"></span></div></div>
         <ol id="queue-list" class="queue-list" aria-label="Pending tasks"></ol>
-        <div id="queue-empty" class="empty-state"><span class="empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6M4 21h16"/></svg></span><strong>nothing queued.</strong><p>add a task above. they run one at a time, in order.</p></div>
-        <div class="queue-controls"><button id="pause-queue" class="button secondary small" type="button" disabled>pause queue</button><button id="resume-queue" class="button primary small" type="button" hidden disabled>resume queue</button></div>
+        <div id="queue-empty" class="empty-state"><img class="arisu-tea" src="/maid-arisu-tea.png" alt="" width="112" height="112" loading="lazy" decoding="async"><strong>nothing queued.</strong><p>hit do everything, or let the next scheduled check handle it.</p></div>
         <div class="schedule-summary"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18m-13 5 2 2 5-5"/></svg><div><strong id="daily-schedule-title">daily schedule</strong><span id="daily-schedule-status">waiting for schedule</span></div></div>
         <div class="schedule-summary"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2M8 3 6 1m10 2 2-2"/></svg><div><strong id="checkin-schedule-title">check-in schedule</strong><span id="checkin-schedule-status">waiting for schedule</span></div></div>
         <div class="schedule-summary"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><strong id="cafe-schedule-title">Café schedule</strong><span id="cafe-schedule-status">Waiting for schedule</span></div></div>
@@ -85,7 +123,7 @@
     </div>
 
     <section id="loot" class="loot-card card" aria-labelledby="loot-title">
-      <div class="card-header"><div><p class="section-kicker">SINCE LAST CLEAR</p><h2 id="loot-title">loot gathered</h2></div><button id="clear-loot" class="button secondary small" type="button" disabled>clear loot</button></div>
+      <div class="card-header"><div class="loot-heading"><img class="arisu-loot" src="/maid-arisu-loot.png" alt="" width="72" height="72" loading="lazy" decoding="async"><div><p class="section-kicker">SINCE LAST CLEAR</p><h2 id="loot-title">loot gathered</h2></div></div><button id="clear-loot" class="button secondary small" type="button" disabled>clear loot</button></div>
       <div class="loot-caption"><p id="loot-since" class="microcopy">loading the haul.</p><p id="loot-count" class="loot-count" aria-live="polite"></p></div>
       <div id="loot-totals" class="loot-totals" aria-label="Loot grouped by importance"></div>
       <p id="loot-empty" class="logs-empty">nothing collected since the last clear. give it a minute.</p>

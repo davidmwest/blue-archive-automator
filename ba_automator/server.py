@@ -7,6 +7,8 @@ enabled schedules can enqueue work when due. Periodic check-ins default to every
 30 minutes and reuse successful home scans from other jobs. Daily
 attempts survive restarts and require a manual retry after failure. Failed cafe jobs
 retry after 15 minutes, up to three consecutive failures, then require Resume.
+The Do everything control resumes dispatch and coalesces a catch-up request
+after existing work, using due schedules and a fresh notification/AP scan.
 """
 
 from __future__ import annotations
@@ -170,6 +172,8 @@ class DashboardController:
         self._batch_has_game_job = False
         self._badge_attempted = set()
         self._ap_batch_observed = None
+        self._run_available_pending = False
+        self._run_available_active = False
         self._job_roots: dict[str, Path] = {}
         self._popup_cache: dict[Path, tuple[tuple[int, int], list[dict]]] = {}
         self._schedule = self._load_schedule()
@@ -539,13 +543,36 @@ class DashboardController:
             self._checkin_error(exc)
 
     def _enqueue_scheduled(self) -> None:
+        if self._run_available_active and not self._current and not self._queue:
+            self._run_available_active = False
+        available = self._run_available_pending
+        if available:
+            # Finish the existing batch before deciding what remains useful.
+            # This includes badge follow-ups and avoids overlapping a composite
+            # Daily with an already-running Cafe, mail collection, or AP job.
+            if self._paused or self._shutdown or self._capturing or self._current or self._queue:
+                return
+            self._run_available_pending = False
+            self._run_available_active = True
+            self._badge_attempted.clear()
+            self._ap_batch_observed = None
         # Daily covers cafe, packs and AP; enqueue it first so those timers defer.
         self._enqueue_daily()
         self._enqueue_crafting()
         self._enqueue_packs()
         self._enqueue_ap()
         self._enqueue_cafe()
-        self._enqueue_checkin()
+        if available:
+            # Explicit catch-up always gets a fresh final home scan, even when
+            # no schedule is due or the periodic check-in timer is disabled.
+            # Its ordinary badge/AP follow-ups still honor opt-ins and holds.
+            job = {"id": uuid4().hex, "task": "red_dots", "source": "available",
+                   "created_at": _timestamp()}
+            self._queue.append(job)
+            self._queued(job)
+            self._daily("available_work_queued", tasks=[job["task"] for job in self._queue])
+        else:
+            self._enqueue_checkin()
 
     def _enqueue_cafe(self) -> None:
         if (self._paused or self._shutdown or not getattr(self.config, "cafe_schedule_enabled", False)
@@ -700,6 +727,29 @@ class DashboardController:
             self._queued(job)
             self._condition.notify_all()
             return dict(job)
+
+    def run_available(self) -> dict:
+        """Resume and coalesce one catch-up pass, without retrying held spending.
+
+        Due work uses its ordinary scheduler and durable Daily occurrence.
+        A fresh notification/AP scan discovers additional claims. No settings,
+        spending holds, or failure notices are changed by this control.
+        """
+        with self._condition:
+            if self._shutdown:
+                raise ApiError(409, "The server is shutting down")
+            if self._run_available_active and not self._current and not self._queue:
+                self._run_available_active = False
+            before = {job["id"] for job in self._queue}
+            if not self._run_available_pending and not self._run_available_active:
+                self._run_available_pending = True
+                self._daily("available_work_requested", waiting_for_queue=bool(self._current or self._queue))
+            self.resume()
+            self._enqueue_scheduled()
+            self._condition.notify_all()
+            return {"ok": True, "jobs": [dict(job) for job in self._queue if job["id"] not in before],
+                    "pending": self._run_available_pending, "active": self._run_available_active,
+                    "queue_paused": self._paused}
 
     def cancel(self, job_id: str) -> None:
         with self._condition:
@@ -1278,6 +1328,8 @@ class DashboardController:
                     "queue": [dict(job) for job in self._queue],
                     "current_job": dict(self._current) if self._current else None,
                     "history": list(self._history), "queue_paused": self._paused,
+                    "run_available_pending": self._run_available_pending,
+                    "run_available_active": self._run_available_active,
                     "failed_jobs": list(reversed(self._failures)),
                     "app_closed": self._app_closed,
                     "schedule": {"checkin": self._checkin_status(), "daily": self._daily_status(), "ap": self._ap_status(), "packs": self._packs_status(), "crafting": self._crafting_status(), "cafe": {**self._schedule["cafe"],
@@ -1642,13 +1694,17 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     if parse_qs(target.query).keys() - {"v"}:
                         raise ApiError(400, "Popup images accept only a version parameter")
                     self._send(200, controller.popup_image(*match.groups()), "image/png")
-                elif target.path in {"/", "/index.html", "/app.js", "/style.css", "/maid-arisu.png", "/ap", "/ap.html", "/ap.js", "/ap.css"}:
+                elif target.path in {"/", "/index.html", "/app.js", "/style.css", "/maid-arisu.png",
+                                     "/maid-arisu-checklist.png", "/maid-arisu-tea.png", "/maid-arisu-loot.png",
+                                     "/ap", "/ap.html", "/ap.js", "/ap.css"}:
                     name = "index.html" if target.path == "/" else "ap.html" if target.path == "/ap" else target.path[1:]
                     resource = files("ba_automator").joinpath("web", name)
                     if not resource.is_file():
                         raise ApiError(404, "Dashboard asset not found")
                     types = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8",
                              "style.css": "text/css; charset=utf-8", "maid-arisu.png": "image/png",
+                             "maid-arisu-checklist.png": "image/png", "maid-arisu-tea.png": "image/png",
+                             "maid-arisu-loot.png": "image/png",
                              "ap.html":"text/html; charset=utf-8", "ap.js":"text/javascript; charset=utf-8", "ap.css":"text/css; charset=utf-8"}
                     self._send(200, resource.read_bytes(), types[name])
                 else:
@@ -1667,6 +1723,7 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     raise ApiError(400, "Mutation requests do not accept query parameters")
                 body = self._body()
                 expected = {"/api/run": {"task"}, "/api/cancel": {"id"}, "/api/pause": set(),
+                            "/api/run-available": set(),
                             "/api/dismiss-failure": {"id"}, "/api/clear-loot": set(),
                             "/api/resume": set(), "/api/stop": set(), "/api/capture": set(),
                             "/api/settings": SETTINGS}
@@ -1677,6 +1734,8 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                 result = {"ok": True}
                 if target.path == "/api/run":
                     result = {"job": controller.enqueue(body.get("task"))}
+                elif target.path == "/api/run-available":
+                    result = controller.run_available()
                 elif target.path == "/api/cancel":
                     if not isinstance(body.get("id"), str):
                         raise ApiError(400, "A queued job id is required")

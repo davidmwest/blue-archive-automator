@@ -18,6 +18,8 @@ this is a local Python automator built around BlueStacks, ADB, OpenCV, and local
 
 *sample data, an original game-screen schematic, and Maid Arisu fan art. this is the same dashboard frontend, with a separate read-only server behind it.*
 
+arisu has a clipboard by the controls, tea when the queue is empty, and a pile of coins to sweep up by the loot box. [the fan art →](docs/mascot-art.md)
+
 the demo needs Python 3.11+, but no packages, emulator, account, or local config. from the repo directory:
 
 ```sh
@@ -45,7 +47,7 @@ on Windows: `py -3.11 -m ba_automator.demo`. open [localhost:8766](http://127.0.
 | packs and mail | optional paid renewal of the three permanent daily-benefit packs, off by default; collect product and ordinary mail with reward logs |
 | crafting | uses the saved Quick Craft preset, fills affordable slots, and persists collection/refill timers; all three natural completions and the zero-keystone path passed |
 | lessons | surveys locations before each ticket; defaults to the most owned students, with lowest-school-rank leveling as an option |
-| dashboard | serial queue, pause/stop controls, settings, screenshots, and persistent important-action history |
+| dashboard | one serial queue, do everything / pause controls, tucked-away manual tasks, settings, screenshots, and persistent important-action history |
 | spend AP | configurable AP floor, highest-cleared commissions, and a persistent Hard-stage round robin with its own planning page |
 | scheduling | regular red-dot/AP check-ins, optional daily routine after Global reset with saved occurrence state, hourly AP checks, daily pack checks, Cafe visits and per-slot crafting deadlines, optional game closure between visits |
 | event profiles | reviewed JSON and recognition helpers; navigation and farming are still to come |
@@ -59,6 +61,8 @@ cafe invitations are off by default. turn them on and leave the name blank to pi
 turn on **run daily after reset** in settings to run that plan once per game day. it defaults to one minute after Global reset, with the next run shown in your local time in the queue. missed reset? it catches up on the current day when the server is back. if one activity fails, Daily logs it, gets back home, and carries on with the independent jobs when it can. uncertain spending stays on hold; the failed step isn't repeated. the final summary tells you what finished and what needs attention. keep the server running and the computer awake. [daily schedule →](docs/getting-started.md#daily-schedule)
 
 between jobs, it checks red dots and AP every 30 minutes by default. change that interval or turn it off in settings. a successful check after another job resets the timer, so it doesn't wake the game just to look again. reward collection and AP spending use the same queue and your existing settings. [periodic check-ins →](docs/getting-started.md#periodic-check-ins)
+
+most of the time, the controls are just **do everything** and **pause queue**. do everything resumes the queue, finishes anything already in progress, runs enabled jobs that are due, then checks for red dots and extra AP right away. it keeps your AP floor and spending settings. individual jobs and the immediate stop button are under **manual controls**. failed jobs show up underneath, when there's something to look at.
 
 the first profile is the global English game at **1280×720, 320 DPI**. use a dedicated BlueStacks instance and sign in manually once. Blue Archive and Azur Lane get different ADB endpoints; they can share a compatible host ADB server. [setup and commands →](docs/getting-started.md)
 

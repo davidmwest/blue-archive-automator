@@ -193,6 +193,8 @@
     const paused = Boolean(status?.queue_paused);
     const unavailable = !connected || pending > 0 || isDemo();
     const queued = queue().length > 0;
+    $("run-available").disabled = unavailable || status?.run_available_pending === undefined
+      || (Boolean(status.run_available_pending || status.run_available_active) && !paused);
     $("run-restart").disabled = unavailable;
     $("clear-loot").disabled = unavailable;
     $("run-daily").disabled = unavailable;
@@ -210,14 +212,16 @@
     $("run-bounties").disabled = unavailable;
     $("run-scrimmages").disabled = unavailable;
     $("run-lessons").disabled = unavailable;
-    $("run-restart").querySelector("span").textContent = "queue restart";
-    $("run-daily").textContent = "queue daily";
-    $("run-cafe").textContent = "queue café";
     $("stop-run").disabled = unavailable || !active;
     $("capture").disabled = unavailable || active;
-    $("pause-queue").hidden = paused;
-    $("pause-queue").disabled = unavailable;
-    $("pause-queue").textContent = active ? "pause after this task" : "pause queue";
+    $("pause-queue").disabled = unavailable || paused;
+    $("pause-queue").textContent = paused ? "paused" : active ? "pause after this task" : "pause queue";
+    $("queue-control-note").textContent = paused
+      ? active ? "this task will finish, then the queue will wait. do everything gets things moving again."
+        : "queue's paused. do everything checks what's ready and gets things moving again."
+      : status?.run_available_pending ? "finishing what's already queued, then checking what else is ready."
+      : status?.run_available_active ? "getting through what's ready. everything runs one at a time."
+      : "run the enabled jobs that are due, then check red dots and AP. your settings and AP floor still apply.";
     $("resume-queue").hidden = !paused;
     $("resume-queue").disabled = unavailable;
     $("settings-fields").disabled = unavailable || active || queued;
@@ -267,8 +271,8 @@
     $("queue-empty").hidden = waiting.length > 0;
     $("queue-empty").querySelector("strong").textContent = paused ? "queue’s paused." : running ? "nothing queued after this." : "nothing queued.";
     $("queue-empty").querySelector("p").textContent = paused
-      ? "add whatever you want. hit resume when you’re ready."
-      : "add a task above. they run one at a time, in order.";
+      ? "hit do everything when you’re ready to get going again."
+      : "hit do everything, or let the next scheduled check handle it.";
     const signature = JSON.stringify(waiting);
     if (signature === queueSignature) return;
     queueSignature = signature;
@@ -883,6 +887,7 @@
     } finally { actionsLoading = false; }
   }
 
+  $("run-available").addEventListener("click", () => void post("/api/run-available", {}, "checking what’s ready. everything runs in order."));
   $("run-restart").addEventListener("click", () => void post("/api/run", { task: "restart" }, "restart’s in the queue."));
   $("run-daily").addEventListener("click", () => void post("/api/run", { task: "daily" }, "daily’s in the queue."));
   $("run-club").addEventListener("click", () => void post("/api/run", { task: "club" }, "club check-in is in the queue."));

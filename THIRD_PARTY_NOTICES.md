@@ -12,9 +12,10 @@ used for regression testing, including the locally captured Total Assault
 formation, battle, and result screens. Their provenance is recorded in
 [`tests/fixtures/README.md`](tests/fixtures/README.md).
 
-`ba_automator/web/maid-arisu.png` is newly generated fan artwork depicting
-Maid Arisu, a Blue Archive character. It is a dashboard mascot, not a game
-recognition template or an official illustration. Its character design remains
+`ba_automator/web/maid-arisu*.png` contains newly generated fan artwork depicting
+Maid Arisu, a Blue Archive character, including the original mascot and the
+checklist, tea, and coin-sweeping accents. These are dashboard decorations, not
+game recognition templates or official illustrations. Their character design remains
 the property of the game's rights holders. The character artwork is excluded
 from the MIT grant even though the surrounding dashboard code and layout are
 original. Screenshots containing the mascot inherit that same limitation.
