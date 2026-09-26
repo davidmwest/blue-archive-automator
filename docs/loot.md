@@ -12,6 +12,8 @@ The local receipt reader runs before a reward screen is dismissed. It identifies
 
 Full List uses the same inspection path with vertical scrolling. Its heading can appear before the cards are readable, so entry waits without input for up to eight seconds. An empty nested list cannot bypass its exit and leave the caller waiting for the covered sweep receipt. Opening and unreadable frames are saved for diagnosis. Overlap is reconciled in order, so visiting the same card again does not add another drop, while separate identical cards are retained. Every input requires a current capture, the expected game foreground, and a recognized receipt or tooltip. Inspection has a bounded time and input budget; a missing tooltip or unreadable amount remains visible for review.
 
+Readable Full List cards must also remain stationary through OCR before the first scroll. Closing the list waits up to eight seconds for the original sweep receipt to return, without another tap; rejected return frames are saved. Across a vertical scroll, a separate overlap check tolerates the small observed change in icon rendering only when multiple consecutive cards have matching quantities, tiers, columns, dimensions, and a common movement. Ambiguous overlap stays incomplete. This tolerance never authorizes an input or supplies an unread item name or amount.
+
 Inspection saves its observations before returning to the task, including partial results if inspection fails. A later navigation or resource-check failure therefore cannot hide an already recorded reward. Resource intent checkpoints still require their existing postconditions and cannot be replayed merely because loot was captured.
 
 Sweep revalidation compares the heading, complete Final reward row, and Confirm button. It excludes the decorative label column, where a tooltip-dismiss click can leave a fading animation. Changed cards, quantities, or controls still stop input. A rejected scroll read saves the exact frame and parsed page kind/card count for diagnosis. Full List checks also exclude the neutral-area dismissal pulse. Equipment tier outlines may animate only when fresh OCR independently confirms the same tier and the remaining artwork, quantities, heading, and controls still match.
@@ -72,3 +74,16 @@ A subsequent live Hard 8-2 sweep completed on September 26: 740 → 720 AP,
 saved loot inspection, verified post-sweep balance, and return home. The old
 Hard 8-3 intent was reconciled against its saved receipt and the live remaining
 attempt count before this retry; it was not spent again.
+
+A later Hard 7-1 receipt exposed small rendering differences between six
+overlapping Full List cards after scrolling, followed by a closing animation
+that briefly hid the original sweep receipt. Staged live recovery identified
+all thirteen item types, including 1,187 credits, and verified the completed
+660 → 640 AP sweep against the remaining-attempt change (three → two). It
+returned home and advanced the rotation to 6-3 without repeating the sweep.
+Sanitized opening and scrolling fixtures exercise these transitions offline.
+
+After restarting with the fix, the daemon completed a fresh Hard 6-3 sweep
+(640 → 620 AP), identified all three item types, verified the remaining attempt
+count, and continued to 6-2. The repaired failure notice was then dismissed;
+its original error and recovery remain in the daily log.

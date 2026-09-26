@@ -488,6 +488,58 @@ def test_optional_loot_failure_cannot_recover_in_foreign_foreground(harness, mon
     assert h.inputs == [] and h.runner.state["pending"]
 
 
+@pytest.mark.parametrize("transition", ["grid", "unknown", "changed"])
+@pytest.mark.parametrize("settles", [True, False])
+def test_full_list_recovery_waits_for_original_receipt_without_extra_input(
+    harness, monkeypatch, transition, settles
+):
+    h = harness
+    original = optional_sweep_failure(h, monkeypatch)
+    closed_at = None
+
+    def close(x, y, **kwargs):
+        nonlocal closed_at
+        assert (x, y) == (640, 533) and closed_at is None
+        h.inputs.append(("tap", (x, y)))
+        closed_at = h.now
+        h.position = {"grid": 1, "unknown": 2, "changed": 3}[transition]
+        return True
+
+    def animate(number):
+        if settles and closed_at is not None and h.now - closed_at >= 3:
+            h.position = 0
+
+    h.runner.device.tap = close
+    h.on_capture = animate
+    if settles:
+        result = lr.inspect_receipt(h.runner, original, h.evidence)
+        assert result.screen.count == 1 and h.position == 0
+    else:
+        with pytest.raises(TaskError, match="original sweep receipt"):
+            lr.inspect_receipt(h.runner, original, h.evidence)
+        assert (h.evidence.parent / "receipt-full-list-return-rejected.png").exists()
+    assert h.inputs == [("tap", (640, 533))]
+    assert h.runner.state["pending"] == {"count": 1, "ap_before": 129}
+    assert h.now < lr.GRID_RETURN_TIMEOUT + 3
+    assert (h.evidence.parent / "receipt-full-list-closing.png").exists()
+
+
+def test_full_list_return_stops_if_foreground_changes(harness, monkeypatch):
+    h = harness
+    original = optional_sweep_failure(h, monkeypatch)
+
+    def close(x, y, **kwargs):
+        h.inputs.append(("tap", (x, y)))
+        h.foreground = "com.android.settings"
+        return True
+
+    h.runner.device.tap = close
+    with pytest.raises(TaskError, match="Foreground changed"):
+        lr.inspect_receipt(h.runner, original, h.evidence)
+    assert h.inputs == [("tap", (640, 533))]
+    assert h.runner.state["pending"]
+
+
 @pytest.mark.parametrize("field,value", [("count", 2), ("task", "scrimmages")])
 def test_optional_loot_failure_must_return_same_task_and_sweep_count(harness, monkeypatch, field, value):
     h = harness

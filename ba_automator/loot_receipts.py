@@ -22,6 +22,7 @@ RECEIPT_TIMEOUT = 240
 REWARD_RECEIPT_TIMEOUT = 900
 TASK_NOTICE_TIMEOUT = 12
 GRID_ENTRY_TIMEOUT = 8
+GRID_RETURN_TIMEOUT = 8
 TOOLTIP_RETURN_TIMEOUT = 8
 # The horizontal receipt viewport ends at x=100/1180. Its four-pixel fade
 # bands can make a clipped card look almost full and change width each frame.
@@ -687,6 +688,64 @@ def same_card(a, b):
     )
 
 
+def same_scrolled_grid_card(a, b):
+    """Compare ordered loot across a scroll, never authorize a device input.
+
+    Compact Full List cards are rendered at fractional scroll positions. Even
+    a settled 15px move changes antialiasing inside their artwork and a handful
+    of border pixels. Keep the quantity, tier, column and dimensions exact;
+    admit only the small, observed rendering difference inside the card frame.
+    ``same_card`` and ``same_receipt_view`` remain strict for every input.
+    """
+    if (a.quantity is None or a.quantity != b.quantity or a.tier != b.tier
+            or a.box[2:] != b.box[2:] or a.box[0] != b.box[0]
+            or not (83 <= a.box[3] <= 94 and 95 <= a.box[2] <= 115)):
+        return False
+    if complete_name(a.name) and complete_name(b.name) and a.name != b.name:
+        return False
+    if same_card(a, b):
+        return True
+    first, second = [cv2.imdecode(np.frombuffer(c.icon, np.uint8), cv2.IMREAD_UNCHANGED)
+                     for c in (a, b)]
+    if (first is None or second is None or first.shape != second.shape
+            or first.shape != (a.box[3], a.box[2], 4)):
+        return False
+    # Alpha comes from the full white card outline. Neighboring cards are not
+    # evidence, and clipping or a changed silhouette cannot establish overlap.
+    masks = [image[:, :, 3] != 0 for image in (first, second)]
+    if np.count_nonzero(masks[0] != masks[1]) > 16:
+        return False
+    visible = cv2.erode((masks[0] & masks[1]).astype(np.uint8),
+                        np.ones((5, 5), np.uint8)).astype(bool)
+    if np.count_nonzero(visible) < 4000:
+        return False
+    softened = [cv2.GaussianBlur(image[:, :, :3], (5, 5), 1).astype(np.float32)
+                for image in (first, second)]
+    delta = np.abs(softened[0] - softened[1])[visible]
+    # These bounds cover the saved subpixel scroll (mean <= 1.41, MSE <= 7.62,
+    # max <= 25), not similar artwork, a changed badge, or another item variant.
+    return (float(delta.mean()) <= 1.6 and float(np.mean(delta * delta)) <= 10
+            and float(delta.max()) <= 32)
+
+
+def scrolled_grid_overlap(previous, current):
+    """Return one proven suffix/prefix overlap, or zero for ambiguity.
+
+    The tolerant comparison needs at least two consecutive cards and a common
+    upward translation. It is only a fallback after exact overlap fails; a
+    single similar icon never proves that a receipt page was fully inspected.
+    """
+    matches = []
+    for count in range(2, min(len(previous), len(current)) + 1):
+        pairs = list(zip(previous[-count:], current[:count]))
+        shifts = [a.box[1] - b.box[1] for a, b in pairs]
+        if (min(shifts) < 1 or max(shifts) > 280 or max(shifts) - min(shifts) > 1):
+            continue
+        if all(same_scrolled_grid_card(a, b) for a, b in pairs):
+            matches.append(count)
+    return matches[0] if len(matches) == 1 else 0
+
+
 def save_icon(config, png):
     identifier = sha256(png).hexdigest()
     root = config.state_dir / "loot-icons"
@@ -1018,11 +1077,16 @@ class ReceiptReader:
         while True:
             p = self.read(cap)
             if p.kind == "grid" and p.cards:
-                if waiting:
-                    self.r.journal.record("receipt_full_list_ready",
-                                          waited=self.r.clock() - started,
-                                          cards=len(p.cards))
-                return cap, p
+                fresh = self.capture()
+                if fresh.is_fresh(self.r.clock()) and same_receipt_view(
+                    cap.png, fresh.png, p, vision=self.vision
+                ):
+                    if waiting:
+                        self.r.journal.record("receipt_full_list_ready",
+                                              waited=self.r.clock() - started,
+                                              cards=len(p.cards))
+                    self.observed = (fresh.png, p)
+                    return fresh, p
             if not waiting:
                 self.evidence_frame(cap, "full-list-opening")
                 self.r.journal.record("receipt_waiting_for_full_list",
@@ -1034,6 +1098,35 @@ class ReceiptReader:
             self.r.sleep(.25)
             cap = self.capture()
 
+    def returned_sweep(self, cap, original=None):
+        """Observe a closing Full List until its original receipt is restored.
+
+        The nested modal fades out after Okay. Do not tap again during that
+        transition: only a fresh sweep matching the original receipt permits
+        the caller to continue with its normal resource verification.
+        """
+        started = self.r.clock()
+        waiting = False
+        while True:
+            p = self.read(cap)
+            if p.kind == "sweep" and (original is None or same_receipt_view(
+                original[0], cap.png, original[1], vision=self.vision
+            )):
+                if waiting:
+                    self.r.journal.record("receipt_full_list_closed",
+                                          waited=self.r.clock() - started)
+                return cap, p
+            if not waiting:
+                self.evidence_frame(cap, "full-list-closing")
+                self.r.journal.record("receipt_waiting_for_sweep",
+                                      observed_kind=p.kind)
+                waiting = True
+            if self.r.clock() - started >= GRID_RETURN_TIMEOUT:
+                self.evidence_frame(cap, "full-list-return-rejected")
+                self.r.fail("Full List did not return to the original sweep receipt")
+            self.r.sleep(.25)
+            cap = self.capture()
+
     def run(self):
         items = []
         complete = False
@@ -1042,6 +1135,7 @@ class ReceiptReader:
             cap = self.capture()
             p = self.read(cap)
             kind = p.kind
+            original_sweep = (cap.png, p) if kind == "sweep" else None
             if p.expand_target:
                 self.input(cap, p.expand_target)
                 cap = self.capture()
@@ -1102,6 +1196,10 @@ class ReceiptReader:
                                 for a, b in zip(previous_keys[-n:], keys[:n])
                             )
                         ]
+                        if not matches and kind == "grid":
+                            scrolled = scrolled_grid_overlap(previous_keys, keys)
+                            if scrolled:
+                                matches = [scrolled]
                         if not matches:
                             self.r.fail(
                                 "Reward receipt pages did not overlap; totals need review"
@@ -1171,8 +1269,7 @@ class ReceiptReader:
                     self.r.fail("Full List changed before returning to sweep receipt")
                 self.input(cap, (640, 533))
                 cap = self.capture()
-                if self.read(cap).kind != "sweep":
-                    self.r.fail("Sweep receipt did not return after Full List")
+                self.returned_sweep(cap, original_sweep)
             return save_result(
                 self.r.config,
                 self.evidence,
@@ -1268,10 +1365,11 @@ def recover_sweep_receipt(runner, frame, vision, evidence, error, *, tooltip_ori
         cap = reader.revalidate(cap, force=True)
         reader.input(cap, (640, 533))
         cap = reader.capture()
-        current = reader.read(cap)
+        cap, current = reader.returned_sweep(cap, (frame.capture.png, original))
     if current.kind != "sweep" or not same_receipt_view(
         frame.capture.png, cap.png, original, vision=vision
     ):
+        reader.evidence_frame(cap, "sweep-recovery-rejected")
         runner.fail("Incomplete loot inspection did not return to the original sweep receipt")
     fresh = runner.wait("receipt")
     if (fresh.screen.count != frame.screen.count

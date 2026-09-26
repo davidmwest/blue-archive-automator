@@ -426,3 +426,20 @@ reader recognizes the receipt but waits for card geometry without another tap.
 Only the receipt heading, reward viewport, and continuation hint remain; the
 unrelated Cafe HUD and scenery are masked. Both game-derived fixtures are excluded
 from the MIT grant described in the third-party notices.
+
+`loot-grid-scroll-{before,after}.png` retain the Full List modal from the
+September 26 Hard 7-1 receipt. Its thirteen items require a short final scroll;
+six consecutive cards overlap with slightly different subpixel rasterization,
+followed by 1,187 Credits. Tests preserve strict input guards while proving a
+unique ordered overlap with matching quantities, tiers, columns, dimensions,
+and narrowly bounded artwork differences. Account identity, balances,
+experience, and all pixels outside the modal are masked. These game-derived
+fixtures are excluded from the MIT grant described in the third-party notices.
+
+`loot-grid-opening-shift-{before,after}.png` retain the Full List modal from
+the September 26 Hard 7-1 recovery. Readable cards still move upward two pixels
+while the modal opens. Tests require them to settle through OCR before input,
+and reject persistent movement, stale captures, or a changed foreground.
+Everything outside the modal, including account identity and balances, is
+masked. These game-derived fixtures are excluded from the MIT grant described
+in the third-party notices.
