@@ -1,0 +1,362 @@
+[
+  {
+    "text": "Attack Formation ",
+    "box": [
+      104,
+      9,
+      376,
+      38
+    ],
+    "confidence": 0.99383
+  },
+  {
+    "text": "Display Settings",
+    "box": [
+      519,
+      64,
+      766,
+      109
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "X",
+    "box": [
+      1194,
+      66,
+      1230,
+      100
+    ],
+    "confidence": 0.93527
+  },
+  {
+    "text": "Filter",
+    "box": [
+      111,
+      138,
+      180,
+      170
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "LV.",
+    "box": [
+      312,
+      172,
+      348,
+      201
+    ],
+    "confidence": 0.8766
+  },
+  {
+    "text": "\u2605",
+    "box": [
+      556,
+      170,
+      582,
+      199
+    ],
+    "confidence": 0.79133
+  },
+  {
+    "text": "Quantity",
+    "box": [
+      581,
+      172,
+      668,
+      202
+    ],
+    "confidence": 0.99989
+  },
+  {
+    "text": "\u2605",
+    "box": [
+      793,
+      170,
+      824,
+      200
+    ],
+    "confidence": 0.90751
+  },
+  {
+    "text": "Quantity",
+    "box": [
+      817,
+      170,
+      908,
+      203
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Relationship Rank",
+    "box": [
+      1032,
+      173,
+      1186,
+      197
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "Sort",
+    "box": [
+      116,
+      198,
+      177,
+      230
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Academy",
+    "box": [
+      310,
+      244,
+      408,
+      279
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Name",
+    "box": [
+      552,
+      247,
+      619,
+      275
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "EX Skill Lv.",
+    "box": [
+      793,
+      246,
+      890,
+      273
+    ],
+    "confidence": 0.98739
+  },
+  {
+    "text": "Skill Lv.",
+    "box": [
+      1029,
+      246,
+      1104,
+      276
+    ],
+    "confidence": 0.99019
+  },
+  {
+    "text": "EX Skill Cost",
+    "box": [
+      314,
+      321,
+      429,
+      350
+    ],
+    "confidence": 0.99922
+  },
+  {
+    "text": "Urban Warfare",
+    "box": [
+      555,
+      323,
+      697,
+      349
+    ],
+    "confidence": 0.99886
+  },
+  {
+    "text": "Field Warfare",
+    "box": [
+      793,
+      323,
+      921,
+      349
+    ],
+    "confidence": 0.99985
+  },
+  {
+    "text": "Indoor Warfare",
+    "box": [
+      1031,
+      323,
+      1180,
+      349
+    ],
+    "confidence": 0.99959
+  },
+  {
+    "text": "Attack Type",
+    "box": [
+      312,
+      396,
+      428,
+      429
+    ],
+    "confidence": 0.9608
+  },
+  {
+    "text": "Defense Type",
+    "box": [
+      553,
+      395,
+      685,
+      428
+    ],
+    "confidence": 0.99468
+  },
+  {
+    "text": "Role",
+    "box": [
+      792,
+      396,
+      842,
+      426
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Weapon Type",
+    "box": [
+      1030,
+      395,
+      1165,
+      429
+    ],
+    "confidence": 0.99941
+  },
+  {
+    "text": "Range",
+    "box": [
+      311,
+      470,
+      383,
+      505
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Date Acquired",
+    "box": [
+      553,
+      471,
+      689,
+      501
+    ],
+    "confidence": 0.99904
+  },
+  {
+    "text": "Max HP",
+    "box": [
+      792,
+      472,
+      871,
+      500
+    ],
+    "confidence": 0.99016
+  },
+  {
+    "text": "ATK",
+    "box": [
+      1029,
+      472,
+      1079,
+      501
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "\u25b3\u00d7+\u25cb",
+    "box": [
+      60,
+      521,
+      121,
+      542
+    ],
+    "confidence": 0.70706
+  },
+  {
+    "text": "Cancel",
+    "box": [
+      460,
+      578,
+      565,
+      612
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      700,
+      576,
+      827,
+      612
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      410,
+      676,
+      460,
+      700
+    ],
+    "confidence": 0.98754
+  },
+  {
+    "text": "Michiru",
+    "box": [
+      487,
+      655,
+      557,
+      675
+    ],
+    "confidence": 0.99185
+  },
+  {
+    "text": "(Dress)",
+    "box": [
+      489,
+      671,
+      556,
+      698
+    ],
+    "confidence": 0.99986
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      760,
+      678,
+      808,
+      699
+    ],
+    "confidence": 0.9998
+  },
+  {
+    "text": "Serina",
+    "box": [
+      840,
+      662,
+      902,
+      687
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "Mobilize",
+    "box": [
+      1103,
+      656,
+      1234,
+      686
+    ],
+    "confidence": 0.99968
+  }
+]

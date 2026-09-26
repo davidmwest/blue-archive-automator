@@ -1,0 +1,72 @@
+[
+  {
+    "text": "Participate in a Tactical Challenge 1",
+    "box": [
+      459,
+      14,
+      819,
+      44
+    ],
+    "confidence": 0.99828
+  },
+  {
+    "text": "time(s)",
+    "box": [
+      598,
+      36,
+      681,
+      72
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "MAX",
+    "box": [
+      617,
+      77,
+      663,
+      103
+    ],
+    "confidence": 0.99975
+  },
+  {
+    "text": "LOSE",
+    "box": [
+      455,
+      252,
+      821,
+      417
+    ],
+    "confidence": 0.9998
+  },
+  {
+    "text": "Time",
+    "box": [
+      570,
+      433,
+      625,
+      460
+    ],
+    "confidence": 0.99985
+  },
+  {
+    "text": "01:28",
+    "box": [
+      671,
+      431,
+      739,
+      460
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      574,
+      637,
+      707,
+      676
+    ],
+    "confidence": 0.99997
+  }
+]

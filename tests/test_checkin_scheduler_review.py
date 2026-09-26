@@ -121,6 +121,8 @@ def test_canceling_due_checkin_persists_one_interval_skip_across_restart(config_
         controller.close()
     controller = DashboardController(config_path, process_factory=factory, wall_clock=lambda: clock[0])
     try:
+        assert controller.status()["queue_paused"] is True
+        controller.resume()
         tick(controller)
         assert not factory.processes
         clock[0] += INTERVAL
@@ -206,6 +208,8 @@ def test_restart_and_clock_rollback_do_not_replay_a_claimed_interval(config_path
     clock[0] = NOW - timedelta(hours=1)
     controller = DashboardController(config_path, process_factory=factory, wall_clock=lambda: clock[0])
     try:
+        assert controller.status()["queue_paused"] is True
+        controller.resume()
         tick(controller)
         assert not factory.processes
         clock[0] = NOW + INTERVAL

@@ -182,4 +182,5 @@ def test_reward_job_is_in_daily_and_never_includes_battle_stub(runner):
         "red_dots",
     )
     assert "tactical_rewards" in task_plan("daily", runner.config)
-    assert "tactical_battles" not in task_plan("daily", runner.config)
+    assert "tactical_battles" not in task_plan("tactical_rewards", runner.config)
+    assert "tactical_battles" in task_plan("daily", runner.config)

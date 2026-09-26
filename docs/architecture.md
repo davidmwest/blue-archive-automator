@@ -8,7 +8,7 @@ Status: the local dashboard dispatches restart, Cafe, Lessons, Club, reward coll
 
 The Python 3.11+ core controls one explicit ADB endpoint. The initial profile is global English Blue Archive (`com.nexon.bluearchive`) at 1280×720 landscape and 320 DPI, running in BlueStacks Air on Apple Silicon macOS. BlueStacks 5 on Windows is the portability target; its live smoke test remains outstanding. The emulator instance must already be running.
 
-`restart` force-stops and launches Blue Archive, reuses its existing session, handles recognized startup states, and verifies a clear home screen. `tasks.py` owns the ordered plans. `daily` runs restart → Club → free pack → optional paid packs → mail → Cafe → Bounties → Scrimmages → Tactical Challenge rewards → Lessons → optional Total Assault → optional Spend AP → Tasks rewards. Bounties, Scrimmages, and Lessons have individual daily-inclusion settings; Total Assault, paid packs, and automatic AP spending are off by default. After an isolated task failure, Daily attempts bounded recovery to home and continues independent steps. A stop request or failed recovery ends the plan; unresolved spending remains held for the affected task.
+`restart` force-stops and launches Blue Archive, reuses its existing session, handles recognized startup states, and verifies a clear home screen. `tasks.py` owns the ordered plans. `daily` runs restart → Club → free pack → optional paid packs → mail → Cafe → Bounties → Scrimmages → optional Tactical Challenge battles → Tactical Challenge rewards → Lessons → optional Total Assault → Total Assault rewards → optional Spend AP → Tasks rewards. Bounties, Scrimmages, Tactical Challenge battles, and Lessons have individual daily-inclusion settings; Total Assault, paid packs, and automatic AP spending are off by default. After an isolated task failure, Daily attempts bounded recovery to home and continues independent steps. A stop request or failed recovery ends the plan; unresolved spending remains held for the affected task.
 
 `cafe` runs restart → Club → mail → Cafe, followed by Spend AP when enabled; `lessons` runs restart → Lessons. All successful task plans finish with a home-notification scan. The dashboard turns recognized red dots and eligible excess AP into serial follow-up jobs. Standalone Club and free-pack jobs collect mail after their own actions.
 
@@ -55,7 +55,9 @@ flowchart TD
 | `spend_ap.py`, `ap_vision.py`, `ap_policy.py`, `ap_state.py` | Three-star stage surveys, AP-floor budgeting, commission sweeps, durable Hard-stage rotation, and pending spend reconciliation |
 | `tickets.py`, `ticket_vision.py`, `ticket_state.py` | Bounty/Scrimmage stage surveys, weekday ticket allocation, guarded sweeps, and durable completion counts |
 | `packs.py`, `packs_state.py`, `mail.py`, `shop_runtime.py`, `shop_vision.py` | Opt-in paid-pack policy, durable purchase holds, verified mail collection, and shared shop navigation |
-| `free_pack.py`, `task_rewards.py`, `task_rewards_vision.py`, `tactical_rewards.py` | Guarded collection of free packs, completed Tasks, and Tactical Challenge rewards; battles remain a no-input stub |
+| `free_pack.py`, `task_rewards.py`, `task_rewards_vision.py`, `tactical_rewards.py` | Guarded collection of free packs, completed Tasks, and Tactical Challenge rewards without spending battle tickets |
+| `tactical_battles.py`, `tactical_runtime.py`, `tactical_refresh.py`, `tactical_vision.py`, `tactical_formation.py` | Opponent scouting and conditional sampling estimates, team-level policy, saved-team completion, guarded battle entry, and ticket reserve |
+| `tactical_state.py`, `tactical_survey.py` | Durable opponent history and battle intents, plus separate expiring survey checkpoints that let long searches yield the queue |
 | `home_badges.py`, `red_dots.py` | Home notification recognition and duplicate-suppressed follow-up requests, including excess AP |
 | `checkin_schedule.py` | Per-instance periodic check-in deadlines, validation, and atomic state persistence |
 | `lesson_planner.py` | Pure relationship and school-rank policy over observed locations, rooms, ownership, and relationship ranks |
@@ -129,7 +131,7 @@ Batch selection starts at one and increases within observed inventory and credit
 
 The dashboard binds to loopback and launches one task subprocess at a time. Each job gets a configuration snapshot and its own diagnostic directory. The same per-instance lock also protects against a separately launched CLI runner.
 
-Pause allows the current job to finish and blocks dispatch. Stop interrupts the current job and pauses the queue. Resume permits queued work and clears the scheduler's retry pause. Waiting jobs can be canceled. Settings cannot be changed while jobs are active or queued.
+Pause allows the current job to finish and blocks dispatch. Stop interrupts the current job and pauses the queue. The explicit pause/resume choice survives daemon restarts; shutdown itself does not change that choice. Resume permits queued work and clears the scheduler's retry pause. Waiting jobs can be canceled. Settings cannot be changed while jobs are active or queued.
 
 Periodic check-ins default to every 30 minutes under `[checkin]`, with a configurable interval of 5–1440 minutes or an off switch. A due visit uses the existing `red_dots` plan: restart the game on the running emulator, scan Home and Campaign, and queue eligible reward/AP follow-ups. A successful final scan from another job also restarts the interval. The per-instance deadline persists before dispatch; downtime produces at most one overdue visit, while failed or interrupted checks wait another interval. Check-ins respect the serial queue, pause, task eligibility, and spending holds. Invalid timer state holds only check-ins and appears in the queue schedule summary. Host and emulator startup remain manual.
 
@@ -141,7 +143,7 @@ The Cafe timer enqueues `cafe`, so recurring visits check Club and mail and may 
 
 Daily scheduling is opt-in under `[daily]`. `daily_schedule.py` determines the Global game day from the fixed 19:00 UTC reset, with a configurable delay of 0–120 minutes (default one). The dashboard queues only the current game day's occurrence after its deadline, including after downtime. Before dispatch, it saves an instance-scoped occurrence; completion, failure, or interruption prevents automatic same-day replay. Manual dashboard Daily runs also record an occurrence and can explicitly retry reviewed failures. Cancelling an automatically queued Daily records that day as skipped. Queue pause and serial dispatch still apply; this is scheduling persistence, not per-step Daily resumption.
 
-Cafe/Crafting retry state persists in `data/state/schedule.json`; task-specific files retain craft deadlines and AP/pack check times. Failed-job notices persist separately and can be dismissed without deleting their diagnostic history or clearing a spending hold. The FIFO job queue and dashboard's recent job list are in memory and disappear at shutdown. `serve` must remain running for schedules to execute; no system service or login item is installed.
+Cafe/Crafting retry state and the queue's pause choice persist in `data/state/schedule.json`; task-specific files retain craft deadlines and AP/pack check times. Failed-job notices persist separately and can be dismissed without deleting their diagnostic history or clearing a spending hold. The FIFO job queue and dashboard's recent job list are in memory and disappear at shutdown. `serve` must remain running for schedules to execute; no system service or login item is installed.
 
 `[automation] close_app_when_idle` is optional and defaults to false. Once the final dashboard task subprocess has exited, the controller checks for due/queued work and, if the queue is empty, force-stops the configured game under the instance lock. It performs this once after a job, including a failed or interrupted final job; it is not a recurring idle timer. BlueStacks and the dashboard remain open. Standalone CLI runs are unaffected, and closure does not change the task result. The important-action history records successful app closure.
 
@@ -155,21 +157,23 @@ Storage paths are relative to the TOML file. With the example configuration:
 | `data/runs/dashboard-*/` | Dashboard job snapshots and the subprocess's run directories |
 | `data/state/important-actions.jsonl` | Persistent important actions, including separate attempts and verified results |
 | `data/state/logs/YYYY-MM-DD.log` | Full daily text log with local timestamps, task diagnostics, actions, and queue events |
-| `data/state/schedule.json` | Cafe due time and Cafe/Crafting failure counts, retry pauses, and backoff |
+| `data/state/schedule.json` | Queue pause choice, Cafe due time, and Cafe/Crafting failure counts, retry pauses, and backoff |
 | `data/state/daily-<instance hash>.json` | Latest Daily game-day occurrence, run identity, timestamps, and outcome |
 | `data/state/checkin-<instance hash>.json` | Next periodic check-in deadline, visit timestamps, and last result |
 | `data/state/crafting-<instance hash>.json` | Craft slot deadlines, inventory recheck time, setup-disable reason, and pending action |
 | `data/state/club-<instance hash>.json` | Verified Club attendance check for the current game day |
 | `data/state/ap-<instance hash>.json` | Stage catalog, Hard-stage rotation, spending hold, and next AP check |
 | `data/state/bounties-<instance hash>.json`, `scrimmages-<instance hash>.json` | Game-day ticket allocation, verified progress, and pending sweep |
+| `data/state/tactical-<instance hash>.json` | Game-day opponent history, verified identities, ticket/rank observations, and unresolved battle intent |
+| `data/state/tactical-survey-<instance hash>.json` | Disposable scouting samples, candidate identities, lookup progress, and continuation deadline; expires after four hours or a game-day, rank, or scouting-setting change |
 | `data/state/packs-<instance hash>.json` | Pack ownership observations, purchase intent, payment hold, and next check |
 | `data/state/failed-jobs-<instance hash>.json` | Persistent, dismissible failed-job notices |
 | `data/state/loot-icons/`, receipt-adjacent `.loot.json` files | Saved game icons and itemized receipt metadata |
 | `data/locks/` | Shared per-instance process locks |
 
-Ctrl+C and task failure record the result and release the lock. A restart starts a new force-stop/launch sequence; there is no resume checkpoint. Cafe receipts and relationship evidence, plus lesson survey and receipt evidence, are retained separately from the rotating screenshot ring.
+Ctrl+C and task failure record the result and release the lock. The `restart` task starts a new force-stop/launch sequence; startup itself has no resume checkpoint. Cafe receipts and relationship evidence, plus lesson survey and receipt evidence, are retained separately from the rotating screenshot ring.
 
-JSONL remains the machine-readable history format, supplemented by daily text logs and atomic task state. Crafting, AP, tickets, Club, and paid packs have task-specific durable checkpoints or intents; a general resumable queue and SQLite history are deferred. Local config, raw screenshots, and logs remain outside Git. Only reviewed recognition crops and sanitized fixtures belong in the repository.
+JSONL remains the machine-readable history format, supplemented by daily text logs and atomic task state. Crafting, AP, tickets, Club, paid packs, and Tactical Challenge have task-specific durable checkpoints or intents; a general resumable queue and SQLite history are deferred. Tactical survey continuations append behind ordinary scheduled work, and discarding survey progress never clears unresolved battle intent. Local config, raw screenshots, and logs remain outside Git. Only reviewed recognition crops and sanitized fixtures belong in the repository.
 
 ## Resource use and coexistence
 

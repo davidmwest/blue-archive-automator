@@ -1,0 +1,242 @@
+[
+  {
+    "text": "Tactical Challenge",
+    "confidence": 0.99988,
+    "box": [
+      102,
+      7,
+      359,
+      42
+    ]
+  },
+  {
+    "text": "Season",
+    "confidence": 0.9997,
+    "box": [
+      449,
+      130,
+      550,
+      163
+    ]
+  },
+  {
+    "text": "Time Left 01:02",
+    "confidence": 0.99609,
+    "box": [
+      964,
+      134,
+      1094,
+      160
+    ]
+  },
+  {
+    "text": "Refresh List",
+    "confidence": 0.96536,
+    "box": [
+      1124,
+      134,
+      1233,
+      157
+    ]
+  },
+  {
+    "text": "Lv.79 Player",
+    "confidence": 0.99909,
+    "box": [
+      167,
+      192,
+      304,
+      215
+    ]
+  },
+  {
+    "text": "Rank 428",
+    "confidence": 0.98649,
+    "box": [
+      555,
+      206,
+      705,
+      243
+    ]
+  },
+  {
+    "text": "Rank 571",
+    "confidence": 0.98602,
+    "box": [
+      134,
+      293,
+      284,
+      331
+    ]
+  },
+  {
+    "text": "Lv.90 Scout1",
+    "confidence": 0.99914,
+    "box": [
+      464,
+      293,
+      573,
+      317
+    ]
+  },
+  {
+    "text": "Time Reward +60/ minute(s)",
+    "confidence": 0.98231,
+    "box": [
+      59,
+      358,
+      284,
+      383
+    ]
+  },
+  {
+    "text": "Claim",
+    "confidence": 0.99996,
+    "box": [
+      319,
+      374,
+      387,
+      402
+    ]
+  },
+  {
+    "text": "Rank488",
+    "confidence": 0.99998,
+    "box": [
+      556,
+      365,
+      705,
+      402
+    ]
+  },
+  {
+    "text": "Total 32K/1,000K",
+    "confidence": 0.97512,
+    "box": [
+      59,
+      398,
+      203,
+      422
+    ]
+  },
+  {
+    "text": "Daily Reward 11:21",
+    "confidence": 0.9703,
+    "box": [
+      58,
+      437,
+      220,
+      463
+    ]
+  },
+  {
+    "text": "Claim",
+    "confidence": 0.99997,
+    "box": [
+      319,
+      453,
+      387,
+      481
+    ]
+  },
+  {
+    "text": "Lv.90 Scout2",
+    "confidence": 0.96751,
+    "box": [
+      464,
+      452,
+      598,
+      475
+    ]
+  },
+  {
+    "text": "Tickets Owned4/5",
+    "confidence": 0.99897,
+    "box": [
+      82,
+      476,
+      248,
+      502
+    ]
+  },
+  {
+    "text": "Standby Time",
+    "confidence": 0.99609,
+    "box": [
+      55,
+      513,
+      177,
+      542
+    ]
+  },
+  {
+    "text": "--:--",
+    "confidence": 0.96233,
+    "box": [
+      177,
+      518,
+      212,
+      537
+    ]
+  },
+  {
+    "text": "Rank 536",
+    "confidence": 0.99005,
+    "box": [
+      557,
+      523,
+      705,
+      560
+    ]
+  },
+  {
+    "text": "Battle",
+    "confidence": 0.99999,
+    "box": [
+      101,
+      562,
+      187,
+      594
+    ]
+  },
+  {
+    "text": "Defense",
+    "confidence": 0.97278,
+    "box": [
+      265,
+      558,
+      381,
+      595
+    ]
+  },
+  {
+    "text": "History",
+    "confidence": 0.99998,
+    "box": [
+      91,
+      587,
+      197,
+      627
+    ]
+  },
+  {
+    "text": "Formation",
+    "confidence": 0.99998,
+    "box": [
+      253,
+      590,
+      393,
+      620
+    ]
+  },
+  {
+    "text": "Lv.90 Scout3",
+    "confidence": 0.99822,
+    "box": [
+      463,
+      610,
+      565,
+      634
+    ]
+  }
+]

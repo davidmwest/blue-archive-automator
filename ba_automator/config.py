@@ -49,6 +49,11 @@ class Config:
     packs_ap_max_cents: int = 299
     bounties_enabled_in_daily: bool = True
     scrimmages_enabled_in_daily: bool = True
+    tactical_battles_enabled_in_daily: bool = True
+    tactical_battles_skip_battles: bool = True
+    tactical_battles_preserve_tickets: int = 1
+    tactical_battles_refresh_limit: int = 50
+    tactical_battles_confidence_percent: float = 99.0
     total_assault_difficulty: str = "hardcore"
     total_assault_enabled_in_daily: bool = False
     total_assault_comfort_seconds: int = 30
@@ -105,7 +110,8 @@ class Config:
             raise ConfigError("restart.auto_download must be true or false")
         for name in ("daily_schedule_enabled", "checkin_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle",
                      "lessons_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily",
-                     "total_assault_enabled_in_daily", "crafting_schedule_enabled",
+                     "total_assault_enabled_in_daily", "tactical_battles_enabled_in_daily",
+                     "tactical_battles_skip_battles", "crafting_schedule_enabled",
                      "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled",
                      "ap_schedule_enabled", "ap_hard_default_order"):
             if type(getattr(self, name)) is not bool:
@@ -140,6 +146,15 @@ class Config:
         if (self.cafe_invite_enabled and self.cafe_invite_student
                 and not re.search(r"[A-Za-z]", self.cafe_invite_student)):
             raise ConfigError("cafe.invite_student must use the English in-game name")
+        if (type(self.tactical_battles_preserve_tickets) is not int
+                or not 0 <= self.tactical_battles_preserve_tickets <= 5):
+            raise ConfigError("tactical_battles.preserve_tickets must be an integer from 0 to 5")
+        if (type(self.tactical_battles_refresh_limit) is not int
+                or not 2 <= self.tactical_battles_refresh_limit <= 100):
+            raise ConfigError("tactical_battles.refresh_limit must be an integer from 2 to 100")
+        if (type(self.tactical_battles_confidence_percent) not in (int, float)
+                or not 80 <= self.tactical_battles_confidence_percent <= 99.9):
+            raise ConfigError("tactical_battles.confidence_percent must be a number from 80 to 99.9")
         if self.total_assault_difficulty not in ("normal", "hard", "very_hard", "hardcore", "extreme", "insane", "torment", "lunatic"):
             raise ConfigError("total_assault.difficulty must be normal, hard, very_hard, hardcore, extreme, insane, torment, or lunatic")
         if (type(self.total_assault_comfort_seconds) is not int
@@ -190,6 +205,7 @@ class Config:
                       "monthly_max_cents", "half_monthly_max_cents", "ap_max_cents"},
             "bounties": {"enabled_in_daily"},
             "scrimmages": {"enabled_in_daily"},
+            "tactical_battles": {"enabled_in_daily", "skip_battles", "preserve_tickets", "refresh_limit", "confidence_percent"},
             "total_assault": {"difficulty", "enabled_in_daily", "comfort_seconds"},
             "lessons": {"strategy", "max_tickets", "locations", "enabled_in_daily"},
             "automation": {"close_app_when_idle"},
@@ -205,7 +221,7 @@ class Config:
             unexpected_keys = entries.keys() - keys
             if unexpected_keys:
                 raise ConfigError(f"Unknown {section} settings: {', '.join(sorted(unexpected_keys))}")
-            values.update({f"{section}_{key}" if section in {"daily", "checkin", "cafe", "lessons", "crafting", "packs", "ap", "bounties", "scrimmages", "total_assault"} else key: value
+            values.update({f"{section}_{key}" if section in {"daily", "checkin", "cafe", "lessons", "crafting", "packs", "ap", "bounties", "scrimmages", "total_assault", "tactical_battles"} else key: value
                            for key, value in entries.items()})
         for required in ("serial", "package"):
             if required not in values:

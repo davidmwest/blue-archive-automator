@@ -41,6 +41,7 @@ def main(argv=None) -> int:
     descriptions = {
         "total_assault": "Mock-test the configured Total Assault difficulty before a real clear, then sweep remaining tickets",
         "assault_rewards": "Collect available Total Assault rank and points rewards without entering a battle",
+        "tactical_battles": "Climb Tactical Challenge with existing tickets while preserving the configured manual-play reserve",
         "tactical_rewards": "Collect Tactical Challenge time and daily rewards without fighting",
         "red_dots": "Check home and Campaign notifications for daemon collection jobs",
         "free_pack": "Claim the Free daily pack when its home badge is visible, then collect mail",
@@ -56,7 +57,7 @@ def main(argv=None) -> int:
         "spend_ap": "Sweep selected Hard missions or commissions down to the AP floor",
         "scan_ap": "Survey three-star Hard missions and commissions without spending AP",
         "lessons": "Restart and use lesson tickets with the configured strategy",
-        "daily": "Run restart, free package, Club, enabled packs, mail, cafe, enabled ticket sweeps, Tactical Challenge rewards, lessons, optional Total Assault, raid rewards, AP spending and task rewards",
+        "daily": "Run restart, free package, Club, enabled packs, mail, cafe, enabled ticket sweeps, enabled Tactical Challenge battles and rewards, lessons, optional Total Assault, raid rewards, AP spending and task rewards",
     }
     for name, description in descriptions.items():
         command = commands.add_parser(name, help=description)
@@ -120,6 +121,10 @@ def main(argv=None) -> int:
                     from .assault_rewards import run_assault_rewards
 
                     runner = run_assault_rewards
+                elif task == "tactical_battles":
+                    from .tactical_runtime import run_tactical_battles
+
+                    runner = run_tactical_battles
                 elif task == "tactical_rewards":
                     from .tactical_rewards import run_tactical_rewards
 

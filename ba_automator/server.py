@@ -45,8 +45,9 @@ from .locking import InstanceLock, LockError
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS, task_plan
 from .home_badges import PRIORITY
 from . import packs_state
-from . import ap_state, loot, daily_log, daily_schedule, checkin_schedule
+from . import ap_state, loot, daily_log, daily_schedule, checkin_schedule, tactical_survey
 from .club import game_day
+from .tactical_state import TacticalStateError, ensure_restart_safe
 from .vision import decode_frame
 
 
@@ -68,8 +69,10 @@ AP_SETTINGS = {f'ap_{key}': key for key in
                ('schedule_enabled', 'floor', 'strategy', 'hard_default_order', 'hard_order')}
 TOTAL_ASSAULT_SETTINGS = {f"total_assault_{key}": key
                           for key in ("difficulty", "enabled_in_daily", "comfort_seconds")}
+TACTICAL_BATTLE_SETTINGS = {f"tactical_battles_{key}": key
+                           for key in ("enabled_in_daily", "skip_battles", "preserve_tickets", "refresh_limit", "confidence_percent")}
 TICKET_SETTINGS = {"bounties_enabled_in_daily", "scrimmages_enabled_in_daily"}
-SETTINGS = CHECKIN_SETTINGS.keys() | DAILY_SETTINGS.keys() | TOTAL_ASSAULT_SETTINGS.keys() | TICKET_SETTINGS | RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
+SETTINGS = TACTICAL_BATTLE_SETTINGS.keys() | CHECKIN_SETTINGS.keys() | DAILY_SETTINGS.keys() | TOTAL_ASSAULT_SETTINGS.keys() | TICKET_SETTINGS | RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
 CAFE_INTERVAL = timedelta(hours=3, seconds=15)
 CAFE_RETRY_INTERVAL = timedelta(minutes=15)
 MAX_SCHEDULE_FAILURES = 3
@@ -126,6 +129,7 @@ def _config_document(config: Config) -> dict:
         "packs": {name: getattr(config, attribute) for attribute, name in PACKS_SETTINGS.items()},
         "bounties": {"enabled_in_daily": config.bounties_enabled_in_daily},
         "scrimmages": {"enabled_in_daily": config.scrimmages_enabled_in_daily},
+        "tactical_battles": {name: getattr(config, attribute) for attribute, name in TACTICAL_BATTLE_SETTINGS.items()},
         "total_assault": {name: getattr(config, attribute) for attribute, name in TOTAL_ASSAULT_SETTINGS.items()},
         "ap": {name: getattr(config, attribute) for attribute, name in AP_SETTINGS.items()},
     }
@@ -177,6 +181,9 @@ class DashboardController:
         self._job_roots: dict[str, Path] = {}
         self._popup_cache: dict[Path, tuple[tuple[int, int], list[dict]]] = {}
         self._schedule = self._load_schedule()
+        # Read the operator's choice before the worker can enqueue due work.
+        # A malformed saved value must not silently resume device actions.
+        self._paused = self._schedule.get("queue_paused", False) is not False
         self._daily_schedule_error = None
         self._daily_not_before = None
         self._checkin_schedule_error = None
@@ -186,6 +193,7 @@ class DashboardController:
         self._checkin_pending_record = None
         self._packs_not_before = None
         self._ap_not_before = None
+        self._tactical_continuation_error = None
         self._failures = self._load_failures()
         self._daily("dashboard_started", detail="Local serial queue started")
         self._initialize_checkin()
@@ -221,7 +229,10 @@ class DashboardController:
         values.update({name: getattr(self.config, name) for name in LESSONS_SETTINGS})
         values.update({name: getattr(self.config, name) for name in CRAFTING_SETTINGS})
         values.update({name: getattr(self.config, name) for name in PACKS_SETTINGS})
-        values.update({name: getattr(self.config, name) for name in AP_SETTINGS.keys() | TICKET_SETTINGS | TOTAL_ASSAULT_SETTINGS.keys()})
+        values.update({name: getattr(self.config, name) for name in (
+            AP_SETTINGS.keys() | TICKET_SETTINGS | TACTICAL_BATTLE_SETTINGS.keys()
+            | TOTAL_ASSAULT_SETTINGS.keys()
+        )})
         return values
 
     def _state_dir(self) -> Path:
@@ -260,6 +271,9 @@ class DashboardController:
             # Acknowledging a notice never clears schedules or purchase holds.
 
     def _load_schedule(self) -> dict:
+        defaults = {"crafting": {"not_before": None, "consecutive_failures": 0, "retry_paused": False},
+                    "cafe": {"last_success_at": None, "next_due_at": None,
+                             "consecutive_failures": 0, "retry_paused": False}}
         try:
             value = json.loads((self._state_dir() / "schedule.json").read_text(encoding="utf-8"))
             if isinstance(value, dict) and isinstance(value.get("cafe"), dict):
@@ -267,11 +281,13 @@ class DashboardController:
                 if not isinstance(value["crafting"], dict):
                     value["crafting"] = {"not_before": None, "consecutive_failures": 0, "retry_paused": True}
                 return value
-        except (OSError, ValueError):
-            pass
-        return {"crafting": {"not_before": None, "consecutive_failures": 0, "retry_paused": False},
-                "cafe": {"last_success_at": None, "next_due_at": None,
-                         "consecutive_failures": 0, "retry_paused": False}}
+            raise ValueError("Invalid schedule state")
+        except FileNotFoundError:
+            return defaults
+        except (OSError, ValueError) as exc:
+            defaults["queue_paused"] = True
+            self._log(f"Could not restore task schedules; queue remains paused: {exc}", "error")
+            return defaults
 
     def _save_schedule(self) -> None:
         try:
@@ -563,6 +579,12 @@ class DashboardController:
         self._enqueue_ap()
         self._enqueue_cafe()
         if available:
+            if (self.config.tactical_battles_enabled_in_daily
+                    and not any(job["task"] in {"daily", "tactical_battles"} for job in self._queue)):
+                job = {"id": uuid4().hex, "task": "tactical_battles", "source": "available",
+                       "created_at": _timestamp()}
+                self._queue.append(job)
+                self._queued(job)
             # Explicit catch-up always gets a fresh final home scan, even when
             # no schedule is due or the periodic check-in timer is disabled.
             # Its ordinary badge/AP follow-ups still honor opt-ins and holds.
@@ -571,8 +593,45 @@ class DashboardController:
             self._queue.append(job)
             self._queued(job)
             self._daily("available_work_queued", tasks=[job["task"] for job in self._queue])
-        else:
+        self._enqueue_tactical_continuation(self._wall_clock().timestamp())
+        if not available:
             self._enqueue_checkin()
+
+    def _tactical_continuation_due(self, now: float) -> bool:
+        if not self.config.tactical_battles_enabled_in_daily or self._tactical_continuation_error:
+            return False
+        try:
+            return tactical_survey.continuation_due(self.config, now=now)
+        except (RuntimeError, OSError) as exc:
+            self._tactical_continuation_error = str(exc)
+            self._log(f"Tactical survey continuation paused: {exc}", "error")
+            return False
+
+    def _enqueue_tactical_continuation(self, now: float) -> None:
+        """Resume a bounded survey behind ordinary work, never replay Daily."""
+        if (self._paused or self._shutdown or self._capturing or len(self._queue) >= 100
+                or (self._current and self._current["task"] in {"daily", "tactical_battles"})
+                or any(job["task"] in {"daily", "tactical_battles"} for job in self._queue)
+                or not self._tactical_continuation_due(now)):
+            return
+        job = {"id": uuid4().hex, "task": "tactical_battles", "source": "tactical_continuation",
+               "created_at": _timestamp()}
+        self._queue.append(job)
+        self._queued(job)
+
+    def _finish_tactical_continuation(self, job: dict, selected: Config) -> None:
+        if job.get("source") != "tactical_continuation" or self._state != "failed":
+            return
+        try:
+            with InstanceLock(selected):
+                tactical_survey.clear_survey(selected)
+            self._daily("tactical_survey_continuation_cleared", level="WARNING", run=job["id"],
+                        detail="Failed continuation discarded its survey; battle intent and history were preserved")
+        except (RuntimeError, OSError) as exc:
+            # A failed cleanup must not let the same due file create a tight
+            # retry loop. Other schedules keep running and the failure stays visible.
+            self._tactical_continuation_error = str(exc)
+            self._log(f"Could not clear failed Tactical survey; automatic continuation paused: {exc}", "error")
 
     def _enqueue_cafe(self) -> None:
         if (self._paused or self._shutdown or not getattr(self.config, "cafe_schedule_enabled", False)
@@ -757,6 +816,12 @@ class DashboardController:
                 raise ApiError(409, "This job is already running; use Stop to interrupt it")
             for job in self._queue:
                 if job["id"] == job_id:
+                    if job.get("source") == "tactical_continuation":
+                        try:
+                            with InstanceLock(self.config):
+                                tactical_survey.clear_survey(self.config)
+                        except (RuntimeError, OSError) as exc:
+                            raise ApiError(409, f"Could not cancel Tactical survey continuation: {exc}") from exc
                     if job.get("source") == "schedule" and job["task"] == "daily":
                         try:
                             with self._daily_state_lock():
@@ -796,11 +861,25 @@ class DashboardController:
             if not self._paused:
                 self._daily("queue_paused")
             self._paused = True
+            self._persist_queue_pause(True)
+
+    def _persist_queue_pause(self, paused: bool) -> None:
+        """Commit the dispatch choice without changing any task deadline or hold."""
+        saved = {**self._schedule, "queue_paused": paused}
+        try:
+            _write_atomic(self._state_dir() / "schedule.json", json.dumps(saved, indent=2) + "\n")
+        except OSError as exc:
+            self._paused = True
+            self._schedule["queue_paused"] = True
+            self._log(f"Could not save queue pause state; dispatch remains paused: {exc}", "error")
+            raise ApiError(500, "Could not save queue pause state; dispatch remains paused") from exc
+        self._schedule["queue_paused"] = paused
 
     def resume(self) -> None:
         with self._condition:
             if self._shutdown:
                 raise ApiError(409, "The server is shutting down")
+            self._persist_queue_pause(False)
             self._paused = False
             self._daily("queue_resumed")
             if self._schedule["crafting"].get("retry_paused", False):
@@ -813,19 +892,26 @@ class DashboardController:
                 self._save_schedule()
             self._condition.notify_all()
 
-    def stop(self) -> None:
+    def stop(self, *, persist_pause: bool = True) -> None:
         with self._condition:
             self._paused = True
+            persistence_error = None
+            if persist_pause:
+                try:
+                    self._persist_queue_pause(True)
+                except ApiError as exc:
+                    persistence_error = exc
             self._daily("queue_stop_requested", task=self._task,
                         run=self._current["id"] if self._current else None)
-            if not self._current:
-                return
-            self._stop_requested = True
-            self._phase = "Stopping"
-            process = self._process
-            if process is not None and not self._escalating:
-                self._escalating = True
-                self._interrupt(process)
+            if self._current:
+                self._stop_requested = True
+                self._phase = "Stopping"
+                process = self._process
+                if process is not None and not self._escalating:
+                    self._escalating = True
+                    self._interrupt(process)
+            if persistence_error is not None:
+                raise persistence_error
 
     def _interrupt(self, process) -> None:
         try:
@@ -862,6 +948,11 @@ class DashboardController:
                 if job["task"] == "daily" and not self._claim_daily(job):
                     continue
                 if job.get("source") == "checkin" and not self._claim_checkin(job):
+                    continue
+                if (job.get("source") == "tactical_continuation"
+                        and not self._tactical_continuation_due(self._wall_clock().timestamp())):
+                    self._daily("tactical_survey_continuation_skipped", run=job["id"],
+                                detail="Survey is no longer due or enabled")
                     continue
                 self._started_at = _timestamp()
                 self._current = {"id": job["id"], "task": job["task"], "started_at": self._started_at,
@@ -924,7 +1015,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info", child=True)
-                            marker = next((prefix for prefix in ("total_assault:", "assault_rewards:", "tactical_rewards:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("total_assault:", "assault_rewards:", "tactical_rewards:", "tactical_battles:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -978,6 +1069,7 @@ class DashboardController:
                                               "source": job.get("source", "manual"),
                                               "state": self._state, "completed_at": self._completed_at})
                     self._finish_daily(job)
+                    self._finish_tactical_continuation(job, selected)
                     if self._state == 'failed':
                         detail = (self._summary_failure_detail(summary) if summary else
                                   next((entry['message'] for entry in reversed(self._logs)
@@ -1112,10 +1204,15 @@ class DashboardController:
             return
         try:
             with InstanceLock(selected):
+                ensure_restart_safe(selected)
                 device = self._device_factory(selected)
                 device.connect()
                 device.verify_package()
                 device.force_stop()
+        except TacticalStateError as exc:
+            self._phase += "; Blue Archive left open for Tactical Challenge review"
+            self._log(f"Kept Blue Archive open: {exc}", "error")
+            return
         except Exception as exc:
             self._log(f"Could not close Blue Archive after the queue finished: {exc}", "error")
             return
@@ -1328,6 +1425,7 @@ class DashboardController:
                     "queue": [dict(job) for job in self._queue],
                     "current_job": dict(self._current) if self._current else None,
                     "history": list(self._history), "queue_paused": self._paused,
+                    "capturing": self._capturing,
                     "run_available_pending": self._run_available_pending,
                     "run_available_active": self._run_available_active,
                     "failed_jobs": list(reversed(self._failures)),
@@ -1518,8 +1616,8 @@ class DashboardController:
         if not changes or changes.keys() - SETTINGS:
             raise ApiError(400, "Only supported task settings may be updated")
         with self._condition:
-            if self._current or self._queue or self._capturing:
-                raise ApiError(409, "Settings cannot change while jobs are running or queued")
+            if self._current or self._capturing or (self._queue and not self._paused):
+                raise ApiError(409, "Pause the queue and wait for the current job or capture before changing settings")
             try:
                 existing = Config.from_file(self.config_path)
                 updated = replace(existing, **changes)  # Validate before touching the file.
@@ -1540,6 +1638,7 @@ class DashboardController:
                     section = (name.split("_")[0] if name in TICKET_SETTINGS else
                                "checkin" if name in CHECKIN_SETTINGS else
                                "daily" if name in DAILY_SETTINGS else
+                               "tactical_battles" if name in TACTICAL_BATTLE_SETTINGS else
                                "total_assault" if name in TOTAL_ASSAULT_SETTINGS else
                                "cafe" if name in CAFE_SETTINGS else
                                "ap" if name in AP_SETTINGS else
@@ -1548,6 +1647,7 @@ class DashboardController:
                                "lessons" if name in LESSONS_SETTINGS else
                                "automation" if name in AUTOMATION_SETTINGS else "restart")
                     key = AP_SETTINGS.get(name, PACKS_SETTINGS.get(name, CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, CRAFTING_SETTINGS.get(name, name)))))
+                    if name in TACTICAL_BATTLE_SETTINGS: key = TACTICAL_BATTLE_SETTINGS[name]
                     if name in TOTAL_ASSAULT_SETTINGS: key = TOTAL_ASSAULT_SETTINGS[name]
                     if name in DAILY_SETTINGS: key = DAILY_SETTINGS[name]
                     if name in CHECKIN_SETTINGS: key = CHECKIN_SETTINGS[name]
@@ -1567,7 +1667,9 @@ class DashboardController:
         with self._condition:
             self._daily("dashboard_stopping", active=self._current, queued_count=len(self._queue))
             self._shutdown = True
-            self.stop()
+            # Shutdown interrupts the child, but preserves the last explicit
+            # Pause/Stop/Resume choice for the next daemon invocation.
+            self.stop(persist_pause=False)
             self._condition.notify_all()
         self._worker.join(timeout=16)
         if self._worker.is_alive():

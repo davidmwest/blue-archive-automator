@@ -114,6 +114,8 @@ def test_status_is_explicitly_fictional_and_cannot_schedule_jobs(demo_server):
     assert status["config"]["total_assault_difficulty"] == "hardcore"
     assert status["config"]["total_assault_comfort_seconds"] == 30
     assert status["config"]["total_assault_enabled_in_daily"] is False
+    assert status["config"]["tactical_battles_skip_battles"] is True
+    assert status["config"]["tactical_battles_confidence_percent"] == 99
     assert not status["schedule"]["cafe"]["enabled"]
     assert status["config"]["checkin_schedule_enabled"] is False
     assert status["config"]["checkin_interval_minutes"] == 30

@@ -1,0 +1,132 @@
+[
+  {
+    "text": "Tip!",
+    "box": [
+      288,
+      79,
+      408,
+      158
+    ],
+    "confidence": 0.9994
+  },
+  {
+    "text": "Buff",
+    "box": [
+      446,
+      157,
+      503,
+      185
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Grants a positive effect to the target.",
+    "box": [
+      448,
+      182,
+      705,
+      204
+    ],
+    "confidence": 0.99631
+  },
+  {
+    "text": "Debuff",
+    "box": [
+      445,
+      226,
+      527,
+      253
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Inflicts a harmful effect on the target.",
+    "box": [
+      447,
+      251,
+      711,
+      274
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Crowd Control",
+    "box": [
+      449,
+      295,
+      600,
+      322
+    ],
+    "confidence": 0.99975
+  },
+  {
+    "text": "Limits a specific aspect of the target.",
+    "box": [
+      448,
+      321,
+      707,
+      343
+    ],
+    "confidence": 0.99993
+  },
+  {
+    "text": "Special Effects",
+    "box": [
+      447,
+      364,
+      611,
+      392
+    ],
+    "confidence": 0.99851
+  },
+  {
+    "text": "Applies a special effect such as invincibility, immortality, rage, etc. on the target.",
+    "box": [
+      446,
+      390,
+      931,
+      414
+    ],
+    "confidence": 0.99441
+  },
+  {
+    "text": "nime",
+    "box": [
+      574,
+      441,
+      621,
+      458
+    ],
+    "confidence": 0.83044
+  },
+  {
+    "text": "01:28",
+    "box": [
+      673,
+      439,
+      736,
+      459
+    ],
+    "confidence": 0.95873
+  },
+  {
+    "text": "You can distinguish effect types by the color of the icon.",
+    "box": [
+      353,
+      491,
+      924,
+      524
+    ],
+    "confidence": 0.99419
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      575,
+      639,
+      705,
+      676
+    ],
+    "confidence": 0.99992
+  }
+]

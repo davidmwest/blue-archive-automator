@@ -199,9 +199,34 @@ def test_settings_validate_before_write_and_preserve_device_and_paths(controlled
     assert controller.status()["config"]["startup_timeout"] == 90
     controller.pause()
     controller.enqueue("restart")
-    with pytest.raises(ApiError) as error:
-        controller.update_settings({"auto_download": True})
-    assert error.value.status == 409
+    controller.update_settings({"auto_download": True})
+    assert controller.status()["config"]["auto_download"] is True
+
+
+@pytest.mark.parametrize("gate", ["running", "ready", "capturing"])
+def test_settings_remain_locked_during_active_or_ready_work(controlled, config_path, gate):
+    controller, factory = controlled
+    controller.pause()
+    controller.enqueue("restart")
+    if gate == "running":
+        controller.resume()
+        eventually(lambda: len(factory.processes) == 1)
+        controller.pause()  # Pausing does not interrupt the active child.
+    original = config_path.read_bytes()
+    with controller._condition:
+        if gate == "ready":
+            controller._paused = False
+        if gate == "capturing":
+            controller._capturing = True
+            assert controller.status()["capturing"] is True
+        try:
+            with pytest.raises(ApiError) as error:
+                controller.update_settings({"tactical_battles_confidence_percent": 90})
+            assert error.value.status == 409
+            assert config_path.read_bytes() == original
+        finally:
+            controller._paused = True
+            controller._capturing = False
 
 
 def test_total_assault_settings_persist_and_reach_the_queued_snapshot(controlled, config_path):
@@ -224,16 +249,71 @@ def test_total_assault_settings_persist_and_reach_the_queued_snapshot(controlled
     assert saved["device"]["adb_path"] == "../tools/adb"
     assert {key: controller.status()["config"][key] for key in changes} == changes
     controller.enqueue("total_assault")
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
     with pytest.raises(ApiError) as error:
         controller.update_settings({"total_assault_difficulty": "hard"})
     assert error.value.status == 409
-    controller.resume()
-    eventually(lambda: len(factory.processes) == 1)
     snapshot = Config.from_file(factory.processes[0].arguments[4])
     assert factory.processes[0].arguments[-1] == "total_assault"
     assert snapshot.total_assault_difficulty == "hardcore"
     assert snapshot.total_assault_comfort_seconds == 45
     assert snapshot.total_assault_enabled_in_daily is True
+
+
+def test_tactical_battle_settings_persist_and_reach_the_queued_snapshot(controlled, config_path):
+    controller, factory = controlled
+    controller.pause()
+    original = config_path.read_bytes()
+    for invalid in ({"tactical_battles_preserve_tickets": -1},
+                    {"tactical_battles_preserve_tickets": 6},
+                    {"tactical_battles_refresh_limit": 0},
+                    {"tactical_battles_refresh_limit": 101},
+                    {"tactical_battles_confidence_percent": 79.9},
+                    {"tactical_battles_confidence_percent": 100},
+                    {"tactical_battles_confidence_percent": True},
+                    {"tactical_battles_confidence_percent": "90"},
+                    {"tactical_battles_skip_battles": "false"},
+                    {"tactical_battles_skip_battles": 0},
+                    {"tactical_battles_enabled_in_daily": "yes"}):
+        with pytest.raises(ApiError) as error:
+            controller.update_settings(invalid)
+        assert error.value.status == 400
+        assert config_path.read_bytes() == original
+    changes = {"tactical_battles_preserve_tickets": 2, "tactical_battles_refresh_limit": 8,
+               "tactical_battles_confidence_percent": 90.5,
+               "tactical_battles_skip_battles": False,
+               "tactical_battles_enabled_in_daily": True}
+    controller.update_settings(changes)
+    saved = tomllib.loads(config_path.read_text())
+    assert saved["tactical_battles"] == {"preserve_tickets": 2, "refresh_limit": 8,
+                                       "confidence_percent": 90.5,
+                                       "skip_battles": False,
+                                       "enabled_in_daily": True}
+    assert saved["device"]["adb_path"] == "../tools/adb"
+    assert {key: controller.status()["config"][key] for key in changes} == changes
+    job = controller.enqueue("tactical_battles")
+    schedules = json.loads(json.dumps(controller._schedule))
+    schedule_path = controller._state_dir() / "schedule.json"
+    persisted_schedules = schedule_path.read_bytes()
+    controller.update_settings({"tactical_battles_confidence_percent": 90})
+    assert controller.status()["queue_paused"] is True
+    assert [entry["id"] for entry in controller.status()["queue"]] == [job["id"]]
+    assert factory.processes == []
+    assert controller._schedule == schedules
+    assert schedule_path.read_bytes() == persisted_schedules
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    with pytest.raises(ApiError) as error:
+        controller.update_settings({"tactical_battles_preserve_tickets": 0})
+    assert error.value.status == 409
+    snapshot = Config.from_file(factory.processes[0].arguments[4])
+    assert factory.processes[0].arguments[-1] == "tactical_battles"
+    assert snapshot.tactical_battles_preserve_tickets == 2
+    assert snapshot.tactical_battles_refresh_limit == 8
+    assert snapshot.tactical_battles_confidence_percent == 90
+    assert snapshot.tactical_battles_enabled_in_daily is True
+    assert snapshot.tactical_battles_skip_battles is False
 
 
 def test_frames_are_scoped_to_current_job_and_clear_before_next_job(controlled, tmp_path):
@@ -758,6 +838,62 @@ def test_finished_failed_or_stopped_job_can_close_an_empty_queue(close_controlle
     assert devices.calls[-1] == ("force_stop", controller.config.package)
 
 
+@pytest.mark.parametrize("exit_code", [0, 1])
+def test_idle_closure_preserves_unproven_tactical_result_after_job(close_controlled, exit_code):
+    from ba_automator.tactical_state import begin_battle, state_path
+
+    controller, processes, devices = close_controlled
+    controller.update_settings({"close_app_when_idle": True})
+    controller.enqueue("tactical_battles")
+    eventually(lambda: len(processes.processes) == 1)
+    begin_battle(controller.config, "2026-09-26", "opponent-a", 5, 1000,
+                 now=datetime(2026, 9, 26, 21, tzinfo=timezone.utc))
+    saved = state_path(controller.config).read_bytes()
+    processes.processes[0].finish(exit_code)
+    eventually(lambda: any("Kept Blue Archive open" in item["message"]
+                           for item in controller.status()["logs"]))
+    status = controller.status()
+    assert status["state"] == ("success" if exit_code == 0 else "failed")
+    assert "left open for Tactical Challenge review" in status["phase"]
+    assert status["app_closed"] is False
+    assert devices.calls == []
+    assert state_path(controller.config).read_bytes() == saved
+
+
+def test_idle_closure_allows_proven_tactical_outcome_and_retains_recovery(close_controlled):
+    from ba_automator.tactical_state import begin_battle, record_outcome, state_path
+
+    controller, processes, devices = close_controlled
+    controller.update_settings({"close_app_when_idle": True})
+    controller.enqueue("tactical_battles")
+    eventually(lambda: len(processes.processes) == 1)
+    now = datetime(2026, 9, 26, 21, tzinfo=timezone.utc)
+    intent = begin_battle(controller.config, "2026-09-26", "opponent-a", 5, 1000, now=now)
+    record_outcome(controller.config, intent, won=False, evidence="result.png", now=now)
+    saved = state_path(controller.config).read_bytes()
+    processes.processes[0].finish(1)
+    eventually(lambda: controller.status()["app_closed"])
+    assert devices.calls[-1] == ("force_stop", controller.config.package)
+    assert state_path(controller.config).read_bytes() == saved
+
+
+def test_idle_closure_preserves_game_if_tactical_recovery_file_is_corrupt(close_controlled):
+    from ba_automator.tactical_state import state_path
+
+    controller, processes, devices = close_controlled
+    controller.update_settings({"close_app_when_idle": True})
+    controller.enqueue("restart")
+    eventually(lambda: len(processes.processes) == 1)
+    path = state_path(controller.config)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{damaged recovery")
+    processes.processes[0].finish()
+    eventually(lambda: any("Cannot verify Tactical Challenge recovery state" in item["message"]
+                           for item in controller.status()["logs"]))
+    assert controller.status()["app_closed"] is False
+    assert devices.calls == []
+
+
 def test_paused_pending_queue_keeps_app_open_after_current_job(close_controlled):
     controller, processes, devices = close_controlled
     controller.update_settings({"close_app_when_idle": True})
@@ -789,11 +925,11 @@ def test_lesson_settings_validate_persist_and_snapshot_before_dispatch(controlle
     assert document["lessons"] == {"strategy": "school_rank", "max_tickets": 2,
                                    "locations": ["Gehenna Academy"], "enabled_in_daily": False}
     controller.enqueue("lessons")
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
     with pytest.raises(ApiError) as error:
         controller.update_settings({"lessons_max_tickets": 1})
     assert error.value.status == 409
-    controller.resume()
-    eventually(lambda: len(factory.processes) == 1)
     snapshot = Config.from_file(factory.processes[0].arguments[4])
     assert snapshot.lessons_strategy == "school_rank"
     assert snapshot.lessons_max_tickets == 2

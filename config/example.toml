@@ -49,6 +49,21 @@ max_tickets = 0
 locations = []
 enabled_in_daily = true
 
+[tactical_battles]
+# Daily / do-everything climb the ladder using your existing formation.
+# Empty slots use the highest-level owned students for the matching role.
+enabled_in_daily = true
+# Leave this many of the five daily tickets for manual play. Never buys tickets.
+preserve_tickets = 1 # 0..5
+# Skip the battle animation; false watches the full fight before reading its result.
+skip_battles = true
+# Valid refreshed lists before the first conditional sampling estimate.
+# Long searches save progress in five-minute / 100-refresh queue visits.
+# Each survey / target lookup is capped at 1,000 refreshes.
+refresh_limit = 50 # 2..100
+# Model-based coverage confidence. 90 allows a shorter search; 99 is the default.
+confidence_percent = 99.0 # 80..99.9; actual game sampling odds are unpublished
+
 [total_assault]
 # Mock-test this difficulty before spending a ticket; stop if it cannot be verified.
 difficulty = "hardcore" # normal, hard, very_hard, hardcore, extreme, insane, torment, lunatic

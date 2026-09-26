@@ -1,0 +1,192 @@
+[
+  {
+    "text": "Attack Formation ",
+    "box": [
+      101,
+      6,
+      377,
+      40
+    ],
+    "confidence": 0.99416
+  },
+  {
+    "text": "Display Settings",
+    "box": [
+      518,
+      64,
+      766,
+      110
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Filter",
+    "box": [
+      110,
+      138,
+      182,
+      170
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "List",
+    "box": [
+      253,
+      147,
+      302,
+      181
+    ],
+    "confidence": 0.99993
+  },
+  {
+    "text": "C",
+    "box": [
+      1045,
+      148,
+      1076,
+      176
+    ],
+    "confidence": 0.85982
+  },
+  {
+    "text": "Reset All",
+    "box": [
+      1074,
+      146,
+      1173,
+      179
+    ],
+    "confidence": 0.99119
+  },
+  {
+    "text": "Sort",
+    "box": [
+      116,
+      197,
+      177,
+      229
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "|ATK Attribute",
+    "box": [
+      258,
+      207,
+      396,
+      231
+    ],
+    "confidence": 0.98638
+  },
+  {
+    "text": "I DEF Attribute",
+    "box": [
+      258,
+      351,
+      397,
+      378
+    ],
+    "confidence": 0.98548
+  },
+  {
+    "text": "\u65e5",
+    "box": [
+      1022,
+      412,
+      1061,
+      450
+    ],
+    "confidence": 0.65405
+  },
+  {
+    "text": "\u65e5",
+    "box": [
+      317,
+      476,
+      356,
+      516
+    ],
+    "confidence": 0.74969
+  },
+  {
+    "text": "\u25b3\u00d7+\u25cb",
+    "box": [
+      60,
+      521,
+      121,
+      542
+    ],
+    "confidence": 0.70706
+  },
+  {
+    "text": "Cancel",
+    "box": [
+      458,
+      574,
+      566,
+      615
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      699,
+      574,
+      829,
+      615
+    ],
+    "confidence": 0.9997
+  },
+  {
+    "text": "Serina",
+    "box": [
+      839,
+      659,
+      904,
+      689
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "Mobilize",
+    "box": [
+      1102,
+      655,
+      1233,
+      685
+    ],
+    "confidence": 0.99969
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      409,
+      676,
+      460,
+      700
+    ],
+    "confidence": 0.99134
+  },
+  {
+    "text": "(Dress)",
+    "box": [
+      489,
+      671,
+      555,
+      699
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      759,
+      678,
+      808,
+      699
+    ],
+    "confidence": 0.99971
+  }
+]

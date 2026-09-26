@@ -1,0 +1,302 @@
+[
+  {
+    "text": "Attack Formation 2",
+    "box": [
+      101,
+      7,
+      376,
+      39
+    ],
+    "confidence": 0.96167
+  },
+  {
+    "text": "Notice",
+    "box": [
+      584,
+      146,
+      693,
+      183
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "X",
+    "box": [
+      869,
+      147,
+      904,
+      182
+    ],
+    "confidence": 0.94319
+  },
+  {
+    "text": "Unit 1",
+    "box": [
+      28,
+      171,
+      109,
+      205
+    ],
+    "confidence": 0.99891
+  },
+  {
+    "text": "Quick Formation",
+    "box": [
+      1144,
+      196,
+      1259,
+      218
+    ],
+    "confidence": 0.9959
+  },
+  {
+    "text": "You must select another opponent",
+    "box": [
+      428,
+      285,
+      851,
+      319
+    ],
+    "confidence": 0.99906
+  },
+  {
+    "text": "Starting Skill",
+    "box": [
+      1141,
+      288,
+      1261,
+      318
+    ],
+    "confidence": 0.98514
+  },
+  {
+    "text": "because matching has ended. Ready to",
+    "box": [
+      402,
+      318,
+      874,
+      354
+    ],
+    "confidence": 0.99896
+  },
+  {
+    "text": "proceed?",
+    "box": [
+      577,
+      353,
+      698,
+      390
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Unit Info",
+    "box": [
+      1159,
+      385,
+      1244,
+      412
+    ],
+    "confidence": 0.98867
+  },
+  {
+    "text": "BACK",
+    "box": [
+      244,
+      493,
+      290,
+      518
+    ],
+    "confidence": 0.99991
+  },
+  {
+    "text": "Cancel",
+    "box": [
+      460,
+      486,
+      567,
+      523
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      701,
+      485,
+      829,
+      522
+    ],
+    "confidence": 0.99976
+  },
+  {
+    "text": "BACK",
+    "box": [
+      918,
+      495,
+      961,
+      516
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "Presets",
+    "box": [
+      1166,
+      483,
+      1238,
+      508
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Shun",
+    "box": [
+      295,
+      531,
+      347,
+      557
+    ],
+    "confidence": 0.99986
+  },
+  {
+    "text": "Eimi (Armed)",
+    "box": [
+      935,
+      530,
+      1050,
+      557
+    ],
+    "confidence": 0.99882
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      207,
+      546,
+      257,
+      570
+    ],
+    "confidence": 0.99971
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      27,
+      558,
+      151,
+      584
+    ],
+    "confidence": 0.99936
+  },
+  {
+    "text": "Skip Battle",
+    "box": [
+      1131,
+      587,
+      1255,
+      620
+    ],
+    "confidence": 0.9834
+  },
+  {
+    "text": "Time Left",
+    "box": [
+      28,
+      610,
+      115,
+      638
+    ],
+    "confidence": 0.99969
+  },
+  {
+    "text": "00:47",
+    "box": [
+      70,
+      638,
+      133,
+      666
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      411,
+      678,
+      459,
+      699
+    ],
+    "confidence": 0.99752
+  },
+  {
+    "text": "4",
+    "box": [
+      420,
+      655,
+      446,
+      680
+    ],
+    "confidence": 0.98394
+  },
+  {
+    "text": "Michiru",
+    "box": [
+      485,
+      652,
+      558,
+      677
+    ],
+    "confidence": 0.99967
+  },
+  {
+    "text": "(Dress)",
+    "box": [
+      489,
+      671,
+      556,
+      699
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      759,
+      678,
+      808,
+      699
+    ],
+    "confidence": 0.99854
+  },
+  {
+    "text": "4",
+    "box": [
+      769,
+      654,
+      795,
+      681
+    ],
+    "confidence": 0.9779
+  },
+  {
+    "text": "Serina",
+    "box": [
+      841,
+      663,
+      902,
+      688
+    ],
+    "confidence": 0.99921
+  },
+  {
+    "text": "Mobilize",
+    "box": [
+      1101,
+      651,
+      1236,
+      688
+    ],
+    "confidence": 0.99998
+  }
+]

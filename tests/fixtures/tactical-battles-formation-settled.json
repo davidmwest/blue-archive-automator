@@ -1,0 +1,322 @@
+[
+  {
+    "text": "Attack Formation",
+    "box": [
+      103,
+      8,
+      355,
+      37
+    ],
+    "confidence": 0.99972
+  },
+  {
+    "text": "Unit 1",
+    "box": [
+      28,
+      172,
+      109,
+      203
+    ],
+    "confidence": 0.99908
+  },
+  {
+    "text": "Quick Formation",
+    "box": [
+      1145,
+      198,
+      1259,
+      217
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Starting Skill",
+    "box": [
+      1143,
+      292,
+      1260,
+      315
+    ],
+    "confidence": 0.97051
+  },
+  {
+    "text": "Unit Info",
+    "box": [
+      1158,
+      385,
+      1244,
+      412
+    ],
+    "confidence": 0.96147
+  },
+  {
+    "text": "Presets",
+    "box": [
+      1166,
+      483,
+      1238,
+      507
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "BACK",
+    "box": [
+      242,
+      492,
+      291,
+      519
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "BACK",
+    "box": [
+      469,
+      495,
+      514,
+      516
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "FRONT",
+    "box": [
+      684,
+      493,
+      743,
+      518
+    ],
+    "confidence": 0.9996
+  },
+  {
+    "text": "BACK",
+    "box": [
+      917,
+      495,
+      962,
+      517
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Shun",
+    "box": [
+      295,
+      531,
+      346,
+      556
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Aris (Maid)",
+    "box": [
+      495,
+      530,
+      593,
+      557
+    ],
+    "confidence": 0.99877
+  },
+  {
+    "text": "Tsubaki",
+    "box": [
+      732,
+      531,
+      805,
+      555
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "Eimi (Armed)",
+    "box": [
+      935,
+      531,
+      1050,
+      555
+    ],
+    "confidence": 0.9996
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      208,
+      547,
+      257,
+      568
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      431,
+      547,
+      480,
+      568
+    ],
+    "confidence": 0.99983
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      656,
+      547,
+      704,
+      568
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      879,
+      546,
+      930,
+      570
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      28,
+      558,
+      151,
+      584
+    ],
+    "confidence": 0.99956
+  },
+  {
+    "text": "Skip Battle",
+    "box": [
+      1133,
+      588,
+      1253,
+      618
+    ],
+    "confidence": 0.99984
+  },
+  {
+    "text": "Time Left",
+    "box": [
+      30,
+      610,
+      113,
+      637
+    ],
+    "confidence": 0.9994
+  },
+  {
+    "text": "[0]",
+    "box": [
+      404,
+      621,
+      444,
+      650
+    ],
+    "confidence": 0.79747
+  },
+  {
+    "text": "\u00e0",
+    "box": [
+      840,
+      627,
+      863,
+      645
+    ],
+    "confidence": 0.80295
+  },
+  {
+    "text": "01:35",
+    "box": [
+      70,
+      638,
+      133,
+      665
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      411,
+      678,
+      459,
+      699
+    ],
+    "confidence": 0.9998
+  },
+  {
+    "text": "4",
+    "box": [
+      422,
+      657,
+      444,
+      678
+    ],
+    "confidence": 0.99977
+  },
+  {
+    "text": "Michiru",
+    "box": [
+      485,
+      652,
+      557,
+      676
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "(Dress)",
+    "box": [
+      488,
+      671,
+      556,
+      699
+    ],
+    "confidence": 0.9998
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      759,
+      678,
+      807,
+      699
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "4",
+    "box": [
+      766,
+      653,
+      797,
+      682
+    ],
+    "confidence": 0.69423
+  },
+  {
+    "text": "Serina",
+    "box": [
+      841,
+      663,
+      902,
+      687
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Mobilize",
+    "box": [
+      1100,
+      648,
+      1236,
+      688
+    ],
+    "confidence": 0.99998
+  }
+]

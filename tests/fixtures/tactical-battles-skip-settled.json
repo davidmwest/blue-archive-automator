@@ -1,0 +1,302 @@
+[
+  {
+    "text": "Attack Formation",
+    "box": [
+      103,
+      8,
+      351,
+      37
+    ],
+    "confidence": 0.99974
+  },
+  {
+    "text": "Unit 1",
+    "box": [
+      28,
+      172,
+      109,
+      203
+    ],
+    "confidence": 0.99908
+  },
+  {
+    "text": "Quick Formation",
+    "box": [
+      1145,
+      198,
+      1259,
+      217
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Starting Skill",
+    "box": [
+      1143,
+      292,
+      1260,
+      315
+    ],
+    "confidence": 0.97058
+  },
+  {
+    "text": "Unit Info",
+    "box": [
+      1159,
+      385,
+      1244,
+      412
+    ],
+    "confidence": 0.99566
+  },
+  {
+    "text": "Presets",
+    "box": [
+      1166,
+      483,
+      1238,
+      507
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "BACK",
+    "box": [
+      245,
+      494,
+      290,
+      516
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "BACK",
+    "box": [
+      469,
+      495,
+      514,
+      516
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "FRONT",
+    "box": [
+      680,
+      493,
+      743,
+      518
+    ],
+    "confidence": 0.99954
+  },
+  {
+    "text": "BACK",
+    "box": [
+      917,
+      495,
+      963,
+      517
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Shun",
+    "box": [
+      295,
+      531,
+      346,
+      556
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Aris (Maid)",
+    "box": [
+      495,
+      529,
+      593,
+      557
+    ],
+    "confidence": 0.99983
+  },
+  {
+    "text": "Tsubaki",
+    "box": [
+      732,
+      531,
+      805,
+      555
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "Eimi (Armed)",
+    "box": [
+      936,
+      531,
+      1050,
+      555
+    ],
+    "confidence": 0.99929
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      208,
+      547,
+      256,
+      568
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      431,
+      547,
+      480,
+      568
+    ],
+    "confidence": 0.99983
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      656,
+      547,
+      704,
+      568
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      880,
+      547,
+      929,
+      568
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      28,
+      558,
+      151,
+      584
+    ],
+    "confidence": 0.99956
+  },
+  {
+    "text": "Skip Battle",
+    "box": [
+      1133,
+      589,
+      1253,
+      619
+    ],
+    "confidence": 0.99986
+  },
+  {
+    "text": "Time Left",
+    "box": [
+      29,
+      609,
+      112,
+      636
+    ],
+    "confidence": 0.99939
+  },
+  {
+    "text": "01:32",
+    "box": [
+      70,
+      638,
+      133,
+      665
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      411,
+      678,
+      459,
+      699
+    ],
+    "confidence": 0.9998
+  },
+  {
+    "text": "4",
+    "box": [
+      423,
+      659,
+      442,
+      677
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Michiru",
+    "box": [
+      485,
+      652,
+      557,
+      676
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "(Dress)",
+    "box": [
+      488,
+      672,
+      556,
+      699
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      760,
+      678,
+      807,
+      699
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "4",
+    "box": [
+      769,
+      655,
+      795,
+      681
+    ],
+    "confidence": 0.99372
+  },
+  {
+    "text": "Serina",
+    "box": [
+      841,
+      663,
+      902,
+      687
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Mobilize",
+    "box": [
+      1100,
+      648,
+      1236,
+      688
+    ],
+    "confidence": 0.99998
+  }
+]

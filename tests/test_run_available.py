@@ -17,6 +17,7 @@ NOW = datetime(2026, 9, 26, 16, tzinfo=timezone.utc)
 
 def configure(controller, **changes):
     controller.pause()
+    changes.setdefault("tactical_battles_enabled_in_daily", False)
     with controller._condition:
         controller._wall_clock = lambda: NOW
         controller.config = replace(controller.config, **changes)
@@ -76,9 +77,52 @@ def test_active_job_and_queued_work_finish_before_one_catchup_scan(controlled):
     assert len(factory.processes) == 3
 
 
+def test_available_runs_enabled_tactical_battles_before_reward_scan_once(controlled):
+    controller, factory = controlled
+    configure(controller, tactical_battles_enabled_in_daily=True,
+              tactical_battles_preserve_tickets=1)
+    with controller._condition:
+        result = controller.run_available()
+        assert [job["task"] for job in result["jobs"]] == ["tactical_battles", "red_dots"]
+        assert all(job["source"] == "available" for job in result["jobs"])
+        assert controller.run_available()["jobs"] == []
+    eventually(lambda: len(factory.processes) == 1)
+    assert factory.processes[0].arguments[-1] == "tactical_battles"
+    assert task_plan("tactical_battles", controller.config) == (
+        "restart", "tactical_battles", "tactical_rewards", "red_dots")
+    factory.processes[0].finish()
+    eventually(lambda: len(factory.processes) == 2)
+    assert factory.processes[1].arguments[-1] == "red_dots"
+    factory.processes[1].finish()
+    eventually(lambda: not controller.status()["run_available_active"])
+    assert factory.max_active == 1 and len(factory.processes) == 2
+
+
+def test_available_daily_plan_covers_tactical_battles_without_duplicate_job(controlled):
+    controller, _ = controlled
+    configure(controller, daily_schedule_enabled=True, tactical_battles_enabled_in_daily=True)
+    result = controller.run_available()
+    assert [job["task"] for job in result["jobs"]] == ["daily", "red_dots"]
+    plan = task_plan("daily", controller.config)
+    assert plan.count("tactical_battles") == 1
+    assert plan.index("tactical_battles") < plan.index("tactical_rewards")
+
+
+def test_available_tactical_catchup_does_not_replay_completed_daily(controlled):
+    controller, _ = controlled
+    configure(controller, daily_schedule_enabled=True, tactical_battles_enabled_in_daily=True)
+    saved = occurrence("success")
+    daily_schedule.write_state(controller.config, saved)
+    result = controller.run_available()
+    assert [job["task"] for job in result["jobs"]] == ["tactical_battles", "red_dots"]
+    assert daily_schedule.read_state(controller.config) == saved
+
+
 def test_pausing_before_batch_drains_retains_request_without_dispatch(controlled):
     controller, factory = controlled
+    configure(controller)
     controller.enqueue("restart")
+    controller.resume()
     eventually(lambda: len(factory.processes) == 1)
     controller.run_available()
     controller.pause()
@@ -216,6 +260,7 @@ def test_available_scan_follows_up_excess_ap_without_bypassing_hold(config_path,
 
 def test_http_available_requires_csrf_and_empty_body(http_server):
     request, controller, _, port = http_server
+    configure(controller)
     token = {"X-CSRF-Token": controller.csrf_token}
     assert request("POST", "/api/run-available", {})[0] == 403
     assert request("POST", "/api/run-available", {},

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import tempfile
@@ -150,6 +151,46 @@ class RestartTests(unittest.TestCase):
         self.assertEqual(result.duration, 9.0)
         self.assertEqual([item["state"] for item in self.journal(result.run_dir) if item["event"] == "state"],
                          ["home", "popup", "home"])
+
+    def test_unproven_tactical_result_blocks_all_startup_input_and_is_journaled(self):
+        from ba_automator.tactical_state import begin_battle, state_path
+
+        selected = self.config()
+        begin_battle(selected, "2026-09-26", "opponent-a", 5, 1000,
+                     now=datetime(2026, 9, 26, 21, tzinfo=timezone.utc))
+        saved = state_path(selected).read_bytes()
+        with self.assertRaisesRegex(RestartError, "unresolved Tactical Challenge") as error:
+            self.run_task([Observation("home")], selected=selected)
+        self.assertEqual(self.device.calls, [])
+        self.assertEqual(state_path(selected).read_bytes(), saved)
+        event = self.journal(error.exception.run_dir)[-1]
+        self.assertEqual(event["status"], "failed")
+        self.assertIn("leave Blue Archive open", event["reason"])
+        with InstanceLock(selected):
+            pass  # The blocked startup releases its lock for result inspection.
+
+    def test_proven_tactical_result_can_restart_without_erasing_pending_reconciliation(self):
+        from ba_automator.tactical_state import begin_battle, record_outcome, state_path
+
+        selected = self.config()
+        now = datetime(2026, 9, 26, 21, tzinfo=timezone.utc)
+        intent = begin_battle(selected, "2026-09-26", "opponent-a", 5, 1000, now=now)
+        record_outcome(selected, intent, won=False, evidence="result.png", now=now)
+        saved = state_path(selected).read_bytes()
+        result = self.run_task([Observation("home")], selected=selected)
+        self.assertEqual(result.status, "success")
+        self.assertEqual(self.device.calls.count("force_stop"), 1)
+        self.assertEqual(state_path(selected).read_bytes(), saved)
+
+    def test_unreadable_tactical_recovery_state_blocks_startup_input(self):
+        from ba_automator.tactical_state import state_path
+
+        selected = self.config()
+        selected.state_dir.mkdir()
+        state_path(selected).write_text("{interrupted state")
+        with self.assertRaisesRegex(RestartError, "Cannot verify Tactical Challenge recovery state"):
+            self.run_task([Observation("home")], selected=selected)
+        self.assertEqual(self.device.calls, [])
 
     def test_confirmation_count_and_minimum_stability_are_both_required(self):
         result = self.run_task([Observation("home")], selected=self.config(home_confirmations=8))

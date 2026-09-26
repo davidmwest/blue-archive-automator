@@ -1,0 +1,292 @@
+[
+  {
+    "text": "Tactical Challenge",
+    "box": [
+      102,
+      7,
+      357,
+      42
+    ],
+    "confidence": 0.9994
+  },
+  {
+    "text": "Time Left 01:22",
+    "box": [
+      271,
+      85,
+      427,
+      109
+    ],
+    "confidence": 0.99644
+  },
+  {
+    "text": "Battle Opponent",
+    "box": [
+      512,
+      77,
+      770,
+      118
+    ],
+    "confidence": 0.99641
+  },
+  {
+    "text": "01:22",
+    "box": [
+      1044,
+      135,
+      1095,
+      159
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Refresh List",
+    "box": [
+      1127,
+      134,
+      1232,
+      157
+    ],
+    "confidence": 0.99951
+  },
+  {
+    "text": "Rank 511",
+    "box": [
+      349,
+      179,
+      497,
+      215
+    ],
+    "confidence": 0.98396
+  },
+  {
+    "text": "Outdoor Zone 4",
+    "box": [
+      919,
+      235,
+      1023,
+      254
+    ],
+    "confidence": 0.96179
+  },
+  {
+    "text": "Lv.76 Scout5",
+    "box": [
+      259,
+      265,
+      449,
+      291
+    ],
+    "confidence": 0.99984
+  },
+  {
+    "text": "HAYASE YUUKA",
+    "box": [
+      921,
+      266,
+      1003,
+      280
+    ],
+    "confidence": 0.98526
+  },
+  {
+    "text": "Outdoor Zone 4",
+    "box": [
+      1127,
+      262,
+      1227,
+      279
+    ],
+    "confidence": 0.96312
+  },
+  {
+    "text": "Rank!",
+    "box": [
+      132,
+      292,
+      233,
+      333
+    ],
+    "confidence": 0.98591
+  },
+  {
+    "text": "Opponent Info",
+    "box": [
+      257,
+      298,
+      412,
+      330
+    ],
+    "confidence": 0.99991
+  },
+  {
+    "text": "VS",
+    "box": [
+      609,
+      299,
+      666,
+      342
+    ],
+    "confidence": 0.98538
+  },
+  {
+    "text": "My Info",
+    "box": [
+      902,
+      315,
+      988,
+      346
+    ],
+    "confidence": 0.99632
+  },
+  {
+    "text": "Time Reward +60 / mir",
+    "box": [
+      58,
+      358,
+      235,
+      381
+    ],
+    "confidence": 0.94543
+  },
+  {
+    "text": "Rank 571",
+    "box": [
+      349,
+      378,
+      498,
+      415
+    ],
+    "confidence": 0.988
+  },
+  {
+    "text": "Total 30K/1,000K",
+    "box": [
+      58,
+      398,
+      203,
+      422
+    ],
+    "confidence": 0.99898
+  },
+  {
+    "text": "Outdoor Zone 4",
+    "box": [
+      1126,
+      421,
+      1229,
+      440
+    ],
+    "confidence": 0.98492
+  },
+  {
+    "text": "Daily Reward11:56",
+    "box": [
+      57,
+      437,
+      221,
+      463
+    ],
+    "confidence": 0.99565
+  },
+  {
+    "text": "HAYASE YUUKA",
+    "box": [
+      1128,
+      450,
+      1210,
+      467
+    ],
+    "confidence": 0.99914
+  },
+  {
+    "text": "Lv.79 Player",
+    "box": [
+      258,
+      464,
+      388,
+      490
+    ],
+    "confidence": 0.99953
+  },
+  {
+    "text": "Tickets Owned 5/",
+    "box": [
+      83,
+      477,
+      235,
+      501
+    ],
+    "confidence": 0.97904
+  },
+  {
+    "text": "Standby Time",
+    "box": [
+      58,
+      517,
+      176,
+      540
+    ],
+    "confidence": 0.97688
+  },
+  {
+    "text": "--:--",
+    "box": [
+      180,
+      519,
+      212,
+      537
+    ],
+    "confidence": 0.88432
+  },
+  {
+    "text": "5\u21924",
+    "box": [
+      689,
+      512,
+      750,
+      539
+    ],
+    "confidence": 0.99877
+  },
+  {
+    "text": "Battle",
+    "box": [
+      102,
+      562,
+      187,
+      594
+    ],
+    "confidence": 0.99999
+  },
+  {
+    "text": "Attack Formation",
+    "box": [
+      538,
+      559,
+      747,
+      585
+    ],
+    "confidence": 0.98216
+  },
+  {
+    "text": "History",
+    "box": [
+      91,
+      585,
+      196,
+      628
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Outdoor Zone 4",
+    "box": [
+      1127,
+      579,
+      1229,
+      599
+    ],
+    "confidence": 0.97756
+  }
+]

@@ -1,0 +1,422 @@
+[
+  {
+    "text": "Attack Formation",
+    "box": [
+      103,
+      9,
+      347,
+      38
+    ],
+    "confidence": 0.99936
+  },
+  {
+    "text": "Synergy Info",
+    "box": [
+      79,
+      74,
+      195,
+      104
+    ],
+    "confidence": 0.99923
+  },
+  {
+    "text": "Time Left 00:00",
+    "box": [
+      241,
+      77,
+      397,
+      101
+    ],
+    "confidence": 0.97401
+  },
+  {
+    "text": "Quick Formation",
+    "box": [
+      504,
+      75,
+      779,
+      111
+    ],
+    "confidence": 0.99811
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      576,
+      145,
+      665,
+      171
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "SPECIAL",
+    "box": [
+      692,
+      143,
+      784,
+      173
+    ],
+    "confidence": 0.99968
+  },
+  {
+    "text": "Lv.",
+    "box": [
+      966,
+      147,
+      1003,
+      173
+    ],
+    "confidence": 0.99935
+  },
+  {
+    "text": "Lv.79-",
+    "box": [
+      693,
+      211,
+      745,
+      229
+    ],
+    "confidence": 0.92318
+  },
+  {
+    "text": "Lv:79",
+    "box": [
+      914,
+      212,
+      953,
+      230
+    ],
+    "confidence": 0.91516
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      1133,
+      207,
+      1177,
+      231
+    ],
+    "confidence": 0.95456
+  },
+  {
+    "text": "Add students to the unit",
+    "box": [
+      275,
+      272,
+      500,
+      297
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "4",
+    "box": [
+      907,
+      267,
+      926,
+      286
+    ],
+    "confidence": 0.99907
+  },
+  {
+    "text": "Michiru",
+    "box": [
+      586,
+      301,
+      648,
+      322
+    ],
+    "confidence": 0.97299
+  },
+  {
+    "text": "(Dress)",
+    "box": [
+      589,
+      316,
+      643,
+      337
+    ],
+    "confidence": 0.9996
+  },
+  {
+    "text": "Serina",
+    "box": [
+      700,
+      307,
+      754,
+      331
+    ],
+    "confidence": 0.99986
+  },
+  {
+    "text": "Ako",
+    "box": [
+      821,
+      308,
+      858,
+      330
+    ],
+    "confidence": 0.99985
+  },
+  {
+    "text": "Kisaki",
+    "box": [
+      925,
+      308,
+      976,
+      330
+    ],
+    "confidence": 0.99857
+  },
+  {
+    "text": "Hare",
+    "box": [
+      1041,
+      309,
+      1084,
+      330
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "(School)",
+    "box": [
+      1140,
+      315,
+      1204,
+      338
+    ],
+    "confidence": 0.99856
+  },
+  {
+    "text": "Karin",
+    "box": [
+      1149,
+      299,
+      1196,
+      323
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "LV.78",
+    "box": [
+      580,
+      361,
+      621,
+      382
+    ],
+    "confidence": 0.97713
+  },
+  {
+    "text": "Lv.78",
+    "box": [
+      803,
+      362,
+      844,
+      382
+    ],
+    "confidence": 0.99668
+  },
+  {
+    "text": "Lv:78",
+    "box": [
+      911,
+      359,
+      955,
+      383
+    ],
+    "confidence": 0.91739
+  },
+  {
+    "text": "Lv-77",
+    "box": [
+      1023,
+      360,
+      1066,
+      384
+    ],
+    "confidence": 0.82236
+  },
+  {
+    "text": "3",
+    "box": [
+      684,
+      420,
+      702,
+      438
+    ],
+    "confidence": 0.97774
+  },
+  {
+    "text": "(Armed)",
+    "box": [
+      584,
+      467,
+      649,
+      491
+    ],
+    "confidence": 0.98362
+  },
+  {
+    "text": "Yuzu",
+    "box": [
+      597,
+      453,
+      639,
+      473
+    ],
+    "confidence": 0.99991
+  },
+  {
+    "text": "Sena",
+    "box": [
+      706,
+      459,
+      751,
+      484
+    ],
+    "confidence": 0.99728
+  },
+  {
+    "text": "Hanako",
+    "box": [
+      808,
+      461,
+      871,
+      481
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "Yoshimi",
+    "box": [
+      919,
+      461,
+      982,
+      481
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Akari (New",
+    "box": [
+      1019,
+      453,
+      1104,
+      473
+    ],
+    "confidence": 0.9629
+  },
+  {
+    "text": "Ye\u00e0r)",
+    "box": [
+      1040,
+      469,
+      1083,
+      490
+    ],
+    "confidence": 0.97144
+  },
+  {
+    "text": "Iroha",
+    "box": [
+      1148,
+      458,
+      1195,
+      483
+    ],
+    "confidence": 0.99973
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      354,
+      556,
+      398,
+      577
+    ],
+    "confidence": 0.99864
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      568,
+      555,
+      633,
+      578
+    ],
+    "confidence": 0.95858
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      1062,
+      573,
+      1195,
+      610
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Michiru",
+    "box": [
+      488,
+      655,
+      556,
+      675
+    ],
+    "confidence": 0.99961
+  },
+  {
+    "text": "Serina",
+    "box": [
+      840,
+      661,
+      903,
+      688
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Mobilize",
+    "box": [
+      1102,
+      654,
+      1234,
+      687
+    ],
+    "confidence": 0.99987
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      411,
+      678,
+      459,
+      699
+    ],
+    "confidence": 0.99752
+  },
+  {
+    "text": "(Dress)",
+    "box": [
+      491,
+      673,
+      554,
+      698
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Lv.79",
+    "box": [
+      760,
+      678,
+      808,
+      699
+    ],
+    "confidence": 0.99894
+  }
+]

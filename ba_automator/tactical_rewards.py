@@ -29,7 +29,7 @@ def classify_tactical(frame, words, *, home=False):
     if receipt.kind == "receipt":
         return TacticalScreen("receipt", receipt.target, items=receipt.items)
     tickets = re.fullmatch(
-        r"Tickets Owned (\d+)/(\d+)", text_in(words, (45, 470, 290, 512))
+        r"Tickets Owned\s*(\d+)\s*/\s*(\d+)", text_in(words, (45, 470, 290, 512))
     )
     if (
         any(

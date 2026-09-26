@@ -1,5 +1,9 @@
 """Startup decisions must recognize context before authorizing a tap."""
 
+import builtins
+import os
+from types import SimpleNamespace
+
 import cv2
 import numpy as np
 import pytest
@@ -8,6 +12,35 @@ from ba_automator.vision import StartupVision, VisionError, Word, classify, deco
 
 
 HOME_MATCHES = {"home_left": (74, 288), "home_right": (1160, 665)}
+
+
+@pytest.mark.parametrize("initial_flag", [None, "0"])
+def test_ocr_disables_native_telemetry_before_import_and_session_creation(monkeypatch, initial_flag):
+    if initial_flag is None:
+        monkeypatch.delenv("ORT_DISABLE_TELEMETRY", raising=False)
+    else:
+        monkeypatch.setenv("ORT_DISABLE_TELEMETRY", initial_flag)
+    events = []
+    original_import = builtins.__import__
+    engine = object()
+
+    def create_engine(**_kwargs):
+        events.append("session")
+        return engine
+
+    def guarded_import(name, *args, **kwargs):
+        if name in {"onnxruntime", "rapidocr"}:
+            assert os.environ.get("ORT_DISABLE_TELEMETRY") == "1"
+            events.append(name)
+            if name == "onnxruntime":
+                return SimpleNamespace(disable_telemetry_events=lambda: events.append("disable"))
+            return SimpleNamespace(RapidOCR=create_engine)
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    vision = StartupVision()
+    assert vision.ocr is engine
+    assert events == ["onnxruntime", "disable", "rapidocr", "session"]
 
 
 def word(text, *, center=(640, 300), confidence=0.99):

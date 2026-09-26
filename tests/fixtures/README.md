@@ -121,7 +121,7 @@ Task reward samples (`task-rewards-*.png`) were captured on 2026-09-24 at 1280×
 
 Home notification samples (`red-dots-*.png`) were captured on 2026-09-24. They mask account identity/balances and private Club details, retaining the fixed badges, Social cards, Free Daily Pack price/confirmation/exhausted state, attendance notice, and receipts. No paid checkout was entered for these captures.
 
-Tactical Challenge samples (`tactical-*.png`) were captured on 2026-09-24 local time. Account and opponent identities/ranks are masked. They retain an available Time Reward, the disabled controls after collection, and its actual 70,570-credit receipt. The enabled Daily Reward color state is synthesized only inside a test; it is not presented as a live daily-claim capture.
+Tactical Challenge reward samples (`tactical-time-ready.png`, `tactical-checked.png`, and `tactical-time-receipt.png`) were captured on 2026-09-24 local time. Account and opponent identities/ranks are masked. They retain an available Time Reward, the disabled controls after collection, and its actual 70,570-credit receipt. The enabled Daily Reward color state is synthesized only inside a test; it is not presented as a live daily-claim capture.
 
 Loot inspection fixtures (`loot-*.png`) were captured from the authorized staging
 instance on September 25 UTC (September 24 local). They preserve only reward
@@ -443,3 +443,56 @@ and reject persistent movement, stale captures, or a changed foreground.
 Everything outside the modal, including account identity and balances, is
 masked. These game-derived fixtures are excluded from the MIT grant described
 in the third-party notices.
+
+`tactical-battles-*.png/json` preserve the September 26, 2026 staging opponent
+list, opponent detail, saved attack formation with both skip states, and two
+formation-expiry notices. Account balances are masked. Player and opponent
+names are replaced with synthetic labels; menu club badges are masked. Rank,
+ticket projections, public character portraits and tiny unit levels are retained
+as recognition evidence. JSON contains the observed OCR boxes with matching
+synthetic names. These samples prove navigation and recognition, not victories.
+`assets/tactical-hidden-student.png` is the small gray question-mark card used
+to distinguish a deliberately concealed student from unreadable visible text.
+
+`tactical-battles-clipped-eight` preserves a real misreading found during the
+first ladder test: the last visible student's level is 80, while tight OCR
+crops confidently read 30. Wider crops retaining the complete glyph contradict
+that reading, so the opponent is excluded from scoring. This regression guards
+against correlated OCR errors rather than treating repeated crops as independent
+confirmation. Names and balances are masked as above.
+
+`tactical-battles-clipped-seven` preserves the second audit finding: a visible
+level75 was read as15 in the digit crops. Complete labels read75 below the
+acceptance threshold; those agreeing contradictions now veto the candidate, and
+digit-only fallback also needs a matching full-height reading. The first row is actually
+85/75/90. Its names and account balances are masked as above. Uncertain OCR does
+not provide a discounted opponent score.
+
+`tactical-battles-live-hud`, `tactical-battles-defeat`, and
+`tactical-battles-defeat-tip` retain the first non-skipped battle's timer HUD,
+actual loss result, and following effect-type tutorial. HUD player/opponent names
+are replaced with synthetic labels. The result and tutorial contain no account
+identity or balances. These are live defeat and progress evidence, not a victory.
+`assets/tactical-versus.png` is the small fixed VS HUD marker used to distinguish
+combat progress from other timers; no combat input target is inferred from it.
+
+`tactical-battles-menu-after-defeat` retains the later menu with four tickets.
+The real OCR joined its counter into `Tickets Owned4/5`; the regression permits
+missing whitespace without inferring a ticket count. Names, club labels, and
+account balances are masked as in the other menu fixtures. The WIN counterpart
+test is explicitly synthetic, using the observed result controls with a replaced
+title. It does not establish live victory recognition.
+
+`tactical-attack-formation`, `tactical-quick`, `tactical-quick-empty`,
+`tactical-quick-restored`, `tactical-quick-special`, `tactical-formation-display`,
+and `tactical-formation-sort` preserve September 26 staging observations of the
+saved attack team, both roster roles, one temporarily emptied Quick Formation
+slot and its restoration, and the filter/sort controls. Account resource bars
+are masked; the opponent preview is also masked in the Quick Formation views.
+The Display and Sort modals instead retain their complete controls. Paired JSON
+contains only OCR words outside the masked areas. These fixtures verify that
+existing slots are preserved and that selecting the highest-level available
+student requires proven role, filter, sort, and roster position. They do not
+establish an automated live fill or victory. The ordinary-formation blank-slot
+text in its parser test is synthetic; the Quick Formation empty slot is real.
+These game-derived fixtures remain outside the project's MIT grant.

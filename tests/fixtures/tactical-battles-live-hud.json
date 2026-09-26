@@ -1,0 +1,112 @@
+[
+  {
+    "text": "VS",
+    "confidence": 0.90994,
+    "box": [
+      610,
+      6,
+      670,
+      62
+    ]
+  },
+  {
+    "text": "atdoor Zone 4",
+    "confidence": 0.92582,
+    "box": [
+      3,
+      18,
+      151,
+      53
+    ]
+  },
+  {
+    "text": "Lv.79 Player",
+    "confidence": 0.9941,
+    "box": [
+      282,
+      25,
+      361,
+      48
+    ]
+  },
+  {
+    "text": "Scout Lv.80",
+    "confidence": 0.99979,
+    "box": [
+      897,
+      27,
+      970,
+      44
+    ]
+  },
+  {
+    "text": "01:51",
+    "confidence": 0.99997,
+    "box": [
+      1076,
+      22,
+      1140,
+      51
+    ]
+  },
+  {
+    "text": "\u300b",
+    "confidence": 0.93572,
+    "box": [
+      1210,
+      25,
+      1257,
+      67
+    ]
+  },
+  {
+    "text": "A Girl's Ninja Scroll, Michirunyaaaaw!",
+    "confidence": 0.99954,
+    "box": [
+      27,
+      179,
+      258,
+      196
+    ]
+  },
+  {
+    "text": "8300",
+    "confidence": 0.7024,
+    "box": [
+      646,
+      311,
+      727,
+      338
+    ]
+  },
+  {
+    "text": "EMPTY",
+    "confidence": 0.99956,
+    "box": [
+      1063,
+      609,
+      1139,
+      634
+    ]
+  },
+  {
+    "text": "COST",
+    "confidence": 0.99994,
+    "box": [
+      783,
+      650,
+      820,
+      667
+    ]
+  },
+  {
+    "text": "AGTO",
+    "confidence": 0.8147,
+    "box": [
+      1174,
+      656,
+      1258,
+      698
+    ]
+  }
+]

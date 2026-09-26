@@ -52,7 +52,9 @@ open [the dashboard](http://127.0.0.1:8765). `serve --port 8767` selects a diffe
 | `lessons` | runs restart, surveys locations, and uses existing tickets with the configured strategy |
 | `total_assault` | runs restart, tests the configured difficulty in mock battles, and uses tickets only after the team qualifies; see [Total Assault](total-assault.md) for current validation limits |
 | `assault_rewards` | checks both raid reward tabs and claims available rewards without entering a battle |
-| `daily` | runs restart → Club → free pack → enabled paid packs → mail → Cafe → enabled Bounties → enabled Scrimmages → Tactical rewards → enabled Lessons → enabled Total Assault → raid rewards → enabled Spend AP → Tasks |
+| `tactical_battles` | scouts higher-ranked opponents and fights with the saved team, keeping the configured ticket reserve; then collects Tactical rewards |
+| `tactical_rewards` | collects available Tactical Challenge time and daily rewards without spending tickets |
+| `daily` | runs restart → Club → free pack → enabled paid packs → mail → Cafe → enabled Bounties → enabled Scrimmages → enabled Tactical battles → Tactical rewards → enabled Lessons → enabled Total Assault → raid rewards → enabled Spend AP → Tasks |
 | `scan_ap` | surveys three-star Hard stages and commissions without spending AP |
 | `spend_ap` | sweeps the chosen stages without crossing the configured AP floor |
 | `probe` | checks the selected device, game, display size, and foreground app |
@@ -155,3 +157,11 @@ configure Quick Craft in the game first, then enable **keep the crafting slots b
 ## spend the extra AP
 
 open **Spend AP** in the sidebar. scan your three-star stages, keep the default 100 AP reserve or choose another floor, then pick Elephs, reports, or credits. the Hard rotation supports drag-and-drop, add/remove buttons, arrow controls, and a text editor. enable automatic spending to check hourly and follow Cafe/mail through the same queue. periodic check-ins can send it there sooner when they see extra AP. [configuration, policies, and spending evidence →](spend-ap.md)
+
+### tactical challenge
+
+**settings → tactical challenge** controls ladder battles. Daily and **do everything** include them by default, preserving one of the five daily tickets for manual play. Set the reserve to five to keep all tickets, or turn daily inclusion off. The manual task is under **manual controls → climb tactical challenge**; reward collection stays separate.
+
+Scouting starts with 50 valid free refreshes, then estimates how many more are needed for the selected coverage confidence under a uniform sampling model for each row. Confidence defaults to 99%; choose 90% for a shorter search, or set any value from 80% to 99.9%. That confidence applies to one survey and its lookup under an assumed model, not the whole job or published game odds. Long searches save progress every five minutes or 100 refreshes and continue through the serial queue after other work. Each survey or lookup is capped at 1,000 refreshes. Saved searches expire after four hours or when your rank, game day, or scouting settings change. No ticket is spent before the search and battle checks pass.
+
+Verified opponents ahead in rank are ordered by the sum of six student levels, using the player's level for hidden slots, multiplied by 2 for level-90+ players or player level ÷ 90 otherwise. This weighted score is a rough strength estimate with an extra penalty for level-90+ accounts. Each opponent gets at most one battle per game day, regardless of the result. The saved attacking team stays intact; only blank slots are filled. See [Tactical Challenge](tactical-challenge.md) for the sampling assumptions, resource guards, and current validation coverage.

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from importlib.resources import files
 import json
+import os
 import re
 
 import cv2
@@ -59,6 +60,13 @@ class StartupVision:
     """Keep OCR local and CPU-bounded; no cloud model calls during a run."""
 
     def __init__(self):
+        # Disable the native uploader before ORT initializes. Its telemetry worker
+        # can race process teardown on macOS; the API alone leaves that worker alive.
+        os.environ["ORT_DISABLE_TELEMETRY"] = "1"
+        import onnxruntime
+
+        # Also cover Windows and older ORT builds that do not use the environment flag.
+        onnxruntime.disable_telemetry_events()
         from rapidocr import RapidOCR
 
         cv2.setNumThreads(2)

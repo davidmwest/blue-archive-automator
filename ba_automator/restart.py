@@ -13,6 +13,7 @@ from .config import Config
 from .locking import InstanceLock
 from .runtime import Capture, FRAME_MAX_AGE, HOME_STABLE_SECONDS, TRACE_LIMIT
 from .runtime import Journal, RunResult, TaskError
+from .tactical_state import ensure_restart_safe
 
 # Compatibility for existing task callers and saved integrations.
 _Journal = Journal
@@ -251,6 +252,7 @@ def run_restart(
         journal = _Journal(run_dir, monotonic, started)
         journal.record("started", task="restart", serial=config.serial, package=config.package)
         with InstanceLock(config):
+            ensure_restart_safe(config)
             device.connect()
             device.verify_package()
             size = device.display_size()
