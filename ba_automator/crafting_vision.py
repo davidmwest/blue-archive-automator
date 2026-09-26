@@ -133,7 +133,12 @@ def classify_crafting(frame, words, *, keystone=False, home=False):
             and has(words, 'touch to continue', (380, 590, 900, 665))):
         return CraftScreen('receipt', target=(640, 631))
     if home:
-        return CraftScreen('home', target=(660, 658))
+        # Some home scenes ignore a tap on the protruding Crafting illustration.
+        # Use its visible menu label, independently of the character/background.
+        # The two home anchors alone do not authorize an unreadable label.
+        labels = [word for word in within(words, (600, 672, 723, 706))
+                  if word.normalized == 'crafting' and word.confidence >= .9]
+        return CraftScreen('home', target=labels[0].center if len(labels) == 1 else None)
     return CraftScreen('unknown')
 
 

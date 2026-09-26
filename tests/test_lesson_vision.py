@@ -201,6 +201,54 @@ def test_narrow_heart_crop_recovers_single_digits_without_adjacent_artwork():
     assert screen.room_cards[5].students[1].bond == 3
 
 
+@pytest.mark.parametrize("name,index,slot", [
+    ("shiratori-single-bond", 4, 1),
+    ("redwinter-single-bond", 1, 2),
+])
+def test_observed_thin_relationship_one_is_read_at_agreeing_scales(name, index, slot):
+    frame, _, vision = replay(name)
+    screen = analyze(vision, frame)
+    assert screen.kind == "rooms" and screen.inspection_complete
+    student = screen.room_cards[index].students[slot]
+    assert (student.owned, student.bond) == (True, 1)
+
+
+@pytest.mark.parametrize("readings", [
+    (("1", .99), ("2", .99)),
+    (("1", .99), ("1", .84)),
+    (("0", .99), ("0", .99)),
+    (("101", .99), ("101", .99)),
+    (("1", .99), ("", .99)),
+])
+def test_thin_bond_fallback_keeps_conflicting_or_invalid_readings_unknown(readings):
+    frame, ocr, vision = replay("shiratori-single-bond")
+    crop = frame[441:463, 608:631]
+    for scale, (text, confidence) in zip((3, 5), readings):
+        enlarged = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+        ocr.crops[enlarged.tobytes()] = [
+            {"text": text, "confidence": confidence, "box": [0, 0, 30, 30]}
+        ] if text else []
+    student = analyze(vision, frame).room_cards[4].students[1]
+    assert student.owned is True and student.bond is None
+
+
+def test_recovered_relationship_one_allows_the_correct_owned_count_tiebreak():
+    from ba_automator.lesson_planner import (
+        LessonLocation, LessonRoom, LessonStudent, choose_lesson,
+    )
+
+    frame, _, vision = replay("shiratori-single-bond")
+    plato = analyze(vision, frame).room_cards[4]
+    assert [student.bond for student in plato.students] == [15, 1]
+    observed = LessonRoom("city", "4", plato.name, plato.students)
+    competitor = LessonRoom("city", "other", "Other room", (
+        LessonStudent("0", True, 8), LessonStudent("1", True, 9),
+    ))
+    result = choose_lesson([LessonLocation("city", "City")], [observed, competitor])
+    assert result.status == "selected" and result.room == competitor
+    assert result.bond_total == 17
+
+
 def test_padded_wrapped_name_matches_the_observed_confirmation_exactly():
     frame, _, vision = replay("hyakki-shopping-grid")
     grid = analyze(vision, frame)

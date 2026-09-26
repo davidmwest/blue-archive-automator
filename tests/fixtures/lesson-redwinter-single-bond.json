@@ -1,0 +1,842 @@
+{
+  "source": "Authorized development capture, September 26, 2026 UTC; everything outside the lesson modal is black. OCR is recorded local output.",
+  "words": [
+    {
+      "text": "All Locations",
+      "confidence": 0.99987,
+      "box": [
+        535,
+        83,
+        744,
+        118
+      ]
+    },
+    {
+      "text": "X",
+      "confidence": 0.95209,
+      "box": [
+        1121,
+        82,
+        1157,
+        118
+      ]
+    },
+    {
+      "text": "Tickets Owned7/7",
+      "confidence": 0.99982,
+      "box": [
+        565,
+        136,
+        726,
+        164
+      ]
+    },
+    {
+      "text": "Red Winter Office",
+      "confidence": 0.99902,
+      "box": [
+        213,
+        188,
+        403,
+        214
+      ]
+    },
+    {
+      "text": "Red Mustache",
+      "confidence": 0.99976,
+      "box": [
+        557,
+        188,
+        713,
+        214
+      ]
+    },
+    {
+      "text": "First Shared",
+      "confidence": 0.99997,
+      "box": [
+        900,
+        186,
+        1035,
+        215
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99908,
+      "box": [
+        150,
+        200,
+        205,
+        229
+      ]
+    },
+    {
+      "text": "Building",
+      "confidence": 0.99995,
+      "box": [
+        209,
+        208,
+        309,
+        245
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99948,
+      "box": [
+        494,
+        200,
+        549,
+        229
+      ]
+    },
+    {
+      "text": "Revolution Plaza",
+      "confidence": 0.99996,
+      "box": [
+        557,
+        212,
+        738,
+        239
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99954,
+      "box": [
+        838,
+        200,
+        894,
+        229
+      ]
+    },
+    {
+      "text": "Dormitory",
+      "confidence": 0.99992,
+      "box": [
+        898,
+        209,
+        1020,
+        243
+      ]
+    },
+    {
+      "text": "Red Bear Broadcasting",
+      "confidence": 0.99997,
+      "box": [
+        211,
+        337,
+        458,
+        369
+      ]
+    },
+    {
+      "text": "Third Communal",
+      "confidence": 0.99409,
+      "box": [
+        557,
+        338,
+        740,
+        365
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99946,
+      "box": [
+        150,
+        351,
+        205,
+        381
+      ]
+    },
+    {
+      "text": "Station",
+      "confidence": 0.99997,
+      "box": [
+        210,
+        362,
+        298,
+        392
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99956,
+      "box": [
+        495,
+        351,
+        549,
+        381
+      ]
+    },
+    {
+      "text": "Cafeteria",
+      "confidence": 0.99999,
+      "box": [
+        557,
+        363,
+        660,
+        390
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99932,
+      "box": [
+        839,
+        352,
+        894,
+        381
+      ]
+    },
+    {
+      "text": "Beluga Market",
+      "confidence": 0.994,
+      "box": [
+        900,
+        353,
+        1063,
+        380
+      ]
+    },
+    {
+      "text": "Labor Party Workforce",
+      "confidence": 0.99991,
+      "box": [
+        557,
+        491,
+        801,
+        518
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99907,
+      "box": [
+        152,
+        505,
+        214,
+        529
+      ]
+    },
+    {
+      "text": "Forestr:Storage",
+      "confidence": 0.97789,
+      "box": [
+        206,
+        503,
+        395,
+        532
+      ]
+    },
+    {
+      "text": "Lv.3",
+      "confidence": 0.99632,
+      "box": [
+        495,
+        503,
+        549,
+        531
+      ]
+    },
+    {
+      "text": "Office",
+      "confidence": 0.99982,
+      "box": [
+        557,
+        515,
+        628,
+        542
+      ]
+    },
+    {
+      "text": "Rank 8 required",
+      "confidence": 0.97695,
+      "box": [
+        213,
+        557,
+        381,
+        586
+      ]
+    },
+    {
+      "text": "Rank 9 required",
+      "confidence": 0.99252,
+      "box": [
+        558,
+        559,
+        725,
+        585
+      ]
+    }
+  ],
+  "bond_crops": [
+    {
+      "box": [
+        674,
+        288,
+        708,
+        310
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "1",
+          "confidence": 0.77377,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        678,
+        292,
+        705,
+        313
+      ],
+      "scale": 5,
+      "words": []
+    },
+    {
+      "box": [
+        680,
+        290,
+        703,
+        312
+      ],
+      "scale": 3,
+      "words": [
+        {
+          "text": "1",
+          "confidence": 0.92226,
+          "box": [
+            0,
+            0,
+            68,
+            65
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        680,
+        290,
+        703,
+        312
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "1",
+          "confidence": 0.92017,
+          "box": [
+            0,
+            0,
+            114,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        874,
+        288,
+        908,
+        310
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "29",
+          "confidence": 0.80682,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        878,
+        292,
+        905,
+        313
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "9",
+          "confidence": 0.99224,
+          "box": [
+            0,
+            0,
+            134,
+            104
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        257,
+        439,
+        291,
+        461
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "11",
+          "confidence": 0.98612,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        530,
+        439,
+        564,
+        461
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "10",
+          "confidence": 0.99974,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        874,
+        439,
+        908,
+        461
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "6",
+          "confidence": 0.98893,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    }
+  ],
+  "header_crops": [
+    {
+      "box": [
+        209,
+        185,
+        460,
+        247
+      ],
+      "scale": 2,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Red Winter Office",
+          "confidence": 0.99851,
+          "box": [
+            19,
+            10,
+            411,
+            80
+          ]
+        },
+        {
+          "text": "Building",
+          "confidence": 0.99992,
+          "box": [
+            19,
+            61,
+            216,
+            137
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        209,
+        185,
+        460,
+        247
+      ],
+      "scale": 3,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Red Winter Office",
+          "confidence": 0.99504,
+          "box": [
+            28,
+            15,
+            617,
+            120
+          ]
+        },
+        {
+          "text": "Building",
+          "confidence": 0.99993,
+          "box": [
+            28,
+            93,
+            322,
+            204
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        554,
+        185,
+        805,
+        247
+      ],
+      "scale": 2,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Red Mustache",
+          "confidence": 0.99998,
+          "box": [
+            21,
+            16,
+            335,
+            77
+          ]
+        },
+        {
+          "text": "Revolution Plaza",
+          "confidence": 0.99979,
+          "box": [
+            22,
+            67,
+            384,
+            126
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        554,
+        185,
+        805,
+        247
+      ],
+      "scale": 3,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Red Mustache",
+          "confidence": 0.99998,
+          "box": [
+            32,
+            24,
+            502,
+            116
+          ]
+        },
+        {
+          "text": "Revolution Plaza",
+          "confidence": 0.99985,
+          "box": [
+            32,
+            102,
+            575,
+            189
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        898,
+        185,
+        1149,
+        247
+      ],
+      "scale": 2,
+      "padding": 8,
+      "words": [
+        {
+          "text": "First Shared",
+          "confidence": 0.99565,
+          "box": [
+            21,
+            16,
+            291,
+            78
+          ]
+        },
+        {
+          "text": "Dormitory",
+          "confidence": 0.99999,
+          "box": [
+            19,
+            65,
+            261,
+            135
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        898,
+        185,
+        1149,
+        247
+      ],
+      "scale": 3,
+      "padding": 8,
+      "words": [
+        {
+          "text": "First Shared",
+          "confidence": 0.99258,
+          "box": [
+            32,
+            25,
+            434,
+            118
+          ]
+        },
+        {
+          "text": "Dormitory",
+          "confidence": 0.99998,
+          "box": [
+            28,
+            96,
+            391,
+            203
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        209,
+        336,
+        460,
+        398
+      ],
+      "scale": 2,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Red Bear Broadcasting",
+          "confidence": 0.99995,
+          "box": [
+            17,
+            6,
+            520,
+            88
+          ]
+        },
+        {
+          "text": "Station",
+          "confidence": 0.99997,
+          "box": [
+            23,
+            70,
+            190,
+            126
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        209,
+        336,
+        460,
+        398
+      ],
+      "scale": 3,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Red Bear Broadcasting",
+          "confidence": 0.99997,
+          "box": [
+            26,
+            10,
+            778,
+            133
+          ]
+        },
+        {
+          "text": "Station",
+          "confidence": 0.99997,
+          "box": [
+            34,
+            103,
+            285,
+            191
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        554,
+        336,
+        805,
+        398
+      ],
+      "scale": 2,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Third",
+          "confidence": 0.99992,
+          "box": [
+            21,
+            15,
+            155,
+            77
+          ]
+        },
+        {
+          "text": "Communal",
+          "confidence": 0.99997,
+          "box": [
+            134,
+            19,
+            389,
+            78
+          ]
+        },
+        {
+          "text": "Cafeteria",
+          "confidence": 0.99999,
+          "box": [
+            22,
+            69,
+            229,
+            126
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        554,
+        336,
+        805,
+        398
+      ],
+      "scale": 3,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Third",
+          "confidence": 0.99995,
+          "box": [
+            32,
+            26,
+            225,
+            114
+          ]
+        },
+        {
+          "text": "Communal",
+          "confidence": 0.99997,
+          "box": [
+            203,
+            28,
+            583,
+            117
+          ]
+        },
+        {
+          "text": "Cafeteria",
+          "confidence": 0.99999,
+          "box": [
+            34,
+            105,
+            344,
+            189
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        898,
+        336,
+        1149,
+        398
+      ],
+      "scale": 2,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Beluga Market",
+          "confidence": 0.99953,
+          "box": [
+            15,
+            37,
+            355,
+            118
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        898,
+        336,
+        1149,
+        398
+      ],
+      "scale": 3,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Beluga Market",
+          "confidence": 0.99897,
+          "box": [
+            23,
+            55,
+            533,
+            176
+          ]
+        }
+      ]
+    }
+  ],
+  "ticket_crops": []
+}

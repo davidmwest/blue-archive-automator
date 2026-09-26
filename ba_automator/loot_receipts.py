@@ -22,6 +22,7 @@ RECEIPT_TIMEOUT = 240
 REWARD_RECEIPT_TIMEOUT = 900
 TASK_NOTICE_TIMEOUT = 12
 GRID_ENTRY_TIMEOUT = 8
+TOOLTIP_RETURN_TIMEOUT = 8
 # The horizontal receipt viewport ends at x=100/1180. Its four-pixel fade
 # bands can make a clipped card look almost full and change width each frame.
 # Discover only within the opaque interior; anything touching it is partial.
@@ -175,6 +176,17 @@ def tooltip_boxes(image):
         if not len(borders):
             continue
         h = 65 + int(borders[-1]) + 1
+        # Side-pointing tooltips include their arrow in the contour bounds.
+        # Locate the long vertical borders before checking the title stripe;
+        # otherwise a left arrow shifts that stripe outside the narrow crop.
+        sides = np.flatnonzero(
+            np.count_nonzero(mask[y:y + h, x:x + w], axis=0) >= .85 * h
+        )
+        if len(sides) < 2:
+            continue
+        x, w = x + int(sides[0]), int(sides[-1] - sides[0]) + 1
+        if not 170 <= w <= 700:
+            continue
         if image[y + 8 : y + min(h - 8, 45), x + 8 : x + w - 8].mean() < 180:
             continue
         stripe = mask[y + 8 : y + h - 12, x + 10 : x + 31]
@@ -197,12 +209,7 @@ def tooltip(image, words):
     """Extract a wrapped name only inside the bright cyan-bordered item tooltip."""
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, (75, 100, 180), (105, 255, 255))
-    for contour in cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[
-        0
-    ]:
-        x, y, w, h = cv2.boundingRect(contour)
-        if not (170 <= w <= 700 and 70 <= h <= 420):
-            continue
+    for x, y, w, h in tooltip_boxes(image):
         inside = [
             a for a in words if x < a.center[0] < x + w and y < a.center[1] < y + h
         ]
@@ -869,12 +876,16 @@ class ReceiptReader:
         for attempt in range(3):
             self.input(cap, point)
             cap = self.capture()
-            for _ in range(3):
+            deadline = self.r.clock() + TOOLTIP_RETURN_TIMEOUT
+            while True:
                 p = self.read(cap)
                 if p.kind == kind and p.cards:
                     self.tooltip_origin = None
                     return cap
-                if p.kind == "tooltip":
+                # Reward cards scale back into place after the tooltip closes.
+                # An empty intermediate page is a wait, never another tap on
+                # the bare receipt (which would dismiss the earned rewards).
+                if self.r.clock() >= deadline:
                     break
                 self.r.sleep(0.5)
                 cap = self.capture()

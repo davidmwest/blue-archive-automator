@@ -549,7 +549,7 @@ def test_scheduled_failures_back_off_and_stop_retrying_until_resume(config_path)
     factory = ProcessFactory()
     controller = DashboardController(config_path, process_factory=factory, wall_clock=lambda: now[0])
     try:
-        controller.update_settings({"cafe_schedule_enabled": True})
+        controller.update_settings({"cafe_schedule_enabled": True, "checkin_schedule_enabled": False})
         for attempt in range(3):
             eventually(lambda: len(factory.processes) == attempt + 1)
             factory.processes[attempt].finish(1)
@@ -1139,7 +1139,7 @@ def test_crafting_failures_back_off_and_resume_does_not_override_setup_disable(c
     now=[datetime(2026,9,24,15,tzinfo=timezone.utc)]
     factory=ProcessFactory();controller=DashboardController(config_path,process_factory=factory,wall_clock=lambda:now[0])
     try:
-        controller.update_settings({'crafting_schedule_enabled':True})
+        controller.update_settings({'crafting_schedule_enabled':True, 'checkin_schedule_enabled':False})
         for n in range(3):
             eventually(lambda:len(factory.processes)==n+1)
             factory.processes[n].finish(1)

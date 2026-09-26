@@ -1,0 +1,224 @@
+{
+  "words": [
+    {
+      "text": "Bounty ",
+      "confidence": 0.96936,
+      "box": [
+        101,
+        6,
+        240,
+        43
+      ]
+    },
+    {
+      "text": "740/218",
+      "confidence": 0.99999,
+      "box": [
+        504,
+        7,
+        589,
+        38
+      ]
+    },
+    {
+      "text": "Clear Unit",
+      "confidence": 0.99993,
+      "box": [
+        172,
+        124,
+        285,
+        155
+      ]
+    },
+    {
+      "text": "Mission Info",
+      "confidence": 0.99157,
+      "box": [
+        544,
+        120,
+        734,
+        157
+      ]
+    },
+    {
+      "text": "Rec.",
+      "confidence": 0.98315,
+      "box": [
+        654,
+        185,
+        704,
+        215
+      ]
+    },
+    {
+      "text": "08",
+      "confidence": 0.99999,
+      "box": [
+        142,
+        199,
+        185,
+        231
+      ]
+    },
+    {
+      "text": "Besieged Classroom H",
+      "confidence": 0.9997,
+      "box": [
+        202,
+        197,
+        547,
+        233
+      ]
+    },
+    {
+      "text": "Lv.70",
+      "confidence": 0.99882,
+      "box": [
+        643,
+        208,
+        711,
+        241
+      ]
+    },
+    {
+      "text": "Sweep",
+      "confidence": 0.99992,
+      "box": [
+        896,
+        215,
+        971,
+        250
+      ]
+    },
+    {
+      "text": "Enemy/Syn.",
+      "confidence": 0.99919,
+      "box": [
+        174,
+        257,
+        294,
+        288
+      ]
+    },
+    {
+      "text": "Min",
+      "confidence": 0.99988,
+      "box": [
+        763,
+        285,
+        814,
+        315
+      ]
+    },
+    {
+      "text": "0",
+      "confidence": 0.99721,
+      "box": [
+        924,
+        286,
+        947,
+        316
+      ]
+    },
+    {
+      "text": "Max",
+      "confidence": 0.99911,
+      "box": [
+        1054,
+        285,
+        1111,
+        317
+      ]
+    },
+    {
+      "text": "Mission Objectives (\u2606)",
+      "confidence": 0.99761,
+      "box": [
+        321,
+        311,
+        545,
+        340
+      ]
+    },
+    {
+      "text": "Clear",
+      "confidence": 0.99997,
+      "box": [
+        180,
+        352,
+        240,
+        381
+      ]
+    },
+    {
+      "text": "0 \u2192",
+      "confidence": 0.82284,
+      "box": [
+        1040,
+        352,
+        1087,
+        374
+      ]
+    },
+    {
+      "text": "All students survive",
+      "confidence": 0.99986,
+      "box": [
+        176,
+        388,
+        377,
+        414
+      ]
+    },
+    {
+      "text": "Start Sweep",
+      "confidence": 0.99339,
+      "box": [
+        848,
+        386,
+        1021,
+        428
+      ]
+    },
+    {
+      "text": "Clear within 150 second(s)",
+      "confidence": 0.99954,
+      "box": [
+        179,
+        421,
+        440,
+        446
+      ]
+    },
+    {
+      "text": "Expected Rewards",
+      "confidence": 0.98572,
+      "box": [
+        340,
+        469,
+        527,
+        498
+      ]
+    },
+    {
+      "text": "0\u2192.",
+      "confidence": 0.7803,
+      "box": [
+        1027,
+        469,
+        1111,
+        503
+      ]
+    },
+    {
+      "text": "Start Mission",
+      "confidence": 0.99995,
+      "box": [
+        822,
+        517,
+        1046,
+        557
+      ]
+    }
+  ]
+}

@@ -33,6 +33,13 @@ drag moved the isometric scene approximately 60 pixels right and 31 pixels up.
 They preserve arbitrary furniture and moving students while removing the entire
 HUD, account resource bar, and visit timer.
 
+`cafe-home-label.png` preserves the Cafe icon/label and the Campaign home anchor
+from a September 26 UTC failed entry. Three taps on the cup illustration left
+the game at Home; the fixture verifies selection of the label's matched center
+and rejection when either home anchor is missing or dimmed. All other pixels,
+including account identity, currency balances, and the home character, are black.
+This is recognition evidence, not a claim that the revised target has run live.
+
 Lessons samples (`lesson-*.png`) were captured on 2026-09-24 UTC from the same
 authorized instance. They retain only the location headers, ticket/XP controls,
 room grid, or lesson confirmation needed for recognition. The top account resource
@@ -42,6 +49,36 @@ without loading an OCR model. The room grids include unowned students with pink
 hair so ownership cannot be inferred from artwork, and both single-line and wrapped
 room names. These game-derived fixtures remain outside the project's MIT grant;
 see `THIRD_PARTY_NOTICES.md` at the repository root.
+
+`lesson-shiratori-single-bond` and `lesson-redwinter-single-bond` are September 26
+room grids with thin relationship-rank `1` labels. The original crops' low-confidence
+readings and the fallback's agreeing 3×/5× readings are preserved in paired JSON.
+Only the lesson modal remains visible; all account resources and background are black.
+
+`tickets-scrimmage-split-projection.png` and `tickets-bounty-quantity-seven.png`
+are September 26 pre-spend Mission Info controls. They retain the task heading,
+AP needed for cost verification, and mission dialog; credit/Pyroxene balances
+and unrelated background are black. They cover separate AP/ticket OCR words
+and a quantity selector that overshot its requested count. Neither is a receipt.
+
+`tickets-bounty-zero-selector.png` retains the Bounty heading, AP verification
+counter, and Mission Info dialog after the September 26 Classroom H sweep spent
+its final five tickets. Whole-frame OCR omits the dash in the visible `0 → -`
+projection; independent 2× and 3× crops recover it. All unrelated background,
+credit/Pyroxene balances, and other account HUD are black. This is post-spend
+balance evidence; the exhausted selector never supplies a Sweep target. The
+paired JSON retains only original OCR words inside the unmasked regions, because
+masking the screenshot itself changes whole-frame text detection. Tests replay
+those observations and run real OCR on the unchanged enlarged ticket bubble.
+
+`tickets-scrimmage-zero-missing-projection.png/json` records the final Millennium B
+selector from September 26. Whole-frame OCR misses the entire exhausted ticket
+label beside the AP projection. Only the task heading, AP verification counter,
+and Mission Info dialog remain visible. The fallback isolates the ticket text
+from the neighboring AP digits, adds blank margins, and requires agreeing 2×/3×
+reads of `0 → -`. Tests reject conflicting or low-confidence reads, nonzero
+quantities, changed AP, and missing stage or screen identity. This post-spend
+observation never supplies a Sweep target.
 
 Lessons also includes an opening-animation rejection sample, a captured relationship
 rank-up banner, loading/completed Lesson Report panels, and before/after room grids
@@ -60,6 +97,13 @@ cover wrapped titles where tightly cropped OCR duplicated letter fragments. Thei
 the saved game screenshots themselves retain their original pixels.
 
 Crafting samples (`crafting-*.png`) were captured on 2026-09-24. They retain the synthesis slot list, configured Quick Craft preset, maximum batch, confirmation, running timers, and red zero-inventory counter. The account resource bar is removed. `craft_keystone.png` is a small matching crop of the keystone material icon. Natural completion and collection recognition now have live fixtures and passed runtime verification.
+
+`crafting-home-label.png` comes from the September 26 UTC Crafting navigation
+failure. Only the two home menu anchors and Crafting icon/label remain. Account
+identity, balances, time, notifications, and the character background are masked.
+The runner had stayed on home after three accepted taps on the illustration;
+this sample verifies recognition of the lower text-label target. It does not
+establish that Android delivered a tap or that a live navigation succeeded.
 
 `crafting-unaffordable-max.png` preserves the evening live failure where Max
 selected three crafts despite only two owned keystones. The red 2/3 material
@@ -371,3 +415,14 @@ one Eleph and 1,439 Credits. Runtime tests separately simulate the unsaved
 opening transition and require bounded observation without input before
 scanning and returning to Sweep Complete. All pixels outside the modal are
 masked. This game-derived fixture is excluded from MIT.
+
+`loot-grid-left-tooltip.png` retains the September 26 Hard 8-3 Full List
+and its Bluetooth Necklace tooltip. A left-pointing arrow extends beyond the
+rectangular text panel; recognition must locate both long side borders before
+reading the name. Account identity, balances, and experience are masked.
+`loot-cafe-dismiss-animation.png` retains the Cafe Reward Acquired transition
+immediately after an item tooltip closes. The cards are still scaling, so the
+reader recognizes the receipt but waits for card geometry without another tap.
+Only the receipt heading, reward viewport, and continuation hint remain; the
+unrelated Cafe HUD and scenery are masked. Both game-derived fixtures are excluded
+from the MIT grant described in the third-party notices.

@@ -40,6 +40,15 @@ class CafeVision:
                 return False
         return True
 
+    def home_entry_target(self, frame):
+        """Use the visible Cafe label, with both unobstructed Home anchors present."""
+        hits = self.startup.matches(frame)
+        if {"home_left", "home_right"} <= hits.keys():
+            # home_left is the Cafe label itself. The illustration above it
+            # remained visible but ignored input in saved scheduled visits.
+            return hits["home_left"]
+        return None
+
     def visitor_notice(self, frame, words):
         """Recognize the English visiting-student notice over a dimmed Cafe HUD."""
         panel = [w for w in words if 345 <= w.center[0] <= 935 and 170 <= w.center[1] <= 515]

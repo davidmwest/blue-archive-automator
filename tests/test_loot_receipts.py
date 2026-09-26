@@ -285,6 +285,50 @@ def test_unrelated_screen_cannot_authorize_loot_inputs(vision):
     )
 
 
+def test_side_pointing_tooltip_is_not_the_single_highlighted_grid_card(vision):
+    png = (FIXTURES / "loot-grid-left-tooltip.png").read_bytes()
+    image = decode_frame(png)
+    assert lr.has_tooltip(image)
+    assert lr.page(png, vision).kind == "tooltip"
+    assert lr.read_tooltip(image, vision) == "Bluetooth Necklace"
+
+
+@pytest.mark.parametrize("side", ["left", "right"])
+def test_side_pointing_tooltip_requires_two_separate_vertical_borders(side):
+    image = decode_frame((FIXTURES / "loot-grid-left-tooltip.png").read_bytes())
+    (x, y, width, height), = lr.tooltip_boxes(image)
+    if side == "left":
+        image[y:y + height, x - 1:x + 5] = 255
+    else:
+        image[y:y + height, x + width - 5:x + width + 1] = 255
+    # Multiple pixels belonging to one border cannot authorize a dismiss tap.
+    with np.errstate(invalid="raise", divide="raise"):
+        assert not lr.has_tooltip(image)
+
+
+@pytest.mark.parametrize("change", ["pointer", "title", "description"])
+def test_side_tooltip_identity_excludes_only_the_pointer(change):
+    original = (FIXTURES / "loot-grid-left-tooltip.png").read_bytes()
+    image = decode_frame(original)
+    bounds = lr.tooltip_boxes(image)
+    (x, y, width, height), = bounds
+    if change == "pointer":
+        image[y:y + height, x - 25:x] = 0
+    elif change == "title":
+        image[y + 18:y + 38, x + 35:x + 100] = 0
+    else:
+        image[y + height - 40:y + height - 20, x + 35:x + 100] = 0
+    assert lr.tooltip_boxes(image) == bounds
+    assert lr.same_receipt_view(original, lr.encode(image), lr.Page("tooltip")) == (change == "pointer")
+
+
+def test_cafe_return_animation_is_recognized_without_guessing_card_geometry(vision):
+    png = (FIXTURES / "loot-cafe-dismiss-animation.png").read_bytes()
+    parsed = lr.page(png, vision)
+    assert parsed.kind == "reward" and not parsed.cards
+    assert not lr.has_tooltip(decode_frame(png))
+
+
 def test_overlapping_pages_are_inspected_once_and_receipt_survives_clear(
     tmp_path, monkeypatch
 ):

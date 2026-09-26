@@ -17,6 +17,13 @@ action_cooldown = 3.0
 # Close only Blue Archive after the final queued task; the emulator stays open.
 close_app_when_idle = false
 
+[checkin]
+# Check Home/Campaign red dots and excess AP through the serial queue.
+# A successful final scan after another job starts this timer again.
+# AP spending still requires [ap].schedule_enabled and respects its floor.
+schedule_enabled = true
+interval_minutes = 30 # 5..1440 minutes
+
 [daily]
 # Queue the daily routine once per Global game day, after the 19:00 UTC reset.
 # Catches up on the current game day when serve restarts; never replays missed days.

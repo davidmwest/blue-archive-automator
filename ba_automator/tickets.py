@@ -143,23 +143,26 @@ class TicketRunner(ShopRunner):
 
     def quantity(self, frame, wanted):
         identity = (frame.screen.task, frame.screen.area, frame.screen.stage)
-        # Min then small increments gives every requested count an observed result.
-        if frame.screen.count > wanted:
-            self.tap(frame, (788, 300), "Set sweep quantity to minimum")
+        # Observe the actual change, including a selector that jumps several
+        # counts. Only quantity controls are touched until the exact count is
+        # reached; the sweep and its cost still require separate verification.
+        # Three bounded passes allow an overshoot to reset without cycling forever.
+        for _ in range(3 * (wanted + 1)):
+            previous = frame.screen.count
+            if previous == wanted:
+                return frame
+            if previous > wanted:
+                self.tap(frame, (788, 300), "Set sweep quantity to minimum")
+            else:
+                self.tap(frame, (1015, 300), f"Set sweep quantity to {previous + 1}")
             frame = self.wait(
                 "detail",
                 predicate=lambda s: (s.task, s.area, s.stage) == identity
-                and s.count == 1,
+                and s.count is not None and s.count != previous,
             )
-        while frame.screen.count < wanted:
-            expected = frame.screen.count + 1
-            self.tap(frame, (1015, 300), f"Set sweep quantity to {expected}")
-            frame = self.wait(
-                "detail",
-                predicate=lambda s: (s.task, s.area, s.stage) == identity
-                and s.count == expected,
-            )
-        return frame
+        if frame.screen.count == wanted:
+            return frame
+        self.fail("Ticket sweep quantity did not settle at the requested count")
 
     def sweep(self, frame, count, index):
         self.check_day()

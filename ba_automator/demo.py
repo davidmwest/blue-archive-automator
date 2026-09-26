@@ -106,6 +106,8 @@ def _routes(now: datetime) -> dict[str, tuple[str, bytes]]:
             "download_timeout": 1800,
             "unknown_timeout": 60,
             "close_app_when_idle": True,
+            "checkin_schedule_enabled": False,
+            "checkin_interval_minutes": 30,
             "cafe_schedule_enabled": False,
             "cafe_invite_enabled": False,
             "cafe_invite_student": "",
@@ -121,7 +123,11 @@ def _routes(now: datetime) -> dict[str, tuple[str, bytes]]:
             "ap_floor":100,"ap_schedule_enabled":False,"ap_strategy":"elephs",
             "ap_hard_default_order":True,"ap_hard_order":[],
         },
-        "schedule": {"cafe": {"enabled": False, "next_due_at": None, "retry_paused": False}},
+        "schedule": {
+            "cafe": {"enabled": False, "next_due_at": None, "retry_paused": False},
+            "checkin": {"enabled": False, "interval_minutes": 30, "next_due_at": None,
+                        "last_success_at": None, "status": None, "blocked_reason": None},
+        },
         "logs": [
             {"time": stamp(-480), "message": "Sample: restart started; explicit device target checked."},
             {"time": stamp(-450), "message": "Sample: announcement recognized; before and after frames saved."},

@@ -30,6 +30,8 @@ class Config:
     state_dir: Path = Path("data/state")
     daily_schedule_enabled: bool = False
     daily_reset_delay_minutes: int = 1
+    checkin_schedule_enabled: bool = True
+    checkin_interval_minutes: int = 30
     cafe_schedule_enabled: bool = False
     cafe_invite_enabled: bool = False
     cafe_invite_student: str = ""
@@ -101,7 +103,7 @@ class Config:
             raise ConfigError("restart.home_confirmations must be an integer from 1 to 10")
         if type(self.auto_download) is not bool:
             raise ConfigError("restart.auto_download must be true or false")
-        for name in ("daily_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle",
+        for name in ("daily_schedule_enabled", "checkin_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle",
                      "lessons_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily",
                      "total_assault_enabled_in_daily", "crafting_schedule_enabled",
                      "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled",
@@ -111,6 +113,9 @@ class Config:
         if (type(self.daily_reset_delay_minutes) is not int
                 or not 0 <= self.daily_reset_delay_minutes <= 120):
             raise ConfigError("daily.reset_delay_minutes must be an integer from 0 to 120")
+        if (type(self.checkin_interval_minutes) is not int
+                or not 5 <= self.checkin_interval_minutes <= 1440):
+            raise ConfigError("checkin.interval_minutes must be an integer from 5 to 1440")
         for name in ('packs_monthly_max_cents', 'packs_half_monthly_max_cents', 'packs_ap_max_cents'):
             if type(getattr(self, name)) is not int or not 1 <= getattr(self, name) <= 10000:
                 raise ConfigError(f'{name} must be an integer from 1 to 10000 USD cents')
@@ -177,6 +182,7 @@ class Config:
                         "home_confirmations", "action_cooldown", "auto_download"},
             "storage": {"run_dir", "lock_dir", "state_dir"},
             "daily": {"schedule_enabled", "reset_delay_minutes"},
+            "checkin": {"schedule_enabled", "interval_minutes"},
             "cafe": {"schedule_enabled", "invite_enabled", "invite_student"},
             "crafting": {"schedule_enabled"},
             "ap": {"schedule_enabled", "floor", "strategy", "hard_default_order", "hard_order"},
@@ -199,7 +205,7 @@ class Config:
             unexpected_keys = entries.keys() - keys
             if unexpected_keys:
                 raise ConfigError(f"Unknown {section} settings: {', '.join(sorted(unexpected_keys))}")
-            values.update({f"{section}_{key}" if section in {"daily", "cafe", "lessons", "crafting", "packs", "ap", "bounties", "scrimmages", "total_assault"} else key: value
+            values.update({f"{section}_{key}" if section in {"daily", "checkin", "cafe", "lessons", "crafting", "packs", "ap", "bounties", "scrimmages", "total_assault"} else key: value
                            for key, value in entries.items()})
         for required in ("serial", "package"):
             if required not in values:

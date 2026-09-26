@@ -226,8 +226,8 @@ class LessonVision:
         key = crop.tobytes()
         if key in self._bond_cache:
             return self._bond_cache[key]
-        def read_number(image):
-            enlarged = cv2.resize(image, None, fx=5, fy=5, interpolation=cv2.INTER_CUBIC)
+        def read_number(image, scale=5):
+            enlarged = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
             words = self.startup.read(enlarged)
             values = {int(word.text.strip()) for word in words
                       if re.fullmatch(r"\d{1,3}", word.text.strip()) and word.confidence >= .85}
@@ -238,6 +238,14 @@ class LessonVision:
             # The wider crop sometimes joins adjacent hair to a single digit
             # (for example C4). This crop stays entirely on the heart label.
             result = read_number(frame[top + 33:top + 54, left + 40:left + 67])
+        if result is None:
+            # A thin single digit can remain low confidence beside the heart's
+            # outline. Keep the entire numeric label but trim the surrounding
+            # artwork, and require agreement at two independent resize scales.
+            label = frame[top + 31:top + 53, left + 42:left + 65]
+            candidates = [read_number(label, scale) for scale in (3, 5)]
+            if candidates[0] is not None and candidates[0] == candidates[1]:
+                result = candidates[0]
         if result is not None and not 1 <= result <= 100:
             result = None
         if len(self._bond_cache) >= 256:

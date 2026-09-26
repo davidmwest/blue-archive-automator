@@ -18,6 +18,8 @@ The floor is a minimum, not an exact target. With 137 AP, a floor of 100, and a 
 
 When enabled, Spend AP checks hourly and follows Cafe, Mail, and the full Daily plan. A pack visit already ends with Mail, so it also reaches Spend AP. These remain serial tasks; there is no second worker issuing game inputs. Keep the local dashboard running for scheduling to work.
 
+Periodic check-ins also read AP every 30 minutes by default; choose 5–1440 minutes or turn them off in Settings. A successful final Home/Campaign scan after another job starts that timer again. Observed AP at least 20 above the floor can queue Spend AP sooner, but only when automatic AP spending is enabled. The follow-up respects the same floor, queue pause, duplicate suppression, and resource holds; check-ins never clear an unresolved spend. The server and emulator must already be running. See [red-dot and AP follow-ups](red-dots.md#ap-after-collection).
+
 A large AP balance can take more than one visit. Before each Hard sweep, the runner reserves eight minutes and 200 inputs for its receipt and the trip home. If the visit is running out of room, it returns to verified Home, keeps the next stage in the rotation, and makes another check due in one minute. Dispatch still respects the queue and retry backoff. Completed sweeps stay completed; the continuation does not repeat them. Automatic continuation requires AP scheduling to be enabled.
 
 ```toml

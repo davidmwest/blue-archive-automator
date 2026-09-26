@@ -28,6 +28,8 @@ Cafe entry and floor changes verify the destination instead of assuming ADB acce
 
 This recovery addresses two observed scheduled failures: a floor change that was still on Now Loading at the old 30-second deadline, and Cafe entry taps that left the game on home. Navigation attempts and arrivals retain named screenshots so later camera captures do not overwrite that evidence in the trace ring.
 
+Saved September 26 entry failures showed all three taps hitting the cup illustration above the Cafe label while the home menu remained visible. Entry now targets the Cafe label itself, using the existing `home_left` template's matched center (97, 691 in the saved frame). Both bright home anchors are required again before every attempt; a dimmed or missing label stops input. Sanitized captures and offline tests cover the new target and rejection rules. A fresh live check at 07:52 Pacific opened the Cafe successfully using that label target.
+
 The Visiting Student List notice requires its exact English headings and Confirm control in the known panel, plus three Cafe HUD anchors with consistent dimming. Its dismissal is bounded to three attempts and uses the same before/after popup history as startup announcements. An arbitrary Guide or Confirm dialog does not qualify.
 
 ## Student interactions
@@ -102,3 +104,5 @@ Each visit has a run journal, a ring of recent screenshots, and retained reward/
 A collection attempt is recorded when Claim is pressed; earnings are recorded as collected only after the receipt appears. Relationship taps and verified heart/rank-up feedback are also separate. Invitation requests are recorded before result verification, and a verified new cooldown produces the completion record. A successful overall visit requires the final home screen.
 
 Remaining live validation includes repeated unattended visits across further relationship cooldowns, obscured markers across more layouts, invitation boundary-rank reselection and deep scrolling, a configured-name invitation, and interruption recovery. Both-floor scanning, floor transitions, empty earnings, reward receipts, relationship feedback, automatic free invitation, final home verification, and idle-close have each been observed live. The latest successful full run used invitations disabled and scheduling enabled; the invitation check was separate. The extended loading timeout is covered by offline regression tests; this successful live floor change did not require the full two-minute allowance.
+
+On September 26, a full live retry entered through the verified Cafe label, collected AP and credits with both loot tooltips identified, scanned both floors, and returned home. This exercised the corrected Home target and the reward-card animation wait that caused the saved failures. Invitations remained disabled. Historical failure journals and partial receipts are retained when their dashboard notices are dismissed.

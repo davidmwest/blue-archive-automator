@@ -19,6 +19,10 @@ scheduling is off by default. the setting doesn't change your in-game node prior
 
 ## each visit
 
+home navigation uses the recognized **Crafting** text label. an ignored tap gets
+at most two retries, each requiring a fresh home screen and readable label. an
+unknown screen never triggers another navigation tap.
+
 1. Verify Material Synthesis and all three crafting slots, waiting for repeated settled observations.
 2. Collect finished slots using an active Claim All control. Verify the reward receipt and the newly vacant slots before logging collection as confirmed.
 3. Open Quick Craft if there's space. Require Node 1 to be on and configured, with a recognized keystone-only material list.
@@ -49,6 +53,12 @@ the September 24, 2026 live inspection verified the existing Node 1 preset and a
 an evening live check exposed the Max behavior: with three vacant slots and two keystones, it selected three crafts and displayed a red **2/3** material counter and a 6,000-credit fee. The runner stopped before confirmation. That screen is now a sanitized recognition fixture. At 18:18 Pacific, the replacement runner started from quantity one, selected two crafts, verified the confirmation, and spent two keystones and 4,000 credits. It verified two three-hour timers, left the third slot empty, persisted their collection schedule, and returned home. The preset was unchanged. Offline tests also cover resetting an initial quantity of three with Min, changed costs, unexpected quantities, and collection followed immediately by refill within the same visit; those variants still need live coverage.
 
 sanitized fixtures preserve the relevant UI controls and omit the account resource bar. raw traces and receipts stay in the ignored runtime directories.
+
+three September 26 UTC visits failed before opening Crafting: their screenshots
+remained on home after taps on the Crafting illustration. They attempted no
+collection or resource spending. Offline regression coverage now selects the
+visible text label instead, rejects ambiguous or unreadable labels, and bounds
+unacknowledged navigation. A fresh live visit at 07:51 Pacific verified the label route, started one affordable craft using the existing preset, saved its timer, and returned home.
 
 on September 25, an interrupted collection was reconciled using the saved overlapping receipt frames and a fresh settled view of empty slots 1 and 2. the receipt contained one **Brain Teaser Puzzle Cube** and one **Wind-Up Music Box**. animated highlights had made the old page-overlap check reject the same cards; the fix has captured regression coverage. recovery completed the original receipt and cleared its pending collection without pressing Claim again, starting another craft, or changing the preset. return home and the next three-hour recheck were verified. this does not establish live coverage of collection followed immediately by refill.
 

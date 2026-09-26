@@ -89,3 +89,28 @@ def test_live_craft_receipt_requires_continue_label(vision):
     result=classify_crafting(frame,words)
     assert result.kind=='receipt' and result.target==(640,631)
     assert classify_crafting(frame,[w for w in words if w.normalized!='touch to continue']).kind=='unknown'
+
+
+def test_home_entry_targets_the_visible_crafting_label(vision):
+    result = vision.analyze((FIXTURES / 'crafting-home-label.png').read_bytes())
+    assert result.kind == 'home'
+    assert result.target is not None
+    assert 650 <= result.target[0] <= 670 and 680 <= result.target[1] <= 698
+
+
+@pytest.mark.parametrize('fault', ['missing', 'duplicate', 'low_confidence', 'outside_menu', 'not_home'])
+def test_crafting_label_needs_unambiguous_text_and_home_anchors(vision, fault):
+    frame = decode_frame((FIXTURES / 'crafting-home-label.png').read_bytes())
+    label = Word('Crafting', .99, (622, 676, 695, 702))
+    words = [label]
+    if fault == 'missing':
+        words = []
+    elif fault == 'duplicate':
+        words.append(replace(label, box=(630, 676, 703, 702)))
+    elif fault == 'low_confidence':
+        words = [replace(label, confidence=.89)]
+    elif fault == 'outside_menu':
+        words = [replace(label, box=(622, 500, 695, 526))]
+    result = classify_crafting(frame, words, home=fault != 'not_home')
+    assert result.target is None
+    assert result.kind == ('unknown' if fault == 'not_home' else 'home')

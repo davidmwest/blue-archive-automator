@@ -1,0 +1,680 @@
+{
+  "source": "Authorized development capture, September 26, 2026 UTC; everything outside the lesson modal is black. OCR is recorded local output.",
+  "words": [
+    {
+      "text": "All Locations",
+      "confidence": 0.99988,
+      "box": [
+        535,
+        83,
+        744,
+        118
+      ]
+    },
+    {
+      "text": "X",
+      "confidence": 0.8909,
+      "box": [
+        1118,
+        80,
+        1158,
+        120
+      ]
+    },
+    {
+      "text": "Tickets Owned7/7",
+      "confidence": 0.99987,
+      "box": [
+        565,
+        136,
+        726,
+        164
+      ]
+    },
+    {
+      "text": "Valkyrie Police School,",
+      "confidence": 0.99996,
+      "box": [
+        212,
+        187,
+        452,
+        216
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.9992,
+      "box": [
+        150,
+        200,
+        205,
+        229
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99934,
+      "box": [
+        495,
+        201,
+        551,
+        229
+      ]
+    },
+    {
+      "text": "Corgi Town",
+      "confidence": 0.99964,
+      "box": [
+        555,
+        200,
+        684,
+        230
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.9993,
+      "box": [
+        839,
+        201,
+        895,
+        229
+      ]
+    },
+    {
+      "text": "Tri-Square",
+      "confidence": 0.99987,
+      "box": [
+        898,
+        198,
+        1019,
+        231
+      ]
+    },
+    {
+      "text": "Shiratori Branch",
+      "confidence": 0.98333,
+      "box": [
+        213,
+        212,
+        391,
+        239
+      ]
+    },
+    {
+      "text": "Shiratori",
+      "confidence": 0.99997,
+      "box": [
+        900,
+        338,
+        1001,
+        365
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99942,
+      "box": [
+        151,
+        353,
+        205,
+        379
+      ]
+    },
+    {
+      "text": "Business District 3",
+      "confidence": 0.99206,
+      "box": [
+        213,
+        352,
+        412,
+        378
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99936,
+      "box": [
+        495,
+        352,
+        550,
+        381
+      ]
+    },
+    {
+      "text": "Plato Avenue",
+      "confidence": 0.99906,
+      "box": [
+        556,
+        352,
+        703,
+        379
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99919,
+      "box": [
+        839,
+        351,
+        894,
+        381
+      ]
+    },
+    {
+      "text": "Neighborhood Park",
+      "confidence": 0.99998,
+      "box": [
+        900,
+        363,
+        1115,
+        392
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99902,
+      "box": [
+        152,
+        505,
+        210,
+        529
+      ]
+    },
+    {
+      "text": "Kanesaki Port",
+      "confidence": 0.99565,
+      "box": [
+        208,
+        504,
+        366,
+        527
+      ]
+    },
+    {
+      "text": "Lv.2",
+      "confidence": 0.99749,
+      "box": [
+        497,
+        505,
+        562,
+        529
+      ]
+    },
+    {
+      "text": "RaminiTown",
+      "confidence": 0.99933,
+      "box": [
+        550,
+        504,
+        700,
+        530
+      ]
+    },
+    {
+      "text": "Rank 8 required",
+      "confidence": 0.98552,
+      "box": [
+        213,
+        557,
+        381,
+        586
+      ]
+    },
+    {
+      "text": "Rank 9 required",
+      "confidence": 0.99848,
+      "box": [
+        558,
+        559,
+        725,
+        585
+      ]
+    }
+  ],
+  "bond_crops": [
+    {
+      "box": [
+        530,
+        439,
+        564,
+        461
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "15",
+          "confidence": 0.99963,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        602,
+        439,
+        636,
+        461
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "1",
+          "confidence": 0.77536,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        606,
+        443,
+        633,
+        464
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "1",
+          "confidence": 0.67124,
+          "box": [
+            0,
+            0,
+            134,
+            104
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        608,
+        441,
+        631,
+        463
+      ],
+      "scale": 3,
+      "words": [
+        {
+          "text": "1",
+          "confidence": 0.86653,
+          "box": [
+            0,
+            0,
+            68,
+            65
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        608,
+        441,
+        631,
+        463
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "1",
+          "confidence": 0.87324,
+          "box": [
+            0,
+            0,
+            114,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        946,
+        439,
+        980,
+        461
+      ],
+      "scale": 5,
+      "words": [
+        {
+          "text": "10",
+          "confidence": 0.99917,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    }
+  ],
+  "header_crops": [
+    {
+      "box": [
+        209,
+        185,
+        460,
+        247
+      ],
+      "scale": 2,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Valkyrie Police School,",
+          "confidence": 0.99975,
+          "box": [
+            17,
+            12,
+            501,
+            85
+          ]
+        },
+        {
+          "text": "Shiratori Branch",
+          "confidence": 0.99963,
+          "box": [
+            21,
+            64,
+            384,
+            128
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        209,
+        185,
+        460,
+        247
+      ],
+      "scale": 3,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Valkyrie Police School,",
+          "confidence": 0.99982,
+          "box": [
+            26,
+            19,
+            752,
+            127
+          ]
+        },
+        {
+          "text": "Shiratori Branch",
+          "confidence": 0.99974,
+          "box": [
+            31,
+            95,
+            576,
+            194
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        554,
+        185,
+        805,
+        247
+      ],
+      "scale": 2,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Corgi Town",
+          "confidence": 0.99968,
+          "box": [
+            14,
+            36,
+            282,
+            118
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        554,
+        185,
+        805,
+        247
+      ],
+      "scale": 3,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Corgi Town",
+          "confidence": 0.99962,
+          "box": [
+            21,
+            54,
+            423,
+            177
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        898,
+        185,
+        1149,
+        247
+      ],
+      "scale": 2,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Tri-Square",
+          "confidence": 0.99985,
+          "box": [
+            13,
+            36,
+            264,
+            118
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        898,
+        185,
+        1149,
+        247
+      ],
+      "scale": 3,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Tri-Square",
+          "confidence": 0.99989,
+          "box": [
+            20,
+            55,
+            396,
+            176
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        209,
+        336,
+        460,
+        398
+      ],
+      "scale": 2,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Business District 3",
+          "confidence": 0.99966,
+          "box": [
+            21,
+            42,
+            423,
+            105
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        209,
+        336,
+        460,
+        398
+      ],
+      "scale": 3,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Business D",
+          "confidence": 0.95059,
+          "box": [
+            33,
+            64,
+            366,
+            155
+          ]
+        },
+        {
+          "text": "District 3",
+          "confidence": 0.99728,
+          "box": [
+            318,
+            67,
+            631,
+            152
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        554,
+        336,
+        805,
+        398
+      ],
+      "scale": 2,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Plato Avenue",
+          "confidence": 0.99994,
+          "box": [
+            19,
+            41,
+            319,
+            107
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        554,
+        336,
+        805,
+        398
+      ],
+      "scale": 3,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Plato Avenue",
+          "confidence": 0.99996,
+          "box": [
+            28,
+            62,
+            479,
+            160
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        898,
+        336,
+        1149,
+        398
+      ],
+      "scale": 2,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Shiratori",
+          "confidence": 0.99996,
+          "box": [
+            19,
+            13,
+            224,
+            83
+          ]
+        },
+        {
+          "text": "Neighborhood Park",
+          "confidence": 0.99998,
+          "box": [
+            17,
+            60,
+            456,
+            137
+          ]
+        }
+      ]
+    },
+    {
+      "box": [
+        898,
+        336,
+        1149,
+        398
+      ],
+      "scale": 3,
+      "padding": 8,
+      "words": [
+        {
+          "text": "Shiratori",
+          "confidence": 0.99996,
+          "box": [
+            27,
+            18,
+            334,
+            125
+          ]
+        },
+        {
+          "text": "Neighborhood Park",
+          "confidence": 0.99996,
+          "box": [
+            24,
+            90,
+            684,
+            207
+          ]
+        }
+      ]
+    }
+  ],
+  "ticket_crops": []
+}

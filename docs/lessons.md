@@ -94,6 +94,8 @@ On September 24, 2026 UTC, the authorized BlueStacks Air staging instance comple
 
 The final local run is `lessons-20260924T064611-02b9e014`. Full screenshots, survey JSON, receipt evidence, and important-action history remain local; the repository contains sanitized replay fixtures.
 
+September 26 saved room grids exposed a thin relationship-rank `1` that remained below the OCR confidence threshold in the original crops. A fallback now checks the complete heart label at two scales and requires agreement. Sanitized Shiratori and Red Winter replays recover both missed ranks, and planner tests preserve the correct relationship tie-break. Conflicting or unreadable ranks still block comparisons that need them. The live retry (`lessons-20260926T152150-bcf1051a`) surveyed all 94 rooms across 12 schools before each selection, completed seven verified lessons, confirmed zero tickets remaining, and returned home.
+
 All live spending used the relationship policy. The school-rank policy is covered by observed-data and multi-ticket rank/XP tests, including switching schools after each ticket, but a real school rank-up popup remains unverified as described above. Live Windows execution and broader account/layout coverage remain future checks.
 
 ## Mechanics references

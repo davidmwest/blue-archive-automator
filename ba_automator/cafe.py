@@ -287,12 +287,17 @@ class CafeRunner:
 
         def send(screen):
             nonlocal attempts
+            current_target = target
+            if source == "home" and destination == "cafe":
+                current_target = self.vision.home_entry_target(screen[2])
+                if current_target is None:
+                    self.fail("Cafe entry requires its visible label and both unobstructed home anchors")
             attempts += 1
             name = f"{evidence}-attempt-{attempts}.png"
             self.journal.save_image(name, screen[1])
             self.journal.record("navigation_attempt", source=source, destination=destination,
-                                attempt=attempts, frame=name)
-            self.tap(screen, target, detail)
+                                attempt=attempts, target=list(current_target), frame=name)
+            self.tap(screen, current_target, detail)
 
         send(cap)
         source_since = unknown_since = None
@@ -388,7 +393,7 @@ class CafeRunner:
         observation = self.startup.analyze(cap[1])
         if observation.state != "home":
             self.fail("Cafe requires an unobstructed home screen; run restart first")
-        self.navigate(cap, (100, 659), "Open Cafe from verified home",
+        self.navigate(cap, None, "Open Cafe from verified home",
                       source="home", destination="cafe")
 
     def move_to_floor(self, other):

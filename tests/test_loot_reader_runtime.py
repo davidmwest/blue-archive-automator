@@ -515,6 +515,54 @@ def test_optional_loot_failure_is_not_enabled_for_other_claim_tasks(harness, mon
     assert h.inputs == []
 
 
+@pytest.mark.parametrize("settles", [True, False])
+def test_tooltip_return_waits_for_card_animation_without_dismissing_receipt(harness, monkeypatch, settles):
+    h = harness
+    h.tip = "Credit Points"
+    h.pages = [lr.Page("reward", (card("Credit Points", 480),))]
+    read_page = lr.page
+
+    def animated_page(png, vision):
+        parsed = read_page(png, vision)
+        if parsed.kind == "reward" and (not settles or h.now < 4):
+            return lr.Page("reward")
+        return parsed
+
+    monkeypatch.setattr(lr, "page", animated_page)
+    reader = h.reader()
+    cap = reader.capture()
+    if settles:
+        result = reader.dismiss_tooltip(cap, "reward")
+        assert reader.read(result).cards and h.now >= 4
+    else:
+        with pytest.raises(TaskError, match="did not return"):
+            reader.dismiss_tooltip(cap, "reward")
+        assert h.now < 10
+    assert h.inputs == [("tap", (110, 530))]
+
+
+@pytest.mark.parametrize("failure", ["unknown", "foreign_foreground"])
+def test_tooltip_return_wait_never_taps_an_unrecognized_or_foreign_screen(harness, failure):
+    h = harness
+    h.tip = "Credit Points"
+    h.pages = [lr.Page("reward")]
+
+    def interrupt_animation(number):
+        if number >= 3:
+            if failure == "unknown":
+                h.unknown = True
+            else:
+                h.foreground = "com.android.settings"
+
+    h.on_capture = interrupt_animation
+    reader = h.reader()
+    cap = reader.capture()
+    with pytest.raises(TaskError, match="did not return|Foreground changed"):
+        reader.dismiss_tooltip(cap, "reward")
+    assert h.inputs == [("tap", (110, 530))]
+    assert h.now <= lr.TOOLTIP_RETURN_TIMEOUT + 1
+
+
 def test_optional_loot_failure_never_catches_device_or_storage_errors(harness, monkeypatch):
     h = harness
     original = optional_sweep_failure(h, monkeypatch)

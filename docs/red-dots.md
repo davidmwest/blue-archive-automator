@@ -11,7 +11,9 @@ when a job gets back home, check the home screen and Campaign for two stable vie
 | Total Assault in Campaign | available rank and total-points rewards |
 | Tactical Challenge in Campaign | time and daily rewards |
 
-there's a **collect red dots** button for a manual check, and **collect free pack** for the package alone. the scanner doesn't keep the game open or wake an idle emulator to poll. Cafe and the other scheduled visits give it chances to check.
+there's a **collect red dots** button for a manual check, and **collect free pack** for the package alone. periodic check-ins are on by default every 30 minutes; **settings → check in between jobs** lets you choose 5–1440 minutes or turn them off. a successful final scan after another job starts that timer again.
+
+scheduled check-ins launch the game on an already running emulator, then scan Home and Campaign through the same serial queue. they wait behind other work and respect pause, existing task eligibility, and spending holds. they don't run the whole Daily plan or enable paid purchases. the emulator, server, and host still need to be running; starting or waking them remains manual. the idle-close setting can close the game after the queue finishes. see [periodic check-ins](getting-started.md#periodic-check-ins) for timer persistence and retry behavior.
 
 free means free. the package handler recognizes **Free Daily Pack** and the separate **Cost: Free** confirmation. it cannot operate Google Play billing. paid renewals keep their own opt-in settings. missing labels, an unexpected screen, or a failed receipt stop the job and leave local screenshots.
 

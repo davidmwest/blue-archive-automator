@@ -292,6 +292,40 @@ def test_navigation_retries_only_a_verified_source(harness):
     assert h.device.taps == [(660,658),(660,658)]
 
 
+def test_home_entry_uses_fresh_label_target_and_accepts_delayed_navigation(harness):
+    h = harness
+    h.screens[:] = [CraftScreen('home', target=(658, 689)), CraftScreen('unknown'),
+                   CraftScreen('home', target=(660, 688)), listing('empty', 'empty', 'empty')]
+    assert h.runner.navigate('home', 'list').screen.kind == 'list'
+    assert h.device.taps == [(658, 689), (660, 688)]
+
+
+def test_unreadable_crafting_label_cannot_authorize_home_input(harness):
+    h = harness
+    h.screens[:] = [CraftScreen('home')]
+    with pytest.raises(TaskError, match='expected home, list'):
+        h.runner.navigate('home', 'list')
+    assert not h.device.taps
+    assert h.runner.state['pending_action'] is None
+
+
+def test_repeated_ignored_crafting_label_taps_remain_bounded(harness):
+    h = harness
+    h.screens[:] = [CraftScreen('home', target=(658, 689))]
+    with pytest.raises(TaskError, match='expected list'):
+        h.runner.navigate('home', 'list')
+    assert h.device.taps == [(658, 689)] * 3
+    assert h.runner.state['pending_action'] is None
+    assert not actions(h.config)
+
+
+def test_home_entry_does_not_tap_after_destination_is_recognized(harness):
+    h = harness
+    h.screens[:] = [listing('empty', 'empty', 'empty')]
+    assert h.runner.navigate('home', 'list').screen.kind == 'list'
+    assert not h.device.taps
+
+
 def test_lock_and_wrong_resolution_block_input(harness):
     h = harness
     with InstanceLock(h.config), pytest.raises(RuntimeError, match='lock'):

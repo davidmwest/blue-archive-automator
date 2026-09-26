@@ -1,8 +1,9 @@
 """Local, fixed English recognition for Bounty and Scrimmage sweeps."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import re
-from .vision import decode_frame
+import cv2
+from .vision import Word, decode_frame
 from .crafting_vision import within, number, bright, cyan
 from .shop_vision import has, text_in
 from .ap_vision import APStage, ap_value, gold, mission_stars, classify_ap
@@ -115,15 +116,22 @@ def classify_tickets(frame, words, *, home=False):
         )
         index = number(words, (125, 185, 195, 240))
         count = number(words, (904, 277, 970, 330))
-        projection = text_in(words, (855, 337, 1108, 384)).replace(" ", "")
+        # Scrimmage's AP and ticket projections can be separate OCR words.
+        # Preserve their boundary: joining 643→643 and 15→14 makes the middle
+        # digits ambiguous, and a greedy match can invent AP 6431 / tickets 5.
+        projection = " ".join(
+            word.text for word in sorted(
+                within(words, (855, 337, 1108, 384)), key=lambda word: word.box[0]
+            )
+        ).strip()
         # The exhausted selector displays an explicit 0 -> dash, quantity zero.
         # This is a read-only balance observation; it never supplies a tap target.
-        if count and count[0] == 0 and projection.endswith("0→-"):
-            projection = projection[:-1] + "0"
+        if count and count[0] == 0:
+            projection = re.sub(r"0\s*→\s*-$", "0→0", projection)
         pattern = (
-            r"[^0-9]*(\d+)→(\d+)"
+            r"[^0-9]*(\d+)\s*→\s*(\d+)"
             if task == "bounties"
-            else r"[^0-9]*(\d+)→(\d+)\|?[^0-9]*(\d+)→(\d+)"
+            else r"[^0-9]*(\d+)\s*→\s*(\d+)(?:\s*\|\s*|\s+)[^0-9]*(\d+)\s*→\s*(\d+)"
         )
         projected = re.fullmatch(pattern, projection)
         if not (match and index and count and projected and ap is not None):
@@ -240,4 +248,47 @@ class TicketVision:
         frame = decode_frame(png)
         words = self.startup.read(frame)
         home = {"home_left", "home_right"} <= self.startup.matches(frame).keys()
-        return classify_tickets(frame, words, home=home)
+        screen = classify_tickets(frame, words, home=home)
+        if screen.kind != "unknown" or number(words, (904, 277, 970, 330)) != (0,):
+            return screen
+        # Whole-frame OCR can omit part or all of the exhausted ticket label.
+        # Recovery needs agreeing enlarged observations; a zero quantity alone
+        # is not evidence that the ticket balance is zero.
+        candidates = [
+            word for word in within(words, (1030, 337, 1108, 384))
+            if re.fullmatch(r"0\s*→", word.text.strip())
+        ]
+        missing_scrimmage_projection = (
+            not within(words, (1030, 337, 1108, 384))
+            and has(words, "scrimmage", (80, 0, 310, 55))
+        )
+        if len(candidates) == 1:
+            candidate = candidates[0]
+            recovered_words = [
+                replace(word, text="0→-") if word is candidate else word
+                for word in words
+            ]
+            crop = frame[341:392, 1010:1105]
+        elif missing_scrimmage_projection:
+            # Scrimmage may omit the entire exhausted ticket projection. Its
+            # AP projection must still independently prove no resource change.
+            recovered_words = [*words, Word("0→-", 1.0, (1040, 348, 1093, 378))]
+            # Exclude the ticket icon and neighboring AP digits; leave blank
+            # margin so the dash is not confused with the bubble's edge.
+            crop = cv2.copyMakeBorder(frame[348:378, 1040:1093], 8, 8, 8, 8,
+                                      cv2.BORDER_CONSTANT, value=(255, 255, 255))
+        else:
+            return screen
+        recovered = classify_tickets(frame, recovered_words)
+        if (recovered.kind, recovered.count, recovered.tickets,
+                recovered.after_tickets, recovered.target) != ("detail", 0, 0, 0, None):
+            return screen
+        # Both scales must independently read the complete zero projection.
+        for scale in (2, 3):
+            enlarged = cv2.resize(crop, None, fx=scale, fy=scale,
+                                  interpolation=cv2.INTER_CUBIC)
+            observed = self.startup.read(enlarged)
+            if (len(observed) != 1 or observed[0].confidence < .9
+                    or not re.fullmatch(r"0\s*→\s*-", observed[0].text.strip())):
+                return screen
+        return recovered

@@ -3,9 +3,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const SVG_NS = "http://www.w3.org/2000/svg";
-  const booleanSettings = new Set(["daily_schedule_enabled", "total_assault_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "auto_download", "crafting_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle", "lessons_enabled_in_daily"]);
+  const booleanSettings = new Set(["checkin_schedule_enabled", "daily_schedule_enabled", "total_assault_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "auto_download", "crafting_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle", "lessons_enabled_in_daily"]);
   const stringSettings = new Set(["total_assault_difficulty", "cafe_invite_student", "lessons_strategy"]);
-  const settingNames = ["daily_schedule_enabled", "daily_reset_delay_minutes", "total_assault_enabled_in_daily", "total_assault_difficulty", "total_assault_comfort_seconds", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "ap_floor","packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "packs_monthly_max_cents", "packs_half_monthly_max_cents", "packs_ap_max_cents", "auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "crafting_schedule_enabled", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
+  const settingNames = ["checkin_schedule_enabled", "checkin_interval_minutes", "daily_schedule_enabled", "daily_reset_delay_minutes", "total_assault_enabled_in_daily", "total_assault_difficulty", "total_assault_comfort_seconds", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily", "ap_floor","packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "packs_monthly_max_cents", "packs_half_monthly_max_cents", "packs_ap_max_cents", "auto_download", "poll_interval", "startup_timeout", "download_timeout", "unknown_timeout", "crafting_schedule_enabled", "close_app_when_idle", "cafe_schedule_enabled", "cafe_invite_enabled", "cafe_invite_student", "lessons_strategy", "lessons_max_tickets", "lessons_locations", "lessons_enabled_in_daily"];
   const fields = Object.fromEntries(settingNames.map((name) => [name, $(name.replaceAll("_", "-"))]));
   let status = null;
   let connected = false;
@@ -35,6 +35,7 @@
   let noticeTimer = null;
 
   const taskName = (task) => ({ total_assault: "Total Assault", assault_rewards: "Total Assault rewards", tactical_rewards: "Tactical rewards", red_dots: "Collect red dots", free_pack: "Free pack + mail", tasks: "Collect Tasks", bounties: "Bounties", scrimmages: "Scrimmages", spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
+  const jobName = (job) => job?.source === "checkin" && job?.task === "red_dots" ? "Check-in" : taskName(job?.task);
   const isRunning = () => Boolean(status && (status.state === "running" || status.current_job));
   const queue = () => (Array.isArray(status?.queue) ? status.queue : []);
   const isDemo = () => status?.demo === true;
@@ -108,8 +109,34 @@
     summary.textContent = notes.join(" · ");
   }
 
+  function renderCheckinSchedule() {
+    const schedule = status?.schedule?.checkin;
+    const enabled = schedule?.enabled ?? status?.config?.checkin_schedule_enabled ?? false;
+    const interval = schedule?.interval_minutes ?? status?.config?.checkin_interval_minutes ?? 30;
+    const isCheckin = (job) => job?.task === "red_dots" && job?.source === "checkin";
+    const running = isCheckin(status?.current_job);
+    const queued = queue().some(isCheckin);
+    const next = dateValue(schedule?.next_due_at);
+    const last = dateValue(schedule?.last_success_at);
+    const notes = [];
+    $("checkin-schedule-title").textContent = enabled ? "next check-in" : "check-in schedule";
+    if (running) notes.push("checking red dots and AP now");
+    else if (queued) notes.push(status?.queue_paused ? "queued · waiting for resume" : "queued · runs in order");
+    else if (schedule?.blocked_reason) notes.push(`needs a look: ${schedule.blocked_reason}`);
+    else if (["failed", "stopped"].includes(schedule?.status)) notes.push("last check didn't finish · see the log");
+    else if (last) notes.push(`last checked ${last.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`);
+    if (!enabled) notes.push("schedule off");
+    else if (!running && !queued) {
+      if (next && next.getTime() <= Date.now()) notes.push(status?.queue_paused ? "due now · queue is paused" : "due now · goes in the queue");
+      else if (next) notes.push(`next: ${next.toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}${status?.queue_paused ? " · queue is paused" : ""}`);
+      else notes.push(status?.queue_paused ? "waiting for resume" : `every ${interval} minutes · waiting for the next check`);
+    }
+    $("checkin-schedule-status").textContent = notes.join(" · ");
+  }
+
   function renderSchedule() {
     renderDailySchedule();
+    renderCheckinSchedule();
     const crafting = status?.schedule?.crafting;
     const craftEnabled = crafting?.enabled ?? status?.config?.crafting_schedule_enabled ?? false;
     $("crafting-status").textContent = crafting?.disabled_reason
@@ -196,6 +223,7 @@
     $("settings-fields").disabled = unavailable || active || queued;
     $("settings-lock-note").hidden = !active && !queued;
     $("save-settings").disabled = unavailable || active || queued || !settingsDirty;
+    fields.checkin_interval_minutes.disabled = !fields.checkin_schedule_enabled.checked;
     fields.cafe_invite_student.disabled = unavailable || !fields.cafe_invite_enabled.checked;
     $("lessons-strategy-description").textContent = fields.lessons_strategy.value === "school_rank"
       ? "lowest rank first, then lowest XP. recheck after each ticket. pick the room with the most students; higher owned relationships break ties."
@@ -215,10 +243,10 @@
   function renderSettings(config) {
     if (!config || (settingsLoaded && settingsDirty)) return;
     settingNames.forEach((name) => {
-      if (booleanSettings.has(name)) fields[name].checked = Boolean(config[name] ?? (["lessons_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily"].includes(name)));
+      if (booleanSettings.has(name)) fields[name].checked = Boolean(config[name] ?? (["checkin_schedule_enabled", "lessons_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily"].includes(name)));
       else if (name.endsWith("_max_cents")) fields[name].value = ((config[name] ?? (name.includes("half_monthly") || name.includes("_ap_") ? 299 : 699)) / 100).toFixed(2);
       else if (name === "lessons_locations") fields[name].value = Array.isArray(config[name]) ? config[name].join("\n") : "";
-      else fields[name].value = config[name] ?? ({ daily_reset_delay_minutes: 1, total_assault_difficulty: "hardcore", total_assault_comfort_seconds: 30, ap_floor: 100, lessons_strategy: "relationship", lessons_max_tickets: 0 }[name] ?? "");
+      else fields[name].value = config[name] ?? ({ checkin_interval_minutes: 30, daily_reset_delay_minutes: 1, total_assault_difficulty: "hardcore", total_assault_comfort_seconds: 30, ap_floor: 100, lessons_strategy: "relationship", lessons_max_tickets: 0 }[name] ?? "");
     });
     settingsLoaded = true;
     $("settings-status").textContent = isDemo() ? "sample settings · read only" : "saved on this machine";
@@ -234,7 +262,7 @@
     $("nav-queue-count").hidden = waiting.length === 0;
     stateBadge($("queue-state"), paused ? "paused" : running ? "running" : "neutral", paused ? "Paused" : running ? "Running" : "Ready");
     $("current-job").hidden = !running;
-    $("current-job-title").textContent = taskName(current?.task || status.task);
+    $("current-job-title").textContent = current ? jobName(current) : taskName(status.task);
     $("current-job-phase").textContent = status.phase || "Starting task";
     $("queue-empty").hidden = waiting.length > 0;
     $("queue-empty").querySelector("strong").textContent = paused ? "queue’s paused." : running ? "nothing queued after this." : "nothing queued.";
@@ -255,7 +283,7 @@
       const main = document.createElement("div");
       main.className = "queue-item-main";
       const title = document.createElement("strong");
-      title.textContent = taskName(job.task);
+      title.textContent = jobName(job);
       const subtitle = document.createElement("small");
       subtitle.textContent = `Added ${shortTime(job.created_at)}`;
       main.append(title, subtitle);
@@ -263,7 +291,7 @@
       cancel.type = "button";
       cancel.className = "icon-button";
       cancel.dataset.cancelJob = job.id;
-      cancel.setAttribute("aria-label", `Cancel queued ${taskName(job.task)} at position ${index + 1}`);
+      cancel.setAttribute("aria-label", `Cancel queued ${jobName(job)} at position ${index + 1}`);
       cancel.title = "Remove from queue";
       cancel.textContent = "×";
       item.append(position, main, cancel);
@@ -310,7 +338,7 @@
     [...history].sort((a, b) => (dateValue(b.completed_at)?.getTime() || 0) - (dateValue(a.completed_at)?.getTime() || 0)).slice(0, 5).forEach((job) => {
       const item = document.createElement("li");
       const title = document.createElement("strong");
-      title.textContent = taskName(job.task);
+      title.textContent = jobName(job);
       const timestamp = document.createElement("time");
       timestamp.textContent = shortTime(job.completed_at);
       if (dateValue(job.completed_at)) timestamp.dateTime = job.completed_at;
@@ -371,7 +399,7 @@
     const running = isRunning();
     stateBadge($("state-badge"), status.state, ({ disabled: "Disabled", deferred: "Awaiting reset test", idle: "Ready", running: "Running", success: status.task === "restart" && !status.app_closed ? "Home reached" : "Completed", failed: "Needs attention", stopped: "Stopped" }[status.state] || status.state));
     $("run-phase").textContent = status.phase || "close the game, open it again, get to home. deal with the popups on the way.";
-    $("current-task").textContent = running ? taskName(status.current_job?.task || status.task) : "None running";
+    $("current-task").textContent = running ? (status.current_job ? jobName(status.current_job) : taskName(status.task)) : "None running";
     $("device-serial").textContent = status.config?.serial || "—";
     $("sidebar-serial").textContent = status.config?.serial || "Not configured";
     renderElapsed();

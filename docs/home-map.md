@@ -6,12 +6,12 @@ All listed home controls were visually checked against a clear staging screensho
 
 | Home control | Center | Navigation status |
 | --- | --- | --- |
-| Cafe | `(100,659)` | Destination verified |
+| Cafe | `(97,691)` | Label target; destination verified |
 | Lesson | `(210,659)` | Destination verified |
 | Students | `(323,659)` | Position verified |
 | Formation | `(436,659)` | Position verified |
 | Social | `(548,659)` | Position verified |
-| Crafting | `(659,659)` | Position verified |
+| Crafting | `(658,689)` | Label target; destination verified |
 | Shop | `(769,659)` | Position verified |
 | Recruit | `(877,659)` | Position verified |
 | Event Recap | `(1063,617)` | Position verified; permanent archive |
@@ -23,7 +23,7 @@ All listed home controls were visually checked against a clear staging screensho
 | Menu | `(1226,36)` | Position verified |
 | Rotating event banner | `(1193,207)` | Position verified; card identity changes |
 
-After a September 25 startup, Home looked ready but Campaign did not respond to either a normal tap or a 150 ms press. The same normal tap succeeded about 28 seconds later; the underlying cause is unconfirmed. Home → Campaign now checks the destination after each attempt and, if Home is still recognized, waits ten seconds before its next freshly verified attempt. It keeps the three-tap limit and returns immediately when Campaign opens. A queued Spend AP run subsequently opened Campaign on a delayed retry and reached Hard missions. Other navigation routes are unchanged.
+After a September 25 startup, Home looked ready but Campaign did not respond to either a normal tap or a 150 ms press. The same normal tap succeeded about 28 seconds later; the underlying cause is unconfirmed. Home → Campaign now checks the destination after each attempt and, if Home is still recognized, waits ten seconds before its next freshly verified attempt. It keeps the three-tap limit and returns immediately when Campaign opens. A queued Spend AP run subsequently opened Campaign on a delayed retry and reached Hard missions. September 26 live checks also verified the Cafe and Crafting text-label targets after saved failures showed ignored taps on their illustrations. Each runner recognizes the label again before sending input.
 
 Campaign contains Mission, Story, Bounty, Commissions, Scrimmage, Total Assault, Joint Firing Drill, Grand Assault, Tactical Challenge, and Final Restriction Release in the current screenshot. Mission is near `(821,232)`; the Spend AP job has verified this route into Hard missions. Home's Tasks control is separate from playable missions.
 

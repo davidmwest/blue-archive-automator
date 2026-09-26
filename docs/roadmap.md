@@ -24,7 +24,7 @@ An optional setting closes Blue Archive after the last dashboard job exits and t
 
 `cafe` runs restart → Club → mail → Cafe, followed by Spend AP when enabled. The Cafe routine collects earnings, checks students across both unlocked floors, and returns home; Daily uses the same routine before its ticket and lesson work. A live full run completed in **425.5 seconds**, recognized empty earnings, verified measured scans and camera boundaries on both floors, returned home, and closed the game. Earlier receipts verified **81 AP and 73,957 credits**, then **16 AP and 14,791 credits**; relationship hearts and rank-up screens were also verified. The full passing run recorded zero new relationship increases.
 
-Continue validation with repeat visits after the relationship cooldown, occluded/disappearing attention markers across more layouts, and interruption. Report scan completion separately from confirmed student interactions. Keep invitations and scheduling off by default until explicitly enabled.
+Continue validation with repeat visits after the relationship cooldown, occluded/disappearing attention markers across more layouts, and interruption. Report scan completion separately from confirmed student interactions. Keep invitations and Cafe scheduling off by default until explicitly enabled.
 
 The runner measures scene displacement, scans overlapping views, and requires two observed stationary drags to establish camera bounds, within a 15-minute visit budget. Unmeasurable movement triggers an intermediate student scan and resets distance/boundary evidence before another short drag. Camera movement also passed a separate check in another player's furniture layout. The runner has no zoom dependency. The Gift panel was inspected, and no bulk relationship-collection button was verified.
 
@@ -76,6 +76,8 @@ Keep extending one routine at a time, with recognized entry/exit states, bounded
 
 Daily-reset scheduling queues the full Daily plan once per Global game day after 19:00 UTC plus a configurable delay. It catches up on the current game day after downtime and persists an occurrence before dispatch to suppress automatic repeats after completion, failure, or interruption. An explicit manual dashboard Daily can retry reviewed work; cancelling a scheduled run skips that day's occurrence. Queue pause is respected. This scheduling policy has offline coverage; a complete unattended reset-to-finished-plan run still needs live validation.
 
+Periodic red-dot/AP check-ins are implemented and on by default every 30 minutes, configurable from 5–1440 minutes or disabled. Successful final scans from other jobs cover the interval. Persisted deadlines, one-visit catch-up, and retry-after-interval behavior use the existing serial queue without bypassing pause or resource holds. Timer behavior has offline coverage; an unattended timer-triggered visit remains to be verified live. Emulator and host startup remain manual. See [periodic check-ins](getting-started.md#periodic-check-ins).
+
 Cafe cooldowns, craft deadlines, optional pack checks, and hourly AP checks keep their own schedules. General queue restoration and per-step Daily resumption remain future work. Add SQLite history, richer task dependencies, or account-level coordination when their use cases exist.
 
 Platform-specific emulator discovery/start/stop, packaging, and optional system-service installation follow reliable task execution. The current server must be launched and kept running manually.
@@ -86,7 +88,7 @@ Quick Craft has a guarded affordable-batch runner and per-instance durable colle
 
 ## AP spending
 
-A dedicated planning page provides a minimum AP floor, report/credit commission policies, and an editable Hard-stage round robin. The runner scans three-star clears, reads live costs, verifies every spending confirmation and receipt, and retains a durable rotation cursor and unresolved spend intent. Optional hourly visits and follow-ups after Cafe/Mail use the existing serial queue. See [Spend AP](spend-ap.md) for setup and validation status.
+A dedicated planning page provides a minimum AP floor, report/credit commission policies, and an editable Hard-stage round robin. The runner scans three-star clears, reads live costs, verifies every spending confirmation and receipt, and retains a durable rotation cursor and unresolved spend intent. Optional hourly visits and follow-ups after Cafe/Mail use the existing serial queue; periodic check-ins can queue an earlier visit when they observe eligible excess AP. See [Spend AP](spend-ap.md) for setup and validation status.
 
 ## Loot and daily logs
 

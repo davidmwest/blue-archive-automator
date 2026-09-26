@@ -2,17 +2,17 @@
 
 See [the high-level design](design.md) for the project direction and planned contracts. This document describes the implementation that exists today.
 
-Status: the local dashboard dispatches restart, Cafe, Lessons, Club, reward collection, ticket sweeps, AP spending, and Crafting through one queue. Schedule state, important actions, loot receipts, and daily text logs persist locally. Live validation covers the main Mac routines, including an automatic free invitation; task guides distinguish verified paths from offline-only cases. Actual school rank-up handling and live Windows operation remain unverified. Development session: September 23–25, 2026.
+Status: the local dashboard dispatches restart, Cafe, Lessons, Club, reward collection, ticket sweeps, AP spending, and Crafting through one queue. Schedule state, important actions, loot receipts, and daily text logs persist locally. Live validation covers the main Mac routines, including an automatic free invitation; task guides distinguish verified paths from offline-only cases. Actual school rank-up handling and live Windows operation remain unverified. Development session: September 23–26, 2026.
 
 ## Runtime
 
 The Python 3.11+ core controls one explicit ADB endpoint. The initial profile is global English Blue Archive (`com.nexon.bluearchive`) at 1280×720 landscape and 320 DPI, running in BlueStacks Air on Apple Silicon macOS. BlueStacks 5 on Windows is the portability target; its live smoke test remains outstanding. The emulator instance must already be running.
 
-`restart` force-stops and launches Blue Archive, reuses its existing session, handles recognized startup states, and verifies a clear home screen. `tasks.py` owns the ordered plans. `daily` runs restart → Club → free pack → optional paid packs → mail → Cafe → Bounties → Scrimmages → Tactical Challenge rewards → Lessons → optional Total Assault → optional Spend AP → Tasks rewards. Bounties, Scrimmages, and Lessons have individual daily-inclusion settings; Total Assault, paid packs, and automatic AP spending are off by default. Failure stops the sequence.
+`restart` force-stops and launches Blue Archive, reuses its existing session, handles recognized startup states, and verifies a clear home screen. `tasks.py` owns the ordered plans. `daily` runs restart → Club → free pack → optional paid packs → mail → Cafe → Bounties → Scrimmages → Tactical Challenge rewards → Lessons → optional Total Assault → optional Spend AP → Tasks rewards. Bounties, Scrimmages, and Lessons have individual daily-inclusion settings; Total Assault, paid packs, and automatic AP spending are off by default. After an isolated task failure, Daily attempts bounded recovery to home and continues independent steps. A stop request or failed recovery ends the plan; unresolved spending remains held for the affected task.
 
 `cafe` runs restart → Club → mail → Cafe, followed by Spend AP when enabled; `lessons` runs restart → Lessons. All successful task plans finish with a home-notification scan. The dashboard turns recognized red dots and eligible excess AP into serial follow-up jobs. Standalone Club and free-pack jobs collect mail after their own actions.
 
-`serve` provides a loopback dashboard at `127.0.0.1:8765`. It dispatches the same CLI tasks through a serial queue, with optional Cafe, Crafting, AP, and paid-pack schedules. There is no installed operating-system service, emulator start/stop manager, or cloud inference dependency.
+`serve` provides a loopback dashboard at `127.0.0.1:8765`. It dispatches the same CLI tasks through a serial queue, with periodic check-ins and optional Daily, Cafe, Crafting, AP, and paid-pack schedules. There is no installed operating-system service, emulator start/stop manager, or cloud inference dependency.
 
 ```mermaid
 flowchart TD
@@ -57,6 +57,7 @@ flowchart TD
 | `packs.py`, `packs_state.py`, `mail.py`, `shop_runtime.py`, `shop_vision.py` | Opt-in paid-pack policy, durable purchase holds, verified mail collection, and shared shop navigation |
 | `free_pack.py`, `task_rewards.py`, `task_rewards_vision.py`, `tactical_rewards.py` | Guarded collection of free packs, completed Tasks, and Tactical Challenge rewards; battles remain a no-input stub |
 | `home_badges.py`, `red_dots.py` | Home notification recognition and duplicate-suppressed follow-up requests, including excess AP |
+| `checkin_schedule.py` | Per-instance periodic check-in deadlines, validation, and atomic state persistence |
 | `lesson_planner.py` | Pure relationship and school-rank policy over observed locations, rooms, ownership, and relationship ranks |
 | `runtime.py` | Shared fresh-capture contract, task result/error, screenshot ring, and durable run journal |
 | `events.py` | Strict event-profile validation and read-only entrance/destination matching; no event task |
@@ -130,6 +131,8 @@ The dashboard binds to loopback and launches one task subprocess at a time. Each
 
 Pause allows the current job to finish and blocks dispatch. Stop interrupts the current job and pauses the queue. Resume permits queued work and clears the scheduler's retry pause. Waiting jobs can be canceled. Settings cannot be changed while jobs are active or queued.
 
+Periodic check-ins default to every 30 minutes under `[checkin]`, with a configurable interval of 5–1440 minutes or an off switch. A due visit uses the existing `red_dots` plan: restart the game on the running emulator, scan Home and Campaign, and queue eligible reward/AP follow-ups. A successful final scan from another job also restarts the interval. The per-instance deadline persists before dispatch; downtime produces at most one overdue visit, while failed or interrupted checks wait another interval. Check-ins respect the serial queue, pause, task eligibility, and spending holds. Invalid timer state holds only check-ins and appears in the queue schedule summary. Host and emulator startup remain manual.
+
 Crafting scheduling is separately enabled and off by default. The dispatcher reads durable slot deadlines and combines currently due slots into one queued Crafting visit. It reconstructs overdue work after restart; failed runs back off 15 minutes and pause after three failures. Setup disables remain separate from retry pauses.
 
 Cafe scheduling is explicitly enabled and off by default. A successful cafe job or verified Cafe step within daily records the next due time three hours and 15 seconds later. A later Lessons failure or interruption does not undo the completed Cafe visit. A Cafe failure sets a 15-minute retry; three consecutive failures pause retries until Resume. Pending cafe/daily work prevents a duplicate scheduled cafe job. Canceling a scheduled occurrence skips that occurrence instead of immediately recreating it.
@@ -154,6 +157,7 @@ Storage paths are relative to the TOML file. With the example configuration:
 | `data/state/logs/YYYY-MM-DD.log` | Full daily text log with local timestamps, task diagnostics, actions, and queue events |
 | `data/state/schedule.json` | Cafe due time and Cafe/Crafting failure counts, retry pauses, and backoff |
 | `data/state/daily-<instance hash>.json` | Latest Daily game-day occurrence, run identity, timestamps, and outcome |
+| `data/state/checkin-<instance hash>.json` | Next periodic check-in deadline, visit timestamps, and last result |
 | `data/state/crafting-<instance hash>.json` | Craft slot deadlines, inventory recheck time, setup-disable reason, and pending action |
 | `data/state/club-<instance hash>.json` | Verified Club attendance check for the current game day |
 | `data/state/ap-<instance hash>.json` | Stage catalog, Hard-stage rotation, spending hold, and next AP check |

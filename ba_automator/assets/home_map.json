@@ -7,8 +7,8 @@
       "id": "cafe",
       "label": "Cafe",
       "center": [
-        100,
-        659
+        97,
+        691
       ],
       "bounds": [
         60,
@@ -122,8 +122,8 @@
       "id": "crafting",
       "label": "Crafting",
       "center": [
-        659,
-        659
+        658,
+        689
       ],
       "bounds": [
         610,
@@ -136,10 +136,10 @@
         "home",
         "crafting"
       ],
-      "verified": false,
+      "verified": true,
       "description": "Home → Crafting",
       "visual_verified": true,
-      "route_verified": false
+      "route_verified": true
     },
     {
       "id": "shop",

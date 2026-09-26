@@ -99,13 +99,14 @@ class CraftingRunner:
         self.actions += 1
         self.sleep(.5)
 
-    def navigate(self, source, destination, target):
+    def navigate(self, source, destination, target=None):
         """Retry navigation only while its source is freshly recognized."""
         for attempt in range(3):
-            frame = self.wait({source, destination})
+            frame = self.wait({source, destination}, predicate=lambda screen:
+                              screen.kind == destination or target is not None or screen.target is not None)
             if frame.screen.kind == destination:
                 return frame
-            self.tap(frame, target, f'Open {destination}')
+            self.tap(frame, target if target is not None else frame.screen.target, f'Open {destination}')
             self.sleep(2)
         return self.wait(destination)
 
@@ -267,7 +268,7 @@ class CraftingRunner:
                 self.device.verify_package()
                 if self.device.display_size() != (1280, 720):
                     self.fail('Crafting requires the 1280×720 display profile')
-                frame = self.navigate('home', 'list', (660, 658))
+                frame = self.navigate('home', 'list')
                 frame = self.settled_list()
                 self.reconcile(frame)
                 self.state['disabled_reason'] = None

@@ -155,6 +155,43 @@ def detail(**kwargs):
     return TicketScreen(**(values | kwargs))
 
 
+def test_quantity_recovers_observed_overshoot_without_spending(runner):
+    counts = iter([2, 3, 4, 7, 1, 2, 3, 4, 5])
+    taps = []
+    runner.tap = lambda frame, target, detail: taps.append(target)
+
+    def wait(kind, *, predicate):
+        count = next(counts)
+        observed = detail(count=count, after_tickets=15 - count)
+        assert kind == "detail" and predicate(observed)
+        assert not predicate(replace(observed, area="Classroom"))
+        return frame(runner, observed)
+
+    runner.wait = wait
+    observed = runner.quantity(frame(runner, detail(count=1, after_tickets=14)), 5)
+    assert observed.screen.count == 5
+    assert taps == [(1015, 300)] * 4 + [(788, 300)] + [(1015, 300)] * 4
+    assert runner.state["pending"] is None
+
+
+def test_repeated_quantity_overshoot_stops_after_bounded_adjustments(runner):
+    taps = []
+    runner.tap = lambda frame, target, detail: taps.append(target)
+
+    def wait(kind, *, predicate):
+        count = 7 if taps[-1] == (1015, 300) else 1
+        observed = detail(count=count, after_tickets=15 - count)
+        assert predicate(observed)
+        return frame(runner, observed)
+
+    runner.wait = wait
+    with pytest.raises(TaskError, match="quantity did not settle"):
+        runner.quantity(frame(runner, detail(count=1, after_tickets=14)), 5)
+    assert len(taps) == 18
+    assert set(taps) == {(1015, 300), (788, 300)}
+    assert runner.state["pending"] is None
+
+
 @pytest.mark.parametrize(
     "s,count",
     [
@@ -367,6 +404,44 @@ def test_scrimmage_reads_nonzero_ap_cost_and_rejects_inconsistent_projection(vis
     assert classify_tickets(frame, bad).kind == "unknown"
 
 
+def test_real_split_scrimmage_projection_preserves_both_resource_counters(vision):
+    png = (Path(__file__).parent / "fixtures/tickets-scrimmage-split-projection.png").read_bytes()
+    screen = vision.analyze(png)
+    assert (screen.kind, screen.task, screen.area, screen.stage) == (
+        "detail", "scrimmages", "Trinity", "B"
+    )
+    assert (screen.ap, screen.after_ap, screen.tickets, screen.after_tickets,
+            screen.count, screen.ap_cost, screen.stars) == (643, 643, 15, 14, 1, 0, 3)
+    frame = decode_frame(png)
+    words = vision.startup.read(frame)
+    paid = [replace(w, text="643→628") if w.text == "643→643" else w for w in words]
+    assert classify_tickets(frame, paid).ap_cost == 15
+    inconsistent = [replace(w, text="15→13") if w.text == "15→14" else w for w in words]
+    assert classify_tickets(frame, inconsistent).kind == "unknown"
+
+
+def test_scrimmage_rejects_projection_with_no_resource_boundary(vision):
+    from ba_automator.vision import Word
+    from ba_automator.crafting_vision import within
+
+    png = (Path(__file__).parent / "fixtures/tickets-scrimmage-split-projection.png").read_bytes()
+    frame = decode_frame(png)
+    words = vision.startup.read(frame)
+    projection = within(words, (855, 337, 1108, 384))
+    words = [word for word in words if word not in projection]
+    words.append(Word("643→64315→14", .99, (874, 347, 1097, 378)))
+    assert classify_tickets(frame, words).kind == "unknown"
+
+
+def test_real_bounty_quantity_jump_remains_readable_before_confirmation(vision):
+    png = (Path(__file__).parent / "fixtures/tickets-bounty-quantity-seven.png").read_bytes()
+    screen = vision.analyze(png)
+    assert (screen.kind, screen.task, screen.area, screen.stage) == (
+        "detail", "bounties", "Desert Railroad", "H"
+    )
+    assert (screen.tickets, screen.after_tickets, screen.count, screen.ap_cost) == (10, 3, 7, 0)
+
+
 def test_scrimmage_paid_ap_confirmation(vision):
     png = (
         Path(__file__).parent / "fixtures/tickets-scrimmage-confirm.png"
@@ -453,3 +528,221 @@ def test_exhausted_scrimmage_receipt_and_zero_selector(vision, name):
         )
     else:
         assert (s.kind, s.task, s.count) == ("receipt", "scrimmages", 5)
+
+
+def test_exhausted_scrimmage_preserves_spaced_zero_arrow(vision):
+    png = (Path(__file__).parent / "fixtures/tickets-scrimmage-zero.png").read_bytes()
+    frame = decode_frame(png)
+    words = [replace(w, text=w.text.replace("0→-", "0 → -"))
+             for w in vision.startup.read(frame)]
+    screen = classify_tickets(frame, words)
+    assert (screen.kind, screen.count, screen.tickets, screen.after_tickets, screen.target) == (
+        "detail", 0, 0, 0, None,
+    )
+
+
+@pytest.fixture(scope="module")
+def bounty_zero_selector(vision):
+    import json
+    from ba_automator.vision import Word
+
+    png = (Path(__file__).parent / "fixtures/tickets-bounty-zero-selector.png").read_bytes()
+    observed = json.loads((Path(__file__).parent / "fixtures/tickets-bounty-zero-selector.json").read_text())
+    return png, [Word(**word) for word in observed["words"]]
+
+
+def test_real_exhausted_bounty_recovers_omitted_projection_dash(vision, bounty_zero_selector):
+    png, words = bounty_zero_selector
+    assert classify_tickets(decode_frame(png), words).kind == "unknown"
+    # Masking unrelated pixels changes full-frame OCR. Replay the original
+    # sanitized observations while running actual OCR on both unchanged crops.
+    class Startup:
+        def __init__(self):
+            self.crops = []
+
+        def read(self, frame):
+            if frame.shape[:2] == (720, 1280):
+                return words
+            self.crops.append(frame.shape[:2])
+            return vision.startup.read(frame)
+
+        def matches(self, frame):
+            return {}
+
+    startup = Startup()
+    screen = TicketVision(startup).analyze(png)
+    assert startup.crops == [(102, 190), (153, 285)]
+    assert (screen.kind, screen.task, screen.area, screen.stage) == (
+        "detail", "bounties", "Classroom", "H",
+    )
+    assert (screen.ap, screen.after_ap, screen.count, screen.tickets,
+            screen.after_tickets, screen.target) == (740, 740, 0, 0, 0, None)
+    assert vision.analyze(png) == screen
+
+
+@pytest.mark.parametrize("readings", [
+    [[], []],
+    [[("0→-", .99)], [("0→1", .99)]],
+    [[("0→-", .99)], [("0→-", .89)]],
+    [[("0→", .99)], [("0→-", .99)]],
+    [[("0→-", .99), ("1", .99)], [("0→-", .99)]],
+])
+def test_exhausted_bounty_fallback_rejects_unproven_zero(bounty_zero_selector, readings):
+    from ba_automator.vision import Word
+
+    png, words = bounty_zero_selector
+
+    class Startup:
+        def __init__(self):
+            self.crops = iter(readings)
+
+        def read(self, frame):
+            if frame.shape[:2] == (720, 1280):
+                return words
+            return [Word(text, confidence, (0, 0, 100, 30))
+                    for text, confidence in next(self.crops)]
+
+        def matches(self, frame):
+            return {}
+
+    assert TicketVision(Startup()).analyze(png).kind == "unknown"
+
+
+@pytest.mark.parametrize("change", ["nonzero_quantity", "no_ap", "wrong_stage", "no_heading"])
+def test_exhausted_bounty_fallback_requires_complete_readonly_detail(bounty_zero_selector, change):
+    from ba_automator.crafting_vision import within
+
+    png, original = bounty_zero_selector
+    words = original
+    if change == "nonzero_quantity":
+        count = within(words, (904, 277, 970, 330))
+        words = [replace(word, text="1") if word in count else word for word in words]
+    elif change == "no_ap":
+        words = [word for word in words if "/218" not in word.text]
+    elif change == "wrong_stage":
+        words = [replace(word, text="Besieged Classroom G")
+                 if "Besieged Classroom" in word.text else word for word in words]
+    else:
+        words = [word for word in words if word.normalized != "mission info"]
+
+    class Startup:
+        def read(self, frame):
+            assert frame.shape[:2] == (720, 1280), "invalid detail must not start fallback OCR"
+            return words
+
+        def matches(self, frame):
+            return {}
+
+    assert TicketVision(Startup()).analyze(png).kind == "unknown"
+
+
+def test_last_ticket_zero_selector_clears_pending_after_balance_verification(runner):
+    runner.state["done"] = [0, 5, 5]
+    setup_sweep(runner, after=detail(tickets=0, after_tickets=0, count=0,
+                                   ap_cost=None, target=None))
+    runner.sweep(frame(runner, detail(tickets=5, after_tickets=0)), 5, 0)
+    saved = read_state(runner.config, runner.task)
+    assert saved["done"] == [5, 5, 5]
+    assert saved["pending"] is None
+
+
+@pytest.fixture(scope="module")
+def scrimmage_missing_projection():
+    import json
+    from ba_automator.vision import Word
+
+    fixture = Path(__file__).parent / "fixtures/tickets-scrimmage-zero-missing-projection"
+    observed = json.loads(fixture.with_suffix(".json").read_text())
+    return fixture.with_suffix(".png").read_bytes(), [Word(**word) for word in observed["words"]]
+
+
+def test_scrimmage_recovers_entire_missing_zero_label(vision, scrimmage_missing_projection):
+    png, words = scrimmage_missing_projection
+    assert classify_tickets(decode_frame(png), words).kind == "unknown"
+
+    class Startup:
+        def __init__(self):
+            self.crops = []
+
+        def read(self, frame):
+            if frame.shape[:2] == (720, 1280):
+                return words
+            self.crops.append(frame.shape[:2])
+            return vision.startup.read(frame)
+
+        def matches(self, frame):
+            return {}
+
+    startup = Startup()
+    screen = TicketVision(startup).analyze(png)
+    assert startup.crops == [(92, 138), (138, 207)]
+    assert (screen.kind, screen.task, screen.area, screen.stage) == (
+        "detail", "scrimmages", "Millennium", "B",
+    )
+    assert (screen.ap, screen.after_ap, screen.count, screen.tickets,
+            screen.after_tickets, screen.target) == (720, 720, 0, 0, 0, None)
+    assert vision.analyze(png) == screen
+
+
+@pytest.mark.parametrize("readings", [
+    [[], []],
+    [[("0→-", .99)], [("0→1", .99)]],
+    [[("0→-", .99)], [("0→-", .89)]],
+    [[("0→", .99)], [("0→-", .99)]],
+    [[("0→-", .99), ("1", .99)], [("0→-", .99)]],
+])
+def test_missing_scrimmage_label_requires_two_complete_reads(scrimmage_missing_projection, readings):
+    from ba_automator.vision import Word
+
+    png, words = scrimmage_missing_projection
+
+    class Startup:
+        def __init__(self):
+            self.readings = iter(readings)
+
+        def read(self, frame):
+            if frame.shape[:2] == (720, 1280):
+                return words
+            return [Word(text, confidence, (0, 0, 100, 30))
+                    for text, confidence in next(self.readings)]
+
+        def matches(self, frame):
+            return {}
+
+    assert TicketVision(Startup()).analyze(png).kind == "unknown"
+
+
+@pytest.mark.parametrize("change", [
+    "nonzero_quantity", "no_ap", "wrong_stage", "no_heading", "ap_changed", "ticket_conflict", "bounty",
+])
+def test_missing_scrimmage_label_does_not_infer_other_fields(scrimmage_missing_projection, change):
+    from ba_automator.crafting_vision import within
+    from ba_automator.vision import Word
+
+    png, original = scrimmage_missing_projection
+    words = original
+    if change == "nonzero_quantity":
+        count = within(words, (904, 277, 970, 330))
+        words = [replace(word, text="1") if word in count else word for word in words]
+    elif change == "no_ap":
+        words = [word for word in words if "/218" not in word.text]
+    elif change == "wrong_stage":
+        words = [replace(word, text="Millennium C") if word.text == "Millennium B" else word for word in words]
+    elif change == "no_heading":
+        words = [word for word in words if word.normalized != "mission info"]
+    elif change == "ap_changed":
+        words = [replace(word, text="720→719") if word.text == "720→720" else word for word in words]
+    elif change == "ticket_conflict":
+        words = [*words, Word("5→4", .99, (1040, 348, 1093, 378))]
+    else:
+        words = [replace(word, text="Bounty") if word.normalized == "scrimmage" else word for word in words]
+
+    class Startup:
+        def read(self, frame):
+            assert frame.shape[:2] == (720, 1280), "ambiguous detail must not start crop recovery"
+            return words
+
+        def matches(self, frame):
+            return {}
+
+    assert TicketVision(Startup()).analyze(png).kind == "unknown"

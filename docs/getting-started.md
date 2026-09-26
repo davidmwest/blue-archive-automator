@@ -82,6 +82,20 @@ keep `serve` running and the computer awake. if the server starts late or the co
 
 the server saves an occurrence before dispatch and records its result, so restarting it won't automatically repeat a completed or interrupted daily run. manually queueing **daily** from the dashboard counts for that game day too. if a run fails or stops, inspect its log and any spending holds, then queue **daily** yourself to retry. cancelling a scheduled Daily skips that game day's automatic run. the next reset permits a fresh occurrence. queued jobs in general still live only in memory; this occurrence record doesn't provide resumable game actions.
 
+## periodic check-ins
+
+**settings → check in between jobs** keeps an eye on red dots and excess AP. it is on by default, every 30 minutes. change the interval from 5 minutes to 24 hours, or turn it off there. the queue shows the last successful check and the next due time in your local time.
+
+```toml
+[checkin]
+schedule_enabled = true
+interval_minutes = 30  # 5–1440 minutes
+```
+
+each check opens the game, reads Home and Campaign, and queues the matching reward jobs. excess AP only queues Spend AP when that setting is already enabled, using your current strategy and floor. it doesn't enable paid purchases or repeat the full Daily routine. successful final scans from other jobs restart the interval too, so a busy queue doesn't need a duplicate visit.
+
+the timer survives server restarts. a new timer waits one interval before its first check; an overdue timer catches up once instead of replaying missed checks. check-ins run one at a time with the other jobs, wait while paused, and retry after the next interval if a check fails. the last result stays visible in the queue and the log. keep the server running and the computer awake. the idle-close setting can still close the game after the queue finishes.
+
 ## Cafe and scheduling
 
 Cafe scheduling and invitations are **off by default**. enable them in the dashboard or the `[cafe]` section of your local config. leave the invitation name blank to pick the student with the highest relationship below their current cap, or enter an exact English name, including variants such as `Yuuka (Track)`, to pick someone yourself. only normal free invitations are supported; bonus invitations aren't used.
@@ -138,4 +152,4 @@ configure Quick Craft in the game first, then enable **keep the crafting slots b
 
 ## spend the extra AP
 
-open **Spend AP** in the sidebar. scan your three-star stages, keep the default 100 AP reserve or choose another floor, then pick Elephs, reports, or credits. the Hard rotation supports drag-and-drop, add/remove buttons, arrow controls, and a text editor. enable automatic spending to check hourly and follow Cafe/mail through the same queue. [configuration, policies, and spending evidence →](spend-ap.md)
+open **Spend AP** in the sidebar. scan your three-star stages, keep the default 100 AP reserve or choose another floor, then pick Elephs, reports, or credits. the Hard rotation supports drag-and-drop, add/remove buttons, arrow controls, and a text editor. enable automatic spending to check hourly and follow Cafe/mail through the same queue. periodic check-ins can send it there sooner when they see extra AP. [configuration, policies, and spending evidence →](spend-ap.md)

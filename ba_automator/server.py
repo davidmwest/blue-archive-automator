@@ -3,7 +3,8 @@
 Queued jobs do not survive server shutdown. Each dispatched job receives a private
 configuration snapshot and run directory, so its frames cannot be confused with
 earlier runs or an independently started CLI runner. Startup runs no manual job;
-explicitly enabled daily and cafe schedules can enqueue work when due. Daily
+enabled schedules can enqueue work when due. Periodic check-ins default to every
+30 minutes and reuse successful home scans from other jobs. Daily
 attempts survive restarts and require a manual retry after failure. Failed cafe jobs
 retry after 15 minutes, up to three consecutive failures, then require Resume.
 """
@@ -42,7 +43,7 @@ from .locking import InstanceLock, LockError
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS, task_plan
 from .home_badges import PRIORITY
 from . import packs_state
-from . import ap_state, loot, daily_log, daily_schedule
+from . import ap_state, loot, daily_log, daily_schedule, checkin_schedule
 from .club import game_day
 from .vision import decode_frame
 
@@ -56,6 +57,8 @@ LESSONS_SETTINGS = {"lessons_strategy": "strategy", "lessons_max_tickets": "max_
 AUTOMATION_SETTINGS = {"close_app_when_idle"}
 DAILY_SETTINGS = {"daily_schedule_enabled": "schedule_enabled",
                   "daily_reset_delay_minutes": "reset_delay_minutes"}
+CHECKIN_SETTINGS = {"checkin_schedule_enabled": "schedule_enabled",
+                    "checkin_interval_minutes": "interval_minutes"}
 CRAFTING_SETTINGS = {"crafting_schedule_enabled": "schedule_enabled"}
 PACKS_SETTINGS = {f'packs_{key}_{suffix}': f'{key}_{suffix}'
                   for key in packs_state.PACKS for suffix in ('enabled', 'max_cents')}
@@ -64,7 +67,7 @@ AP_SETTINGS = {f'ap_{key}': key for key in
 TOTAL_ASSAULT_SETTINGS = {f"total_assault_{key}": key
                           for key in ("difficulty", "enabled_in_daily", "comfort_seconds")}
 TICKET_SETTINGS = {"bounties_enabled_in_daily", "scrimmages_enabled_in_daily"}
-SETTINGS = DAILY_SETTINGS.keys() | TOTAL_ASSAULT_SETTINGS.keys() | TICKET_SETTINGS | RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
+SETTINGS = CHECKIN_SETTINGS.keys() | DAILY_SETTINGS.keys() | TOTAL_ASSAULT_SETTINGS.keys() | TICKET_SETTINGS | RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
 CAFE_INTERVAL = timedelta(hours=3, seconds=15)
 CAFE_RETRY_INTERVAL = timedelta(minutes=15)
 MAX_SCHEDULE_FAILURES = 3
@@ -115,6 +118,7 @@ def _config_document(config: Config) -> dict:
         "storage": {"run_dir": str(config.run_dir), "lock_dir": str(config.lock_dir)},
         "automation": {name: getattr(config, name) for name in AUTOMATION_SETTINGS},
         "daily": {name: getattr(config, attribute) for attribute, name in DAILY_SETTINGS.items()},
+        "checkin": {name: getattr(config, attribute) for attribute, name in CHECKIN_SETTINGS.items()},
         "lessons": {name: getattr(config, attribute) for attribute, name in LESSONS_SETTINGS.items()},
         "crafting": {"schedule_enabled": config.crafting_schedule_enabled},
         "packs": {name: getattr(config, attribute) for attribute, name in PACKS_SETTINGS.items()},
@@ -171,10 +175,16 @@ class DashboardController:
         self._schedule = self._load_schedule()
         self._daily_schedule_error = None
         self._daily_not_before = None
+        self._checkin_schedule_error = None
+        self._checkin_not_before = None
+        self._checkin_initializing = True
+        self._checkin_reset_pending = False
+        self._checkin_pending_record = None
         self._packs_not_before = None
         self._ap_not_before = None
         self._failures = self._load_failures()
         self._daily("dashboard_started", detail="Local serial queue started")
+        self._initialize_checkin()
         self._worker = threading.Thread(target=self._work, name="blue-archive-queue", daemon=True)
         self._worker.start()
 
@@ -203,6 +213,7 @@ class DashboardController:
                        for name in CAFE_SETTINGS})
         values.update({name: getattr(self.config, name) for name in AUTOMATION_SETTINGS})
         values.update({name: getattr(self.config, name) for name in DAILY_SETTINGS})
+        values.update({name: getattr(self.config, name) for name in CHECKIN_SETTINGS})
         values.update({name: getattr(self.config, name) for name in LESSONS_SETTINGS})
         values.update({name: getattr(self.config, name) for name in CRAFTING_SETTINGS})
         values.update({name: getattr(self.config, name) for name in PACKS_SETTINGS})
@@ -375,12 +386,168 @@ class DashboardController:
             self._daily_schedule_error = str(exc)
             self._log(f"Could not save Daily completion; automatic retries remain held: {exc}", "error")
 
+    def _checkin_state_lock(self):
+        return InstanceLock(replace(self.config, lock_dir=self.config.lock_dir / "checkin-schedule"))
+
+    def _checkin_error(self, exc) -> None:
+        detail = str(exc)
+        if detail != self._checkin_schedule_error:
+            self._log(f"Periodic check-ins held: {detail}", "error")
+        self._checkin_schedule_error = detail
+
+    def _initialize_checkin(self, *, reset=False) -> None:
+        reset = reset or self._checkin_reset_pending
+        try:
+            with self._checkin_state_lock():
+                try:
+                    saved = checkin_schedule.read_state(self.config)
+                except checkin_schedule.CheckinScheduleError:
+                    if not reset:
+                        raise
+                    saved = None
+                if saved is None:
+                    saved = checkin_schedule.initial_state(self._wall_clock(), self.config.checkin_interval_minutes)
+                    checkin_schedule.write_state(self.config, saved)
+                elif reset:
+                    saved["next_due_at"] = (self._wall_clock() + timedelta(
+                        minutes=self.config.checkin_interval_minutes)).isoformat()
+                    checkin_schedule.write_state(self.config, saved)
+            self._checkin_schedule_error = None
+            self._checkin_not_before = None
+            self._checkin_initializing = False
+            self._checkin_reset_pending = False
+            if reset:
+                self._daily("checkin_timer_reset", next_due_at=saved["next_due_at"],
+                            enabled=self.config.checkin_schedule_enabled)
+        except LockError:
+            self._checkin_initializing = True
+            self._checkin_reset_pending = reset
+            self._checkin_schedule_error = None
+            self._checkin_not_before = self._wall_clock() + timedelta(minutes=1)
+            self._log("Check-in timer initialization deferred for one minute: schedule state is busy")
+        except (RuntimeError, OSError) as exc:
+            self._checkin_error(exc)
+
+    def _checkin_status(self) -> dict:
+        status = {"enabled": self.config.checkin_schedule_enabled,
+                  "interval_minutes": self.config.checkin_interval_minutes,
+                  "next_due_at": None, "status": None, "last_started_at": None,
+                  "last_completed_at": None, "last_success_at": None,
+                  "blocked_reason": self._checkin_schedule_error}
+        if self._checkin_initializing and not self._checkin_schedule_error:
+            status["next_due_at"] = self._checkin_not_before.isoformat() if self._checkin_not_before else None
+            return status
+        try:
+            saved = checkin_schedule.read_state(self.config)
+            if saved is None:
+                raise checkin_schedule.CheckinScheduleError("Check-in schedule is missing; save its settings to reset the timer")
+            status.update(saved)
+            if self._checkin_not_before:
+                status["next_due_at"] = max(checkin_schedule.parse_time(saved["next_due_at"]),
+                                             self._checkin_not_before).isoformat()
+        except (RuntimeError, OSError) as exc:
+            status["blocked_reason"] = str(exc)
+        return status
+
+    def _enqueue_checkin(self) -> None:
+        # Every normal job ends in the same scan. Existing work always goes
+        # first; an overdue timer creates one visit, never a backlog.
+        if (not self.config.checkin_schedule_enabled or self._paused or self._shutdown
+                or self._capturing or self._current or self._queue or self._checkin_schedule_error):
+            return
+        if self._checkin_not_before and self._wall_clock() < self._checkin_not_before:
+            return
+        if self._checkin_initializing:
+            self._initialize_checkin()
+            if self._checkin_initializing or self._checkin_schedule_error:
+                return
+        if self._checkin_pending_record:
+            pending_status, pending_job = self._checkin_pending_record
+            self._record_checkin(pending_status, job=pending_job)
+            if self._checkin_pending_record or self._checkin_schedule_error:
+                return
+        status = self._checkin_status()
+        if status["blocked_reason"]:
+            self._checkin_error(status["blocked_reason"])
+            return
+        if self._wall_clock() < checkin_schedule.parse_time(status["next_due_at"]):
+            return
+        job = {"id": uuid4().hex, "task": "red_dots", "source": "checkin", "created_at": _timestamp()}
+        self._queue.append(job)
+        self._queued(job)
+
+    def _claim_checkin(self, job: dict) -> bool:
+        if not self.config.checkin_schedule_enabled or self._checkin_schedule_error:
+            return False
+        try:
+            with InstanceLock(self.config), self._checkin_state_lock():
+                saved = checkin_schedule.read_state(self.config)
+                if saved is None:
+                    raise checkin_schedule.CheckinScheduleError("Check-in schedule is missing; save its settings to reset the timer")
+                now = self._wall_clock()
+                if now < checkin_schedule.parse_time(saved["next_due_at"]):
+                    return False
+                saved.update(status="running", run_id=job["id"], last_started_at=now.isoformat(),
+                             last_completed_at=None,
+                             next_due_at=(now + timedelta(minutes=self.config.checkin_interval_minutes)).isoformat())
+                # A process crash/startup failure still consumes this interval.
+                checkin_schedule.write_state(self.config, saved)
+                self._checkin_not_before = None
+                self._daily("checkin_started", task=job["task"], run=job["id"],
+                            next_due_at=saved["next_due_at"])
+                return True
+        except LockError:
+            self._checkin_not_before = self._wall_clock() + timedelta(minutes=1)
+            self._log("Periodic check-in deferred for one minute: another runner owns the instance")
+        except (RuntimeError, OSError) as exc:
+            self._checkin_error(exc)
+        return False
+
+    def _record_checkin(self, status: str, *, job=None) -> None:
+        """A verified scan covers the timer even when another job produced it."""
+        if self._checkin_schedule_error or (status == "success" and not self.config.checkin_schedule_enabled):
+            return
+        if self._checkin_initializing:
+            self._initialize_checkin()
+            if self._checkin_initializing or self._checkin_schedule_error:
+                if not self._checkin_schedule_error:
+                    self._checkin_pending_record = (status, job)
+                return
+        try:
+            with self._checkin_state_lock():
+                saved = checkin_schedule.read_state(self.config)
+                if saved is None:
+                    raise checkin_schedule.CheckinScheduleError("Check-in schedule is missing; save its settings to reset the timer")
+                now = self._wall_clock()
+                saved.update(status=status, last_completed_at=now.isoformat(),
+                             next_due_at=(now + timedelta(minutes=self.config.checkin_interval_minutes)).isoformat())
+                if status == "success":
+                    saved["last_success_at"] = now.isoformat()
+                if job is not None:
+                    saved["run_id"] = job["id"]
+                checkin_schedule.write_state(self.config, saved)
+                self._checkin_pending_record = None
+                self._checkin_not_before = None
+                self._daily("checkin_finished" if job else "checkin_covered_by_scan",
+                            status=status, run=job["id"] if job else None,
+                            next_due_at=saved["next_due_at"])
+        except LockError:
+            self._checkin_pending_record = (status, job)
+            self._checkin_not_before = self._wall_clock() + timedelta(minutes=1)
+            self._log("Check-in timer update deferred for one minute: schedule state is busy")
+        except (RuntimeError, OSError) as exc:
+            self._checkin_error(exc)
+
     def _enqueue_scheduled(self) -> None:
         # Daily covers cafe, packs and AP; enqueue it first so those timers defer.
         self._enqueue_daily()
         self._enqueue_crafting()
         self._enqueue_packs()
         self._enqueue_ap()
+        self._enqueue_cafe()
+        self._enqueue_checkin()
+
+    def _enqueue_cafe(self) -> None:
         if (self._paused or self._shutdown or not getattr(self.config, "cafe_schedule_enabled", False)
                 or self._schedule["cafe"].get("retry_paused", False)):
             return
@@ -553,6 +720,8 @@ class DashboardController:
                         except (RuntimeError, OSError) as exc:
                             raise ApiError(409, f"Could not save Daily cancellation: {exc}") from exc
                     self._queue.remove(job)
+                    if job.get("source") == "checkin":
+                        self._record_checkin("skipped", job=job)
                     if job.get("source") == "schedule" and job["task"] == "cafe":
                         # Cancel skips this occurrence; leaving it overdue would
                         # silently enqueue the same cafe visit on the next tick.
@@ -566,6 +735,7 @@ class DashboardController:
                         self._schedule["crafting"]["not_before"] = (self._wall_clock() + timedelta(minutes=15)).isoformat()
                         self._save_schedule()
                     self._history.appendleft({"id": job_id, "task": job["task"],
+                                              "source": job.get("source", "manual"),
                                               "state": "stopped", "completed_at": _timestamp()})
                     self._daily("job_cancelled", task=job["task"], run=job_id)
                     return
@@ -641,8 +811,11 @@ class DashboardController:
                 job = self._queue.popleft()
                 if job["task"] == "daily" and not self._claim_daily(job):
                     continue
+                if job.get("source") == "checkin" and not self._claim_checkin(job):
+                    continue
                 self._started_at = _timestamp()
-                self._current = {"id": job["id"], "task": job["task"], "started_at": self._started_at}
+                self._current = {"id": job["id"], "task": job["task"], "started_at": self._started_at,
+                                 "source": job.get("source", "manual")}
                 self._task = job["task"]
                 self._batch_has_game_job = True
                 self._badge_attempted.update(task_plan(job["task"], self.config))
@@ -752,6 +925,7 @@ class DashboardController:
                                 status=self._state, duration=round(self._duration, 3),
                                 exit_code=exit_code, result=self._result)
                     self._history.appendleft({"id": job["id"], "task": job["task"],
+                                              "source": job.get("source", "manual"),
                                               "state": self._state, "completed_at": self._completed_at})
                     self._finish_daily(job)
                     if self._state == 'failed':
@@ -798,6 +972,7 @@ class DashboardController:
                                 packs_state.write_state(selected, pack_state)
                         except (RuntimeError, OSError) as exc:
                             self._log(f'Could not save pack failure hold: {exc}', 'error')
+                    scanned = False
                     if self._state == "success" or (
                         self._state == "failed" and summary
                         and summary["status"] == "partial_failure"
@@ -805,7 +980,9 @@ class DashboardController:
                     ):
                         # An isolated Daily failure does not discard a verified
                         # final scan. Batch deduplication still prevents retries.
-                        self._enqueue_badges(output, run_root)
+                        scanned = self._enqueue_badges(output, run_root)
+                    if job.get("source") == "checkin" and not scanned:
+                        self._record_checkin("stopped" if self._state == "stopped" else "failed", job=job)
                     self._current = None
                     self._process = None
                     # Materialize any due scheduled job before deciding the queue is done.
@@ -817,11 +994,11 @@ class DashboardController:
                         self._ap_batch_observed = None
                     self._condition.notify_all()
 
-    def _enqueue_badges(self, output, run_root):
+    def _enqueue_badges(self, output, run_root) -> bool:
         """Called under the queue lock. One attempt per task per busy batch."""
         scan = self._parse_result(output, run_root, task='red_dots')
         if not scan or scan['status'] != 'success':
-            return
+            return False
         root = Path(scan['run_dir'])
         path = root / 'requests.json'
         try:
@@ -836,7 +1013,8 @@ class DashboardController:
                 raise ValueError('Invalid badge request tasks')
         except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
             self._log(f'Could not read notification requests: {exc}', 'error')
-            return
+            return False
+        self._record_checkin("success")
         covered = set(self._badge_attempted)
         for queued in self._queue:
             covered.update(task_plan(queued['task'], self.config))
@@ -869,6 +1047,7 @@ class DashboardController:
                 queued_ap = True
         if valid_ap and (spent_here or queued_ap or self._ap_batch_observed is None or ap < self._ap_batch_observed):
             self._ap_batch_observed = ap
+        return True
 
     def _close_app_after_queue(self, selected: Config, process) -> None:
         """Called once per completed job, under the dispatch/enqueue condition lock.
@@ -1101,7 +1280,7 @@ class DashboardController:
                     "history": list(self._history), "queue_paused": self._paused,
                     "failed_jobs": list(reversed(self._failures)),
                     "app_closed": self._app_closed,
-                    "schedule": {"daily": self._daily_status(), "ap": self._ap_status(), "packs": self._packs_status(), "crafting": self._crafting_status(), "cafe": {**self._schedule["cafe"],
+                    "schedule": {"checkin": self._checkin_status(), "daily": self._daily_status(), "ap": self._ap_status(), "packs": self._packs_status(), "crafting": self._crafting_status(), "cafe": {**self._schedule["cafe"],
                                           "enabled": getattr(self.config, "cafe_schedule_enabled", False)}}}
 
     def actions(self) -> dict:
@@ -1292,6 +1471,10 @@ class DashboardController:
             try:
                 existing = Config.from_file(self.config_path)
                 updated = replace(existing, **changes)  # Validate before touching the file.
+                checkin_changes = changes.keys() & CHECKIN_SETTINGS.keys()
+                reset_checkin = bool(checkin_changes) and (
+                    any(getattr(existing, name) != getattr(updated, name) for name in checkin_changes)
+                    or bool(self._checkin_status()["blocked_reason"]))
                 if 'ap_hard_order' in changes and not updated.ap_hard_default_order:
                     try:
                         catalog = ap_state.read_state(updated)['hard_stages']
@@ -1303,6 +1486,7 @@ class DashboardController:
                     document = tomllib.load(stream)
                 for name, value in changes.items():
                     section = (name.split("_")[0] if name in TICKET_SETTINGS else
+                               "checkin" if name in CHECKIN_SETTINGS else
                                "daily" if name in DAILY_SETTINGS else
                                "total_assault" if name in TOTAL_ASSAULT_SETTINGS else
                                "cafe" if name in CAFE_SETTINGS else
@@ -1314,10 +1498,13 @@ class DashboardController:
                     key = AP_SETTINGS.get(name, PACKS_SETTINGS.get(name, CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, CRAFTING_SETTINGS.get(name, name)))))
                     if name in TOTAL_ASSAULT_SETTINGS: key = TOTAL_ASSAULT_SETTINGS[name]
                     if name in DAILY_SETTINGS: key = DAILY_SETTINGS[name]
+                    if name in CHECKIN_SETTINGS: key = CHECKIN_SETTINGS[name]
                     if name in TICKET_SETTINGS: key = "enabled_in_daily"
                     document.setdefault(section, {})[key] = value
                 _write_atomic(self.config_path, _toml(document))
                 self.config = Config.from_file(self.config_path)
+                if reset_checkin:
+                    self._initialize_checkin(reset=True)
                 self._daily("settings_changed", changes=changes)
                 self._condition.notify_all()
             except (ConfigError, ValueError, TypeError) as exc:

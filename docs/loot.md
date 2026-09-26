@@ -57,3 +57,18 @@ On September 25, the long Total Assault points receipt was recovered and fully r
 On September 26, saved receipts and live resource counters reconciled earlier Bounty and AP holds without repeating a sweep. A fresh Hard 11-2 sweep identified nine item types and verified its 20 AP cost. Hard 11-1 initially failed while opening and reading Full List; staged recovery identified ten types but retained an incomplete flag because end-of-list overlap was not proven. Recovery returned to the original receipt and verified the AP and attempt changes.
 
 A subsequent uninterrupted Hard 10-3 sweep automatically opened and closed Full List, identified all ten item types, verified its 20 AP cost, and advanced the rotation to 10-2. Full List entry settling, animated tooltip pointers, and task-completion banners now have sanitized regression fixtures. The recovered 11-1 receipt remains marked incomplete.
+
+A later September 26 Hard 8-3 hold was reconciled from its saved receipt
+(647 → 627 AP) and the live attempt counter (three → two). Cafe earnings had
+already changed the current AP balance, so comparing that balance alone would
+have been incorrect. The completed sweep was not repeated. Its left-pointing
+Bluetooth Necklace tooltip now has a sanitized regression fixture; tooltip
+recognition uses the rectangular panel rather than including its arrow.
+The reader also waits through the Cafe reward-card scaling animation after a
+tooltip closes, without tapping the bare receipt to hurry it along. Existing
+partial receipts retain their known items and incomplete status.
+
+A subsequent live Hard 8-2 sweep completed on September 26: 740 → 720 AP,
+saved loot inspection, verified post-sweep balance, and return home. The old
+Hard 8-3 intent was reconciled against its saved receipt and the live remaining
+attempt count before this retry; it was not spent again.

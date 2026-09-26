@@ -75,7 +75,8 @@ def cafe(tmp_path, monkeypatch):
     _, encoded = cv2.imencode(".png", image)
     png = encoded.tobytes()
     device = Device(selected.package, png)
-    vision = SimpleNamespace(visitor_notice=lambda image, words: None, is_cafe=lambda image: True, words=lambda image: [], markers=lambda image: [],
+    vision = SimpleNamespace(home_entry_target=lambda image: (97, 691),
+                             visitor_notice=lambda image, words: None, is_cafe=lambda image: True, words=lambda image: [], markers=lambda image: [],
                              relationship_feedback=lambda before, after, target: False)
     startup = SimpleNamespace(analyze=lambda png: Observation("home", "verified home"))
     monkeypatch.setattr(cafe_module, "CafeVision", lambda startup: vision)
@@ -651,19 +652,43 @@ def navigation_screen(cafe, monkeypatch, state):
 def test_entry_retries_a_missed_tap_only_while_home_stays_verified(cafe, monkeypatch):
     navigation_screen(cafe, monkeypatch, lambda: "cafe_1" if len(cafe.device.taps) == 2 else "home")
     cafe.runner.enter()
-    assert cafe.device.taps == [(100, 659)] * 2
+    assert cafe.device.taps == [(97, 691)] * 2
     assert cafe.clock.now >= 5
     records = [json.loads(line) for line in (cafe.runner.run_dir / "events.jsonl").read_text().splitlines()]
     assert records[-1]["event"] == "navigation_arrived"
     assert records[-1]["attempts"] == 2
     assert (cafe.runner.run_dir / records[-1]["frame"]).is_file()
+    assert [r["target"] for r in records if r["event"] == "navigation_attempt"] == [[97, 691]] * 2
+
+
+def test_entry_requires_the_label_on_the_initial_frame(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: "home")
+    cafe.vision.home_entry_target = lambda image: None
+    with pytest.raises(RestartError, match="visible label and both unobstructed home anchors"):
+        cafe.runner.enter()
+    assert cafe.device.taps == []
+
+
+def test_entry_rechecks_the_label_before_each_retry(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: "home")
+    cafe.vision.home_entry_target = lambda image: None if cafe.device.taps else (97, 691)
+    with pytest.raises(RestartError, match="visible label and both unobstructed home anchors"):
+        cafe.runner.enter()
+    assert cafe.device.taps == [(97, 691)]
+
+
+def test_entry_uses_the_current_label_match_instead_of_caching_a_target(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: "cafe_1" if len(cafe.device.taps) == 2 else "home")
+    cafe.vision.home_entry_target = lambda image: (98, 692) if cafe.device.taps else (97, 691)
+    cafe.runner.enter()
+    assert cafe.device.taps == [(97, 691), (98, 692)]
 
 
 def test_entry_stops_after_three_unaccepted_taps(cafe, monkeypatch):
     navigation_screen(cafe, monkeypatch, lambda: "home")
     with pytest.raises(RestartError, match="still on home after 3 verified taps"):
         cafe.runner.enter()
-    assert cafe.device.taps == [(100, 659)] * 3
+    assert cafe.device.taps == [(97, 691)] * 3
     assert cafe.clock.now < 30
 
 
@@ -675,7 +700,7 @@ def test_entry_never_retries_over_a_dialog_or_after_arrival(cafe, monkeypatch, d
     else:
         with pytest.raises(RestartError, match="unexpected"):
             cafe.runner.enter()
-    assert cafe.device.taps == [(100, 659)]
+    assert cafe.device.taps == [(97, 691)]
 
 
 def test_floor_navigation_allows_loading_longer_than_thirty_seconds(cafe, monkeypatch):
@@ -729,7 +754,7 @@ def test_visitor_notice_is_dismissed_with_popup_evidence_before_arrival(cafe, mo
     navigation_screen(cafe, monkeypatch, state)
     cafe.vision.visitor_notice = lambda frame, words: (640, 458)
     cafe.runner.enter()
-    assert cafe.device.taps == [(100, 659)] + [(640, 458)] * dismissals
+    assert cafe.device.taps == [(97, 691)] + [(640, 458)] * dismissals
     records = [json.loads(line) for line in (cafe.runner.run_dir / "events.jsonl").read_text().splitlines()]
     popups = [r for r in records if r['event'] == 'popup_dismissal']
     assert popups[-1]['result'] == 'changed'
@@ -746,7 +771,7 @@ def test_visitor_notice_that_does_not_close_has_bounded_retries(cafe, monkeypatc
     cafe.vision.visitor_notice = lambda frame, words: (640, 458)
     with pytest.raises(RestartError, match="notice remained after three"):
         cafe.runner.enter()
-    assert cafe.device.taps == [(100, 659)] + [(640, 458)] * 3
+    assert cafe.device.taps == [(97, 691)] + [(640, 458)] * 3
 
 
 def test_navigation_recaptures_slow_ocr_instead_of_retrying_on_old_frame(cafe, monkeypatch):
@@ -763,7 +788,7 @@ def test_navigation_recaptures_slow_ocr_instead_of_retrying_on_old_frame(cafe, m
     monkeypatch.setattr(cafe.runner, 'capture', capture)
     with pytest.raises(RestartError, match="within 120s"):
         cafe.runner.enter()
-    assert cafe.device.taps == [(100, 659)]
+    assert cafe.device.taps == [(97, 691)]
 
 
 def test_live_declarative_invitation_prompt_requires_exact_recipient():

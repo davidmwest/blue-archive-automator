@@ -115,6 +115,10 @@ def test_status_is_explicitly_fictional_and_cannot_schedule_jobs(demo_server):
     assert status["config"]["total_assault_comfort_seconds"] == 30
     assert status["config"]["total_assault_enabled_in_daily"] is False
     assert not status["schedule"]["cafe"]["enabled"]
+    assert status["config"]["checkin_schedule_enabled"] is False
+    assert status["config"]["checkin_interval_minutes"] == 30
+    assert status["schedule"]["checkin"]["enabled"] is False
+    assert status["schedule"]["checkin"]["next_due_at"] is None
     assert "csrf_token" not in status
     assert all(job["id"].startswith("sample-") for job in status["queue"] + status["history"])
     assert headers["Cache-Control"] == "no-store"
