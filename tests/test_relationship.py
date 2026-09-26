@@ -86,6 +86,34 @@ def test_two_displayed_stat_changes_are_preserved_without_total_estimates():
     assert result.stats == (RelationshipStat("ATK", delta=8), RelationshipStat("HP", delta=1200))
 
 
+def test_real_lesson_stat_bar_preserves_comma_separated_changes():
+    # The mature 2026-09-26 lesson celebration displays both increments.
+    for text in ("ATK +27, Max HP +49", "ATK +27,Max HP +49", "ATK +27 , Max HP +49"):
+        result = parse_relationship_rank_up([banner(), word(text)])
+        assert result.stats == (RelationshipStat("ATK", delta=27), RelationshipStat("HP", delta=49))
+
+
+def test_stat_separator_and_thousands_grouping_can_coexist():
+    result = parse_relationship_rank_up([banner(), word("ATK +1,200, Max HP +12,345, Healing +7")])
+    assert result.stats == (RelationshipStat("ATK", delta=1200),
+                            RelationshipStat("HP", delta=12345),
+                            RelationshipStat("Healing", delta=7))
+
+
+def test_separate_ocr_comma_keeps_both_stat_changes():
+    result = parse_relationship_rank_up([
+        banner(), word("ATK +27", x=500), word(",", x=610), word("Max HP +49", x=720)])
+    assert result.stats == (RelationshipStat("ATK", delta=27), RelationshipStat("HP", delta=49))
+
+
+def test_stat_separators_do_not_make_malformed_quantities_valid():
+    for bad in ("1,2", "1,,200", "12.5", "12/20", "8O", "27,", "1,200,", ""):
+        result = parse_relationship_rank_up([banner(), word(f"ATK +{bad}, Max HP +49")])
+        assert result.stats == (RelationshipStat("HP", delta=49),)
+    for bad in ("ATK +27,", "ATK +1,200,", "ATK +27,,"):
+        assert parse_relationship_rank_up([banner(), word(bad)]).stats == ()
+
+
 def test_split_stat_label_and_amount_are_read_in_visual_order():
     result = parse_relationship_rank_up([banner(), word("+10", x=675), word("Healing", x=590)])
     assert result.stats == (RelationshipStat("Healing", delta=10),)

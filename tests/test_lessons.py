@@ -517,6 +517,21 @@ def test_lesson_recaptures_after_slow_rank_read_before_any_dismissal(harness):
     assert harness.records[0]["rank"] == 3
 
 
+def test_lesson_waits_for_delayed_relationship_details(harness):
+    runner = harness.make()
+    mature = prepare_rankup_frame(harness)
+    early = replace(mature.screen, words=tuple(w for w in mature.screen.words
+                                               if "Relationship" in w.text))
+    harness.screens[:] = [early, mature.screen]
+    start = harness.clock.now
+    runner.dismiss_celebration(harness.frame(early))
+    assert harness.clock.now - start >= 3
+    assert len(harness.records) == 1
+    assert harness.records[0]["rank"] == 3
+    assert harness.records[0]["stats"][0]["delta"] == 8
+    assert harness.device.taps == [(1170, 650)]
+
+
 def test_lesson_stale_rankup_cannot_dismiss_a_changed_screen(harness):
     runner = harness.make()
     frame = prepare_rankup_frame(harness)
@@ -545,6 +560,8 @@ def test_next_rank_for_same_student_is_a_distinct_celebration(harness):
     next_screen = replace(frame.screen, words=tuple(replace(w, text="4") if w.text == "3" else w
                                                    for w in frame.screen.words))
     next_frame = LessonFrame(Capture(png.tobytes(), harness.clock.now, harness.device.foreground), next_screen)
+    harness.device.screenshot = lambda: png.tobytes()
+    harness.screens[:] = [next_screen]
     runner.dismiss_celebration(next_frame)
     assert [record["rank"] for record in harness.records] == [3, 4]
 

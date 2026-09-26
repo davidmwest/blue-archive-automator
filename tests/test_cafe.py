@@ -485,6 +485,22 @@ def test_extra_rank_ocr_recaptures_stale_overlay_before_dismissal(cafe, monkeypa
     assert action_records(cafe.config)[-1]["rank"] == 3
 
 
+def test_rankup_waits_for_delayed_heart_and_stats(cafe, monkeypatch):
+    cafe.vision.is_cafe = lambda image: False
+    monkeypatch.setattr(cafe.runner, "wait_cafe", lambda **kwargs: cafe.capture())
+    banner = [word("Relationship rank up!", 640, 622)]
+    cafe.script(banner, banner, banner + [word("11", 640, 540),
+                                        word("ATK +27, Max HP +49", 640, 681)])
+    start = cafe.clock.now
+    assert cafe.runner.clear_relationship_popup()
+    assert cafe.clock.now - start >= 3
+    event = action_records(cafe.config)[-1]
+    assert event["rank"] == 11
+    assert [(stat["name"], stat["delta"]) for stat in event["stats"]] == [("ATK", 27), ("HP", 49)]
+    assert event["student"] is None
+    assert cafe.device.taps == [(640, 630)]
+
+
 def test_stale_rankup_followed_by_other_screen_sends_no_dismissal(cafe, monkeypatch):
     cafe.vision.is_cafe = lambda image: False
     cafe.script([word("Relationship rank up!", 640, 600)], [word("Confirm", 640, 505)])

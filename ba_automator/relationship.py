@@ -74,8 +74,12 @@ def _stats(words):
     labels = {"atk": "ATK", "attack": "ATK", "hp": "HP", "max hp": "HP",
               "def": "DEF", "defense": "DEF", "healing": "Healing", "heal": "Healing"}
     names = r"Max HP|ATK|Attack|HP|DEF|Defense|Healing|Heal"
-    pattern = (rf"(?<![A-Za-z])(?P<name>{names})\s*\+\s*(?P<delta>[0-9][0-9,]*)"
-               rf"(?=\s*(?:$|(?:{names})\b))")
+    # A comma before the next stat label separates fields; commas inside the
+    # quantity still need valid thousands grouping. Keep the number's final
+    # character a digit so that its delimiter is never mistaken for grouping.
+    pattern = (rf"(?<![A-Za-z])(?P<name>{names})\s*\+\s*"
+               rf"(?P<delta>[0-9](?:[0-9,]*[0-9])?)"
+               rf"(?=\s*(?:$|,?\s*(?:{names})\b))")
     values = {}
     for match in re.finditer(pattern, text, re.I):
         raw = match["delta"]
@@ -112,6 +116,31 @@ def read_relationship_rank_up(frame, reader=None, *, words=(), student=None):
                           interpolation=cv2.INTER_CUBIC)
         rank_words = tuple(reader.read(crop))
     return parse_relationship_rank_up(words, rank_words=rank_words, student=student)
+
+
+def wait_relationship_details(*, capture, read, clock, sleep):
+    """Let the heart animation finish, then confirm readable details twice.
+
+    The opening glow hides the rank and precedes the stat bar. Names are not
+    shown here, so an unidentified student must not prolong the wait. Keep the
+    last observed partial result after eight seconds instead of guessing it.
+    ``read`` returns None if the capture is no longer a celebration.
+    """
+    deadline = clock() + 8
+    sleep(3)
+    previous = None
+    while True:
+        frame = capture()
+        result = read(frame)
+        if result is None:
+            raise ValueError("Relationship celebration changed while waiting for details; no input was sent")
+        if result.rank is not None and result.stats and result == previous:
+            return frame, result, True
+        remaining = deadline - clock()
+        if remaining <= 0:
+            return frame, result, False
+        previous = result
+        sleep(min(.6, remaining))
 
 
 def same_relationship_screen(before, after):

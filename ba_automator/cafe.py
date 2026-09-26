@@ -11,7 +11,8 @@ from .cafe_vision import CafeVision
 from .cafe_camera import measure_camera_displacement
 from .locking import InstanceLock
 from .relationship import (is_relationship_rank_up, read_relationship_rank_up,
-                           record_relationship_increase, same_relationship_screen)
+                           record_relationship_increase, same_relationship_screen,
+                           wait_relationship_details)
 from .runtime import Journal, RunResult, TaskError, FRAME_MAX_AGE, HOME_STABLE_SECONDS
 from .vision import decode_frame
 
@@ -511,10 +512,19 @@ class CafeRunner:
             return False
         text = text_of(cap[3])
         if is_relationship_rank_up(cap[3]):
+            self.phase("Waiting for relationship rank and stat bonuses")
+            try:
+                cap, result, settled = wait_relationship_details(
+                    capture=lambda: self.capture(ocr=True),
+                    read=lambda fresh: read_relationship_rank_up(
+                        fresh[2], self.startup if hasattr(self.startup, 'read') else None,
+                        words=fresh[3], student=student),
+                    clock=self.clock, sleep=self.sleep)
+            except ValueError as exc:
+                self.fail(str(exc))
+            self.journal.record("relationship_details", settled=settled, **result.fields())
             evidence = f"rank-up-{self.actions}.png"
             self.journal.save_image(evidence, cap[1])
-            result = read_relationship_rank_up(cap[2], self.startup if hasattr(self.startup, 'read') else None,
-                                              words=cap[3], student=student)
             previous = self.last_relationship_screen
             if previous is None or not same_relationship_screen(previous, cap[2]):
                 record_relationship_increase(self.config, result, evidence=self.run_dir / evidence,

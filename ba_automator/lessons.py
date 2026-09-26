@@ -15,7 +15,8 @@ from .lesson_planner import LessonLocation, LessonRoom, choose_lesson
 from .lesson_vision import LessonScreen, LessonVision
 from .locking import InstanceLock
 from .relationship import (is_relationship_rank_up, read_relationship_rank_up,
-                           record_relationship_increase, same_relationship_screen)
+                           record_relationship_increase, same_relationship_screen,
+                           wait_relationship_details)
 from .runtime import Capture, Journal, RunResult, TaskError, HOME_STABLE_SECONDS
 from .vision import decode_frame
 
@@ -272,16 +273,25 @@ class LessonsRunner:
             self.fail('Rank-up has no recognized dismissal control')
         kind = 'relationship' if frame.screen.kind == 'relationship_rank_up' else 'area'
         evidence = f'lesson-{self.confirmed + 1:02d}-{kind}-{self.celebrations}.png'
-        self.journal.save_image(evidence, frame.capture.png)
         if kind == 'relationship':
             result = None
             image = None
             if frame.screen.words:
+                self.phase('Waiting for relationship rank and stat bonuses')
+                try:
+                    frame, result, settled = wait_relationship_details(
+                        capture=self.capture,
+                        read=lambda fresh: read_relationship_rank_up(
+                            decode_frame(fresh.capture.png),
+                            self.startup if hasattr(self.startup, 'read') else None,
+                            words=fresh.screen.words)
+                        if fresh.screen.kind == 'relationship_rank_up' else None,
+                        clock=self.clock, sleep=self.sleep)
+                except ValueError as exc:
+                    self.fail(str(exc))
                 image = decode_frame(frame.capture.png)
-                result = read_relationship_rank_up(
-                    image,
-                    self.startup if hasattr(self.startup, 'read') else None,
-                    words=frame.screen.words)
+                self.journal.record('relationship_details', settled=settled, **result.fields())
+            self.journal.save_image(evidence, frame.capture.png)
             previous = self.last_relationship_screen
             if image is None or previous is None or not same_relationship_screen(previous, image):
                 record_relationship_increase(self.config, result, evidence=self.run_dir / evidence,
@@ -300,6 +310,7 @@ class LessonsRunner:
             else:
                 self.fail('Relationship celebration remained stale before dismissal; no input was sent')
         else:
+            self.journal.save_image(evidence, frame.capture.png)
             record_action(self.config, 'lesson_area_rank_up',
                           'Observed an area rank-up screen during Lessons.', task='lessons',
                           evidence=str(self.run_dir / evidence))
