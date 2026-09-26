@@ -7,7 +7,8 @@ are not used by the automation logic.
 
 The following sibling assets were created on September 26, 2026 with the
 built-in image generation tool. The existing `maid-arisu.png` was the character
-and rendering reference. Each final PNG was visually reviewed and checked for
+and rendering reference for the first three poses; the heart pose used
+`maid-arisu-checklist.png` to preserve that style. Each final PNG was visually reviewed and checked for
 an actual alpha channel; the original mascot remains unchanged.
 
 | File | Pose | Size |
@@ -15,12 +16,18 @@ an actual alpha channel; the original mascot remains unchanged.
 | `ba_automator/web/maid-arisu-checklist.png` | Checking off a clipboard | 1254 × 1254 |
 | `ba_automator/web/maid-arisu-tea.png` | Quiet tea break | 1254 × 1254 |
 | `ba_automator/web/maid-arisu-loot.png` | Sweeping up coins, inspired by the user's suggested burst-skill motif | 1254 × 1254 |
+| `ba_automator/web/maid-arisu-heart.png` | Hugging a pink heart to celebrate relationship gains | 1254 × 1254 |
 
 <img src="../ba_automator/web/maid-arisu-checklist.png" alt="Maid Arisu checking off her clipboard" width="200"> <img src="../ba_automator/web/maid-arisu-tea.png" alt="Maid Arisu taking a tea break" width="200"> <img src="../ba_automator/web/maid-arisu-loot.png" alt="Maid Arisu sweeping up sparkling gold coins" width="200">
 
+<img src="../ba_automator/web/maid-arisu-heart.png" alt="Maid Arisu hugging a pink heart" width="200">
+
 Use these as restrained accents, with empty alternative text when they are
 purely decorative. Display at a small CSS size with `object-fit: contain` so
-the halo, hair, broom, and coins remain visible.
+the halo, hair, and props remain visible.
+
+Foreground mascots on the dashboard open their original full-size PNG in a
+new tab. Background decorations remain unlinked.
 
 ## Generation prompts
 
@@ -70,4 +77,34 @@ The initial image had a black backdrop. The final built-in edit used:
 Use case: background-extraction
 Edit target: supplied coin-sweeping Maid Arisu illustration.
 Change ONLY the background: remove all the black backdrop and make it actually transparent alpha. This must be an RGBA PNG with alpha=0 in empty areas. The black background in the input is unwanted; do not preserve it. Keep the character's own dark navy hair, black maid dress, black shoes and dark broom parts intact. Preserve the exact character, cheerful face, pose, broom, gold coins, stars, cyan halo, framing and colors. Leave transparent cutouts between the hair strands and within the halo. Do not replace the backdrop with another solid color or a checkerboard pattern. Output clean transparent cutout artwork.
+```
+
+### Heart
+
+```text
+Use case: stylized-concept
+Asset type: small decorative transparent PNG mascot for relationship gains in the Maid in Schale automation dashboard.
+Primary request: new cute chibi fan art of Arisu (Alice) from Blue Archive in her maid outfit, cheerfully hugging a soft pink heart cushion with both arms. Use the supplied checklist picture as a character and rendering-style reference only; create a new compact pose. One or two tiny pink heart-shaped sparkles can float nearby.
+Subject: one chibi Arisu with bright oversized blue eyes, long dark navy hair with blue highlights, side ponytail tied by blue ribbon, white ruffled maid headband, luminous cyan pixel-shaped halo, modest fully clothed black-and-white frilled maid dress, white apron and stockings, blue bow, black shoes. Warm happy expression. Both hands clearly wrap around the pink heart cushion at her chest.
+Style: polished clean anime chibi illustration, soft cel shading and crisp navy outlines matching the supplied reference, cool blues and white with pink heart accents. Coherent silhouette readable at 160px.
+Composition: full body centered comfortably inside a near-square artboard, halo, hair and shoes all inside frame, little padding, no scenery or floor. No clipboard or pencil.
+Background: actual transparent alpha, RGBA PNG with alpha=0 in empty areas, including inside the halo and between hair strands. The input's black-looking background is transparency; preserve genuine transparency. No opaque rectangle, no checkerboard painted into image, no text, lettering, logos, watermark, extra characters or weapons.
+```
+
+The initial output painted a checkerboard instead of transparency. Two
+built-in background-extraction edits preserved the pose and illustration;
+the final output was verified as RGBA with genuine transparent pixels.
+
+First edit:
+
+```text
+Use case: background-extraction
+Edit target: supplied heart-hugging Maid Arisu illustration.
+Change ONLY the background: remove all the painted gray checkerboard and make it actually transparent alpha. This must be an RGBA PNG with alpha=0 in empty areas. The checkerboard pattern is unwanted; do not preserve it or draw a new checkerboard. Keep the character's own dark navy hair, black maid dress, black shoes, white apron, pink heart cushion, two floating little pink hearts, and cyan pixel halo intact. Preserve the exact character, face, pose, framing and colors. Leave transparent cutouts between all hair strands and within the halo. Do not replace backdrop with a solid color. Output clean genuine transparent cutout artwork.
+```
+
+Final edit:
+
+```text
+Remove the background. Return this identical character illustration as a transparent PNG sticker, with actual alpha transparency, no visible checkerboard. Keep Maid Arisu, pink hearts, halo, and all clothing unchanged.
 ```

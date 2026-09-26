@@ -176,6 +176,7 @@ def _routes(now: datetime) -> dict[str, tuple[str, bytes]]:
         "/maid-arisu-checklist.png": ("image/png", (_ROOT / "web" / "maid-arisu-checklist.png").read_bytes()),
         "/maid-arisu-tea.png": ("image/png", (_ROOT / "web" / "maid-arisu-tea.png").read_bytes()),
         "/maid-arisu-loot.png": ("image/png", (_ROOT / "web" / "maid-arisu-loot.png").read_bytes()),
+        "/maid-arisu-heart.png": ("image/png", (_ROOT / "web" / "maid-arisu-heart.png").read_bytes()),
         "/api/frame": ("image/svg+xml; charset=utf-8", _schematic(home_map)),
         "/api/popups/sample-announcement/before": ("image/svg+xml; charset=utf-8", _schematic(home_map, popup=True)),
         "/api/popups/sample-announcement/after": ("image/svg+xml; charset=utf-8", _schematic(home_map)),

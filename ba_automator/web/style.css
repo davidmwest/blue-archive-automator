@@ -13,7 +13,14 @@
 
 .lessons-settings{border-top:1px solid #e9eff7;margin-top:20px;padding-top:18px}.lessons-settings>.section-kicker{font-size:8px;margin-bottom:13px;color:#91a5be}.lessons-settings .download-setting{padding-bottom:14px;margin-bottom:13px;border-bottom:0}.lesson-setting{display:grid;gap:6px;font-size:9px;color:#8a9ab1;margin-top:14px}.lesson-setting input,.lesson-setting select,.lesson-setting textarea{background:#fbfcff;border:1px solid #e0e7f2;border-radius:6px;min-width:0;width:100%;padding:9px 11px;font:inherit;font-size:11px;color:#5d7497}.lesson-setting textarea{resize:vertical;min-height:70px}.lesson-setting small{font-size:9px;line-height:1.7;color:#8a9ab1}.lesson-setting :disabled{opacity:.55;background:#f5f7fb}.lesson-setting textarea::placeholder{color:#a0aec3}
 
-/* The mascot is decoration; task controls and status stay in the same places. */
+/* Foreground mascot art opens at full size; brand text still leads home. */
+.brand-home{text-decoration:none;min-width:0}
+.mascot-art-link{display:inline-block;flex-shrink:0;border-radius:12px;cursor:zoom-in;line-height:0}
+.mascot-art-link:focus-visible{outline:3px solid #68b5ff;outline-offset:4px}
+.brand-mark.mascot-art-link{display:grid}
+.mascot>.mascot-art-link{position:absolute;inset:0;border-radius:inherit}
+.mascot>.mascot-art-link:focus-visible{outline-offset:-4px}
+.mascot figcaption{pointer-events:none}
 .brand-mark{overflow:hidden;background:radial-gradient(circle at 50% 35%,#b9dcff,#3e75d8 72%)}
 .brand-mark img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 25%;transform:scale(1.75) translateY(8%)}
 .brand small{font-size:7px;letter-spacing:1.25px}
@@ -145,9 +152,15 @@
 .run-intro{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .run-copy{min-width:0}
 .arisu-checklist{display:block;width:96px;height:96px;flex-shrink:0;object-fit:contain;pointer-events:none}
-.arisu-tea{display:block;width:112px;height:112px;object-fit:contain;margin:0 auto 7px;pointer-events:none}
+.empty-state>.mascot-art-link{display:block;width:fit-content;margin:0 auto 7px}
+.arisu-tea{display:block;width:112px;height:112px;object-fit:contain;pointer-events:none}
 @media(max-width:650px){.run-intro{gap:8px}.arisu-checklist{width:68px;height:68px}.arisu-tea{width:88px;height:88px}}
 
 .loot-heading{display:flex;align-items:center;gap:12px;min-width:0}
 .arisu-loot{display:block;width:72px;height:72px;flex-shrink:0;object-fit:contain;pointer-events:none}
 @media(max-width:650px){.loot-heading{gap:7px}.arisu-loot{width:50px;height:50px}}
+
+.loot-relationship-intro{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+.loot-relationship-intro>h3{margin-bottom:0;min-width:0}
+.arisu-heart{display:block;width:80px;height:80px;object-fit:contain;pointer-events:none}
+@media(max-width:650px){.loot-relationship-intro{gap:10px}.arisu-heart{width:60px;height:60px}}

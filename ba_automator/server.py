@@ -1696,6 +1696,7 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     self._send(200, controller.popup_image(*match.groups()), "image/png")
                 elif target.path in {"/", "/index.html", "/app.js", "/style.css", "/maid-arisu.png",
                                      "/maid-arisu-checklist.png", "/maid-arisu-tea.png", "/maid-arisu-loot.png",
+                                     "/maid-arisu-heart.png",
                                      "/ap", "/ap.html", "/ap.js", "/ap.css"}:
                     name = "index.html" if target.path == "/" else "ap.html" if target.path == "/ap" else target.path[1:]
                     resource = files("ba_automator").joinpath("web", name)
@@ -1705,6 +1706,7 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                              "style.css": "text/css; charset=utf-8", "maid-arisu.png": "image/png",
                              "maid-arisu-checklist.png": "image/png", "maid-arisu-tea.png": "image/png",
                              "maid-arisu-loot.png": "image/png",
+                             "maid-arisu-heart.png": "image/png",
                              "ap.html":"text/html; charset=utf-8", "ap.js":"text/javascript; charset=utf-8", "ap.css":"text/css; charset=utf-8"}
                     self._send(200, resource.read_bytes(), types[name])
                 else:

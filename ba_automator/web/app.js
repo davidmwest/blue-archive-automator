@@ -753,6 +753,14 @@
         const section = document.createElement("section"); section.className = "loot-group loot-relationships"; section.dataset.lootGroup = "relationships";
         const heading = document.createElement("h3"); heading.textContent = "relationship gains";
         const count = document.createElement("span"); count.textContent = `${relationships.length} ${relationships.length === 1 ? "level-up" : "level-ups"}`; heading.append(count);
+        const header = document.createElement("div"); header.className = "loot-relationship-intro";
+        const artLink = document.createElement("a"); artLink.className = "mascot-art-link";
+        artLink.href = "/maid-arisu-heart.png"; artLink.target = "_blank"; artLink.rel = "noopener";
+        artLink.setAttribute("aria-label", "View Maid Arisu hugging a heart at full size (opens in a new tab)");
+        artLink.title = "view full-size art";
+        const art = document.createElement("img"); art.src = artLink.href; art.alt = "";
+        art.className = "arisu-heart"; art.width = 80; art.height = 80; art.loading = "lazy";
+        artLink.append(art); header.append(heading, artLink);
         const grid = document.createElement("div"); grid.className = "loot-relationship-grid";
         relationships.forEach((gain) => {
           const card = document.createElement("article"); card.className = "loot-relationship";
@@ -792,7 +800,7 @@
           }
           grid.append(card);
         });
-        section.append(heading, grid); totals.append(section);
+        section.append(header, grid); totals.append(section);
       };
       groups.forEach((group) => {
         if (!["premium", "students"].includes(group.id)) appendRelationships();

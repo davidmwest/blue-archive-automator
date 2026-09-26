@@ -13,10 +13,10 @@
 <body>
   <a class="skip-link" href="#main">Skip to controls</a>
   <aside class="sidebar" aria-label="Application navigation">
-    <a class="brand" href="#overview" aria-label="Maid in Schale overview">
-      <span class="brand-mark" aria-hidden="true"><img src="/maid-arisu.png" alt=""></span>
-      <span><strong>Maid in Schale</strong><small>BLUE ARCHIVE AUTOMATOR</small></span>
-    </a>
+    <div class="brand">
+      <a class="brand-mark mascot-art-link" href="/maid-arisu.png" target="_blank" rel="noopener" aria-label="View Maid Arisu holding a mop at full size (opens in a new tab)"><img src="/maid-arisu.png" alt=""></a>
+      <a class="brand-home" href="#overview" aria-label="Maid in Schale overview"><strong>Maid in Schale</strong><small>BLUE ARCHIVE AUTOMATOR</small></a>
+    </div>
     <div class="sidebar-label">WORKSPACE</div>
     <nav class="nav-list">
       <a class="nav-link active" href="#overview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10 12 3l9 7v10H3Z M9 20v-7h6v7"/></svg>Overview</a>
@@ -35,7 +35,7 @@
     <div id="demo-banner" class="demo-banner" role="note" hidden><strong>demo · sample data · no device</strong><span>have a look around. these runs are made up, and the controls won’t touch anything.</span></div>
     <header class="page-header" id="overview">
       <div class="hero-copy"><p class="eyebrow">MAID IN SCHALE · BLUE ARCHIVE AUTOMATOR</p><h1>blue archive, on autopilot.</h1><p class="page-subtitle">restart the game, clear the popups, get the daily stuff done.</p></div>
-      <figure class="mascot"><img src="/maid-arisu.png" alt="Maid Arisu holding a mop"><figcaption>maid arisu · on duty</figcaption></figure>
+      <figure class="mascot"><a class="mascot-art-link" href="/maid-arisu.png" target="_blank" rel="noopener" aria-label="View Maid Arisu holding a mop at full size (opens in a new tab)"><img src="/maid-arisu.png" alt=""></a><figcaption>maid arisu · on duty</figcaption></figure>
       <div class="connection" id="connection"><span class="connection-dot"></span><span id="connection-text">Connecting to local server</span></div>
     </header>
 
@@ -50,7 +50,7 @@
             <h2 id="run-title">the daily stuff</h2>
             <p id="run-phase" class="run-description">close the game, open it again, get to home. deal with the popups on the way.</p>
           </div>
-          <img class="arisu-checklist" src="/maid-arisu-checklist.png" alt="" width="96" height="96" decoding="async">
+          <a class="mascot-art-link" href="/maid-arisu-checklist.png" target="_blank" rel="noopener" aria-label="View Maid Arisu checking off the daily tasks at full size (opens in a new tab)"><img class="arisu-checklist" src="/maid-arisu-checklist.png" alt="" width="96" height="96" decoding="async"></a>
         </div>
         <div class="run-actions primary-controls" aria-label="Automation controls">
           <button id="run-available" class="button primary" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z"/></svg>do everything</button>
@@ -114,7 +114,7 @@
         <div class="card-header"><div><p class="section-kicker">IN ORDER</p><h2 id="queue-title">the queue <span id="queue-count" class="count">0</span></h2></div><span id="queue-state" class="badge neutral">—</span></div>
         <div id="current-job" class="current-job" hidden><span class="job-indicator" aria-hidden="true"></span><div><span class="section-kicker">RUNNING NOW</span><strong id="current-job-title"></strong><span id="current-job-phase" class="muted"></span></div></div>
         <ol id="queue-list" class="queue-list" aria-label="Pending tasks"></ol>
-        <div id="queue-empty" class="empty-state"><img class="arisu-tea" src="/maid-arisu-tea.png" alt="" width="112" height="112" loading="lazy" decoding="async"><strong>nothing queued.</strong><p>hit do everything, or let the next scheduled check handle it.</p></div>
+        <div id="queue-empty" class="empty-state"><a class="mascot-art-link" href="/maid-arisu-tea.png" target="_blank" rel="noopener" aria-label="View Maid Arisu taking a tea break at full size (opens in a new tab)"><img class="arisu-tea" src="/maid-arisu-tea.png" alt="" width="112" height="112" loading="lazy" decoding="async"></a><strong>nothing queued.</strong><p>hit do everything, or let the next scheduled check handle it.</p></div>
         <div class="schedule-summary"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18m-13 5 2 2 5-5"/></svg><div><strong id="daily-schedule-title">daily schedule</strong><span id="daily-schedule-status">waiting for schedule</span></div></div>
         <div class="schedule-summary"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2M8 3 6 1m10 2 2-2"/></svg><div><strong id="checkin-schedule-title">check-in schedule</strong><span id="checkin-schedule-status">waiting for schedule</span></div></div>
         <div class="schedule-summary"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><div><strong id="cafe-schedule-title">Café schedule</strong><span id="cafe-schedule-status">Waiting for schedule</span></div></div>
@@ -123,7 +123,7 @@
     </div>
 
     <section id="loot" class="loot-card card" aria-labelledby="loot-title">
-      <div class="card-header"><div class="loot-heading"><img class="arisu-loot" src="/maid-arisu-loot.png" alt="" width="72" height="72" loading="lazy" decoding="async"><div><p class="section-kicker">SINCE LAST CLEAR</p><h2 id="loot-title">loot gathered</h2></div></div><button id="clear-loot" class="button secondary small" type="button" disabled>clear loot</button></div>
+      <div class="card-header"><div class="loot-heading"><a class="mascot-art-link" href="/maid-arisu-loot.png" target="_blank" rel="noopener" aria-label="View Maid Arisu sweeping up the loot at full size (opens in a new tab)"><img class="arisu-loot" src="/maid-arisu-loot.png" alt="" width="72" height="72" loading="lazy" decoding="async"></a><div><p class="section-kicker">SINCE LAST CLEAR</p><h2 id="loot-title">loot gathered</h2></div></div><button id="clear-loot" class="button secondary small" type="button" disabled>clear loot</button></div>
       <div class="loot-caption"><p id="loot-since" class="microcopy">loading the haul.</p><p id="loot-count" class="loot-count" aria-live="polite"></p></div>
       <div id="loot-totals" class="loot-totals" aria-label="Loot grouped by importance"></div>
       <p id="loot-empty" class="logs-empty">nothing collected since the last clear. give it a minute.</p>
