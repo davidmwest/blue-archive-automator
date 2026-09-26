@@ -215,9 +215,11 @@
     $("stop-run").disabled = unavailable || !active;
     $("capture").disabled = unavailable || active;
     $("pause-queue").disabled = unavailable || paused;
-    $("pause-queue").textContent = paused ? "paused" : active ? "pause after this task" : "pause queue";
+    $("pause-queue").textContent = paused
+      ? active ? "pausing after this job" : "paused"
+      : active ? "pause after this job" : "pause queue";
     $("queue-control-note").textContent = paused
-      ? active ? "this task will finish, then the queue will wait. do everything gets things moving again."
+      ? active ? "the current job is still finishing. no next job will start. do everything gets the queue moving again."
         : "queue's paused. do everything checks what's ready and gets things moving again."
       : status?.run_available_pending ? "finishing what's already queued, then checking what else is ready."
       : status?.run_available_active ? "getting through what's ready. everything runs one at a time."
@@ -264,14 +266,18 @@
     $("queue-count").textContent = waiting.length;
     $("nav-queue-count").textContent = waiting.length;
     $("nav-queue-count").hidden = waiting.length === 0;
-    stateBadge($("queue-state"), paused ? "paused" : running ? "running" : "neutral", paused ? "Paused" : running ? "Running" : "Ready");
+    stateBadge($("queue-state"), running ? "running" : paused ? "paused" : "neutral",
+      paused ? running ? "Pausing after this job" : "Paused" : running ? "Running" : "Ready");
     $("current-job").hidden = !running;
     $("current-job-title").textContent = current ? jobName(current) : taskName(status.task);
     $("current-job-phase").textContent = status.phase || "Starting task";
     $("queue-empty").hidden = waiting.length > 0;
-    $("queue-empty").querySelector("strong").textContent = paused ? "queue’s paused." : running ? "nothing queued after this." : "nothing queued.";
+    $("queue-empty").querySelector("strong").textContent = paused
+      ? running ? "pausing after this job." : "queue’s paused."
+      : running ? "nothing queued after this." : "nothing queued.";
     $("queue-empty").querySelector("p").textContent = paused
-      ? "hit do everything when you’re ready to get going again."
+      ? running ? "the current job is still finishing. the queue will wait after that."
+        : "hit do everything when you’re ready to get going again."
       : "hit do everything, or let the next scheduled check handle it.";
     const signature = JSON.stringify(waiting);
     if (signature === queueSignature) return;
@@ -913,7 +919,9 @@
   $("run-scrimmages").addEventListener("click", () => void post("/api/run", { task: "scrimmages" }, "scrimmages are in the queue."));
   $("run-lessons").addEventListener("click", () => void post("/api/run", { task: "lessons" }, "lessons are in the queue."));
   $("stop-run").addEventListener("click", () => void post("/api/stop", {}, "stopping this task and pausing the queue. everything waiting stays there."));
-  $("pause-queue").addEventListener("click", () => void post("/api/pause", {}, "queue paused. the current task can finish."));
+  $("pause-queue").addEventListener("click", () => void post("/api/pause", {}, isRunning()
+    ? "pausing after this job. it’s still finishing; no next job will start."
+    : "queue paused. hit do everything when you’re ready to get going again."));
   $("resume-queue").addEventListener("click", () => void post("/api/resume", {}, "queue’s running again."));
   $("capture").addEventListener("click", () => void post("/api/capture", {}));
   $("popup-show-more").addEventListener("click", () => { popupLimit += 6; renderPopups(); });
