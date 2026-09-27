@@ -1237,10 +1237,16 @@ def test_missing_scrimmage_label_does_not_infer_other_fields(scrimmage_missing_p
 
     class Startup:
         def read(self, frame):
-            assert frame.shape[:2] == (720, 1280), "ambiguous detail must not start crop recovery"
-            return words
+            if frame.shape[:2] == (720, 1280):
+                return words
+            assert change == "nonzero_quantity", "invalid detail must not start crop recovery"
+            # A missing projection may now be inspected for positive counts.
+            # The actual exhausted crop cannot prove a payable projection;
+            # it must never manufacture tickets to fit the changed quantity.
+            return [Word("0→-", .99, (0, 0, 100, 30))]
 
         def matches(self, frame):
             return {}
 
-    assert TicketVision(Startup()).analyze(png).kind == "unknown"
+    result = TicketVision(Startup()).analyze(png)
+    assert result.kind == "unknown" and result.target is None
