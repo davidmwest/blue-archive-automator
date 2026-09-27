@@ -24,6 +24,8 @@ from .tactical_battles import (
 
 MAX_IDENTITIES = 1000
 MAX_IDENTITY_BYTES = 8192
+MAX_TIMED_OUT_SEARCHES = 1000
+MAX_SEARCH_ID_LENGTH = 128
 CONFLICTING_OUTCOMES = "Conflicting Tactical Challenge battle outcomes; inspect before retrying"
 
 
@@ -42,6 +44,7 @@ def empty_state():
         "day_key": None,
         "attempts": {},
         "identities": {},
+        "timed_out_searches": [],
         "retry_opponent_id": None,
         "pending": None,
         "last_tickets": None,
@@ -83,6 +86,33 @@ def battle_history(state):
     return BattleState(state["day_key"], state["attempts"], state["retry_opponent_id"])
 
 
+def _search_id(value):
+    _text(value)
+    if len(value) > MAX_SEARCH_ID_LENGTH:
+        raise ValueError("A Tactical Challenge search identity is too long")
+
+
+def _timed_out_searches(value):
+    if not isinstance(value, list) or len(value) > MAX_TIMED_OUT_SEARCHES:
+        raise ValueError("Invalid Tactical Challenge search timeout history")
+    for search_id in value:
+        _search_id(search_id)
+    if len(set(value)) != len(value):
+        raise ValueError("A Tactical Challenge search timeout cannot be recorded twice")
+    return value
+
+
+def search_allowances(state, tickets, preserve=DEFAULT_PRESERVE_TICKETS):
+    """Count unspent ticket searches without restoring timed-out allowances.
+
+    A battle reduces the observed ticket count. A timeout keeps its ticket but
+    consumes one search opportunity for this game day. The caller supplies the
+    current day's durable state and the latest observed ticket count.
+    """
+    timed_out = _timed_out_searches(state["timed_out_searches"])
+    return max(0, ticket_budget(tickets, preserve) - len(timed_out))
+
+
 def _identities(value):
     """Keep a bounded JSON copy; perceptual matching belongs to the runner."""
     if not isinstance(value, dict) or len(value) > MAX_IDENTITIES:
@@ -112,6 +142,7 @@ def _validate(state):
         return state
     history = battle_history(state)
     _identities(state["identities"])
+    _timed_out_searches(state["timed_out_searches"])
     for key in ("blocked_reason", "last_summary"):
         if state[key] is not None:
             _text(state[key])
@@ -162,6 +193,8 @@ def read_state(config):
         # Upgrade in memory without rewriting or discarding unresolved work.
         if isinstance(value, dict) and "identities" not in value:
             value = dict(value, identities={})
+        if isinstance(value, dict) and "timed_out_searches" not in value:
+            value = dict(value, timed_out_searches=[])
         _validate(value)
         value["retry_opponent_id"] = None
         return value
@@ -244,6 +277,30 @@ def observe_ladder(config, day_key, *, tickets, rank, preserve=DEFAULT_PRESERVE_
     if budget == 0:
         state["retry_opponent_id"] = None
         state["last_summary"] = f"Manual-play reserve reached; {tickets} ticket(s) remain"
+    return _save(config, state, now)
+
+
+def record_search_timeout(config, day_key, search_id, *, now=None):
+    """Consume one search allowance, preserving its ticket and other searches.
+
+    Persist before replacing an exhausted survey. Repeating the same stable ID
+    after an interruption is a read-only no-op, so checkpoint rotation cannot
+    count one timeout twice. Pending battles and holds must be resolved first.
+    """
+    _search_id(search_id)
+    now = _now(now)
+    if game_day(now) != day_key:
+        raise TacticalStateError("The game day changed before recording the search timeout")
+    state = state_for_day(config, day_key, now=now)
+    if search_id in state["timed_out_searches"]:
+        return state
+    if len(state["timed_out_searches"]) >= MAX_TIMED_OUT_SEARCHES:
+        raise TacticalStateError("Tactical Challenge search timeout history reached its limit")
+    state["timed_out_searches"].append(search_id)
+    state["last_summary"] = (
+        "Tactical Challenge search timed out; its ticket was kept; "
+        f'{len(state["timed_out_searches"])} search allowance(s) used without a battle today'
+    )
     return _save(config, state, now)
 
 

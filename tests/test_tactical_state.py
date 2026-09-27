@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from ba_automator.tactical_state import (
+    MAX_TIMED_OUT_SEARCHES,
     TacticalStateError,
     battle_history,
     begin_battle,
@@ -16,9 +17,11 @@ from ba_automator.tactical_state import (
     ensure_restart_safe,
     observe_ladder,
     record_outcome,
+    record_search_timeout,
     reconcile_pending,
     read_state,
     save_identities,
+    search_allowances,
     state_for_day,
     state_path,
     write_state,
@@ -513,3 +516,142 @@ def test_legacy_already_entered_second_battle_can_be_reconciled_without_replayin
     assert recovered["pending"] is None and recovered["retry_opponent_id"] is None
     with pytest.raises(TacticalStateError, match="already been fought"):
         begin(config)
+
+
+def test_timeout_consumes_one_allowance_without_spending_a_ticket(config):
+    observe_ladder(config, DAY, tickets=4, rank=541, now=NOW)
+    saved = record_search_timeout(config, DAY, "search-a", now=NOW + timedelta(minutes=10))
+    assert saved["timed_out_searches"] == ["search-a"]
+    assert saved["last_tickets"] == 4 and saved["last_rank"] == 541
+    assert saved["pending"] is None and saved["attempts"] == {}
+    assert search_allowances(saved, 4, 1) == 2
+    assert "ticket was kept" in saved["last_summary"]
+
+
+def test_timeout_replay_after_restart_is_read_only_and_does_not_consume_another_allowance(config):
+    observe_ladder(config, DAY, tickets=4, rank=541, now=NOW)
+    saved = record_search_timeout(config, DAY, "search-a", now=NOW)
+    content = state_path(config).read_bytes()
+    restarted = SimpleNamespace(**vars(config))
+    again = record_search_timeout(restarted, DAY, "search-a", now=NOW + timedelta(minutes=5))
+    assert again == saved
+    assert state_path(config).read_bytes() == content
+    assert search_allowances(read_state(restarted), 4, 1) == 2
+
+
+def test_each_remaining_ticket_gets_one_allowance_and_timeouts_do_not_create_more(config):
+    saved = observe_ladder(config, DAY, tickets=4, rank=541, now=NOW)
+    assert search_allowances(saved, 4, 1) == 3
+    for number in range(3):
+        saved = record_search_timeout(config, DAY, f"search-{number}", now=NOW)
+        assert search_allowances(saved, 4, 1) == 2 - number
+    assert read_state(config)["last_tickets"] == 4
+    assert search_allowances(state_for_day(config, DAY, now=NOW), 4, 1) == 0
+
+
+@pytest.mark.parametrize("won", [False, True])
+def test_battle_completion_preserves_previously_timed_out_allowances(config, won):
+    observe_ladder(config, DAY, tickets=4, rank=541, now=NOW)
+    record_search_timeout(config, DAY, "search-a", now=NOW)
+    intent = begin_battle(config, DAY, "opponent-a", 4, 541, now=NOW)
+    saved = complete_battle(config, intent, tickets_after=3, won=won, rank_after=500 if won else 541, now=NOW)
+    assert saved["timed_out_searches"] == ["search-a"]
+    assert saved["attempts"] == {"opponent-a": 1}
+    assert search_allowances(saved, 3, 1) == 1
+
+
+def test_rank_reserve_and_search_settings_changes_preserve_timeout_accounting(config):
+    observe_ladder(config, DAY, tickets=4, rank=541, now=NOW)
+    record_search_timeout(config, DAY, "search-a", now=NOW)
+    changed_config = SimpleNamespace(**vars(config), tactical_battles_search_minutes=20)
+    saved = observe_ladder(changed_config, DAY, tickets=4, rank=580, preserve=2, now=NOW)
+    assert saved["timed_out_searches"] == ["search-a"]
+    assert search_allowances(saved, 4, 2) == 1
+    assert search_allowances(saved, 4, 0) == 3
+    assert read_state(config)["timed_out_searches"] == ["search-a"]
+
+
+def test_manual_ticket_use_cannot_restore_timed_out_allowances(config):
+    observe_ladder(config, DAY, tickets=4, rank=541, now=NOW)
+    record_search_timeout(config, DAY, "search-a", now=NOW)
+    saved = observe_ladder(config, DAY, tickets=3, rank=541, now=NOW)
+    assert search_allowances(saved, 3, 1) == 1
+    assert search_allowances(saved, 1, 1) == 0
+    assert search_allowances(saved, 0, 1) == 0
+
+
+def test_new_day_resets_timeout_allowances(config):
+    record_search_timeout(config, DAY, "search-a", now=NOW)
+    saved = state_for_day(config, "2026-09-27", now=NOW + timedelta(days=1))
+    assert saved["timed_out_searches"] == []
+    assert search_allowances(saved, 5, 1) == 4
+
+
+@pytest.mark.parametrize("guard", ["pending", "blocked"])
+def test_timeout_recording_cannot_bypass_unresolved_battles_or_holds(config, guard):
+    record_search_timeout(config, DAY, "search-a", now=NOW)
+    if guard == "pending":
+        begin(config)
+    else:
+        block(config, "Inspect formation", now=NOW)
+    content = state_path(config).read_bytes()
+    for search_id in ("search-a", "search-b"):
+        with pytest.raises(TacticalStateError):
+            record_search_timeout(config, DAY, search_id, now=NOW)
+    assert state_path(config).read_bytes() == content
+
+
+@pytest.mark.parametrize("day", ["2026-09-25", "2026-09-27"])
+def test_timeout_requires_current_game_day_without_resetting_history(config, day):
+    record_search_timeout(config, DAY, "search-a", now=NOW)
+    content = state_path(config).read_bytes()
+    with pytest.raises(TacticalStateError, match="game day changed"):
+        record_search_timeout(config, day, "search-b", now=NOW)
+    assert state_path(config).read_bytes() == content
+
+
+@pytest.mark.parametrize("search_id", [None, True, 7, "", " ", " padded", "a" * 129])
+def test_invalid_timeout_id_creates_no_state(config, search_id):
+    with pytest.raises(ValueError):
+        record_search_timeout(config, DAY, search_id, now=NOW)
+    assert not state_path(config).exists()
+
+
+@pytest.mark.parametrize("history", [
+    None, {}, "search-a", [None], [True], [""], [" padded"], ["a" * 129],
+    ["duplicate", "duplicate"], [f"search-{n}" for n in range(MAX_TIMED_OUT_SEARCHES + 1)],
+])
+def test_invalid_timeout_history_fails_closed(config, history):
+    saved = state_for_day(config, DAY, now=NOW)
+    saved["timed_out_searches"] = history
+    state_path(config).write_text(json.dumps(saved))
+    with pytest.raises(TacticalStateError, match="Invalid"):
+        read_state(config)
+
+
+def test_full_timeout_ledger_is_bounded_but_existing_timeout_remains_idempotent(config):
+    saved = state_for_day(config, DAY, now=NOW)
+    saved["timed_out_searches"] = [f"search-{n}" for n in range(MAX_TIMED_OUT_SEARCHES)]
+    write_state(config, saved)
+    content = state_path(config).read_bytes()
+    assert record_search_timeout(config, DAY, "search-0", now=NOW) == saved
+    with pytest.raises(TacticalStateError, match="limit"):
+        record_search_timeout(config, DAY, "one-too-many", now=NOW)
+    assert state_path(config).read_bytes() == content
+
+
+@pytest.mark.parametrize("pending", [False, True])
+def test_legacy_state_without_timeout_history_migrates_in_memory_only(config, pending):
+    if pending:
+        begin(config)
+    else:
+        complete(config, begin(config))
+    legacy = read_state(config)
+    del legacy["timed_out_searches"]
+    content = json.dumps(legacy)
+    state_path(config).write_text(content)
+    upgraded = read_state(config)
+    assert upgraded == dict(legacy, timed_out_searches=[])
+    assert state_path(config).read_text() == content
+    assert upgraded["pending"] == legacy["pending"]
+    assert upgraded["attempts"] == legacy["attempts"]

@@ -8,6 +8,7 @@ Mutating callers hold the instance lock; the scheduler reads atomic snapshots.
 
 from datetime import datetime, timezone
 from functools import lru_cache
+import hashlib
 import json
 import math
 import os
@@ -25,11 +26,11 @@ from . import tactical_state
 MAX_AGE_SECONDS = 4 * 60 * 60
 MAX_FILE_BYTES = 10 * 1024 * 1024
 MAX_ENTRIES = 1000
-# Version 3 replaces confidence sampling with a finite-time search. Durable
-# battle history and daily exclusions live in a separate file and are retained.
-CHECKPOINT_VERSION = 3
+# Version 4 identifies each ticket's finite-time search for timeout accounting.
+# Durable battle history and daily exclusions live in a separate file.
+CHECKPOINT_VERSION = 4
 _KEYS = {"version", "day_key", "own_rank", "status", "search", "identities",
-         "created_at", "updated_at", "due_at"}
+         "created_at", "updated_at", "due_at", "search_id"}
 
 
 def survey_path(config):
@@ -79,9 +80,18 @@ def _identities(value):
 
 
 def _validate(value, now, *, fresh=True):
+    # Version 3 had one search per day after a timeout. Its stable identity
+    # lets migration charge that allowance exactly once, including after a crash.
+    if (isinstance(value, dict) and value.get("version") == 3
+            and set(value) == _KEYS - {"search_id"}):
+        seed = json.dumps([value["day_key"], value["created_at"]])
+        value = dict(value, version=CHECKPOINT_VERSION,
+                     search_id=hashlib.sha256(seed.encode()).hexdigest()[:32])
     if (not isinstance(value, dict) or set(value) != _KEYS
             or type(value["version"]) is not int or value["version"] != CHECKPOINT_VERSION):
         raise ValueError("Invalid saved Tactical Challenge survey")
+    if not isinstance(value["search_id"], str) or not re.fullmatch(r"[0-9a-f]{32}", value["search_id"]):
+        raise ValueError("Invalid saved search identity")
     if type(value["own_rank"]) is not int or value["own_rank"] < 1:
         raise ValueError("Invalid saved player rank")
     created, updated, due = (_number(value[key]) for key in ("created_at", "updated_at", "due_at"))
@@ -136,7 +146,7 @@ def _continuation_metadata(path, fingerprint):
         raw = _read_json(Path(path))
         value = _validate(raw, _number(raw["updated_at"]), fresh=False)
         return {key: value[key] for key in (
-            "day_key", "own_rank", "status", "created_at", "updated_at", "due_at"
+            "day_key", "own_rank", "status", "created_at", "updated_at", "due_at", "search_id"
         )} | {"time_budget_seconds": value["search"].policy.time_budget_seconds,
               "remaining_seconds": value["search"].remaining_seconds}
     except (OSError, ValueError, TypeError, KeyError, OverflowError, RecursionError):
@@ -149,7 +159,7 @@ def _matches(value, day_key, time_budget_seconds):
 
 
 def save_survey(config, *, day_key, own_rank, search, identities, now,
-                delay_seconds=60, status="active"):
+                delay_seconds=60, status="active", search_id=None):
     """Save progress without restoring elapsed time or extending its age."""
     _number(now)
     _number(delay_seconds)
@@ -159,13 +169,27 @@ def save_survey(config, *, day_key, own_rank, search, identities, now,
         raise ValueError("A search state is required")
     previous = _read(config, now)
     matching = _matches(previous, day_key, search.policy.time_budget_seconds)
+    search_id = search_id or (previous["search_id"] if matching else uuid4().hex)
+    if matching and search_id != previous["search_id"]:
+        history = tactical_state.read_state(config)
+        if (not previous["search"].exhausted
+                or history["day_key"] != day_key
+                or previous["search_id"] not in history["timed_out_searches"]
+                or history["pending"] or history["blocked_reason"]
+                or history["last_tickets"] is None
+                or not tactical_state.search_allowances(
+                    history, history["last_tickets"], config.tactical_battles_preserve_tickets)):
+            raise ValueError("A new search requires an accounted timeout and another ticket allowance")
+        matching = False
     if matching and search.elapsed_seconds < previous["search"].elapsed_seconds:
         raise ValueError("Saved search cannot restore an already used time budget")
     created = previous["created_at"] if matching else now
-    value = {"version": CHECKPOINT_VERSION, "day_key": day_key, "own_rank": own_rank,
+    value = {"version": CHECKPOINT_VERSION, "search_id": search_id,
+             "day_key": day_key, "own_rank": own_rank,
              "status": status, "search": search.to_dict(), "identities": identities,
              "created_at": created, "updated_at": now, "due_at": now + delay_seconds}
     _write(config, value, now)
+    return search_id
 
 
 def _write(config, value, now):
@@ -231,9 +255,8 @@ def continuation_due(config, *, now):
     except OSError:
         return False
     if (value is None or value["due_at"] > now or value["updated_at"] > now
-            or now - value["created_at"] >= MAX_AGE_SECONDS
+            or (value["remaining_seconds"] > 0 and now - value["created_at"] >= MAX_AGE_SECONDS)
             or value["day_key"] != _day(now) or value["status"] != "active"
-            or value["remaining_seconds"] <= 0
             or value["time_budget_seconds"] != config.tactical_battles_search_minutes * 60):
         return False
     try:
@@ -243,4 +266,11 @@ def continuation_due(config, *, now):
     if history["pending"] or history["blocked_reason"]:
         return False
     tickets = history["last_tickets"]
-    return tickets is None or tickets > config.tactical_battles_preserve_tickets
+    if tickets is None:
+        return value["remaining_seconds"] > 0
+    remaining = tactical_state.search_allowances(history, tickets, config.tactical_battles_preserve_tickets)
+    # Before migration/timeout accounting the expired allowance still counts
+    # against this total. After accounting it must not be subtracted twice.
+    if value["remaining_seconds"] <= 0 and value["search_id"] not in history["timed_out_searches"]:
+        remaining -= 1
+    return remaining > 0

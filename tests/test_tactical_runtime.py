@@ -951,7 +951,7 @@ def test_survey_expiring_during_a_visit_returns_home_then_reports_failure(runner
     current = frame(rank=100, tickets=5, opponents=candidates)
     now = runner.wall_clock()
     search = SearchState(runner.search_policy)
-    resumed = {"search": search, "identities": {},
+    resumed = {"search": search, "search_id": "a" * 32, "identities": {},
                "created_at": now.timestamp() - survey.MAX_AGE_SECONDS + 1}
     monkeypatch.setattr(survey, "load_survey", lambda *a, **k: resumed)
     def refresh(f):

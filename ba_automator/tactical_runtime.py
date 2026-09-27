@@ -1,6 +1,7 @@
 """Bounded ladder scouting and serial battles with durable ticket accounting."""
 
 from dataclasses import asdict, replace
+from uuid import uuid4
 
 from .actions import record_action
 from .club import game_day
@@ -44,6 +45,7 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
         self.reserve = config.tactical_battles_preserve_tickets
         self.search_policy = SearchPolicy(time_budget_seconds=config.tactical_battles_search_minutes * 60)
         self.search_state = None
+        self.search_id = None
         self.search_clock = None
         self.observed = {}
         self.refresh_count = 0
@@ -278,29 +280,68 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
         day = getattr(self, "run_day", game_day(self.wall_clock()))
         if search is None or day != game_day(self.wall_clock()):
             return
-        survey.save_survey(
+        self.search_id = survey.save_survey(
             self.config, day_key=day, own_rank=self.survey_own_rank,
             search=search, identities={key: asdict(value) for key, value in self.observed.items()},
-            status=status, now=self.wall_clock().timestamp())
+            status=status, now=self.wall_clock().timestamp(),
+            search_id=getattr(self, "search_id", None))
 
     def clear_completed_search(self):
         """End a proven match's search before any ancillary logging can fail."""
         self.search_state = self.search_clock = self.survey_resume = None
+        self.search_id = None
         self.survey_created_at = None
         survey.clear_survey(self.config)
 
+    def expire_ticket_search(self, frame):
+        """Retain the ticket, charge its allowance once, and schedule the next.
+
+        Write the exhausted checkpoint before its durable timeout, then replace
+        it atomically. Either side of a crash remains resumable without granting
+        the same allowance twice or losing all remaining tickets' searches.
+        """
+        self.save_search()
+        already_recorded = self.search_id in state.read_state(self.config)["timed_out_searches"]
+        persisted = state.record_search_timeout(
+            self.config, self.run_day, self.search_id, now=self.wall_clock())
+        remaining = state.search_allowances(persisted, frame.screen.tickets, self.reserve)
+        if not already_recorded:
+            record_action(self.config, "tactical_search_exhausted",
+                          f"Tactical Challenge ticket search timed out; ticket kept, "
+                          f"{remaining} search allowance(s) remain today",
+                          task=self.task, search_id=self.search_id,
+                          search_minutes=self.search_policy.time_budget_seconds / 60,
+                          tickets=frame.screen.tickets, remaining_allowances=remaining)
+        self.phase(f"Ticket search timed out; {frame.screen.tickets} tickets kept, "
+                   f"{remaining} search allowance(s) left today")
+        if remaining:
+            previous = (self.search_state, self.search_id)
+            self.search_state = SearchState(self.search_policy)
+            self.search_id = uuid4().hex
+            try:
+                self.save_search()
+            except BaseException:
+                self.search_state, self.search_id = previous
+                raise
+            self.survey_created_at = self.wall_clock().timestamp()
+            self.survey_resume = None
+            self.defer_survey = True
+        return remaining
+
     def scout(self, frame):
-        """Select from the visible list using a per-match time budget."""
+        """Select from the visible list using this ticket's time budget."""
         rank = frame.screen.rank
         resumed = getattr(self, "survey_resume", None)
         self.survey_resume = None
         if resumed is not None:
             self.search_state = resumed["search"]
+            self.search_id = resumed["search_id"]
             self.survey_created_at = resumed["created_at"]
             self.phase("Continuing saved opponent search with "
                        f"{self.search_state.remaining_seconds:.0f}s remaining")
         if self.search_state is None:
             self.search_state = SearchState(self.search_policy)
+            self.search_id = None
             self.survey_created_at = None
         self.survey_own_rank = rank
         self.search_clock = self.clock()
@@ -351,10 +392,6 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
                     return frame, (selected,)
                 if self.search_state.exhausted:
                     self.phase("Search time used up without a suitable visible opponent; keeping the ticket")
-                    record_action(self.config, "tactical_search_exhausted",
-                                  "Tactical Challenge search time used up; no suitable visible opponent, ticket kept",
-                                  task=self.task, search_minutes=self.search_policy.time_budget_seconds / 60,
-                                  tickets=frame.screen.tickets)
                     break
                 if not self.survey_time_available():
                     self.defer_survey = True
@@ -513,16 +550,22 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
         if self.survey_resume is not None:
             self.restore_identities(self.survey_resume)
             self.search_state = self.survey_resume["search"]
+            self.search_id = self.survey_resume["search_id"]
             self.survey_created_at = self.survey_resume["created_at"]
             self.survey_own_rank = frame.screen.rank
         else:
             survey.clear_survey(self.config)
+            self.search_id = None
         self.restore_identities(persisted)
         battles = 0
         expired_choices = 0
-        while ticket_budget(frame.screen.tickets, self.reserve) and frame.screen.rank > 1:
+        while (state.search_allowances(state.read_state(self.config), frame.screen.tickets, self.reserve)
+               and frame.screen.rank > 1):
             if game_day(self.wall_clock()) != day:
                 self.phase("The game day changed; the next daily visit will use the refreshed tickets")
+                break
+            if self.search_state is not None and self.search_state.exhausted:
+                self.expire_ticket_search(frame)
                 break
             # Standby is not scouting. Wait before choosing so the selected
             # current list remains valid for its immediate detail inspection.
@@ -540,6 +583,9 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
             except TacticalPlanningError:
                 choice = None
             if choice is None:
+                if (self.search_state is not None and self.search_state.exhausted
+                        and not self.survey_failure_reason and frame.screen.rank > 1):
+                    self.expire_ticket_search(frame)
                 break
             # Selection is only from this frame. No historical-target lookup
             # and no refreshes after the search to chase an absent opponent.
@@ -561,6 +607,8 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
                 expired_choices += 1
                 if expired_choices >= 2:
                     self.defer_survey = not self.search_state.exhausted
+                    if self.search_state.exhausted:
+                        self.expire_ticket_search(frame)
                     break
                 continue
             battles += 1
@@ -568,8 +616,12 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
             expired_choices = 0
             if battles >= 5:
                 break
-        self.phase(f"Tactical Challenge finished: {battles} battles; "
-                   f"{frame.screen.tickets} tickets left, reserve {self.reserve}")
+        persisted = state.read_state(self.config)
+        timeouts = len(persisted["timed_out_searches"])
+        allowances = state.search_allowances(persisted, frame.screen.tickets, self.reserve)
+        self.phase(f"Tactical Challenge visit: {battles} battles; "
+                   f"{frame.screen.tickets} tickets left, reserve {self.reserve}; "
+                   f"{timeouts} search timeout(s), {allowances} allowance(s) left today")
         if (self.search_state is not None and game_day(self.wall_clock()) == day
                 and frame.screen.rank == self.survey_own_rank
                 and ticket_budget(frame.screen.tickets, self.reserve)):

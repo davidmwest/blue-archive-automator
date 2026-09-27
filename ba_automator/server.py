@@ -45,7 +45,7 @@ from .locking import InstanceLock, LockError
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS, task_plan
 from .home_badges import PRIORITY
 from . import packs_state
-from . import ap_state, loot, daily_log, daily_schedule, checkin_schedule, tactical_survey, tactical_retry
+from . import ap_state, loot, daily_log, daily_schedule, checkin_schedule, tactical_survey, tactical_retry, tactical_state
 from .club import game_day
 from .tactical_state import TacticalStateError, ensure_restart_safe
 from .vision import decode_frame
@@ -1094,6 +1094,12 @@ class DashboardController:
                     elif exit_code == 0 and self._result and self._result.get("status") in {"success", "deferred"}:
                         self._state = "success"
                         self._phase = TASK_LABELS[job["task"]]
+                        if job["task"] == "tactical_battles":
+                            # Reward collection follows battles and can be the
+                            # last successful result even when scouting yielded.
+                            battle_result = self._parse_result(output, run_root, task="tactical_battles")
+                            self._phase = self._tactical_completion_phase(
+                                selected, (battle_result or self._result)["status"])
                     else:
                         self._state = "failed"
                         self._phase = ("Daily finished with failures; check failed jobs"
@@ -1268,6 +1274,25 @@ class DashboardController:
             record_action(selected, "app_closed", detail, task="system")
         except (OSError, ValueError, TypeError) as exc:
             self._log(f"Blue Archive closed, but its action history could not be saved: {exc}", "error")
+
+    def _tactical_completion_phase(self, selected: Config, status: str) -> str:
+        """Describe a finished visit without implying every ticket was spent."""
+        prefix = ("Tactical Challenge search saved; queue continues" if status == "deferred"
+                  else "Tactical Challenge visit finished")
+        try:
+            state = tactical_state.read_state(selected)
+            tickets = state["last_tickets"]
+            if state["day_key"] != game_day(self._wall_clock()) or tickets is None:
+                return f"{prefix}; ticket counts unavailable"
+            reserve = selected.tactical_battles_preserve_tickets
+            timeouts = len(state["timed_out_searches"])
+            allowances = tactical_state.search_allowances(state, tickets, reserve)
+            return (f"{prefix}; {tickets} ticket{'s' if tickets != 1 else ''} left, reserve {reserve}; "
+                    f"{timeouts} search timeout{'s' if timeouts != 1 else ''}; "
+                    f"{allowances} search allowance{'s' if allowances != 1 else ''} left today")
+        except (TacticalStateError, OSError, ValueError) as exc:
+            self._log(f"Could not read Tactical Challenge completion counts: {exc}", "error")
+            return f"{prefix}; ticket counts unavailable"
 
     @staticmethod
     def _unfinished_result(run_root: Path, status: str) -> dict:

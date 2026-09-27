@@ -57,7 +57,7 @@ flowchart TD
 | `packs.py`, `packs_state.py`, `mail.py`, `shop_runtime.py`, `shop_vision.py` | Opt-in paid-pack policy, durable purchase holds, verified mail collection, and shared shop navigation |
 | `free_pack.py`, `task_rewards.py`, `task_rewards_vision.py`, `tactical_rewards.py` | Guarded collection of free packs, completed Tasks, and Tactical Challenge rewards without spending battle tickets |
 | `tactical_battles.py`, `tactical_runtime.py`, `tactical_search.py`, `tactical_vision.py`, `tactical_formation.py` | Time-bounded opponent benchmarking and selection by estimated team levels, saved-team completion, guarded battle entry, and ticket reserve |
-| `tactical_state.py`, `tactical_survey.py`, `tactical_retry.py` | Durable opponent history and battle intents, persisted search time and evidence for queue continuations, and bounded delayed retries that preserve unresolved battle holds |
+| `tactical_state.py`, `tactical_survey.py`, `tactical_retry.py` | Durable opponent history, battle intents, and used daily search allowances; persisted per-ticket search time and evidence for queue continuations; bounded delayed retries that preserve unresolved battle holds |
 | `home_badges.py`, `red_dots.py` | Home notification recognition and duplicate-suppressed follow-up requests, including excess AP |
 | `checkin_schedule.py` | Per-instance periodic check-in deadlines, validation, and atomic state persistence |
 | `lesson_planner.py` | Pure relationship and school-rank policy over observed locations, rooms, ownership, and relationship ranks |
@@ -164,8 +164,8 @@ Storage paths are relative to the TOML file. With the example configuration:
 | `data/state/club-<instance hash>.json` | Verified Club attendance check for the current game day |
 | `data/state/ap-<instance hash>.json` | Stage catalog, Hard-stage rotation, spending hold, and next AP check |
 | `data/state/bounties-<instance hash>.json`, `scrimmages-<instance hash>.json` | Game-day ticket allocation, verified progress, and pending sweep |
-| `data/state/tactical-<instance hash>.json` | Game-day opponent history, verified identities, ticket/rank observations, and unresolved battle intent |
-| `data/state/tactical-survey-<instance hash>.json` | Per-match benchmark, candidate identities, consumed active search time, status, and continuation deadline; four-hour-old evidence blocks continuation without restoring spent search time. Passive rank changes retain the allowance; a changed game day or search-time setting starts a new allowance |
+| `data/state/tactical-<instance hash>.json` | Game-day opponent history, verified identities, ticket/rank observations, unresolved battle intent, and IDs of searches that exhausted their daily allowance without spending a ticket |
+| `data/state/tactical-survey-<instance hash>.json` | Current per-ticket search ID, benchmark, candidate identities, consumed active time, status, and continuation deadline; four-hour-old evidence blocks continuation without restoring spent time. Passive rank changes retain progress. Exhaustion consumes one daily allowance and permits another search only when an allowance remains |
 | `data/state/tactical-retry-<instance hash>.json` | Current game day's retry allowance and due time; at most three delayed retries, spaced by at least 15 minutes |
 | `data/state/packs-<instance hash>.json` | Pack ownership observations, purchase intent, payment hold, and next check |
 | `data/state/failed-jobs-<instance hash>.json` | Persistent, dismissible failed-job notices |
@@ -174,7 +174,7 @@ Storage paths are relative to the TOML file. With the example configuration:
 
 Ctrl+C and task failure record the result and release the lock. The `restart` task starts a new force-stop/launch sequence; startup itself has no resume checkpoint. Cafe receipts and relationship evidence, plus lesson survey and receipt evidence, are retained separately from the rotating screenshot ring.
 
-JSONL remains the machine-readable history format, supplemented by daily text logs and atomic task state. Crafting, AP, tickets, Club, paid packs, and Tactical Challenge have task-specific durable checkpoints or intents; a general resumable queue and SQLite history are deferred. Tactical search continuations and bounded retries append behind ordinary scheduled work. Failed or canceled continuations block the search checkpoint while preserving consumed time; search state is separate from unresolved battle intent and cannot clear it. Local config, raw screenshots, and logs remain outside Git. Only reviewed recognition crops and sanitized fixtures belong in the repository.
+JSONL remains the machine-readable history format, supplemented by daily text logs and atomic task state. Crafting, AP, tickets, Club, paid packs, and Tactical Challenge have task-specific durable checkpoints or intents; a general resumable queue and SQLite history are deferred. Tactical search continuations and bounded retries append behind ordinary scheduled work. Every usable ticket has its own configured search allowance. A completed battle advances to the next usable ticket; a timeout records its search ID once, keeps the ticket unspent, and permits the next remaining daily allowance. Recording the timeout before replacing the search checkpoint prevents a crash from granting duplicate allowances. Older exhausted checkpoints receive a stable ID and count as one used allowance. Failed or canceled continuations block the search checkpoint while preserving consumed time; search state is separate from unresolved battle intent and cannot clear it. Local config, raw screenshots, and logs remain outside Git. Only reviewed recognition crops and sanitized fixtures belong in the repository.
 
 ## Resource use and coexistence
 

@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
+import json
 
 import pytest
 
@@ -10,7 +11,7 @@ from ba_automator.club import game_day
 from ba_automator.server import DashboardController
 from ba_automator.tactical_search import SearchPolicy, SearchState
 from ba_automator.tactical_survey import continuation_due as saved_continuation_due
-from test_server import ProcessFactory, eventually
+from test_server import FakeOutput, ProcessFactory, eventually
 
 
 NOW = datetime(2026, 9, 26, 16, tzinfo=timezone.utc)
@@ -255,3 +256,88 @@ def test_real_failed_continuation_blocks_search_and_preserves_budget(controlled,
     assert not saved_continuation_due(controller.config, now=NOW.timestamp() + 900)
     assert tactical_state.state_path(controller.config).read_bytes() == intent_before
     assert not controller.status()["queue"]
+
+
+@pytest.mark.parametrize("outcome, tickets, timeouts, remaining", [
+    ("success", 4, 3, 0),  # All search allowances expired; the actual tickets remain.
+    ("success", 1, 0, 0),  # The manual-play reserve is still available.
+    ("deferred", 4, 1, 2),  # A saved search will continue after other queued work.
+])
+def test_tactical_completion_phase_reports_tickets_and_search_allowances(
+        controlled, monkeypatch, outcome, tickets, timeouts, remaining):
+    controller, factory, _, _ = controlled
+    tactical_state.observe_ladder(controller.config, game_day(NOW),
+                                  tickets=tickets, rank=500, preserve=1, now=NOW)
+    for index in range(timeouts):
+        tactical_state.record_search_timeout(controller.config, game_day(NOW),
+                                            f"search-{index}", now=NOW)
+    saved = tactical_state.state_path(controller.config).read_bytes()
+
+    def output(self):
+        self.process.done.wait()
+        # This is the real command's order: successful reward collection must
+        # not hide the battle runner's saved continuation.
+        for task, status in (("tactical_battles", outcome), ("tactical_rewards", "success")):
+            run = self.process.run_dir.parent / f"{task}-test"
+            run.mkdir()
+            yield json.dumps({"status": status, "run_dir": str(run),
+                              "duration": 1.2, "actions": 2}) + "\n"
+
+    monkeypatch.setattr(FakeOutput, "__iter__", output)
+    controller.enqueue("tactical_battles")
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    factory.processes[0].finish()
+    eventually(lambda: controller.status()["state"] == "success")
+    result = controller.status()
+    phase = result["phase"]
+    assert phase.startswith("Tactical Challenge search saved; queue continues"
+                            if outcome == "deferred" else "Tactical Challenge visit finished")
+    assert f"{tickets} ticket{'s' if tickets != 1 else ''} left, reserve 1" in phase
+    assert f"{timeouts} search timeout" in phase
+    assert f"{remaining} search allowances left today" in phase
+    assert "battles complete" not in phase
+    assert result["result"]["status"] == "success"  # Existing API semantics remain intact.
+    assert tactical_state.state_path(controller.config).read_bytes() == saved
+
+
+@pytest.mark.parametrize("state_kind", ["missing", "corrupt", "previous_day"])
+def test_unavailable_tactical_counts_do_not_fail_a_successful_job(controlled, state_kind):
+    controller, factory, _, _ = controlled
+    path = tactical_state.state_path(controller.config)
+    if state_kind == "corrupt":
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{corrupt", encoding="utf-8")
+    elif state_kind == "previous_day":
+        yesterday = NOW - timedelta(days=1)
+        tactical_state.observe_ladder(controller.config, game_day(yesterday),
+                                      tickets=5, rank=500, now=yesterday)
+    saved = path.read_bytes() if path.exists() else None
+    controller.enqueue("tactical_battles")
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    factory.processes[0].finish()
+    eventually(lambda: controller.status()["state"] == "success")
+    assert controller.status()["phase"] == "Tactical Challenge visit finished; ticket counts unavailable"
+    assert (path.read_bytes() if path.exists() else None) == saved
+
+
+@pytest.mark.parametrize("task", ["mail", "daily"])
+def test_other_job_completion_labels_do_not_use_tactical_summary(controlled, monkeypatch, task):
+    from ba_automator.tasks import TASK_LABELS
+
+    controller, factory, _, _ = controlled
+    summaries = []
+
+    def unexpected_summary(config, status):
+        summaries.append((config, status))
+        return "Unexpected Tactical Challenge summary"
+
+    monkeypatch.setattr(controller, "_tactical_completion_phase", unexpected_summary)
+    controller.enqueue(task)
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    factory.processes[0].finish()
+    eventually(lambda: controller.status()["state"] == "success")
+    assert controller.status()["phase"] == TASK_LABELS[task]
+    assert not summaries

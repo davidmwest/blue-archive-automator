@@ -18,24 +18,24 @@ lower scores come first. level-90+ accounts get an extra penalty because account
 
 **never fight the same opponent twice in one game day.** wins and losses both count. history survives daemon restarts and **do everything**, then resets at 19:00 UTC. an unresolved battle stays held for review across reset rather than being replayed.
 
-## ten minutes per match
+## ten minutes per ticket
 
-search time defaults to **10 active minutes**, adjustable from 1 to 30 minutes, including fractions. refresh speed varies with the emulator and OCR, so time controls the budget. the journal reports a refresh-count estimate based on the speed actually observed.
+each usable ticket gets one daily search allowance of **10 active minutes**, adjustable from 1 to 30 minutes, including fractions. with five tickets and a reserve of one, there are up to four allowances. refresh speed varies with the emulator and OCR, so time controls the budget. the journal reports a refresh-count estimate based on the speed actually observed.
 
 1. spend the first 37% of the budget establishing a benchmark: **3 minutes 42 seconds** at the default.
 2. take a currently visible opponent whose score is at least as good as the benchmark's best score.
 3. gradually relax that threshold toward the weakest quarter of the benchmark population as the remaining time runs out.
-4. if nobody visible qualifies at the deadline, keep the ticket. reaching the deadline never means fighting whoever happens to be on screen.
+4. if nobody visible qualifies at the deadline, keep the ticket and consume that search allowance. start a fresh search with the next daily allowance, if one remains. reaching the deadline never means fighting whoever happens to be on screen.
 
 repeated opponents have one entry in the benchmark. later conflicting scores retain the higher estimate. the benchmark needs at least two readable list observations; unreadable teams consume time without inventing a score. there is no second search to relocate someone seen earlier: the selected opponent must be on the current screen and pass another check in their detail view.
 
 this borrows the observation-then-selection idea from the [secretary problem](https://www.or.mist.i.u-tokyo.ac.jp/takeda/FreshmanCourse/Ferguson.pdf). repeated opponents, changing ranks, and the relaxed threshold make this a practical heuristic; it does not claim the classical rule's optimality or a 99% coverage guarantee. the former confidence and pool-estimation settings are retired from the runtime.
 
-searches yield to other queued work after five minutes or 100 refreshes. the local daemon resumes after at least a minute, carrying forward elapsed time and the benchmark. queue waiting and battle time do not consume the search allowance. failures, cancelled continuations, and passive rank changes retain consumed time. an exhausted allowance stays exhausted for that game day; restarting the daemon or losing a defensive battle cannot turn it into another ten minutes. a completed battle starts a new search for the next match, whether it was a win or loss.
+searches yield to other queued work after five minutes or 100 refreshes. the local daemon resumes after at least a minute, carrying forward elapsed time and the benchmark. queue waiting and battle time do not consume the search allowance. failures, cancelled continuations, and passive rank changes retain consumed time. a completed battle starts a fresh search for the next usable ticket, whether it was a win or loss. an unsuccessful search uses one allowance without spending its ticket, then continues with any remaining allowance. exhausted allowances stay counted for the game day across queue visits and daemon restarts, so a timeout cannot create unlimited searches. an exhausted checkpoint from an older release counts as one used allowance.
 
 countdown resets acknowledge refreshes even when the same opponents reappear. unreadable refresh controls defer the search without input. if a fresh screen proves that a tap was ignored—the same opponent rows, three rank labels, player rank, tickets, and a naturally falling timer—the runner retries once within the remaining allowance. identical row images can prove an unchanged list even when student levels are unreadable; they cannot authorize a battle. ignored taps never count as new draws. a second ignored tap, an ambiguous reset, or persistently unreadable rank labels records a failure and allows up to three delayed retries per game day, 15 minutes apart, using the remaining search time. transport errors and unresolved battles do not automatically replay. other queued work can continue.
 
-active search evidence expires after four hours and blocks that search while preserving the time already spent. a changed game day or search-time setting starts a new allowance. rank changes retain the benchmark; every candidate must still be ahead of the freshly observed rank. completed battle history is separate. pausing the queue or disabling automatic Tactical Challenge stops continuation dispatch.
+active search evidence expires after four hours and blocks that search while preserving the time already spent. the daily reset renews the search allowances. changing the search-time setting resets the current benchmark but retains the day's used allowances. rank changes retain the benchmark; every candidate must still be ahead of the freshly observed rank. completed battle history is separate. pausing the queue or disabling automatic Tactical Challenge stops continuation dispatch.
 
 ## entering and finishing
 
@@ -54,7 +54,7 @@ if a battle is interrupted, its persisted entry prevents another ticket from bei
 enabled_in_daily = true
 skip_battles = true
 preserve_tickets = 1 # 0..5
-search_minutes = 10.0 # 1..30 active minutes per match
+search_minutes = 10.0 # 1..30 active minutes per usable ticket
 ```
 
 these are also under **settings → tactical challenge**. older `refresh_limit` and `confidence_percent` values remain readable for compatibility but no longer control search. Daily fights before collecting Tactical Challenge rewards. **do everything** queues battles when enabled and respects the reserve and daily history. periodic red-dot checks never queue combat. manual CLI entry is `ba --config config/local.toml tactical_battles`.
@@ -77,4 +77,6 @@ the new time policy completed a live daemon visit with 22 acknowledged refreshes
 
 a continuation selected a level-75 opponent after 8 minutes 53 seconds of accumulated active search, with visible student levels 74, 72, and 65. the selected list and detail screenshots preserved those readings. the saved formation won with animations skipped: rank 571 → 541 and tickets 5 → 4. the initial runner did not recognize the compact WIN dialog; the corrected recognizer recovered it after a daemon reload, saved the result, reconciled exactly one spent ticket, and began the next search. this verifies interrupted skipped-victory recovery, not uninterrupted completion of that original run. the ignored-refresh and result-timeout notices were dismissed after their fixes were verified.
 
-offline tests cover the time policy, deadline behavior, persistent consumed time, repeated identities, contradictory levels, settings, both skip modes, entry guards, formation preservation, result recovery, and ticket reserves. the earlier live sampling checks used the retired confidence strategy.
+the per-ticket continuation fix was also checked live: the daemon migrated an older exhausted 600-second search, recorded one used allowance, and saved a fresh 600-second search with four tickets still present and one reserved. two search allowances remained. this verifies timeout migration and continuation scheduling; consecutive live timeouts have not been forced.
+
+offline tests cover the time policy, per-ticket allowances, continuation after an unsuccessful search, deadline behavior, persistent consumed time, repeated identities, contradictory levels, settings, both skip modes, entry guards, formation preservation, result recovery, and ticket reserves. the earlier live sampling checks used the retired confidence strategy.

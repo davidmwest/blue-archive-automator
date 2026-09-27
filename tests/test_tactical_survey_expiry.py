@@ -23,7 +23,7 @@ def expire(runner, now):
 
 def test_survey_expiry_mid_refresh_stops_without_claiming_a_result(runner):
     now = approaching_expiry(runner)
-    runner.survey_resume = {"search": runner.search_state, "identities": {},
+    runner.survey_resume = {"search": runner.search_state, "search_id": "a" * 32, "identities": {},
                             "created_at": runner.survey_created_at}
     current = frame(rank=100, tickets=5, all_ahead=True, opponents=(), sampled_ranks=(50, 60, 70))
     def refresh(previous):

@@ -94,7 +94,7 @@ def test_old_confidence_checkpoint_is_discarded_without_touching_battle_history(
     assert not survey.continuation_due(config, now=NOW + 60)
     save(config, now=NOW + 120)
     restored = load(config, now=NOW + 120)
-    assert restored["version"] == 3
+    assert restored["version"] == 4
     assert restored["created_at"] == NOW + 120
     assert tactical_state.state_path(config).read_bytes() == durable
 
@@ -345,3 +345,61 @@ def test_identity_count_is_bounded(config, monkeypatch):
     people = {key: identity(key) for key in ("opponent-a", "opponent-b")}
     with pytest.raises(ValueError, match="Too many"):
         save(config, identities=people)
+
+
+def test_legacy_exhausted_checkpoint_has_stable_identity_and_allows_next_ticket(config):
+    save(config, search=search_state(600))
+    corrupt(config, lambda value: (value.update(version=3), value.pop("search_id")))
+    original = load(config)
+    assert original["search_id"] == load(config)["search_id"]
+    assert original["search"].elapsed_seconds == 600
+    when = datetime.fromtimestamp(NOW, timezone.utc)
+    tactical_state.observe_ladder(config, DAY, tickets=4, rank=571, now=when)
+    assert survey.continuation_due(config, now=NOW + 5 * 3600)
+    tactical_state.record_search_timeout(config, DAY, original["search_id"], now=when)
+    assert survey.continuation_due(config, now=NOW + 60)
+    save(config, search=search_state(0), search_id="b" * 32, now=NOW + 60)
+    restored = load(config, now=NOW + 60)
+    assert restored["search_id"] == "b" * 32
+    assert restored["search"].remaining_seconds == 600
+    assert restored["created_at"] == NOW + 60
+    assert tactical_state.read_state(config)["timed_out_searches"] == [original["search_id"]]
+
+
+def test_rotation_cannot_reset_unfinished_or_unaccounted_search(config):
+    when = datetime.fromtimestamp(NOW, timezone.utc)
+    tactical_state.observe_ladder(config, DAY, tickets=4, rank=571, now=when)
+    save(config, search=search_state(200))
+    with pytest.raises(ValueError, match="accounted timeout"):
+        save(config, search=search_state(0), search_id="c" * 32)
+    save(config, search=search_state(600))
+    with pytest.raises(ValueError, match="accounted timeout"):
+        save(config, search=search_state(0), search_id="c" * 32)
+    assert load(config)["search"].elapsed_seconds == 600
+
+
+def test_last_allowance_stops_continuation_before_and_after_timeout_accounting(config):
+    when = datetime.fromtimestamp(NOW, timezone.utc)
+    tactical_state.observe_ladder(config, DAY, tickets=2, rank=571, now=when)
+    save(config, search=search_state(600))
+    assert not survey.continuation_due(config, now=NOW + 60)
+    tactical_state.record_search_timeout(config, DAY, load(config)["search_id"], now=when)
+    assert not survey.continuation_due(config, now=NOW + 60)
+    with pytest.raises(ValueError, match="accounted timeout"):
+        save(config, search=search_state(0), search_id="d" * 32)
+
+
+def test_failed_atomic_rotation_remains_resumable_without_new_allowance(config, monkeypatch):
+    when = datetime.fromtimestamp(NOW, timezone.utc)
+    tactical_state.observe_ladder(config, DAY, tickets=4, rank=571, now=when)
+    save(config, search=search_state(600))
+    before = load(config)
+    tactical_state.record_search_timeout(config, DAY, before["search_id"], now=when)
+    def failed(*args):
+        raise OSError("disk failure")
+    monkeypatch.setattr(Path, "replace", failed)
+    with pytest.raises(OSError, match="disk failure"):
+        save(config, search=search_state(0), search_id="e" * 32)
+    assert load(config)["search_id"] == before["search_id"]
+    assert load(config)["search"].exhausted
+    assert survey.continuation_due(config, now=NOW + 60)

@@ -40,6 +40,7 @@ def runner(tmp_path, monkeypatch):
     r.reserve = 1
     r.search_policy = SearchPolicy(600)
     r.search_state = r.search_clock = None
+    r.search_id = None
     r.observed = {}
     r.last_refresh_acknowledged = True
     r.last_refresh_sent = False
@@ -86,6 +87,7 @@ def next_visit(runner, queue_seconds=61):
     runner.now += timedelta(seconds=queue_seconds)
     runner.observed = {}
     runner.survey_resume = runner.search_state = runner.search_clock = None
+    runner.search_id = None
     runner.survey_created_at = None
     runner.refresh_count = runner.actions = runner.active_seconds = 0
     runner.inputs.clear()
@@ -113,14 +115,15 @@ def stronger_menu(**kwargs):
                  **kwargs)
 
 
-def assert_no_battle(runner):
+def assert_no_battle(runner, tickets=5):
     saved = state.read_state(runner.config)
     assert saved["pending"] is None and saved["attempts"] == {}
-    assert saved["last_tickets"] == 5
+    assert saved["last_tickets"] == tickets
     assert runner.inputs[-1:] == [((1237, 23), "Return home from Tactical Challenge battles")]
 
 
 def test_unfinished_search_resumes_time_scores_and_counters_across_queue_visits(runner):
+    runner.reserve = runner.config.tactical_battles_preserve_tickets = 4
     current = stronger_menu()
 
     def refresh(previous):
@@ -151,7 +154,8 @@ def test_unfinished_search_resumes_time_scores_and_counters_across_queue_visits(
     assert not survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
 
 
-def test_exhausted_search_survives_restart_without_another_refresh_allowance(runner):
+def test_last_exhausted_search_survives_restart_without_another_refresh_allowance(runner):
+    runner.reserve = runner.config.tactical_battles_preserve_tickets = 4
     checkpoint(runner, elapsed=600)
     next_visit(runner, queue_seconds=5 * 3600)
     runner.refresh = lambda f: pytest.fail("Exhausted allowance cannot refresh again")
@@ -161,7 +165,154 @@ def test_exhausted_search_survives_restart_without_another_refresh_allowance(run
     assert not survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
 
 
+def test_three_ticket_allowances_time_out_across_restarts_without_spending_tickets(runner):
+    """Four tickets and reserve one authorize three searches, even after a timeout."""
+    search_ids = []
+
+    def refresh(previous):
+        runner.active_seconds += 100
+        runner.refresh_count += 1
+        runner.last_refresh_acknowledged = True
+        # A weak opponent establishes the benchmark, then disappears. The
+        # deadline must never force an attack against the stronger current list.
+        if runner.search_state.elapsed_seconds < 200:
+            return frame(observed("best"), tickets=4)
+        return stronger_menu(tickets=4)
+
+    runner.refresh = refresh
+    for allowance in range(3):
+        assert runner.run_menu(frame(observed("best"), tickets=4)) == "deferred"
+        partial = load(runner)
+        search_ids.append(partial["search_id"])
+        assert partial["search"].elapsed_seconds == 300
+        assert partial["search"].refreshes == 3
+        assert len(state.read_state(runner.config)["timed_out_searches"]) == allowance
+        assert_no_battle(runner, tickets=4)
+
+        next_visit(runner, queue_seconds=1800)
+        assert survey.continuation_due(runner.config, now=runner.now.timestamp())
+        expected = "deferred" if allowance < 2 else "success"
+        assert runner.run_menu(stronger_menu(tickets=4)) == expected
+        history = state.read_state(runner.config)
+        assert history["timed_out_searches"] == search_ids
+        assert state.search_allowances(history, 4, 1) == 2 - allowance
+        assert_no_battle(runner, tickets=4)
+        saved = load(runner)
+        if allowance < 2:
+            assert saved["search_id"] not in search_ids
+            assert saved["search"].elapsed_seconds == 0
+            assert saved["search"].observations == 0
+            assert saved["search"].scores == {}
+        else:
+            assert saved["search_id"] == search_ids[-1]
+            assert saved["search"].elapsed_seconds == 600
+            assert saved["search"].refreshes == 6
+        next_visit(runner)
+
+    assert len(set(search_ids)) == 3
+    assert not survey.continuation_due(runner.config, now=runner.now.timestamp())
+    runner.refresh = lambda f: pytest.fail("All three daily search allowances are used")
+    assert runner.run_menu(stronger_menu(tickets=4)) == "success"
+    assert state.read_state(runner.config)["timed_out_searches"] == search_ids
+    assert_no_battle(runner, tickets=4)
+
+
+def test_interruption_after_timeout_accounting_retries_checkpoint_rotation_once(runner, monkeypatch):
+    checkpoint(runner, elapsed=600)
+    exhausted = load(runner)
+    real_save = survey.save_survey
+
+    def interrupted_save(*args, **kwargs):
+        if kwargs["search"].elapsed_seconds == 0:
+            raise OSError("Interrupted before replacing exhausted search")
+        return real_save(*args, **kwargs)
+
+    monkeypatch.setattr(survey, "save_survey", interrupted_save)
+    runner.refresh = lambda f: pytest.fail("Rotation does not refresh the opponent list")
+    with pytest.raises(OSError, match="Interrupted before replacing"):
+        runner.run_menu(stronger_menu(tickets=4))
+    assert state.read_state(runner.config)["timed_out_searches"] == [exhausted["search_id"]]
+    assert load(runner)["search_id"] == exhausted["search_id"]
+    assert load(runner)["search"].exhausted
+
+    next_visit(runner)
+    monkeypatch.setattr(survey, "save_survey", real_save)
+    assert survey.continuation_due(runner.config, now=runner.now.timestamp())
+    assert runner.run_menu(stronger_menu(tickets=4)) == "deferred"
+    history = state.read_state(runner.config)
+    assert history["timed_out_searches"] == [exhausted["search_id"]]
+    assert state.search_allowances(history, 4, 1) == 2
+    fresh = load(runner)
+    assert fresh["search_id"] != exhausted["search_id"]
+    assert fresh["search"].remaining_seconds == 600
+    assert fresh["search"].observations == 0
+    assert_no_battle(runner, tickets=4)
+
+
+@pytest.mark.parametrize("first_won", [False, True], ids=["defeat", "victory"])
+def test_battle_after_timeout_starts_fresh_next_ticket_search_and_keeps_daily_history(runner, first_won):
+    # One timeout leaves two automatic battles available from four tickets.
+    checkpoint(runner, elapsed=600)
+    assert runner.run_menu(stronger_menu(tickets=4)) == "deferred"
+    timeout_ids = state.read_state(runner.config)["timed_out_searches"]
+    assert len(timeout_ids) == 1
+    next_visit(runner)
+
+    candidates = tuple(observed(str(i), rank=70 + i, level=50 + i * 10) for i in range(3))
+    current = [frame(*candidates, tickets=4)]
+    searches = []
+
+    def refresh(previous):
+        runner.active_seconds += 60
+        runner.refresh_count += 1
+        runner.last_refresh_acknowledged = True
+        return current[0]
+
+    def battle(current_frame, candidate):
+        searches.append((candidate.choice.opponent_id, runner.search_id,
+                         runner.search_state.to_dict()))
+        # Battle duration must not consume the next ticket's search budget.
+        runner.active_seconds += 60
+        won = first_won if len(searches) == 1 else False
+        rank = 90 if won else current_frame.screen.rank
+        tickets = current_frame.screen.tickets - 1
+        intent = state.begin_battle(
+            runner.config, game_day(runner.now), candidate.choice.opponent_id,
+            current_frame.screen.tickets, current_frame.screen.rank, now=runner.now)
+        state.complete_battle(runner.config, intent, tickets_after=tickets,
+                              won=won, rank_after=rank, now=runner.now)
+        current[0] = frame(*candidates, tickets=tickets, rank=rank)
+        return current[0], won
+
+    runner.refresh = refresh
+    runner.battle = battle
+    # Each queue visit has its own shorter execution window. After the first
+    # battle that window yields with the next search untouched at zero seconds.
+    assert runner.run_menu(current[0]) == "deferred"
+    assert [identity for identity, _, _ in searches] == ["0"]
+    next_search = load(runner)
+    assert next_search["search"].elapsed_seconds == 0
+    assert next_search["search_id"] != searches[0][1]
+    next_visit(runner)
+    assert runner.run_menu(current[0]) == "success"
+
+    assert [identity for identity, _, _ in searches] == ["0", "1"]
+    assert searches[0][1] != searches[1][1]
+    for _, _, snapshot in searches:
+        assert snapshot["elapsed_seconds"] == 240
+        assert snapshot["refreshes"] == 4
+        assert snapshot["benchmark_observations"] == 4
+    assert "0" not in searches[1][2]["scores"]
+    history = state.read_state(runner.config)
+    assert history["attempts"] == {"0": 1, "1": 1}
+    assert history["timed_out_searches"] == timeout_ids
+    assert history["last_tickets"] == 2
+    assert state.search_allowances(history, 2, 1) == 0
+    assert not survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
+
+
 def test_rank_changes_between_visits_never_renew_unspent_ticket_search(runner):
+    runner.reserve = runner.config.tactical_battles_preserve_tickets = 4
     checkpoint(runner, elapsed=500)
     created = load(runner)["created_at"]
     next_visit(runner)
@@ -190,6 +341,7 @@ def test_rank_changes_between_visits_never_renew_unspent_ticket_search(runner):
 
 
 def test_first_place_visit_preserves_prior_budget_if_rank_later_changes(runner):
+    runner.reserve = runner.config.tactical_battles_preserve_tickets = 4
     checkpoint(runner, elapsed=600)
     next_visit(runner)
     runner.refresh = lambda f: pytest.fail("No refresh at first place or with an exhausted budget")
@@ -299,8 +451,9 @@ def test_incomplete_acknowledged_rank_labels_preserve_budget_but_block_search(ru
 
 
 @pytest.mark.parametrize("guard", ["pending", "blocked", "reserve"])
-def test_saved_progress_cannot_bypass_spending_history_or_reserve(runner, guard):
-    checkpoint(runner)
+@pytest.mark.parametrize("elapsed", [100, 600], ids=["unfinished", "exhausted"])
+def test_saved_progress_cannot_bypass_spending_history_or_reserve(runner, guard, elapsed):
+    checkpoint(runner, elapsed=elapsed)
     day = game_day(runner.now)
     state.observe_ladder(runner.config, day, tickets=5, rank=100, now=runner.now)
     runner.refresh = lambda f: pytest.fail("No scouting may bypass a spending guard")
@@ -314,6 +467,7 @@ def test_saved_progress_cannot_bypass_spending_history_or_reserve(runner, guard)
         with pytest.raises(RuntimeError):
             runner.run_menu(stronger_menu())
     assert runner.refresh_count == 0
+    assert state.read_state(runner.config)["timed_out_searches"] == []
 
 
 def test_stale_evidence_blocks_without_renewing_consumed_search_budget(runner):
