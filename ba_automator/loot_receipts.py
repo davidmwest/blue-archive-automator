@@ -586,6 +586,27 @@ def task_notice_heading(image):
     return image[5:135, 420:930].tobytes()
 
 
+def sweep_notice_shadow(image):
+    """Recognize only a departing notice's shadow above the sweep title.
+
+    The cyan strip can leave before the seven-pixel shadow on the panel's top
+    margin. Require a broad, neutral shadow that fades down into the untouched
+    light background. This only requests a wait; it cannot authorize input.
+    """
+    if getattr(image, "shape", None) != (720, 1280, 3):
+        return False
+    base = image[77:79, 330:950].astype(np.float32).mean(axis=0)
+    darkness = base[None, :, :] - image[70:77, 330:950].astype(np.float32)
+    rows = np.median(darkness, axis=(1, 2))
+    return bool(
+        base.min() >= 230
+        and 4 <= rows[0] <= 40
+        and 0 <= rows[-1] <= 3
+        and np.all(np.diff(rows) <= .5)
+        and (np.min(darkness[:2].mean(axis=0), axis=1) > 3).mean() >= .95
+    )
+
+
 def same_grid_icon(a, b):
     """Keep compact artwork exact while a separately read tier badge pulses.
 
@@ -969,7 +990,7 @@ class ReceiptReader:
             cap = Capture(r.device.screenshot(), at, r.config.package)
             # Timestamp must precede capture: the caller's freshness rules still apply.
             image = decode_frame(cap.png)
-            if not task_notice_visible(image):
+            if not (task_notice_visible(image) or sweep_notice_shadow(image)):
                 if wait_started is None:
                     return cap
                 # A departing banner can fade below its color threshold while
@@ -1481,15 +1502,27 @@ class ReceiptReader:
 def same_sweep_below_notice(before, after):
     """Bind an obscured initial receipt to its clean view before any input.
 
-    This exception is only for a positively detected task notice that has left.
-    Preserve the uncovered heading, close control, complete Final row and
+    A colored notice or its narrowly recognized departing shadow must have
+    left. Preserve the uncovered heading, close control, complete Final row and
     Confirm button. Both views still require independent sweep recognition.
     """
     first, second = decode_frame(before), decode_frame(after)
-    if (not task_notice_visible(first) or task_notice_visible(second)
+    visible = task_notice_visible(first)
+    if ((not visible and not sweep_notice_shadow(first))
+            or task_notice_visible(second) or sweep_notice_shadow(second)
             or getattr(second, "shape", None) != (720, 1280, 3)
             or has_tooltip(first) or has_tooltip(second)):
         return False
+    if not visible:
+        # A departing shadow can only brighten the top margin, never change
+        # title text or either control. Keep every other strict receipt pixel.
+        delta = (second[70:77, 310:970].astype(np.int16)
+                 - first[70:77, 310:970].astype(np.int16))
+        if delta.min() < -1 or delta.max() > 40 or np.ptp(delta, axis=2).max() > 2:
+            return False
+        return all(same_pixels(first[y:y+h, x:x+w], second[y:y+h, x:x+w])
+                   for x, y, w, h in ((170, 77, 940, 58), (170, 70, 140, 7),
+                                      (970, 70, 140, 7), (370, 440, 718, 190)))
     return all(same_pixels(first[y:y+h, x:x+w], second[y:y+h, x:x+w])
                for x, y, w, h in ((170, 100, 940, 35), (170, 70, 140, 30),
                                   (960, 70, 150, 30), (370, 440, 718, 190)))
@@ -1499,8 +1532,10 @@ def settle_initial_sweep_notice(runner, frame, vision, evidence):
     """Save a clean recovery reference without changing the original evidence."""
     if (getattr(runner, "task", None) not in {"spend_ap", "bounties", "scrimmages"}
             or getattr(frame.screen, "kind", None) != "receipt"
-            or getattr(frame.screen, "count", None) is None
-            or not task_notice_visible(decode_frame(frame.capture.png))):
+            or getattr(frame.screen, "count", None) is None):
+        return frame
+    initial = decode_frame(frame.capture.png)
+    if not (task_notice_visible(initial) or sweep_notice_shadow(initial)):
         return frame
     original = page(frame.capture.png, vision)
     reader = ReceiptReader(runner, vision, evidence)

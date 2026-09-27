@@ -4,6 +4,7 @@ from collections import Counter
 from dataclasses import replace
 from hashlib import sha256
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -12,6 +13,7 @@ from ba_automator import loot_receipts as lr
 from ba_automator.config import Config
 from ba_automator.runtime import Capture, Journal, TaskError
 from ba_automator.shop_runtime import ShopFrame
+from ba_automator.vision import decode_frame
 
 
 def card(name, x, quantity=1, icon=None):
@@ -711,6 +713,64 @@ def test_initial_notice_is_bound_before_inspection_and_clean_reference_recovers(
     saved = h.evidence.parent / "receipt-notice-cleared-reference.png"
     assert saved.is_file() and not json.loads(saved.read_bytes()).get("notice")
     assert h.runner.state["pending"] and not h.result()["items_complete"]
+
+
+@pytest.mark.parametrize("change", [None, "count", "task", "unknown"])
+def test_native_fading_initial_reference_is_bound_before_optional_loot_recovery(
+    harness, monkeypatch, change
+):
+    h = harness
+    fixture = Path(__file__).parent / "fixtures"
+    fading, clean = [(fixture / f"loot-sweep-task-fading-native-{name}.png").read_bytes()
+                     for name in ("fading", "clear")]
+    h.runner.task = "spend_ap"
+    pending = {"count": 1, "ap_before": 365}
+    h.runner.state = {"pending": pending.copy()}
+    screen = SimpleNamespace(kind="receipt", count=1, task="spend_ap")
+    original = ShopFrame(Capture(fading, h.now, h.runner.config.package), screen)
+    h.evidence.write_bytes(fading)
+    # Keep the saved native pixels and all actual identity/shadow guards. OCR
+    # is stubbed because these sanitized crops intentionally omit the Final label.
+    monkeypatch.setattr(lr, "decode_frame", decode_frame)
+    monkeypatch.setattr(lr, "task_notice_heading", lambda image: image[5:135, 420:930].tobytes())
+    monkeypatch.setattr(lr, "has_tooltip", lambda image: bool(lr.tooltip_boxes(image)))
+    monkeypatch.setattr(lr, "page", lambda png, vision: lr.Page(
+        "unknown" if change == "unknown" and png == clean else "sweep"))
+
+    def screenshot():
+        h.captures += 1
+        assert h.inputs == []
+        return fading if h.captures == 1 else clean
+
+    h.runner.device.screenshot = screenshot
+    returned_screen = SimpleNamespace(**vars(screen))
+    if change == "count":
+        returned_screen.count = 2
+    elif change == "task":
+        returned_screen.task = "bounties"
+    h.runner.wait = lambda kind: ShopFrame(
+        Capture(screenshot(), h.now, h.runner.config.package), returned_screen)
+
+    def failed_details(reader):
+        lr.save_result(reader.r.config, reader.evidence, [], False,
+                       task="spend_ap", note="Unresolved item quantity")
+        reader.r.fail("Unresolved item quantity")
+
+    monkeypatch.setattr(lr.ReceiptReader, "run", failed_details)
+    assert not lr.task_notice_visible(decode_frame(fading))
+    assert not lr.same_receipt_view(fading, clean, lr.Page("sweep"))
+    if change:
+        with pytest.raises(TaskError, match="changed.*initial task notice"):
+            lr.inspect_receipt(h.runner, original, h.evidence)
+        assert not h.evidence.with_suffix(".loot.json").exists()
+    else:
+        result = lr.inspect_receipt(h.runner, original, h.evidence)
+        assert result.capture.png == clean and result.screen.count == 1
+        assert (h.evidence.parent / "receipt-notice-cleared-reference.png").read_bytes() == clean
+        assert not h.result()["items_complete"] and not h.result()["items"]
+        assert [e["action"] for e in h.events()] == ["loot_received", "loot_inspection_incomplete"]
+    assert h.evidence.read_bytes() == fading
+    assert h.runner.state["pending"] == pending and h.inputs == []
 
 
 @pytest.mark.parametrize("field,value", [("count", 2), ("task", "scrimmages")])

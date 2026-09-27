@@ -792,3 +792,8 @@ are blacked out. The fading frame no longer has a detectable cyan progress bar,
 but it still changes the heading: the strict receipt guard must reject it while
 the bounded, input-free capture wait allows the animation to finish. These are
 saved real frames; the fixture does not establish any additional resource spend.
+The fading frame also starts an integrated optional-inspection recovery test:
+its narrowly detected top-margin shadow must clear before a clean reference is
+saved, with title, controls, Final-row pixels, task and sweep count preserved.
+The original evidence and pending resource intent remain unchanged. OCR alone
+is stubbed in that replay because the sanitized crops omit the Final label.
