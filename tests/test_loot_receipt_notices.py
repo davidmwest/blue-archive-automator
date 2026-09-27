@@ -65,6 +65,20 @@ def test_native_departing_banner_is_not_yet_the_original_receipt():
     assert not lr.same_sweep_below_notice(fading, fading)
 
 
+def test_quiet_receipt_heading_excludes_currency_hud_but_keeps_title_and_shadow():
+    clean = decode_frame(
+        (FIXTURES / "loot-sweep-task-fading-native-clear.png").read_bytes()
+    )
+    changed = clean.copy()
+    changed[5:49, 420:930] = (20, 30, 40)
+    assert lr.task_notice_heading(changed) == lr.task_notice_heading(clean)
+    changed[70:77, 500:700] = 180
+    assert lr.task_notice_heading(changed) != lr.task_notice_heading(clean)
+    changed = clean.copy()
+    changed[85:110, 540:740] = 0
+    assert lr.task_notice_heading(changed) != lr.task_notice_heading(clean)
+
+
 @pytest.mark.parametrize("box", [(550, 83, 50, 20), (1040, 80, 40, 30),
                                 (400, 470, 25, 20), (520, 505, 30, 10),
                                 (590, 593, 70, 25), (500, 70, 50, 7)])

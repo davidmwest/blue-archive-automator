@@ -23,8 +23,9 @@ from .vision import (
 
 RECEIPT_TIMEOUT = 240
 REWARD_RECEIPT_TIMEOUT = 900
-TASK_NOTICE_TIMEOUT = 12
+TASK_NOTICE_TIMEOUT = 90
 TASK_NOTICE_QUIET_TIME = .5
+TASK_NOTICE_EVIDENCE_INTERVAL = 15
 GRID_ENTRY_TIMEOUT = 8
 GRID_RETURN_TIMEOUT = 8
 TOOLTIP_RETURN_TIMEOUT = 8
@@ -600,8 +601,12 @@ def task_notice_visible(image):
 
 
 def task_notice_heading(image):
-    """Exact pixels covering the moving notice and the receipt heading beneath it."""
-    return image[5:135, 420:930].tobytes()
+    """Exact receipt-title pixels, excluding the independently changing currency HUD.
+
+    The panel starts at y=70. The notice detector covers its progress bar above
+    that edge, and the shadow detector covers the departing panel margin.
+    """
+    return image[70:135, 420:930].tobytes()
 
 
 def sweep_notice_shadow(image):
@@ -1020,6 +1025,7 @@ class ReceiptReader:
         wait_started = r.clock() if wait_for_stable_heading else None
         notice_seen = False
         clear_heading, clear_since = None, None
+        last_evidence = None
         while True:
             if r.clock() - self.started > self.timeout or self.inputs >= 160:
                 r.fail("Reward inspection reached its bounded limit; receipt saved")
@@ -1029,7 +1035,8 @@ class ReceiptReader:
             cap = Capture(r.device.screenshot(), at, r.config.package)
             # Timestamp must precede capture: the caller's freshness rules still apply.
             image = decode_frame(cap.png)
-            if not (task_notice_visible(image) or sweep_notice_shadow(image)):
+            notice, shadow = task_notice_visible(image), sweep_notice_shadow(image)
+            if not (notice or shadow):
                 if wait_started is None:
                     return cap
                 # A departing banner can fade below its color threshold while
@@ -1050,9 +1057,21 @@ class ReceiptReader:
                 if not notice_seen:
                     notice_seen = True
                     self.evidence_frame(cap, "task-notice")
+                    last_evidence = r.clock()
                     r.journal.record("receipt_waiting_for_task_notice")
-            if r.clock() - wait_started >= TASK_NOTICE_TIMEOUT:
+            waited = r.clock() - wait_started
+            if last_evidence is None:
+                last_evidence = r.clock()
+            if waited >= TASK_NOTICE_TIMEOUT:
+                self.evidence_frame(cap, "task-notice-timeout")
+                r.journal.record("receipt_task_notice_timeout", waited=waited,
+                                 notice_visible=notice, shadow_visible=shadow)
                 r.fail("Task progress notice did not clear before reward inspection")
+            if r.clock() - last_evidence >= TASK_NOTICE_EVIDENCE_INTERVAL:
+                self.evidence_frame(cap, f"task-notice-wait-{int(waited):03d}")
+                r.journal.record("receipt_task_notice_wait", waited=waited,
+                                 notice_visible=notice, shadow_visible=shadow)
+                last_evidence = r.clock()
             r.sleep(.25)
 
     def read(self, cap):
@@ -1592,7 +1611,7 @@ def settle_initial_sweep_notice(runner, frame, vision, evidence):
         return frame
     original = page(frame.capture.png, vision)
     reader = ReceiptReader(runner, vision, evidence)
-    reader.timeout = 30
+    reader.timeout = TASK_NOTICE_TIMEOUT + 10
     cap = reader.capture(wait_for_stable_heading=True)
     current = reader.read(cap)
     if (original.kind != "sweep" or current.kind != "sweep"
@@ -1619,7 +1638,7 @@ def recover_sweep_receipt(runner, frame, vision, evidence, error, *, tooltip_ori
     if original.kind != "sweep" or getattr(frame.screen, "count", None) is None:
         raise error
     reader = ReceiptReader(runner, vision, evidence)
-    reader.timeout = 30
+    reader.timeout = TASK_NOTICE_TIMEOUT + 10
     cap = reader.capture(wait_for_stable_heading=True)
     current = reader.read(cap)
     reader.evidence_frame(cap, "inspection-incomplete")

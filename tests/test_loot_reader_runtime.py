@@ -15,6 +15,8 @@ from ba_automator.runtime import Capture, Journal, TaskError
 from ba_automator.shop_runtime import ShopFrame
 from ba_automator.vision import decode_frame
 
+REAL_TASK_NOTICE_HEADING = lr.task_notice_heading
+
 
 def card(name, x, quantity=1, icon=None):
     return lr.Card((x, 250, 148, 222), quantity, name, icon or name.encode())
@@ -732,7 +734,7 @@ def test_native_fading_initial_reference_is_bound_before_optional_loot_recovery(
     # Keep the saved native pixels and all actual identity/shadow guards. OCR
     # is stubbed because these sanitized crops intentionally omit the Final label.
     monkeypatch.setattr(lr, "decode_frame", decode_frame)
-    monkeypatch.setattr(lr, "task_notice_heading", lambda image: image[5:135, 420:930].tobytes())
+    monkeypatch.setattr(lr, "task_notice_heading", REAL_TASK_NOTICE_HEADING)
     monkeypatch.setattr(lr, "has_tooltip", lambda image: bool(lr.tooltip_boxes(image)))
     monkeypatch.setattr(lr, "page", lambda png, vision: lr.Page(
         "unknown" if change == "unknown" and png == clean else "sweep"))
@@ -843,6 +845,45 @@ def test_heading_that_keeps_changing_cannot_extend_notice_wait(harness, monkeypa
     with pytest.raises(TaskError, match="notice did not clear"):
         h.reader().capture(wait_for_stable_heading=True)
     assert h.inputs == [] and h.now <= lr.TASK_NOTICE_TIMEOUT + .25
+    assert (h.evidence.parent / "receipt-task-notice-timeout.png").is_file()
+
+
+def test_sequential_task_notices_get_bounded_time_without_any_input(harness, monkeypatch):
+    h = harness
+    h.capture_delay = .5
+    monkeypatch.setattr(lr, "task_notice_visible", lambda image: bool(image["tip"]))
+
+    def notices(number):
+        h.tip = f"task notice {int(h.now // 5)}" if h.now < 32 else None
+        assert h.inputs == []
+
+    h.on_capture = notices
+    cap = h.reader().capture()
+    assert json.loads(cap.png)["tip"] is None
+    assert 32 <= h.now < 35 and cap.is_fresh(h.now) and h.inputs == []
+    saved = list(h.evidence.parent.glob("receipt-task-notice-wait-*.png"))
+    assert len(saved) == 2
+    events = [json.loads(line) for line in (h.evidence.parent / "events.jsonl").read_text().splitlines()]
+    assert events[-1]["event"] == "receipt_task_notice_cleared"
+
+
+def test_native_heading_settles_while_unrelated_currency_hud_changes(harness, monkeypatch):
+    h = harness
+    fixture = Path(__file__).parent / "fixtures"
+    clean = decode_frame((fixture / "loot-sweep-task-fading-native-clear.png").read_bytes())
+    monkeypatch.setattr(lr, "decode_frame", decode_frame)
+    monkeypatch.setattr(lr, "task_notice_heading", REAL_TASK_NOTICE_HEADING)
+
+    def screenshot():
+        h.captures += 1
+        image = clean.copy()
+        image[5:49, 420:930] = (10 + h.captures, 20, 30)
+        return lr.encode(image)
+
+    h.runner.device.screenshot = screenshot
+    cap = h.reader().capture(wait_for_stable_heading=True)
+    assert h.now == .5 and h.captures == 3 and h.inputs == []
+    assert cap.is_fresh(h.now)
 
 
 @pytest.mark.parametrize("failure", ["persistent", "foreign_foreground"])
