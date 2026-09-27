@@ -170,6 +170,16 @@ crop scale. two larger crops must independently read the same explicit `x1`
 (or other quantity) at high confidence before the fallback accepts it. any
 conflicting quantity in the original crop remains unresolved.
 
+native receipt inspection also exposed two timing and geometry edge cases.
+an exact identity check could finish after its screenshot's five-second input
+deadline. the reader now allows three fresh, read-only observations; each must
+prove the same receipt before it can authorize input. an expired observation
+is never tapped, and a mismatched observation never becomes the next reference.
+Full List scrolling could move a card by half a canonical pixel, changing its
+detected height by one pixel. ordered multi-card overlap now permits that exact
+alignment difference while preserving quantity, tier, column, and artwork
+checks. this tolerance does not apply to the identity check before a tap.
+
 ## evidence and its limits
 
 [camera tests](../tests/test_cafe_camera.py) exercise arbitrary generated layouts, moving sprites, occlusion, repeated patterns, perspective changes, and misleading fixed backgrounds. [scan tests](../tests/test_cafe_scan.py) check that unknown movement cannot certify an edge or silently skip an intermediate view. screenshot fixtures exercise actual OCR and template recognition; device and server tests cover stale input, protocol mismatches, locks, and serialized jobs.
