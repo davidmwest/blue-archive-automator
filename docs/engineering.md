@@ -80,7 +80,12 @@ dimmed confirmations. the following native visit completed that first lesson:
 three owned students in Hyakkiyako Shopping District, tickets 7 to 6, and a
 verified 100 school XP gain. it also logged relationship rank 10 and ATK +23;
 the celebration had no written student name, so that identity remains unknown.
-the remaining six lessons and a full successful daily are still unverified.
+the same visit completed two more lessons, reducing tickets to four, before
+the next confirmation split `4→3` into the adjacent words `4` and `→3`.
+the reader now accepts that complete expression only when all words are
+confident, aligned, nonoverlapping, and inside the cost bubble. the fourth
+Start input was never sent. the remaining four lessons and a full successful
+daily are still unverified.
 
 Tactical Challenge exposed a performance problem: repeated crop reads left
 too little time to act on a fresh frame. a cache now reuses level readings only
@@ -134,6 +139,24 @@ Scrimmage's adjacent AP projection remains a separate required observation.
 complete contradictory readings still stop the task, and quantity arithmetic
 still has to match before any sweep input.
 
+the same recovery completed a Hardcore mock, a real clear with the same team,
+and two sweeps. the last receipt contained 200 Total Assault Coins and 20
+Advanced Total Assault Coins, but whole-frame OCR omitted both disabled
+`0→-` costs afterward. exhausted-ticket recovery requires four agreeing native
+reads of those explicit costs, a zero selected count, and no spending controls.
+the saved receipt and before/after ticket evidence reconciled the completed
+sweep without another input or another loot entry. all three tickets were
+accounted for; this was recovery of a completed run, not an uninterrupted pass.
+
+another AP sweep completed before inspection mistook the cyan border of an
+Eleph tooltip for a task-progress bar. the detector now requires a filled bar;
+an outline cannot start that wait. its saved one-sweep receipt and exact
+554-to-534 AP debit advanced the rotation without replaying the spend.
+the post-sweep attempt count was not observed and remains unknown. Tasks also
+claimed successfully before a background label merged into its reward heading.
+that reader now reuses the isolated exact-heading check, retaining the yellow
+title and continue-control requirements. sanitized captures cover both cases.
+
 ## evidence and its limits
 
 [camera tests](../tests/test_cafe_camera.py) exercise arbitrary generated layouts, moving sprites, occlusion, repeated patterns, perspective changes, and misleading fixed backgrounds. [scan tests](../tests/test_cafe_scan.py) check that unknown movement cannot certify an edge or silently skip an intermediate view. screenshot fixtures exercise actual OCR and template recognition; device and server tests cover stale input, protocol mismatches, locks, and serialized jobs.
@@ -141,7 +164,7 @@ still has to match before any sweep input.
 the 1440p migration passed live startup through the title screen and announcements to home, plus a red-dot scan. five Total Assault sweeps also completed. their receipt initially arrived while the game was still animating, before Final rewards and Confirm appeared. the collector now waits up to 90 seconds for that final control without replaying the sweep or weakening freshness checks. live recovery logged 500 Total Assault Coins and 50 Advanced Total Assault Coins, verified zero tickets, and returned home. this is recovered live evidence, not a claim that the original run completed uninterrupted. a separate 1440p run at 20 FPS completed measured scans of both Cafe floors and returned home in 468.2 seconds. earnings were empty, and no new relationship increases were verified. this checks navigation and camera coverage at that frame rate; it does not add live high-resolution gift, invitation, or rank-up evidence. 1080p and 2160p have offline coverage only.
 
 the earlier Cafe and completed Lessons validation below used 720p. the native
-daily recovery above verifies one completed lesson, not a full seven-ticket run.
+daily recovery above verifies three completed lessons, not a full seven-ticket run.
 
 a documented live run on BlueStacks Air completed restart, measured scans of both unlocked Cafe floors, home verification, and idle closure in 425.5 seconds. it found empty earnings and verified zero new relationship increases. earlier calibration runs verified reward receipts and relationship hearts/rank-up feedback. another player's layout passed a separate camera-movement check. these are observed runs, not a benchmark or a guarantee of finding every obscured student.
 

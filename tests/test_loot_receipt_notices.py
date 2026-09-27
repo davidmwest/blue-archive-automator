@@ -107,7 +107,7 @@ def test_native_progress_notice_preserves_clean_receipt_identity(box):
     assert not lr.same_sweep_below_notice(before, cv2.imencode(".png", clear)[1].tobytes())
 
 
-@pytest.mark.parametrize("mutation", ["no_bar", "not_left_anchored", "bright_panel"])
+@pytest.mark.parametrize("mutation", ["no_bar", "not_left_anchored", "bright_panel", "outline"])
 def test_cyan_task_notice_requires_panel_and_progress_bar(mutation):
     image = decode_frame(
         (FIXTURES / "loot-sweep-task-progress-native-refresh-before.png").read_bytes()
@@ -116,8 +116,10 @@ def test_cyan_task_notice_requires_panel_and_progress_bar(mutation):
         image[54:76, 487:794] = 0
     elif mutation == "not_left_anchored":
         image[54:76, 487:500] = 0
-    else:
+    elif mutation == "bright_panel":
         image[5:49, 420:930] = 255
+    else:
+        image[58:72, 491:569] = 0
     assert not lr.task_notice_visible(image)
 
 
@@ -132,7 +134,8 @@ def test_initial_notice_reference_cannot_hide_changed_heading_control_or_rewards
     assert not lr.same_sweep_below_notice(before, cv2.imencode(".png", clean)[1].tobytes())
 
 
-@pytest.mark.parametrize("name", ["loot-full-list", "loot-sweep", "task-rewards-receipt-end"])
+@pytest.mark.parametrize("name", ["loot-full-list", "loot-sweep", "task-rewards-receipt-end",
+                                 "loot-native-eleph-tooltip-not-task-notice"])
 def test_receipt_content_does_not_look_like_a_task_notice(name):
     image = decode_frame((FIXTURES / f"{name}.png").read_bytes())
     assert not lr.task_notice_visible(image)

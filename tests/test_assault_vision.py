@@ -552,6 +552,7 @@ def test_native_exhausted_detail_recovers_both_explicit_disabled_costs(vision):
 
 @pytest.mark.parametrize("readings,confidence", [
     (("0→-", "0→-", "0→-", "0→-"), .89),
+    (("0→-", "0→-", "0→-", "0→-"), float("nan")),
     (("0→-", "0→-", "1→0", "1→0"), .99),
     (("0→-", "0→-", "0→-", None), .99),
     (("0→-", "0→-", "0→-", "0→0"), .99),

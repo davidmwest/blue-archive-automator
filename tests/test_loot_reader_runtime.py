@@ -805,6 +805,22 @@ def test_receipt_waits_without_input_until_task_notice_leaves(harness, monkeypat
         "receipt_waiting_for_task_notice", "receipt_task_notice_cleared"]
 
 
+def test_native_item_tooltip_returns_immediately_for_normal_inspection(harness, monkeypatch):
+    h = harness
+    tooltip = (Path(__file__).parent / "fixtures" /
+               "loot-native-eleph-tooltip-not-task-notice.png").read_bytes()
+    h.runner.state = {"pending": {"stage": "13-3", "ap_before": 554, "cost": 20}}
+    h.runner.device.screenshot = lambda: tooltip
+    monkeypatch.setattr(lr, "decode_frame", decode_frame)
+    cap = h.reader().capture()
+    # Keep real detector pixels: an intentionally opened item tooltip cannot
+    # clear itself. It must reach the ordinary tooltip identity/name checks.
+    assert cap.png == tooltip and lr.tooltip_boxes(decode_frame(cap.png))
+    assert h.now == 0 and h.inputs == []
+    assert h.runner.state["pending"]["cost"] == 20
+    assert not (h.evidence.parent / "receipt-task-notice.png").exists()
+
+
 @pytest.mark.parametrize("initial_notice", [True, False])
 def test_departing_notice_must_stop_fading_before_capture_returns(harness, monkeypatch, initial_notice):
     h = harness

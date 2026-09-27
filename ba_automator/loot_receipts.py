@@ -577,7 +577,11 @@ def task_notice_visible(image):
     rects = [cv2.boundingRect(c) for c in cv2.findContours(
         cyan.astype(np.uint8) * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE,
     )[0]]
+    # A cyan item-tooltip outline can cross this same strip. Its bounding
+    # rectangle is wide/tall enough, but only its border is cyan. A progress
+    # bar must also fill most of the detected rectangle.
     return any(x <= 4 and y <= 4 and width >= 6 and height >= 14
+               and float(cyan[y:y + height, x:x + width].mean()) >= .65
                for x, y, width, height in rects)
 
 

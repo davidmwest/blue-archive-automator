@@ -300,14 +300,14 @@ class AssaultVision:
         # Exclude the ticket artwork and button edges. Batch the four short
         # lines so this recovery stays within the normal input freshness limit.
         crops = ((1070, 475, 1133, 505), (1069, 475, 1134, 506),
-                 (1027, 327, 1090, 357), (1025, 325, 1092, 359))
+                 (1027, 327, 1090, 357), (1026, 327, 1091, 357))
         from rapidocr.ch_ppocr_rec.typings import TextRecInput
         result = self.startup.ocr.text_rec(TextRecInput(
             [native_game_region(native, bounds) for bounds in crops]))
         if (result.txts is None or result.scores is None
                 or len(result.txts) != len(crops) or len(result.scores) != len(crops)
                 or any(text.replace(" ", "") != "0→-" for text in result.txts)
-                or any(score < .9 for score in result.scores)):
+                or any(not score >= .9 for score in result.scores)):
             return screen
         return replace(screen, tickets=0)
 

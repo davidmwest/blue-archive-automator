@@ -1,0 +1,262 @@
+[
+  {
+    "text": "All",
+    "confidence": 0.97402,
+    "box": [
+      558,
+      97,
+      589,
+      122
+    ]
+  },
+  {
+    "text": "Daily",
+    "confidence": 0.99995,
+    "box": [
+      693,
+      92,
+      755,
+      127
+    ]
+  },
+  {
+    "text": "Weekly",
+    "confidence": 0.99998,
+    "box": [
+      835,
+      94,
+      918,
+      125
+    ]
+  },
+  {
+    "text": "REWARD ACQUIRED!k(s)",
+    "confidence": 0.94131,
+    "box": [
+      357,
+      116,
+      966,
+      201
+    ]
+  },
+  {
+    "text": "Normal Activity",
+    "confidence": 0.9723,
+    "box": [
+      378,
+      260,
+      497,
+      280
+    ]
+  },
+  {
+    "text": "Beginner Tech",
+    "confidence": 0.99211,
+    "box": [
+      550,
+      261,
+      653,
+      280
+    ]
+  },
+  {
+    "text": "Beginner Tech",
+    "confidence": 0.99856,
+    "box": [
+      708,
+      260,
+      818,
+      280
+    ]
+  },
+  {
+    "text": "Beginner Tech",
+    "confidence": 0.99906,
+    "box": [
+      870,
+      260,
+      980,
+      279
+    ]
+  },
+  {
+    "text": "Beginner Tech",
+    "confidence": 0.99815,
+    "box": [
+      1032,
+      260,
+      1142,
+      280
+    ]
+  },
+  {
+    "text": "Firing Pin",
+    "confidence": 0.9964,
+    "box": [
+      100,
+      268,
+      182,
+      292
+    ]
+  },
+  {
+    "text": "Keystone",
+    "confidence": 0.99999,
+    "box": [
+      230,
+      267,
+      324,
+      293
+    ]
+  },
+  {
+    "text": "Report",
+    "confidence": 0.99999,
+    "box": [
+      411,
+      278,
+      468,
+      301
+    ]
+  },
+  {
+    "text": "Notes(Red Winter)",
+    "confidence": 0.97561,
+    "box": [
+      533,
+      279,
+      668,
+      298
+    ]
+  },
+  {
+    "text": "Notes (Arius)",
+    "confidence": 0.99747,
+    "box": [
+      712,
+      279,
+      813,
+      299
+    ]
+  },
+  {
+    "text": "Notes (Valkyrie)",
+    "confidence": 0.99969,
+    "box": [
+      864,
+      279,
+      985,
+      300
+    ]
+  },
+  {
+    "text": "Note (Wildhunt)",
+    "confidence": 0.99968,
+    "box": [
+      1026,
+      279,
+      1147,
+      299
+    ]
+  },
+  {
+    "text": "REPORT",
+    "confidence": 0.99028,
+    "box": [
+      423,
+      336,
+      464,
+      359
+    ]
+  },
+  {
+    "text": "Wildhunt",
+    "confidence": 0.99825,
+    "box": [
+      1069,
+      346,
+      1111,
+      379
+    ]
+  },
+  {
+    "text": "X1",
+    "confidence": 0.9774,
+    "box": [
+      101,
+      435,
+      128,
+      459
+    ]
+  },
+  {
+    "text": "x1",
+    "confidence": 0.89037,
+    "box": [
+      260,
+      434,
+      290,
+      459
+    ]
+  },
+  {
+    "text": "x3",
+    "confidence": 0.95371,
+    "box": [
+      423,
+      434,
+      454,
+      459
+    ]
+  },
+  {
+    "text": "x1",
+    "confidence": 0.84224,
+    "box": [
+      585,
+      434,
+      615,
+      459
+    ]
+  },
+  {
+    "text": "x1",
+    "confidence": 0.9314,
+    "box": [
+      748,
+      435,
+      777,
+      459
+    ]
+  },
+  {
+    "text": "x1",
+    "confidence": 0.81712,
+    "box": [
+      909,
+      434,
+      939,
+      459
+    ]
+  },
+  {
+    "text": "x1",
+    "confidence": 0.84558,
+    "box": [
+      1072,
+      434,
+      1102,
+      459
+    ]
+  },
+  {
+    "text": "TOUCH TO CONTINUE",
+    "confidence": 0.98454,
+    "box": [
+      493,
+      618,
+      787,
+      646
+    ]
+  }
+]

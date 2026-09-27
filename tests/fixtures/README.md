@@ -823,3 +823,44 @@ its narrowly detected top-margin shadow must clear before a clean reference is
 saved, with title, controls, Final-row pixels, task and sweep count preserved.
 The original evidence and pending resource intent remain unchanged. OCR alone
 is stubbed in that replay because the sanitized crops omit the Final label.
+
+`assault-zero-detail-native.png` and its recorded whole-frame OCR retain the
+September 27 native Hardcore Room Info screen after the final two-ticket sweep.
+Whole-frame OCR reads the zero sweep count but misses both disabled `0→-`
+ticket costs. Four tightly scoped native crop reads must independently agree
+on the explicit zero/dash notation before the exhausted budget is recognized;
+missing, contradictory, or low-confidence evidence stays unresolved. The modal
+and event period remain; account balances and the surrounding scene are masked.
+The fix exposes no spending controls and tests final ticket reconciliation,
+not permission to repeat the sweep. The game-derived fixture remains outside
+the project's MIT grant.
+
+`loot-native-eleph-tooltip-not-task-notice.png` retains the cyan-bordered
+Izumi Eleph tooltip from the September 27 native Hard 13-3 receipt
+(`spend_ap-20260927T214623-99fafb92`, receipt 0046). Its outline crosses the
+same strip as the task-progress bar, but only 13% of its bounding rectangle
+is cyan. Recognition must require a filled progress bar, so an intentionally
+opened tooltip reaches ordinary item inspection without an impossible wait.
+Only the tooltip and the notice detector regions remain; account details,
+balances, and the surrounding receipt are masked. This saved frame tests
+recognition, not permission for another sweep. The game-derived fixture
+remains outside the project’s MIT grant.
+
+`task-rewards-receipt-merged-native.png` and its recorded OCR retain the
+September 27 native Tasks receipt whose gold heading merged with background
+task text as `REWARD ACQUIRED!k(s)`. The fallback must read the exact isolated
+heading while retaining the yellow-title and Touch to Continue checks. The
+image keeps only the heading, visible reward cards, and continue control;
+account information and the surrounding scene are masked. This fixture proves
+receipt recognition, not complete coverage of the reward list. The game-derived
+fixture remains outside the project's MIT grant.
+
+`task-rewards-receipt-merged-native.png` and its recorded full-frame OCR retain
+the September 27 native Tasks receipt after one successful Claim All. OCR
+merged a dim task title behind the gold banner into `REWARD ACQUIRED!k(s)`;
+an isolated native heading crop must instead read the exact high-confidence
+receipt title. The original gold pixels and exact Touch to Continue control
+remain required. Only the receipt recognition regions and reward cards remain;
+account details, balances, and the surrounding scene are masked. This saved
+frame tests receipt recognition, not permission to repeat Claim All. The
+game-derived fixture remains outside the project's MIT grant.

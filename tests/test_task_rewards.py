@@ -22,7 +22,7 @@ from ba_automator.task_rewards_vision import (
     classify_task_rewards,
 )
 from ba_automator.tasks import task_plan
-from ba_automator.vision import StartupVision, decode_frame
+from ba_automator.vision import StartupVision, Word, decode_frame
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -123,6 +123,77 @@ def test_receipt_requires_its_own_heading_and_continue_control(vision):
             ).kind
             != "receipt"
         )
+
+
+def recorded_native_receipt():
+    png = (FIXTURES / "task-rewards-receipt-merged-native.png").read_bytes()
+    words = [Word(**item) for item in json.loads(
+        (FIXTURES / "task-rewards-receipt-merged-native.json").read_text()
+    )]
+    return png, words
+
+
+def test_native_receipt_merged_background_title_uses_exact_crop(vision, monkeypatch):
+    from ba_automator import task_rewards_vision as tv
+
+    png, words = recorded_native_receipt()
+    assert any(w.text == "REWARD ACQUIRED!k(s)" for w in words)
+    assert classify_task_rewards(decode_frame(png), words).kind == "unknown"
+    # Replay the actual full-frame segmentation; the native isolated crop still
+    # uses real OCR. Removing account pixels must not erase the original defect.
+    monkeypatch.setattr(tv, "read_game_words", lambda *args: words)
+    parsed = vision.analyze(png)
+    assert parsed.kind == "receipt" and parsed.target == (640, 631)
+    assert {"name": "Keystone", "quantity": 1} in parsed.items
+    assert {"name": "Normal Activity Report", "quantity": 3} in parsed.items
+    assert parsed.claim is None
+
+
+def test_native_receipt_real_ocr_smoke(vision):
+    png, _ = recorded_native_receipt()
+    parsed = vision.analyze(png)
+    assert parsed.kind == "receipt" and parsed.claim is None
+
+
+@pytest.mark.parametrize("text,confidence,box", [
+    ("REWARD ACQUIRED!k(s)", .999, (20, 10, 580, 100)),
+    ("REWARD AGQUIRED!", .999, (20, 10, 580, 100)),
+    ("REWARD", .999, (20, 10, 580, 100)),
+    ("REWARD ACQUIRED!", .94, (20, 10, 580, 100)),
+    ("REWARD ACQUIRED!", float("nan"), (20, 10, 580, 100)),
+    ("REWARD ACQUIRED!", .999, (20, 120, 580, 200)),
+])
+def test_native_receipt_fallback_rejects_ambiguous_title(
+    monkeypatch, text, confidence, box,
+):
+    from ba_automator import task_rewards_vision as tv
+
+    png, words = recorded_native_receipt()
+    monkeypatch.setattr(tv, "read_game_words", lambda *args: words)
+    startup = SimpleNamespace(
+        matches=lambda frame: {}, read=lambda frame: [Word(text, confidence, box)],
+    )
+    assert TaskRewardsVision(startup).analyze(png).kind == "unknown"
+
+
+@pytest.mark.parametrize("missing", ["continue", "yellow"])
+def test_native_receipt_fallback_retains_other_guards(monkeypatch, missing):
+    from ba_automator import task_rewards_vision as tv
+
+    png, words = recorded_native_receipt()
+    if missing == "continue":
+        words = [w for w in words if w.normalized != "touch to continue"]
+    else:
+        image = cv2.imdecode(np.frombuffer(png, np.uint8), cv2.IMREAD_COLOR)
+        image[268:364, 750:1802] = 0
+        png = cv2.imencode(".png", image)[1].tobytes()
+    monkeypatch.setattr(tv, "read_game_words", lambda *args: words)
+
+    def no_crop(frame):
+        pytest.fail("A missing receipt guard must not trigger title recovery")
+
+    startup = SimpleNamespace(matches=lambda frame: {}, read=no_crop)
+    assert TaskRewardsVision(startup).analyze(png).kind == "unknown"
 
 
 class Clock:

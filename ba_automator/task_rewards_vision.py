@@ -5,6 +5,7 @@ import re
 from .home_badges import notification_dot
 
 from .crafting_vision import bright, has, yellow, within
+from .loot_receipts import reward_heading_words
 from .shop_vision import text_in
 from .vision import read_game_words, classify, decode_frame
 
@@ -92,4 +93,16 @@ class TaskRewardsVision:
         frame = decode_frame(png)
         words = read_game_words(png, self.startup)
         home = classify(words, self.startup.matches(frame)).state == "home"
-        return classify_task_rewards(frame, words, home=home)
+        screen = classify_task_rewards(frame, words, home=home)
+        if (
+            screen.kind == "unknown"
+            and has(words, "touch to continue", (380, 590, 900, 665))
+            and yellow(frame, (375, 134, 901, 182))
+        ):
+            # Native OCR can merge a dim task title behind the gold heading
+            # into "REWARD ACQUIRED!k(s)". Re-read the isolated title exactly;
+            # never accept a prefix or turn a missing receipt into another claim.
+            heading = reward_heading_words(png, self.startup, words)
+            if heading:
+                screen = classify_task_rewards(frame, [*words, *heading], home=home)
+        return screen
