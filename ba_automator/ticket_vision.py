@@ -57,8 +57,13 @@ def reread_ticket_projection(native, reader, words):
             or any(not re.fullmatch(r"\d+", word.text.strip()) for word in pieces)):
         return None
     partial = len(pieces) == 1
+    partial_index = 0
     if partial:
-        if not 1030 <= pieces[0].center[0] <= 1060:
+        if 1030 <= pieces[0].center[0] <= 1060:
+            partial_index = 0
+        elif 1075 <= pieces[0].center[0] <= 1095:
+            partial_index = 1
+        else:
             return None
     elif pieces:
         if not 1030 <= pieces[0].center[0] < pieces[1].center[0] <= 1100:
@@ -86,7 +91,7 @@ def reread_ticket_projection(native, reader, words):
         if not match:
             return None
         projection = tuple(map(int, match.groups()))
-        if (pieces and (projection[:1] if partial else projection) != observed_digits
+        if (pieces and ((projection[partial_index],) if partial else projection) != observed_digits
                 or expected is not None and projection != expected):
             return None
         expected = projection
@@ -341,6 +346,14 @@ class TicketVision:
             word for word in within(words, (1030, 337, 1108, 384))
             if re.fullmatch(r"0\s*→", word.text.strip())
         ]
+        projection_pieces = within(words, (1010, 337, 1108, 384))
+        single_zero_projection = (
+            len(projection_pieces) == 1
+            and projection_pieces[0].text.strip() == "0"
+            and math.isfinite(projection_pieces[0].confidence)
+            and projection_pieces[0].confidence >= .95
+            and 1030 <= projection_pieces[0].center[0] <= 1060
+        )
         missing_scrimmage_projection = (
             not within(words, (1030, 337, 1108, 384))
             and has(words, "scrimmage", (80, 0, 310, 55))
@@ -352,10 +365,16 @@ class TicketVision:
                 for word in words
             ]
             bounds, margin = (1010, 341, 1105, 392), 0
-        elif missing_scrimmage_projection:
+        elif missing_scrimmage_projection or single_zero_projection:
             # Scrimmage may omit the entire exhausted ticket projection. Its
             # AP projection must still independently prove no resource change.
-            recovered_words = [*words, Word("0→-", 1.0, (1040, 348, 1093, 378))]
+            # Native Bounty/Scrimmage OCR can also preserve only the initial
+            # zero. It is not proof of exhaustion until both complete crops
+            # below agree; remove only that tightly located zero fragment.
+            recovered_words = [
+                *[word for word in words if word not in projection_pieces],
+                Word("0→-", 1.0, (1040, 348, 1093, 378)),
+            ]
             # Exclude the ticket icon and neighboring AP digits; leave blank
             # margin so the dash is not confused with the bubble's edge.
             bounds, margin = (1040, 348, 1093, 378), 8
@@ -367,15 +386,16 @@ class TicketVision:
             return screen
         native = decode_native_frame(png)
         crop = native_game_region(native, bounds)
-        padding = round(margin * native.shape[1] / 1280)
-        if padding:
-            crop = cv2.copyMakeBorder(crop, padding, padding, padding, padding,
-                                      cv2.BORDER_CONSTANT, value=(255, 255, 255))
-        width, height = bounds[2] - bounds[0] + margin * 2, bounds[3] - bounds[1] + margin * 2
+        width, height = bounds[2] - bounds[0], bounds[3] - bounds[1]
         # Both scales must independently read the complete zero projection.
         for scale in (2, 3):
             enlarged = cv2.resize(crop, (width * scale, height * scale),
                                   interpolation=cv2.INTER_CUBIC)
+            if margin:
+                enlarged = cv2.copyMakeBorder(
+                    enlarged, margin * scale, margin * scale, margin * scale, margin * scale,
+                    cv2.BORDER_CONSTANT, value=(255, 255, 255),
+                )
             observed = self.startup.read(enlarged)
             if (len(observed) != 1 or not math.isfinite(observed[0].confidence)
                     or observed[0].confidence < .9

@@ -404,7 +404,7 @@ def test_native_retry_projection_requires_two_readable_complete_crops(vision, re
 @pytest.mark.parametrize("fault", [
     "wrong_count", "disagreement", "low_confidence", "missing_after",
     "missing_before", "missing_arrow", "empty", "extra_text",
-    "contradictory_whole_projection", "right_hand_fragment", "wrong_ap",
+    "contradictory_whole_projection", "middle_fragment", "wrong_ap",
 ])
 def test_retry_projection_never_infers_hidden_or_conflicting_counters(retry_ticket_projection, fault):
     from ba_automator.crafting_vision import within
@@ -416,8 +416,8 @@ def test_retry_projection_never_infers_hidden_or_conflicting_counters(retry_tick
     words = [word for word in original if word not in pieces]
     if fault == "contradictory_whole_projection":
         words.append(Word(f"{before}→{after + 1}", .99, (1030, 353, 1091, 374)))
-    elif fault == "right_hand_fragment":
-        words.append(Word(str(after), .99, (1076, 355, 1091, 372)))
+    elif fault == "middle_fragment":
+        words.append(Word(str(after), .99, (1060, 355, 1074, 372)))
     elif fault == "wrong_ap":
         words = [replace(word, text="585/220") if word.text == "584/220" else word
                  for word in words]
@@ -430,7 +430,7 @@ def test_retry_projection_never_infers_hidden_or_conflicting_counters(retry_tick
         def read(self, image):
             if image.shape[:2] == (1440, 2560):
                 return [replace(word, box=tuple(value * 2 for value in word.box)) for word in words]
-            assert fault not in {"contradictory_whole_projection", "right_hand_fragment"}
+            assert fault not in {"contradictory_whole_projection", "middle_fragment"}
             self.crop_reads += 1
             text = f"{before}→{after}"
             confidence = .99
@@ -1246,6 +1246,200 @@ def test_missing_scrimmage_label_does_not_infer_other_fields(scrimmage_missing_p
             return [Word("0→-", .99, (0, 0, 100, 30))]
 
         def matches(self, frame):
+            return {}
+
+    result = TicketVision(Startup()).analyze(png)
+    assert result.kind == "unknown" and result.target is None
+
+
+@pytest.fixture(scope="module")
+def native_zero_fragment():
+    import json
+    from ba_automator.vision import Word
+
+    fixture = Path(__file__).parent / "fixtures/tickets-bounty-native-zero-fragment"
+    words = [Word(**w) for w in json.loads(fixture.with_suffix(".json").read_text())["words"]]
+    return fixture.with_suffix(".png").read_bytes(), words
+
+
+def test_native_zero_fragment_requires_complete_exhausted_crop_proofs(vision, native_zero_fragment):
+    png, words = native_zero_fragment
+    assert classify_tickets(decode_frame(png), words).kind == "unknown"
+
+    class Startup:
+        def __init__(self):
+            self.crops = []
+
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            self.crops.append(image.shape[:2])
+            return vision.startup.read(image)
+
+        def matches(self, image):
+            return {}
+
+    startup = Startup()
+    screen = TicketVision(startup).analyze(png)
+    assert startup.crops == [(92, 138), (138, 207)]
+    assert (screen.kind, screen.task, screen.area, screen.stage) == (
+        "detail", "bounties", "Classroom", "H",
+    )
+    assert (screen.ap, screen.after_ap, screen.count, screen.tickets,
+            screen.after_tickets, screen.target) == (616, 616, 0, 0, 0, None)
+
+
+@pytest.mark.parametrize("fault", [
+    "positive_balance", "right_hand_zero", "extra_digit", "weak_fragment",
+    "nan_fragment", "infinite_fragment", "conflicting_crop", "weak_crop",
+    "nan_crop", "infinite_crop", "missing_arrow", "no_ap", "wrong_stage",
+    "no_heading", "positive_quantity",
+])
+def test_native_zero_fragment_never_infers_exhaustion(native_zero_fragment, fault):
+    from ba_automator.crafting_vision import within
+    from ba_automator.vision import Word
+
+    png, original = native_zero_fragment
+    pieces = within(original, (1010, 337, 1108, 384))
+    assert len(pieces) == 1 and pieces[0].text == "0"
+    words = original
+    if fault in {"positive_balance", "right_hand_zero", "weak_fragment", "nan_fragment", "infinite_fragment"}:
+        changed = {
+            "positive_balance": replace(pieces[0], text="1"),
+            "right_hand_zero": replace(pieces[0], box=(1080, 356, 1094, 372)),
+            "weak_fragment": replace(pieces[0], confidence=.94),
+            "nan_fragment": replace(pieces[0], confidence=float("nan")),
+            "infinite_fragment": replace(pieces[0], confidence=float("inf")),
+        }[fault]
+        words = [changed if w in pieces else w for w in words]
+    elif fault == "extra_digit":
+        words = [*words, Word("1", .99, (1080, 356, 1094, 372))]
+    elif fault == "no_ap":
+        words = [w for w in words if w.text != "616/220"]
+    elif fault == "wrong_stage":
+        words = [replace(w, text="08 Besieged Classroom G")
+                 if "Classroom H" in w.text else w for w in words]
+    elif fault == "no_heading":
+        words = [w for w in words if w.normalized != "mission info"]
+    elif fault == "positive_quantity":
+        quantity = within(words, (904, 277, 970, 330))
+        words = [replace(w, text="1") if w in quantity else w for w in words]
+
+    class Startup:
+        def __init__(self):
+            self.crops = 0
+
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            assert fault in {"conflicting_crop", "weak_crop", "nan_crop", "infinite_crop",
+                             "missing_arrow", "positive_quantity"}
+            self.crops += 1
+            text = "0→1" if fault == "conflicting_crop" and self.crops == 2 else "0→-"
+            if fault == "missing_arrow":
+                text = "0"
+            confidence = {"weak_crop": .89, "nan_crop": float("nan"),
+                          "infinite_crop": float("inf")}.get(fault, .99)
+            return [Word(text, confidence, (0, 0, 100, 30))]
+
+        def matches(self, image):
+            return {}
+
+    result = TicketVision(Startup()).analyze(png)
+    assert result.kind == "unknown" and result.target is None
+
+
+@pytest.fixture(scope="module")
+def native_right_fragment():
+    import json
+    from ba_automator.vision import Word
+
+    fixture = Path(__file__).parent / "fixtures/tickets-scrimmage-native-right-fragment"
+    words = [Word(**w) for w in json.loads(fixture.with_suffix(".json").read_text())["words"]]
+    return fixture.with_suffix(".png").read_bytes(), words
+
+
+def test_native_right_fragment_requires_complete_projection_proofs(vision, native_right_fragment):
+    png, words = native_right_fragment
+    assert classify_tickets(decode_frame(png), words).kind == "unknown"
+
+    class Startup:
+        def __init__(self):
+            self.crops = []
+
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            self.crops.append(image.shape[:2])
+            return vision.startup.read(image)
+
+        def matches(self, image):
+            return {}
+
+    startup = Startup()
+    screen = TicketVision(startup).analyze(png)
+    assert startup.crops == [(153, 273), (204, 364)]
+    assert (screen.kind, screen.task, screen.area, screen.stage) == (
+        "detail", "scrimmages", "Millennium", "B",
+    )
+    assert (screen.ap, screen.after_ap, screen.count, screen.tickets,
+            screen.after_tickets, screen.target) == (616, 616, 5, 5, 0, (937, 405))
+
+
+@pytest.mark.parametrize("fault", [
+    "wrong_after", "before_digit_as_after", "middle_fragment", "weak_fragment",
+    "nan_fragment", "infinite_fragment", "conflicting_crop", "weak_crop",
+    "nan_crop", "infinite_crop", "missing_arrow", "no_ap", "wrong_stage",
+    "wrong_ap", "no_heading", "wrong_quantity",
+])
+def test_native_right_fragment_preserves_counter_identity(native_right_fragment, fault):
+    from ba_automator.crafting_vision import within
+    from ba_automator.vision import Word
+
+    png, original = native_right_fragment
+    pieces = within(original, (1010, 337, 1108, 384))
+    assert len(pieces) == 1 and pieces[0].text == "0"
+    words = original
+    if fault in {"wrong_after", "before_digit_as_after", "middle_fragment", "weak_fragment", "nan_fragment", "infinite_fragment"}:
+        changed = {
+            "wrong_after": replace(pieces[0], text="1"),
+            "before_digit_as_after": replace(pieces[0], text="5"),
+            "middle_fragment": replace(pieces[0], box=(1060, 356, 1074, 372)),
+            "weak_fragment": replace(pieces[0], confidence=.94),
+            "nan_fragment": replace(pieces[0], confidence=float("nan")),
+            "infinite_fragment": replace(pieces[0], confidence=float("inf")),
+        }[fault]
+        words = [changed if w in pieces else w for w in words]
+    elif fault == "no_ap":
+        words = [w for w in words if w.text != "616→616"]
+    elif fault == "wrong_ap":
+        words = [replace(w, text="617→617") if w.text == "616→616" else w for w in words]
+    elif fault == "wrong_stage":
+        words = [replace(w, text=w.text.replace("Millennium B", "Millennium C")) for w in words]
+    elif fault == "no_heading":
+        words = [w for w in words if w.normalized != "mission info"]
+    elif fault == "wrong_quantity":
+        quantity = within(words, (904, 277, 970, 330))
+        words = [replace(w, text="4") if w in quantity else w for w in words]
+
+    class Startup:
+        def __init__(self):
+            self.crops = 0
+
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            assert fault not in {"middle_fragment", "weak_fragment", "nan_fragment",
+                                 "infinite_fragment", "no_ap", "no_heading"}
+            self.crops += 1
+            text = "5→1" if fault == "conflicting_crop" and self.crops == 2 else "5→0"
+            if fault == "missing_arrow":
+                text = "50"
+            confidence = {"weak_crop": .94, "nan_crop": float("nan"),
+                          "infinite_crop": float("inf")}.get(fault, .99)
+            return [Word(text, confidence, (0, 0, 100, 30))]
+
+        def matches(self, image):
             return {}
 
     result = TicketVision(Startup()).analyze(png)
