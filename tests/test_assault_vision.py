@@ -2,6 +2,7 @@
 from dataclasses import replace
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -22,6 +23,15 @@ def capture(name):
     words = [Word(w["text"], w["confidence"], tuple(w["box"]))
              for w in json.loads((FIXTURES / f"assault-{name}.json").read_text())]
     return frame, words
+
+
+def crop_reader(readings, confidence=.99):
+    def recognize(inputs):
+        values = [readings[index % len(readings)] for index in range(len(inputs.img))]
+        return SimpleNamespace(txts=[value or "" for value in values],
+                               scores=[confidence if value else 0 for value in values])
+
+    return SimpleNamespace(ocr=SimpleNamespace(text_rec=recognize))
 
 
 @pytest.fixture(scope="module")
@@ -63,13 +73,119 @@ def test_menu_missing_enter_is_unknown_lock_not_evidence_for_unlock_ladder():
     assert all(stage.locked is None and stage.target is None for stage in result.stages)
 
 
-def test_official_unlock_phrase_is_bound_to_its_row_without_external_assets():
+@pytest.mark.parametrize("preposition", ["from", "upon"])
+def test_official_unlock_phrase_is_bound_to_its_row_without_external_assets(preposition):
     frame, words = capture("menu")
     words = [word for word in words if not (word.normalized == "enter" and word.center[1] > 450)]
-    words.append(Word("Unlocks from clearing the lower difficulty.", .99, (722, 538, 1195, 563)))
+    words.append(Word(f"Unlocks {preposition} clearing the lower difficulty.", .99, (722, 538, 1195, 563)))
     result = classify_assault(frame, words)
     assert [stage.locked for stage in result.stages] == [False, False, True]
     assert result.stages[-1].boss == "Drumbarka" and result.stages[-1].target is None
+
+
+def test_native_locked_menu_corroborates_padlock_contaminated_boss_names(vision):
+    # Full-frame OCR combines each locked boss name with the adjacent padlock.
+    before = classify_assault(*capture("menu-locked-native"))
+    assert before.boss is None
+    assert [stage.locked for stage in before.stages] == [False, True, True]
+    result = vision.analyze((FIXTURES / "assault-menu-locked-native.png").read_bytes())
+    assert result.boss == "Drumbarka" and result.tickets == 3
+    assert result.event_period == "09/21 19:00 – 09/28 11:59"
+    assert [stage.difficulty for stage in result.stages] == ["extreme", "insane", "torment"]
+    assert all(stage.boss == "Drumbarka" for stage in result.stages)
+    assert result.stages[0].target and all(stage.target is None for stage in result.stages[1:])
+
+
+def test_native_bottom_menu_corroborates_names_without_an_unlocked_row(vision):
+    before = classify_assault(*capture("menu-all-locked-native"))
+    assert before.boss is None and all(stage.locked is True for stage in before.stages)
+    result = vision.analyze((FIXTURES / "assault-menu-all-locked-native.png").read_bytes())
+    assert result.boss == "Drumbarka" and result.tickets == 3
+    assert result.event_period == "09/21 19:00 – 09/28 11:59"
+    assert [stage.difficulty for stage in result.stages] == ["insane", "torment", "lunatic"]
+    assert all(stage.boss == "Drumbarka" and stage.locked is True and stage.target is None
+               for stage in result.stages)
+
+
+@pytest.mark.parametrize("readings", [
+    ("Drumbarka", "Different boss", "Drumbarka", "Drumbarka", "Drumbarka", "Drumbarka"),
+    ("Drumbarka", "Drumbarka", "Different boss", "Different boss", "Drumbarka", "Drumbarka"),
+    ("Drumbarka", "Drumbarka", None, None, "Drumbarka", "Drumbarka"),
+    ("123",) * 6,
+])
+def test_all_locked_names_need_two_matching_crops_per_row_and_agreement_across_rows(readings):
+    before = classify_assault(*capture("menu-all-locked-native"))
+    result = AssaultVision(crop_reader(readings))._locked_boss_names(
+        (FIXTURES / "assault-menu-all-locked-native.png").read_bytes(), before)
+    assert result == before and result.boss is None
+
+
+@pytest.mark.parametrize("change", ["unknown_lock", "single_row"])
+def test_without_unlocked_reference_recovery_requires_multiple_explicitly_locked_rows(change):
+    class OCR:
+        def read(self, frame):
+            pytest.fail("Insufficient independent, explicitly locked rows")
+
+    before = classify_assault(*capture("menu-all-locked-native"))
+    stages = (before.stages[:1] if change == "single_row" else
+              (replace(before.stages[0], locked=None), *before.stages[1:]))
+    before = replace(before, stages=stages)
+    assert AssaultVision(OCR())._locked_boss_names(
+        (FIXTURES / "assault-menu-all-locked-native.png").read_bytes(), before) == before
+
+
+@pytest.mark.parametrize("confidence", [.89, .99])
+def test_all_locked_names_are_corroborated_even_if_padlock_error_is_identical(confidence):
+    before = classify_assault(*capture("menu-all-locked-native"))
+    before = replace(before, boss="Drumbarka0", stages=tuple(
+        replace(stage, boss="Drumbarka0") for stage in before.stages))
+    result = AssaultVision(crop_reader(("Drumbarka",), confidence))._locked_boss_names(
+        (FIXTURES / "assault-menu-all-locked-native.png").read_bytes(), before)
+    if confidence < .9:
+        assert result == before
+    else:
+        assert result.boss == "Drumbarka"
+        assert result.tickets == before.tickets and result.event_period == before.event_period
+        assert all(stage.boss == "Drumbarka" and stage.locked is True and stage.target is None
+                   for stage in result.stages)
+
+
+@pytest.mark.parametrize("texts,scores", [(None, None), (["Drumbarka"] * 5, [.99] * 5),
+                                          (["Drumbarka"] * 6, None),
+                                          (["Drumbarka"] * 6, [.99] * 5)])
+def test_locked_name_batch_must_return_every_crop_and_confidence(texts, scores):
+    reader = SimpleNamespace(ocr=SimpleNamespace(text_rec=lambda _: SimpleNamespace(txts=texts, scores=scores)))
+    before = classify_assault(*capture("menu-all-locked-native"))
+    assert AssaultVision(reader)._locked_boss_names(
+        (FIXTURES / "assault-menu-all-locked-native.png").read_bytes(), before) == before
+
+
+@pytest.mark.parametrize("readings", [
+    ("Drumbarka", "Different boss"), ("Different boss", "Different boss"),
+    ("Drumbarka", None), (None, None),
+])
+def test_locked_boss_crop_disagreement_never_infers_event_identity(readings):
+    before = classify_assault(*capture("menu-locked-native"))
+    result = AssaultVision(crop_reader(readings))._locked_boss_names(
+        (FIXTURES / "assault-menu-locked-native.png").read_bytes(), before)
+    assert result == before and result.boss is None
+
+
+@pytest.mark.parametrize("change", ["unproven_lock", "no_unlocked_reference"])
+def test_locked_boss_recovery_requires_explicit_lock_and_unlocked_reference(change):
+    class OCR:
+        def read(self, frame):
+            pytest.fail("No corroboration should be attempted without explicit lock and reference")
+
+    before = classify_assault(*capture("menu-locked-native"))
+    if change == "unproven_lock":
+        stages = tuple(replace(stage, locked=None) if stage.locked else stage for stage in before.stages)
+    else:
+        stages = tuple(replace(stage, locked=None) if stage.locked is False else stage for stage in before.stages)
+    before = replace(before, stages=stages)
+    result = AssaultVision(OCR())._locked_boss_names(
+        (FIXTURES / "assault-menu-locked-native.png").read_bytes(), before)
+    assert result == before and result.boss is None
 
 
 @pytest.mark.parametrize("phrase", ["Unlocked", "Unlocks after an event", "Unlocks from clearing difficulty."])

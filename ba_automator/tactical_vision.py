@@ -18,7 +18,7 @@ from .crafting_vision import bright, cyan, has, within, yellow
 from .shop_vision import text_in
 from .tactical_battles import Opponent
 from .tactical_rewards import classify_tactical
-from .vision import decode_native_frame, native_game_region, read_game_words, classify, decode_frame
+from .vision import Word, decode_native_frame, native_game_region, read_game_words, classify, decode_frame
 
 
 @dataclass(frozen=True)
@@ -226,6 +226,7 @@ class TacticalBattleVision:
         self.startup = startup
         self.hidden_template = _asset('tactical-hidden-student.png')
         self.versus_template = _asset('tactical-versus.png')
+        self._level_cache = {}
 
     def _opponents(self, frame, words, detail=False, *, native_frame=None):
         specs = ((178, 532, (250, 252, 505, 299), (345, 173, 510, 222),
@@ -233,7 +234,7 @@ class TacticalBattleVision:
             (y, 740, (450, y + 75, 733, y + 118),
              (549, y - 7, 729, y + 45), (484, y, 526, y + 36), (830, y + 44))
             for y in (206, 365, 523))
-        metadata, images, visible = [], [], []
+        metadata, images, visible, keys, pending = [], [], [], [], []
         for y, x, label, rank_bounds, portrait, target in specs:
             account = _match(words, r'Lv\.?\s*(\d{1,3})\s+(.+)', label)
             rank = _rank(words, rank_bounds)
@@ -255,18 +256,33 @@ class TacticalBattleVision:
                     continue
                 indices.append(len(visible))
                 visible.append(level)
-                images.extend(_level_crops(frame, card_x + 5, y + 1, native_frame=native_frame))
+                crops = _level_crops(frame, card_x + 5, y + 1, native_frame=native_frame)
+                # Repeated menus at 1440p otherwise spend the entire five-second
+                # input window recognizing the same tiny labels 16 ways. Reuse
+                # only byte-identical OCR inputs with the same account ceiling.
+                # Menu identity, tickets, timers and hidden cards remain freshly
+                # recognized on every capture; changed pixels invalidate a read.
+                key = (level, tuple((crop.shape, hashlib.sha256(crop.tobytes()).digest())
+                                    for crop in crops))
+                keys.append(key)
+                if key not in self._level_cache:
+                    pending.append((key, len(images), len(crops), level))
+                    images.extend(crops)
             metadata.append((level, name, rank, signature, target, indices))
-        if not images:
+        if not visible:
             return ()
-        from rapidocr.ch_ppocr_rec.typings import TextRecInput
-        result = self.startup.ocr.text_rec(TextRecInput(images))
-        if result.txts is None or len(result.txts) != len(images):
-            return ()
-        readings = list(zip(result.txts, result.scores))
-        reads_per_level = len(images) // len(visible)
-        levels = [_read_level(readings[i * reads_per_level:(i + 1) * reads_per_level], maximum)
-                  for i, maximum in enumerate(visible)]
+        if images:
+            from rapidocr.ch_ppocr_rec.typings import TextRecInput
+            result = self.startup.ocr.text_rec(TextRecInput(images))
+            if result.txts is None or len(result.txts) != len(images):
+                return ()
+            readings = list(zip(result.txts, result.scores))
+            for key, offset, count, maximum in pending:
+                self._level_cache[key] = _read_level(readings[offset:offset + count], maximum)
+        levels = [self._level_cache[key] for key in keys]
+        # Keep at most the current view's 18 visible labels, including rejected
+        # readings. This is a CPU cache, never persisted opponent evidence.
+        self._level_cache = {key: self._level_cache[key] for key in keys}
         opponents = []
         for level, name, rank, signature, target, indices in metadata:
             values = tuple(levels[i] for i in indices)
@@ -284,6 +300,19 @@ class TacticalBattleVision:
         frame = decode_frame(png)
         words = tuple(read_game_words(png, self.startup))
         return self.classify(frame, words, billing=billing, native_frame=decode_native_frame(png))
+
+    def _native_cooldown(self, native_frame):
+        # The tiny idle dash clock can disappear from full-frame OCR at 1440p.
+        # Read its label and clock together from native pixels; the existing
+        # parser still requires an explicit valid clock, never inferred zero.
+        left, top, right, bottom = (45, 503, 275, 550)
+        crop = native_game_region(native_frame, (left, top, right, bottom))
+        scale = native_frame.shape[1] / 1280
+        observed = self.startup.read(crop)
+        words = [Word(w.text, w.confidence, tuple(
+            round(value / scale) + (left if index % 2 == 0 else top)
+            for index, value in enumerate(w.box))) for w in observed]
+        return _cooldown(words)
 
     def classify(self, frame, words, *, billing=False, native_frame=None):
         unknown = TacticalBattleScreen('unknown', words=tuple(words))
@@ -416,6 +445,10 @@ class TacticalBattleVision:
         if base.kind == 'tactical':
             rank = _rank(words, (120, 280, 325, 346))
             cooldown = _cooldown(words)
+            if (cooldown is None and native_frame is not None
+                    and has(words, 'standby time', (45, 503, 180, 550))
+                    and not within(words, (178, 503, 275, 550))):
+                cooldown = self._native_cooldown(native_frame)
             refresh_control = any(
                 re.fullmatch(r'Q?\s*Refresh List', w.text.strip(), re.I) and w.confidence >= .9
                 for w in within(words, (1110, 119, 1250, 171)))

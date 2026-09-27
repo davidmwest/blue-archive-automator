@@ -1,0 +1,152 @@
+[
+  {
+    "text": "Tactical Challenge",
+    "confidence": 0.99997,
+    "box": [
+      102,
+      6,
+      358,
+      42
+    ]
+  },
+  {
+    "text": "Season",
+    "confidence": 0.9998,
+    "box": [
+      452,
+      134,
+      546,
+      161
+    ]
+  },
+  {
+    "text": "Refresh List",
+    "confidence": 0.99997,
+    "box": [
+      1129,
+      135,
+      1231,
+      156
+    ]
+  },
+  {
+    "text": "Rank 663",
+    "confidence": 0.99084,
+    "box": [
+      135,
+      293,
+      287,
+      332
+    ]
+  },
+  {
+    "text": "Time Reward +60 / minute(s)",
+    "confidence": 0.97715,
+    "box": [
+      59,
+      360,
+      282,
+      381
+    ]
+  },
+  {
+    "text": "Claim",
+    "confidence": 0.99998,
+    "box": [
+      319,
+      373,
+      386,
+      401
+    ]
+  },
+  {
+    "text": "Total 46K/1,000K",
+    "confidence": 0.97209,
+    "box": [
+      57,
+      399,
+      202,
+      421
+    ]
+  },
+  {
+    "text": "Daily Reward 09:42",
+    "confidence": 0.99551,
+    "box": [
+      58,
+      438,
+      222,
+      462
+    ]
+  },
+  {
+    "text": "Claim",
+    "confidence": 0.99998,
+    "box": [
+      319,
+      452,
+      386,
+      480
+    ]
+  },
+  {
+    "text": "Tickets Owned 5/5",
+    "confidence": 0.99888,
+    "box": [
+      84,
+      477,
+      247,
+      501
+    ]
+  },
+  {
+    "text": "Standby Time",
+    "confidence": 0.99881,
+    "box": [
+      58,
+      516,
+      173,
+      540
+    ]
+  },
+  {
+    "text": "Battle",
+    "confidence": 0.99854,
+    "box": [
+      103,
+      564,
+      186,
+      592
+    ]
+  },
+  {
+    "text": "Defense",
+    "confidence": 0.99997,
+    "box": [
+      268,
+      563,
+      379,
+      593
+    ]
+  },
+  {
+    "text": "History",
+    "confidence": 0.99999,
+    "box": [
+      94,
+      589,
+      195,
+      624
+    ]
+  },
+  {
+    "text": "Formation",
+    "confidence": 0.99998,
+    "box": [
+      254,
+      591,
+      391,
+      619
+    ]
+  }
+]

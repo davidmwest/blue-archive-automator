@@ -12,8 +12,10 @@ from ba_automator.config import Config, ConfigError
 from ba_automator.tasks import task_plan
 
 
-def selected(**changes):
-    return Config(serial="127.0.0.1:5695", package="com.nexon.bluearchive", **changes)
+def selected(tmp_path, **changes):
+    return Config(serial="127.0.0.1:5695", package="com.nexon.bluearchive",
+                  run_dir=tmp_path / "runs", lock_dir=tmp_path / "locks",
+                  state_dir=tmp_path / "state", **changes)
 
 
 @pytest.mark.parametrize(("field", "value"), [
@@ -27,9 +29,9 @@ def selected(**changes):
     ("lessons_locations", [str(i) for i in range(51)]),
     ("lessons_locations", ["Gehenna", " gehenna "]),
 ])
-def test_invalid_lesson_settings_reject_before_any_device_input(field, value):
+def test_invalid_lesson_settings_reject_before_any_device_input(tmp_path, field, value):
     with pytest.raises(ConfigError):
-        selected(**{field: value})
+        selected(tmp_path, **{field: value})
 
 
 def test_lessons_toml_roundtrip_and_immutable_allowlist(tmp_path):
@@ -44,7 +46,7 @@ def test_lessons_toml_roundtrip_and_immutable_allowlist(tmp_path):
     assert config.lessons_locations == ("Gehenna Academy", "Trinity General School")
     assert config.lessons_enabled_in_daily is False
     names = ["Gehenna Academy"]
-    config = selected(lessons_locations=names)
+    config = selected(tmp_path, lessons_locations=names)
     names.append("Trinity General School")
     assert config.lessons_locations == ("Gehenna Academy",)
 
@@ -61,8 +63,8 @@ def test_lesson_config_typos_do_not_silently_use_defaults(tmp_path, table):
         Config.from_file(source)
 
 
-def test_default_plans_include_lessons_only_in_daily_or_explicit_lessons_job():
-    config = selected()
+def test_default_plans_include_lessons_only_in_daily_or_explicit_lessons_job(tmp_path):
+    config = selected(tmp_path)
     assert config.lessons_strategy == "relationship"
     assert config.lessons_max_tickets == 0
     assert config.lessons_locations == ()
@@ -92,7 +94,8 @@ class Result:
 def test_cli_dispatches_sequential_plan_and_passes_lesson_config(monkeypatch, tmp_path, command, enabled, expected):
     from ba_automator import cafe, club, mail, restart, tickets, task_rewards, free_pack, red_dots, tactical_rewards
 
-    config = selected(lessons_enabled_in_daily=enabled, lessons_strategy="school_rank", lessons_max_tickets=3)
+    config = selected(tmp_path, lessons_enabled_in_daily=enabled,
+                      lessons_strategy="school_rank", lessons_max_tickets=3)
     monkeypatch.setattr(cli.Config, "from_file", lambda _: config)
     device, vision = object(), object()
     monkeypatch.setattr(cli, "AdbDevice", lambda _: device)
@@ -130,12 +133,15 @@ def test_cli_dispatches_sequential_plan_and_passes_lesson_config(monkeypatch, tm
     monkeypatch.setattr(tickets, "run_scrimmages", runner("scrimmages"))
     assert cli.main([command, "--no-downloads"]) == 0
     assert calls == expected
+    logs = list((config.state_dir / "logs").glob("*.log"))
+    assert len(logs) == 1
+    assert "command_started" in logs[0].read_text()
 
 
-def test_restart_failure_prevents_lesson_ticket_use(monkeypatch, capsys):
+def test_restart_failure_prevents_lesson_ticket_use(monkeypatch, capsys, tmp_path):
     from ba_automator import restart
 
-    monkeypatch.setattr(cli.Config, "from_file", lambda _: selected())
+    monkeypatch.setattr(cli.Config, "from_file", lambda _: selected(tmp_path))
     monkeypatch.setattr(cli, "AdbDevice", lambda _: object())
     monkeypatch.setattr(cli, "StartupVision", object)
     def fail(*args):

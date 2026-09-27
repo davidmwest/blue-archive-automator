@@ -214,6 +214,11 @@ class StartupVision:
         observation = classify(words, self.matches(frame))
         # Specific startup handlers retain priority over this narrow visual fallback.
         if observation.state == "unknown":
+            if illustrated_loading(frame, words):
+                return Observation(
+                    "loading", "Waiting for the illustrated loading screen", None,
+                    observation.text, detector="illustrated_loading",
+                )
             if publisher_splash(frame, words):
                 return Observation(
                     "loading", "Waiting for the recognized publisher-logo startup splash", None,
@@ -226,6 +231,30 @@ class StartupVision:
                     observation.text, detector="shaded_overlay",
                 )
         return observation
+
+
+def illustrated_loading(frame: np.ndarray, words: list[Word]) -> bool:
+    """Recognize the centered comic loading card, whose spinner may disappear.
+
+    A title, substantial central artwork, and black space around all four edges
+    are required. This authorizes waiting only; existing deadlines still apply.
+    """
+    if frame.shape != (720, 1280, 3):
+        return False
+    titles = [w for w in words if w.confidence >= .85 and len(w.text.split()) >= 4
+              and 300 <= w.box[0] < w.box[2] <= 980
+              and 85 <= w.box[1] < w.box[3] <= 170]
+    if not titles or any(not (280 <= w.box[0] < w.box[2] <= 1000
+                             and 80 <= w.box[1] < w.box[3] <= 620) for w in words):
+        return False
+    dark = np.max(frame, axis=2) <= 20
+    border = np.ones((720, 1280), dtype=bool)
+    border[80:620, 280:1000] = False
+    artwork = frame[180:570, 330:950]
+    colored = (np.max(artwork, axis=2).astype(int)
+               - np.min(artwork, axis=2).astype(int)) >= 35
+    return bool(dark[border].mean() >= .995 and dark.mean() >= .65
+                and colored.mean() >= .12)
 
 
 def publisher_splash(frame: np.ndarray, words: list[Word]) -> bool:

@@ -1,0 +1,333 @@
+{
+  "description": "Sanitized native 1440p settled Location Info; recorded local OCR. Account header and background outside the modal removed.",
+  "reads": [
+    {
+      "shape": [
+        1440,
+        2560,
+        3
+      ],
+      "sha256": "9d1a4fb8ad529be08cfeeabf78e03f46736efadf0b1f51a519b918be6e5d9f0c",
+      "words": [
+        {
+          "text": "Location Info",
+          "confidence": 0.9987,
+          "box": [
+            1070,
+            195,
+            1491,
+            267
+          ]
+        },
+        {
+          "text": "Lv. 2| Hyakkiyako Shopping District",
+          "confidence": 0.984,
+          "box": [
+            627,
+            333,
+            1518,
+            402
+          ]
+        },
+        {
+          "text": "The shopping district of Allied Hyakkiyako Academy. It's the home of an",
+          "confidence": 0.99175,
+          "box": [
+            632,
+            434,
+            1801,
+            483
+          ]
+        },
+        {
+          "text": "especially famous teahouse called Momoyodou. Rumor has it that whenever",
+          "confidence": 0.98953,
+          "box": [
+            631,
+            482,
+            1883,
+            531
+          ]
+        },
+        {
+          "text": "troublemakers cause a problem, the face of Momoyodou steps in to solve it.",
+          "confidence": 0.99807,
+          "box": [
+            631,
+            534,
+            1870,
+            580
+          ]
+        },
+        {
+          "text": "Lesson Rewards",
+          "confidence": 0.99096,
+          "box": [
+            1119,
+            625,
+            1442,
+            671
+          ]
+        },
+        {
+          "text": "LOCATIONBASS",
+          "confidence": 0.83107,
+          "box": [
+            659,
+            728,
+            709,
+            749
+          ]
+        },
+        {
+          "text": "EXP",
+          "confidence": 0.99983,
+          "box": [
+            723,
+            768,
+            765,
+            795
+          ]
+        },
+        {
+          "text": "x100",
+          "confidence": 0.8783,
+          "box": [
+            684,
+            788,
+            766,
+            827
+          ]
+        },
+        {
+          "text": "Tips",
+          "confidence": 0.99955,
+          "box": [
+            752,
+            868,
+            862,
+            918
+          ]
+        },
+        {
+          "text": "Only currently recruited students can earn Relationship Points.",
+          "confidence": 0.99206,
+          "box": [
+            875,
+            872,
+            1845,
+            918
+          ]
+        },
+        {
+          "text": "Start Lesson",
+          "confidence": 0.99856,
+          "box": [
+            1080,
+            1067,
+            1478,
+            1133
+          ]
+        }
+      ]
+    },
+    {
+      "shape": [
+        98,
+        220,
+        3
+      ],
+      "sha256": "686d85cf7c824cc656fc9769a4cd84cef6ac38dde972aba7d2ba7443aa1c9478",
+      "words": [
+        {
+          "text": "7\u21926",
+          "confidence": 0.96207,
+          "box": [
+            64,
+            21,
+            194,
+            88
+          ]
+        }
+      ]
+    },
+    {
+      "shape": [
+        147,
+        330,
+        3
+      ],
+      "sha256": "ffb2f5b4fd2c8894fc3ef4874f30075c2c811b2ed0fdd8c6127533e7d3ba32fb",
+      "words": [
+        {
+          "text": "7\u21926",
+          "confidence": 0.99785,
+          "box": [
+            96,
+            30,
+            292,
+            133
+          ]
+        }
+      ]
+    },
+    {
+      "shape": [
+        110,
+        170,
+        3
+      ],
+      "sha256": "f093a678f79ed3529ae6b28a9048883de4a168190e31fc1669f0f7f1615ee31d",
+      "words": [
+        {
+          "text": "9",
+          "confidence": 0.97841,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "shape": [
+        110,
+        170,
+        3
+      ],
+      "sha256": "e83b180d188891ca34c74cac893d91becc25e8a1dc355219f297b26d0b977ce0",
+      "words": [
+        {
+          "text": "m",
+          "confidence": 0.83938,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "shape": [
+        105,
+        135,
+        3
+      ],
+      "sha256": "a349d61f516897dd4236ab7162771b31a875e05297b9624bb373641f142daba6",
+      "words": [
+        {
+          "text": "11",
+          "confidence": 0.74827,
+          "box": [
+            0,
+            0,
+            134,
+            104
+          ]
+        }
+      ]
+    },
+    {
+      "shape": [
+        66,
+        69,
+        3
+      ],
+      "sha256": "f541af499f03de23781677fbe58ba28df85a08fffb7d1ac2103dcb4814693866",
+      "words": [
+        {
+          "text": "11",
+          "confidence": 0.99899,
+          "box": [
+            1,
+            5,
+            68,
+            65
+          ]
+        }
+      ]
+    },
+    {
+      "shape": [
+        110,
+        115,
+        3
+      ],
+      "sha256": "0b8f748bf1c6e12caf56f11dbcf1751a1addde0a3df9cb52a1945ab27c41fc2f",
+      "words": [
+        {
+          "text": "11",
+          "confidence": 0.99868,
+          "box": [
+            0,
+            5,
+            114,
+            109
+          ]
+        }
+      ]
+    },
+    {
+      "shape": [
+        110,
+        170,
+        3
+      ],
+      "sha256": "b11599cf8f3da2301baf1f14e93787af87f4a232975b6a392e183d4371ae0069",
+      "words": []
+    },
+    {
+      "shape": [
+        105,
+        135,
+        3
+      ],
+      "sha256": "82fe176c2836891fe3f2794472084812a8369cdb6515f23c4e5fd380ad494278",
+      "words": []
+    },
+    {
+      "shape": [
+        66,
+        69,
+        3
+      ],
+      "sha256": "d1752dab2c9e2c0be78545a2b4b89118a878ab6a499361d5e67d13a39448684c",
+      "words": [
+        {
+          "text": "11",
+          "confidence": 0.99862,
+          "box": [
+            2,
+            6,
+            68,
+            65
+          ]
+        }
+      ]
+    },
+    {
+      "shape": [
+        110,
+        115,
+        3
+      ],
+      "sha256": "6d002731e3deca81d072d4a49fbdca3c1cb74908872c2283fdd6fe7635bace5f",
+      "words": [
+        {
+          "text": "11",
+          "confidence": 0.99856,
+          "box": [
+            2,
+            7,
+            114,
+            109
+          ]
+        }
+      ]
+    }
+  ]
+}

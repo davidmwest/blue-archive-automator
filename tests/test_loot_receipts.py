@@ -99,6 +99,54 @@ def test_final_row_only_and_owned_is_never_quantity(vision):
     )
 
 
+@pytest.mark.parametrize("label,expected", [
+    ("x150K", 150000), ("×40k", 40000), ("x150000", 150000),
+    ("Owned: 150K", None), ("150K", None), ("x1.5K", None),
+    ("x150K remaining", None), ("x0K", None), ("x1000000K", None),
+])
+def test_explicit_integer_thousands_receipt_quantity(label, expected):
+    assert lr.amount([Word(label, .99, (0, 0, 80, 20))]) == expected
+
+
+def test_native_amulet_artwork_quantity_has_two_exact_corner_reads(vision):
+    from ba_automator.vision import decode_native_frame
+
+    native = decode_native_frame((FIXTURES / "loot-native-amulet-quantity.png").read_bytes())
+    box = (372, 450, 75, 64)
+    assert lr.amount(lr.read_game_crop(vision, native, (372, 450, 447, 517))) is None
+    assert lr.amount(lr.read_game_crop(vision, native, (377, 490, 445, 513), 4)) is None
+    assert lr.narrow_small_card_amount(vision, native, box) == 1
+
+
+@pytest.mark.parametrize("labels", [
+    [("x1", .99), ("x2", .99)],
+    [("1", .99), ("1", .99)],
+    [("Owned: 1", .99), ("Owned: 1", .99)],
+    [("x1", .89), ("x1", .99)],
+    [("x1", .99), ("x1", .89)],
+])
+def test_corner_quantity_fallback_rejects_ambiguous_or_unqualified_reads(monkeypatch, labels):
+    reads = iter([[Word(text, confidence, (0, 0, 80, 20))]
+                  for text, confidence in labels])
+    monkeypatch.setattr(lr, "read_game_crop", lambda *args: next(reads))
+    assert lr.narrow_small_card_amount(None, None, (372, 450, 75, 64)) is None
+
+
+def test_corner_quantity_fallback_rejects_multiple_labels(monkeypatch):
+    monkeypatch.setattr(lr, "read_game_crop", lambda *args: [
+        Word("x1", .99, (0, 0, 20, 20)), Word("x1", .99, (25, 0, 45, 20))])
+    assert lr.narrow_small_card_amount(None, None, (372, 450, 75, 64)) is None
+
+
+@pytest.mark.parametrize("conflict_at", [0, 1])
+def test_small_card_quantity_conflict_cannot_fall_back_to_a_smaller_crop(monkeypatch, conflict_at):
+    reads = iter([[]] * conflict_at + [[Word("x1", .99, (0, 0, 20, 20)),
+                                      Word("x2", .99, (25, 0, 45, 20))]])
+    monkeypatch.setattr(lr, "read_game_crop", lambda *args: next(reads))
+    monkeypatch.setattr(lr, "narrow_small_card_amount", lambda *args: pytest.fail("Conflict overridden"))
+    assert lr.small_card_amount(None, None, (372, 450, 75, 64)) is None
+
+
 @pytest.mark.parametrize("native_size", [(2560, 1440), (3840, 2160)])
 def test_native_receipt_keeps_canonical_loot_targets_and_icons(vision, native_size):
     original = (FIXTURES / "loot-sweep.png").read_bytes()
@@ -495,3 +543,34 @@ def test_visual_overlap_accepts_only_tiny_raster_noise():
     assert lr.same_icon(lr.encode(original), lr.encode(shimmer))
     assert not lr.same_icon(lr.encode(original), lr.encode(different))
     assert not lr.same_icon(lr.encode(original), b"not an icon")
+
+
+def test_native_free_pack_sparkle_uses_exact_isolated_heading(vision):
+    from ba_automator.vision import read_game_words
+
+    before, after = [(FIXTURES / f'loot-free-pack-native-{suffix}.png').read_bytes()
+                     for suffix in ('before', 'sparkle')]
+    assert any(w.text == 'REWARD AGQUIRED!' for w in read_game_words(after, vision))
+    for png in (before, after):
+        parsed = lr.page(png, vision)
+        assert parsed.kind == 'reward'
+        assert [(card.name, card.quantity) for card in parsed.cards] == [
+            ('Credit Points', 10000), ('AP', 10),
+        ]
+    heading = lr.reward_heading_words(after, vision)
+    assert ''.join(w.normalized.replace(' ', '') for w in heading) == 'rewardacquired'
+    assert all(w.confidence >= .95 for w in heading)
+    assert lr.same_receipt_view(before, after, lr.page(before, vision), vision=vision)
+
+
+@pytest.mark.parametrize('text,confidence', [
+    ('REWARD AGQUIRED!', .999), ('REWARD AÇQUIRED!', .999),
+    ('REWARD ACQUIRED!', .94), ('REWARD', .999),
+])
+def test_isolated_heading_requires_exact_confident_phrase(text, confidence):
+    class UnreadableHeading:
+        def read(self, image):
+            return [Word(text, confidence, (20, 10, 580, 100))]
+
+    png = (FIXTURES / 'loot-free-pack-native-sparkle.png').read_bytes()
+    assert not lr.reward_heading_words(png, UnreadableHeading(), words=[])

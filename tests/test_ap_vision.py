@@ -229,3 +229,41 @@ def test_natural_regeneration_allows_postcondition_but_not_another_spend(vision)
     assert result.kind == "detail" and result.stage == "4-2"
     assert (result.ap, result.after, result.remaining) == (105, 84, 1)
     assert result.target is None
+
+
+def test_native_hard_projection_overlap_requires_exact_crop_agreement(vision):
+    from ba_automator.vision import read_game_words
+
+    png = (FIXTURES / 'ap-hard-native-overlap.png').read_bytes()
+    frame = decode_frame(png)
+    # Full native OCR overlaps the final digit of 102 with the arrow label.
+    assert classify_ap(frame, read_game_words(png, vision.startup)).kind == 'unknown'
+    screen = vision.analyze(png)
+    assert (screen.kind, screen.stage, screen.ap, screen.remaining,
+            screen.count, screen.cost, screen.after) == (
+        'detail', '4-3', 102, 1, 1, 20, 82,
+    )
+
+
+@pytest.mark.parametrize('change', ['disagree', 'low_confidence', 'malformed'])
+def test_hard_projection_crop_never_infers_or_corrects_a_number(change):
+    import numpy as np
+    from ba_automator.ap_vision import reread_hard_projection
+    from ba_automator.vision import Word
+
+    class CropVision:
+        calls = 0
+
+        def read(self, image):
+            self.calls += 1
+            text, confidence = '102→82 Remaining: 0/3', .99
+            if self.calls == 2:
+                if change == 'disagree':
+                    text = '102→32 Remaining: 0/3'
+                elif change == 'low_confidence':
+                    confidence = .94
+                else:
+                    text = '102 2→82 Remaining: 0/3'
+            return [Word(text, confidence, (25, 25, 250, 55))]
+
+    assert reread_hard_projection(np.zeros((1440, 2560, 3), dtype='uint8'), CropVision()) is None

@@ -87,6 +87,141 @@ def test_real_sanitized_ticket_screens(vision, name, kind, task):
         ] and s.stages[-1].target is None
 
 
+@pytest.mark.parametrize("task,area,stage", [
+    ("bounty", "Overpass", "H"), ("scrimmage", "Trinity", "B"),
+])
+def test_native_joined_stage_heading_preserves_index_guard(vision, task, area, stage):
+    from ba_automator.vision import read_game_words
+
+    png = (Path(__file__).parent / "fixtures" /
+           f"tickets-{task}-native-joined-heading.png").read_bytes()
+    screen = vision.analyze(png)
+    assert (screen.kind, screen.area, screen.stage, screen.stars) == (
+        "detail", area, stage, 3,
+    )
+    assert (screen.tickets, screen.after_tickets, screen.count, screen.ap_cost) == (15, 14, 1, 0)
+    assert screen.target == (937, 405)
+    words = read_game_words(png, vision.startup)
+    from ba_automator.crafting_vision import within
+    heading = within(words, (125, 183, 620, 245))
+    assert len(heading) == 1
+    for wrong in (f"09 {area} {stage}", f"{area} {stage}", f"02 {area} Z"):
+        changed = [replace(w, text=wrong) if w in heading else w for w in words]
+        assert classify_tickets(decode_frame(png), changed).kind == "unknown"
+
+
+def test_native_scrimmage_waits_for_crossfade_before_surveying_stars(vision):
+    fixtures = Path(__file__).parent / "fixtures"
+    fading = vision.analyze((fixtures / "tickets-scrimmage-native-crossfade.png").read_bytes())
+    assert fading.kind == "unknown" and not fading.stages and fading.target is None
+    ready = vision.analyze((fixtures / "tickets-scrimmage-native-settled.png").read_bytes())
+    assert (ready.kind, ready.task, ready.area, ready.tickets) == (
+        "list", "scrimmages", "Trinity", 15,
+    )
+    assert [(stage.id, stage.stars, stage.target is not None) for stage in ready.stages] == [
+        ("A", 3, True), ("B", 3, True), ("C", 0, True), ("D", 0, False),
+    ]
+
+
+@pytest.fixture(scope="module")
+def bounty_missing_arrow():
+    import json
+    from ba_automator.vision import Word
+
+    fixture = Path(__file__).parent / "fixtures/tickets-bounty-native-missing-arrow"
+    observed = json.loads(fixture.with_suffix(".json").read_text())
+    return fixture.with_suffix(".png").read_bytes(), [Word(**word) for word in observed["words"]]
+
+
+def test_native_bounty_recovers_only_arrow_with_two_agreeing_crops(vision, bounty_missing_arrow):
+    png, words = bounty_missing_arrow
+    assert classify_tickets(decode_frame(png), words).kind == "unknown"
+
+    class Startup:
+        def __init__(self):
+            self.crops = []
+
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(word, box=tuple(value * 2 for value in word.box)) for word in words]
+            self.crops.append(image.shape[:2])
+            return vision.startup.read(image)
+
+        def matches(self, image):
+            return {}
+
+    startup = Startup()
+    screen = TicketVision(startup).analyze(png)
+    assert startup.crops == [(134, 222), (201, 333)]
+    assert (screen.kind, screen.task, screen.area, screen.stage) == (
+        "detail", "bounties", "Desert Railroad", "H",
+    )
+    assert (screen.ap, screen.after_ap, screen.tickets, screen.after_tickets,
+            screen.count, screen.ap_cost, screen.stars, screen.target) == (
+        545, 545, 10, 6, 4, 0, 3, (937, 405),
+    )
+    assert vision.analyze(png) == screen
+
+
+@pytest.mark.parametrize("readings", [
+    [[], []],
+    [[("10→6", .99)], [("10→5", .99)]],
+    [[("10→6", .99)], [("10→6", .94)]],
+    [[("10 6", .99)], [("10→6", .99)]],
+    [[("10→6", .99), ("1", .99)], [("10→6", .99)]],
+    [[("10→5", .99)], [("10→5", .99)]],
+])
+def test_bounty_arrow_recovery_rejects_missing_or_disagreeing_evidence(bounty_missing_arrow, readings):
+    from ba_automator.vision import Word
+
+    png, words = bounty_missing_arrow
+
+    class Startup:
+        def __init__(self):
+            self.crops = iter(readings)
+
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(word, box=tuple(value * 2 for value in word.box)) for word in words]
+            return [Word(text, confidence, (0, 0, 100, 30))
+                    for text, confidence in next(self.crops)]
+
+        def matches(self, image):
+            return {}
+
+    assert TicketVision(Startup()).analyze(png).kind == "unknown"
+
+
+@pytest.mark.parametrize("change", ["contradictory_projection", "no_heading", "scrimmage", "missing_digit"])
+def test_bounty_arrow_recovery_never_overwrites_contradictions(bounty_missing_arrow, change):
+    from ba_automator.crafting_vision import within
+    from ba_automator.vision import Word
+
+    png, original = bounty_missing_arrow
+    words = original
+    if change == "contradictory_projection":
+        pieces = within(words, (855, 337, 1108, 384))
+        words = [word for word in words if word not in pieces]
+        words.append(Word("10→5", .99, (1030, 353, 1090, 373)))
+    elif change == "no_heading":
+        words = [word for word in words if word.normalized != "mission info"]
+    elif change == "scrimmage":
+        words = [replace(word, text="Scrimmage") if word.normalized == "bounty" else word
+                 for word in words]
+    else:
+        words = [word for word in words if word.text != "6"]
+
+    class Startup:
+        def read(self, image):
+            assert image.shape[:2] == (1440, 2560), "contradiction must not trigger crop recovery"
+            return [replace(word, box=tuple(value * 2 for value in word.box)) for word in words]
+
+        def matches(self, image):
+            return {}
+
+    assert TicketVision(Startup()).analyze(png).kind == "unknown"
+
+
 def test_attendance_exact_calendar_and_negative_controls(vision):
     png = (Path(__file__).parent / "fixtures/tickets-initial.png").read_bytes()
     v = vision.startup

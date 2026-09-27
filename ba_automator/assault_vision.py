@@ -3,7 +3,7 @@
 Each returned input target is backed by text and an undimmed control in the
 current frame. Missing team metadata leaves the entire team unverified.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import re
 
 import cv2
@@ -265,7 +265,7 @@ def classify_assault(frame, words, *, home=False, stars=()):
                          if index + 1 < len(difficulty_words) else 620)
             lock_words = re.sub(r"\s+", " ", text_in(words, (660, y+18, 1250, bottom)).lower())
             explicit_lock = bool(re.search(
-                r"(?:^| )unlocks from clearing the lower difficulty\.?(?:$| )", lock_words))
+                r"(?:^| )unlocks (?:from|upon) clearing the lower difficulty\.?(?:$| )", lock_words))
             button_lock = text_in(words, (1050, y, 1240, min(y+82, bottom))).strip().lower() == "locked"
             locked = None if entered and (explicit_lock or button_lock) else (
                 False if entered else True if explicit_lock or button_lock else None)
@@ -282,11 +282,72 @@ class AssaultVision:
     def __init__(self, startup):
         self.startup = startup
 
+    def _locked_boss_names(self, png, screen):
+        """Corroborate locked-row names when OCR joins their adjacent padlock.
+
+        No boss is inferred from the event or neighboring row. Two native crops
+        must agree for each repaired row. Normally they must match an unlocked
+        row; at the bottom of the list, at least two explicitly locked rows must
+        independently agree instead. Disagreement leaves identity unresolved.
+        """
+        if screen.kind != "menu":
+            return screen
+        references = {stage.boss for stage in screen.stages if stage.locked is False}
+        all_locked = len(screen.stages) >= 2 and all(stage.locked is True for stage in screen.stages)
+        if not all_locked and (screen.boss is not None or len(references) != 1):
+            return screen
+        native = decode_native_frame(png)
+        expected = next(iter(references)) if references else None
+        images, offsets = [], {}
+        for index, stage in enumerate(screen.stages):
+            if not all_locked and (stage.locked is not True or stage.boss == expected):
+                continue
+            anchors = [word for word in within(screen.words, (668, 150, 1025, 570))
+                       if _difficulty(word.text) == stage.difficulty]
+            if len(anchors) != 1:
+                continue
+            y = anchors[0].center[1]
+            offsets[index] = len(images)
+            for right in (920, 930):
+                images.append(native_game_region(native, (668, y + 18, right, y + 49)))
+        if not images:
+            return screen
+        # These are single-line regions bounded by independently read difficulty
+        # labels. Batch recognition without repeating text detection six times;
+        # otherwise native menu OCR can outlast the five-second input deadline.
+        from rapidocr.ch_ppocr_rec.typings import TextRecInput
+        result = self.startup.ocr.text_rec(TextRecInput(images))
+        if (result.txts is None or result.scores is None
+                or len(result.txts) != len(images) or len(result.scores) != len(images)):
+            return screen
+        names = {}
+        for index, offset in offsets.items():
+            first, second = (result.txts[offset].strip(), result.txts[offset + 1].strip())
+            if (first == second and min(result.scores[offset:offset + 2]) >= .9
+                    and re.fullmatch(r"[A-Za-z][A-Za-z0-9 '\-]+", first)):
+                names[index] = first
+
+        if all_locked:
+            if len(names) == len(screen.stages) and len(set(names.values())) == 1:
+                return replace(screen, boss=names[0], stages=tuple(
+                    replace(stage, boss=names[0]) for stage in screen.stages))
+            return screen
+
+        stages = []
+        for index, stage in enumerate(screen.stages):
+            if stage.locked is True and stage.boss != expected:
+                if names.get(index) == expected:
+                    stage = replace(stage, boss=expected)
+            stages.append(stage)
+        bosses = {stage.boss for stage in stages}
+        return replace(screen, stages=tuple(stages), boss=next(iter(bosses)) if len(bosses) == 1 else None)
+
     def analyze(self, png, *, billing=False):
         frame = decode_frame(png)
         words = read_game_words(png, self.startup)
         home = {"home_left", "home_right"} <= self.startup.matches(frame).keys()
         screen = classify_assault(frame, words, home=home)
+        screen = self._locked_boss_names(png, screen)
         if screen.kind == "formation" and not any(w.normalized == "empty" for w in words):
             screen = classify_assault(frame, words, stars=formation_stars(
                 frame, self.startup, native_frame=decode_native_frame(png)))

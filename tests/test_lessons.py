@@ -250,6 +250,46 @@ def test_unrecognized_screens_timeout_without_guessing_a_button(harness):
     assert not harness.device.taps
 
 
+def test_room_list_retries_ignored_navigation_after_school_scene_loads(harness):
+    runner = harness.make()
+    runner.expected_tickets = 2
+    card = RoomCard(0, "Library", 1, True, (250, 250), (LessonStudent("0", True, 10),))
+    rooms = LessonScreen("rooms", tickets=2, room_cards=(card,))
+
+    def loading_school(png):
+        # The HUD appears before the scene. The first two navigation taps are
+        # ignored; only a fresh tap after the scene appears can open the modal.
+        return rooms if len(harness.device.taps) >= 3 else map_screen()
+
+    harness.vision.analyze = loading_school
+    result = runner.room_grid(harness.frame(map_screen()))
+    assert result.screen == rooms
+    assert harness.device.taps == [(1156, 663)] * 3
+    assert 30 < harness.clock.now < 40
+    assert runner.expected_tickets == 2
+
+
+@pytest.mark.parametrize("changed", [
+    map_screen(name="Other school"), map_screen(tickets=1), map_screen(xp=200),
+])
+def test_room_list_navigation_retry_rejects_school_or_ticket_changes(harness, changed):
+    runner = harness.make()
+    harness.screens[:] = [changed]
+    with pytest.raises(TaskError, match="School or tickets changed"):
+        runner.room_grid(harness.frame(map_screen()))
+    assert harness.device.taps == [(1156, 663)]
+
+
+@pytest.mark.parametrize("observed", [map_screen(), LessonScreen("confirm", tickets=2)])
+def test_room_list_navigation_retries_are_bounded_and_never_confirm_spending(harness, observed):
+    runner = harness.make()
+    harness.screens[:] = [observed]
+    with pytest.raises(TaskError, match="bounded navigation retries"):
+        runner.room_grid(harness.frame(map_screen()))
+    assert harness.device.taps == [(1156, 663)] * (3 if observed.kind == "map" else 1)
+    assert 60 <= harness.clock.now < 65
+
+
 def test_ocr_that_makes_every_frame_stale_never_authorizes_input(harness):
     runner = harness.make()
 
@@ -457,6 +497,147 @@ def test_1440p_display_runs_lessons_with_the_same_ticket_budget(harness):
     assert runner.run().status == "success"
     assert runner.confirmed == 2 and runner.expected_tickets == 1
     assert runner.home_calls == 1
+
+
+class TimedOrchestrationRunner(OrchestrationRunner):
+    """Model a native survey's observed cost without OCR or real device input."""
+
+    starting_tickets = 7
+    setup_seconds = 20
+    survey_seconds = 287
+    execution_seconds = 75
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.rooms = [LessonRoom("a" if index % 2 else "b", str(index), f"Room {index}",
+                                 (LessonStudent("0", True, index + 1),))
+                      for index in range(99)]
+
+    def overview(self):
+        self.sleep(self.setup_seconds)
+        return super().overview()
+
+    def survey(self):
+        self.check_budget()
+        self.sleep(self.survey_seconds)
+        self.check_budget()
+        return super().survey()
+
+    def execute(self, decision):
+        self.sleep(self.execution_seconds)
+        self.check_budget()
+        super().execute(decision)
+
+    def return_home(self):
+        self.sleep(15)
+        self.check_budget()
+        super().return_home()
+
+
+def test_seven_native_pace_lessons_keep_fresh_surveys_beyond_old_total_limit(harness):
+    harness.device.size = (2560, 1440)
+    runner = harness.make(TimedOrchestrationRunner)
+    result = runner.run()
+    assert result.status == "success"
+    assert result.duration > lessons_module.LESSONS_TIMEOUT
+    assert runner.survey_calls == runner.confirmed == len(runner.selected) == 7
+    assert runner.expected_tickets == 0 and runner.home_calls == 1
+    assert runner.timeout_seconds == 58 * 60
+    budgets = [event for event in journal(runner) if event["event"] == "lesson_time_budget"]
+    assert len(budgets) == 1
+    assert budgets[0]["authorized_tickets"] == budgets[0]["observed_tickets"] == 7
+    assert budgets[0]["timeout_seconds"] == 58 * 60
+
+
+def test_time_allowance_respects_user_ticket_limit_instead_of_available_count(harness):
+    runner = harness.make(TimedOrchestrationRunner, lessons_max_tickets=2)
+    assert runner.run().status == "success"
+    assert runner.confirmed == runner.survey_calls == 2
+    assert runner.expected_tickets == 5
+    assert runner.timeout_seconds == 30 * 60
+
+
+@pytest.mark.parametrize("observed,configured,minutes", [
+    (0, 0, 30), (1, 0, 30), (3, 0, 30), (7, 3, 30),
+    (7, 4, 34), (7, 99, 58), (99, 1, 30), (99, 0, 90),
+])
+def test_time_allowance_uses_only_initial_verified_authorized_tickets(harness, observed, configured, minutes):
+    runner = harness.make(OrchestrationRunner, lessons_max_tickets=configured)
+    runner.starting_tickets = observed
+    runner.rooms = [replace(room, students=(LessonStudent("0", False),)) for room in runner.rooms]
+    assert runner.run().status == "success"
+    assert runner.timeout_seconds == minutes * 60
+    assert runner.confirmed == 0 and runner.expected_tickets == observed
+
+
+@pytest.mark.parametrize("observed", [None, True, -1, 100, "7"])
+def test_invalid_initial_counter_cannot_extend_lessons_time_limit(harness, observed):
+    runner = harness.make(OrchestrationRunner)
+    runner.starting_tickets = observed
+    with pytest.raises(TaskError, match="ticket count"):
+        runner.run()
+    assert runner.timeout_seconds == lessons_module.LESSONS_TIMEOUT
+    assert not any(event["event"] == "lesson_time_budget" for event in journal(runner))
+    assert runner.confirmed == runner.survey_calls == 0
+
+
+def test_initial_read_after_old_deadline_cannot_extend_expired_budget(harness):
+    runner = harness.make(TimedOrchestrationRunner)
+    runner.setup_seconds = 30 * 60
+    with pytest.raises(TaskError, match="30-minute limit"):
+        runner.run()
+    assert runner.timeout_seconds == 30 * 60
+    assert runner.confirmed == runner.survey_calls == 0
+
+
+def test_later_increased_ticket_count_does_not_extend_initial_budget(harness, monkeypatch):
+    runner = harness.make(TimedOrchestrationRunner)
+
+    def changed_counter():
+        runner.tickets(harness.frame(LessonScreen("overview", tickets=8)), expected=runner.expected_tickets)
+
+    monkeypatch.setattr(runner, "survey", changed_counter)
+    with pytest.raises(TaskError, match="expected 7, observed 8"):
+        runner.run()
+    assert runner.timeout_seconds == 58 * 60
+    assert runner.confirmed == 0
+    assert len([event for event in journal(runner) if event["event"] == "lesson_time_budget"]) == 1
+
+
+def test_scaled_deadline_stays_anchored_to_run_start_and_never_resets_per_ticket(harness):
+    runner = harness.make(TimedOrchestrationRunner)
+    runner.setup_seconds = 1000
+    with pytest.raises(TaskError, match="58-minute limit"):
+        runner.run()
+    assert runner.confirmed == 6
+    assert runner.expected_tickets == 1
+    assert runner.home_calls == 0
+
+
+def test_large_ticket_count_still_stops_at_explicit_ninety_minute_ceiling(harness):
+    runner = harness.make(TimedOrchestrationRunner)
+    runner.starting_tickets = 99
+    runner.survey_seconds = 480
+    runner.execution_seconds = 120
+    with pytest.raises(TaskError, match="90-minute limit"):
+        runner.run()
+    assert runner.timeout_seconds == 90 * 60
+    assert runner.confirmed == 8 and runner.expected_tickets == 91
+    assert runner.home_calls == 0
+
+
+def test_scaled_time_allowance_does_not_extend_global_input_limit(harness, monkeypatch):
+    runner = harness.make(TimedOrchestrationRunner)
+
+    def exhausted_inputs():
+        runner.actions = lessons_module.MAX_INPUTS
+        runner.check_budget()
+
+    monkeypatch.setattr(runner, "survey", exhausted_inputs)
+    with pytest.raises(TaskError, match="bounded input limit"):
+        runner.run()
+    assert runner.timeout_seconds == 58 * 60
+    assert runner.confirmed == 0
 
 
 def prepare_execution(harness, monkeypatch, *, receipt=True, after_tickets=1,
@@ -940,6 +1121,6 @@ def test_navigation_order_change_blocks_before_room_selection(harness):
 def test_runtime_timeout_is_bounded(harness):
     runner = harness.make()
     harness.clock.sleep(lessons_module.LESSONS_TIMEOUT)
-    with pytest.raises(TaskError, match="thirty-minute"):
+    with pytest.raises(TaskError, match="30-minute"):
         runner.capture()
     assert not harness.device.taps

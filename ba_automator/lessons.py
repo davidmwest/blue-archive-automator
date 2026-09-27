@@ -22,7 +22,10 @@ from .runtime import Capture, Journal, RunResult, TaskError, HOME_STABLE_SECONDS
 from .vision import decode_frame
 
 LOGGER = logging.getLogger(__name__)
-LESSONS_TIMEOUT = 1800
+LESSONS_TIMEOUT = 30 * 60
+LESSONS_SECONDS_PER_TICKET = 8 * 60
+LESSONS_OVERHEAD_SECONDS = 2 * 60
+LESSONS_MAX_TIMEOUT = 90 * 60
 MAX_SCHOOLS = 50
 MAX_INPUTS = 2500
 INPUT_TIME_RESERVE = 1.0
@@ -51,6 +54,7 @@ class LessonsRunner:
         self.vision = lesson_vision or LessonVision(vision)
         self.clock, self.sleep = monotonic, sleep
         self.started = monotonic()
+        self.timeout_seconds = LESSONS_TIMEOUT
         stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')
         self.run_dir = config.run_dir / f'lessons-{stamp}-{uuid4().hex[:8]}'
         self.journal = Journal(self.run_dir, monotonic, self.started)
@@ -69,8 +73,8 @@ class LessonsRunner:
         raise TaskError(message, self.run_dir)
 
     def check_budget(self):
-        if self.clock() - self.started >= LESSONS_TIMEOUT:
-            self.fail('Lessons exceeded its thirty-minute limit; remaining tickets were left alone')
+        if self.clock() - self.started >= self.timeout_seconds:
+            self.fail(f'Lessons exceeded its {self.timeout_seconds / 60:g}-minute limit; remaining tickets were left alone')
         if self.actions >= MAX_INPUTS:
             self.fail('Lessons reached its bounded input limit')
 
@@ -196,11 +200,34 @@ class LessonsRunner:
         return after
 
     def room_grid(self, frame):
+        original = replace(frame.screen, words=(), detail='')
         self.tap(frame, (1156, 663), 'Open the verified school room list')
         # The opening modal slides a few pixels after its title is readable.
         # Fixed portrait crops are valid only after the panel has settled.
         self.sleep(1)
-        result = self.wait('rooms', lambda s: bool(s.room_cards) and counter_visible(s))
+        end = self.clock() + 60
+        retry_at = self.clock() + 15
+        attempts = 1
+        while self.clock() < end:
+            result = self.capture()
+            ready = (result.capture.is_fresh(self.clock())
+                     and result.capture.deadline - self.clock() >= INPUT_TIME_RESERVE)
+            if (ready and result.screen.kind == 'rooms' and result.screen.room_cards
+                    and counter_visible(result.screen)):
+                break
+            if result.screen.kind == 'map':
+                if replace(result.screen, words=(), detail='') != original:
+                    self.fail('School or tickets changed while opening its room list; no lesson was started')
+                # The school HUD can appear before its 3D scene finishes loading.
+                # In that shell an All Locations tap is ignored. Retry only this
+                # harmless navigation, with fresh identical school and tickets.
+                if ready and attempts < 3 and self.clock() >= retry_at:
+                    self.tap(result, (1156, 663), 'Retry the unchanged school room list after loading')
+                    attempts += 1
+                    retry_at = self.clock() + 15
+            self.sleep(.5)
+        else:
+            self.fail('Lessons could not open the school room list after bounded navigation retries')
         for _ in range(3):
             self.sleep(.7)
             following = self.wait('rooms', lambda s: bool(s.room_cards) and counter_visible(s))
@@ -456,8 +483,20 @@ class LessonsRunner:
                 if not is_supported_size(self.device.display_size()):
                     self.fail('Lessons requires a 16:9 landscape display from 1280×720 to 3840×2160')
                 initial = self.overview()
+                self.check_budget()
                 self.initial_tickets = self.expected_tickets = self.tickets(initial)
                 limit = min(self.initial_tickets, self.config.lessons_max_tickets or self.initial_tickets)
+                # A fresh full survey is required for every ticket. Size the
+                # total budget once from the verified, authorized starting
+                # count; later observations never extend the original deadline.
+                self.timeout_seconds = min(LESSONS_MAX_TIMEOUT, max(
+                    LESSONS_TIMEOUT, LESSONS_OVERHEAD_SECONDS + LESSONS_SECONDS_PER_TICKET * limit))
+                self.journal.record('lesson_time_budget', observed_tickets=self.initial_tickets,
+                                    configured_max_tickets=self.config.lessons_max_tickets,
+                                    authorized_tickets=limit, timeout_seconds=self.timeout_seconds,
+                                    maximum_timeout_seconds=LESSONS_MAX_TIMEOUT,
+                                    per_ticket_seconds=LESSONS_SECONDS_PER_TICKET,
+                                    overhead_seconds=LESSONS_OVERHEAD_SECONDS)
                 reason = 'No Lesson tickets available.' if not limit else 'Configured ticket limit reached.'
                 for _ in range(limit):
                     locations, rooms = self.survey()

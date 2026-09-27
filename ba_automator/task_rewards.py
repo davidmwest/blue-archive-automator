@@ -25,10 +25,17 @@ class TaskRewardsRunner(ShopRunner):
         )
 
     def enter(self):
-        for _ in range(3):
-            frame = self.wait({"home", "tasks_other", "tasks", "tasks_empty"})
+        kinds = {"home", "tasks_other", "tasks", "tasks_empty"}
+        attempts = {"home": 0, "tasks_other": 0}
+        # Opening Tasks and selecting All are separate navigation controls.
+        # Success on the final Home attempt must still allow changing the tab.
+        for _ in range(6):
+            frame = self.wait(kinds)
             if frame.screen.kind in {"tasks", "tasks_empty"}:
                 return frame
+            if attempts[frame.screen.kind] >= 3:
+                break
+            attempts[frame.screen.kind] += 1
             target = HOME_TASKS if frame.screen.kind == "home" else ALL_TAB
             self.tap(
                 frame,
@@ -36,6 +43,16 @@ class TaskRewardsRunner(ShopRunner):
                 "Open Tasks" if frame.screen.kind == "home" else "Select All tasks",
             )
             self.sleep(1)
+            if frame.screen.kind == "home" and attempts["home"] < 3:
+                after = self.wait(kinds)
+                if after.screen.kind in {"tasks", "tasks_empty"}:
+                    return after
+                if after.screen.kind == "home":
+                    # Freshly loaded Home has ignored early navigation inputs.
+                    # Space only harmless entry retries; the next loop must
+                    # recognize Home again before sending another tap.
+                    self.phase("Tasks has not opened; letting the home menu settle before retrying")
+                    self.sleep(10)
         return self.wait({"tasks", "tasks_empty"})
 
     def collect(self, frame):

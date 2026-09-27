@@ -83,7 +83,12 @@ class CafeVision:
             reference = template.astype(float)
             sample = crop[y:y + template.shape[0], x:x + template.shape[1]].astype(float)
             gain = float((sample * reference).sum() / max((reference * reference).sum(), 1))
-            if score < .985 or not .25 <= gain <= .8 or np.abs(sample - gain * reference).mean() > 6:
+            # Native 1440p renders the dimmed Comfort label slightly differently
+            # after normalization (observed correlation .98237). Only this
+            # anchor gets the small allowance; pixel residuals and consistent
+            # shading across all three anchors still have to agree.
+            minimum_score = .98 if name == "comfort" else .985
+            if score < minimum_score or not .25 <= gain <= .8 or np.abs(sample - gain * reference).mean() > 6:
                 return None
             gains.append(gain)
         return targets[-1] if max(gains) - min(gains) < .08 else None

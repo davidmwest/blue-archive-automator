@@ -82,6 +82,18 @@ def test_other_red_badges_and_dimmed_home_cannot_authorize_entry(vision):
     )
 
 
+def test_native_ignored_entry_preserves_home_and_targets_tasks_label(vision):
+    png = (FIXTURES / "task-rewards-home-ignored-native.png").read_bytes()
+    screen = vision.analyze(png)
+    assert screen.kind == "home" and screen.red_dot
+    # The native failure screen still has the exact label required by vision.
+    # Its center is below the decorative illustration that ignored early taps.
+    assert HOME_TASKS == (50, 261)
+    frame = decode_frame(png)
+    assert classify_task_rewards(frame, [], home=True).kind == "unknown"
+    assert classify_task_rewards(frame, [], home=False).kind == "unknown"
+
+
 def test_task_page_needs_all_anchors_and_unshaded_controls(vision):
     frame = decode_frame((FIXTURES / "task-rewards-claim-all.png").read_bytes())
     words = vision.startup.read(frame)
@@ -223,6 +235,151 @@ def test_no_badge_sends_no_input_or_reward_log(config):
         result = r.run()
         assert result.status == "success" and result.actions == 0
         assert device.taps == [] and device.swipes == [] and actions(config) == []
+    finally:
+        r.journal.close()
+
+
+def test_ignored_home_entry_retries_are_paced_and_bounded(config):
+    device = Device(config.package)
+    r = harness(config, device)
+    taps = []
+
+    def ignore(x, y, **kwargs):
+        taps.append((x, y, r.clock()))
+        return True
+
+    device.tap = ignore
+    try:
+        with pytest.raises(TaskError, match="did not reach tasks, tasks_empty"):
+            r.enter()
+        assert taps == [(50, 261, 0), (50, 261, 11.7), (50, 261, 23.4)]
+        assert device.claims == 0
+    finally:
+        r.journal.close()
+
+
+def test_later_tasks_entry_succeeds_without_replaying_a_claim(config):
+    device = Device(config.package, [(Screen("tasks", (1150, 670), claim="all"), receipt("AP", 50))])
+    r = harness(config, device)
+    original_tap = device.tap
+    times = []
+
+    def delayed(x, y, **kwargs):
+        times.append(r.clock())
+        if len(times) < 3:
+            device.taps.append((x, y))
+            return True
+        return original_tap(x, y, **kwargs)
+
+    device.tap = delayed
+    try:
+        assert r.enter().screen.kind == "tasks"
+        assert times == pytest.approx([0, 11.7, 23.4])
+        assert device.taps == [HOME_TASKS] * 3
+        assert device.claims == 0
+    finally:
+        r.journal.close()
+
+
+def test_tasks_immediate_entry_does_not_wait_for_home_settle(config):
+    device = Device(config.package, other=True)
+    r = harness(config, device)
+    try:
+        assert r.enter().screen.kind == "tasks_empty"
+        assert device.taps == [HOME_TASKS, ALL_TAB]
+        assert r.clock() == pytest.approx(3.4)
+    finally:
+        r.journal.close()
+
+
+def test_third_home_attempt_can_still_select_all_tab(config):
+    device = Device(config.package, other=True)
+    r = harness(config, device)
+    original_tap = device.tap
+
+    def delayed(x, y, **kwargs):
+        if len(device.taps) < 2:
+            assert device.screen.kind == "home"
+            device.taps.append((x, y))
+            return True
+        return original_tap(x, y, **kwargs)
+
+    device.tap = delayed
+    try:
+        assert r.enter().screen.kind == "tasks_empty"
+        assert device.taps == [HOME_TASKS] * 3 + [ALL_TAB]
+        assert r.clock() == pytest.approx(26.8)
+        assert device.claims == 0
+    finally:
+        r.journal.close()
+
+
+def test_tasks_all_tab_retry_budget_remains_bounded(config):
+    device = Device(config.package, other=True)
+    r = harness(config, device)
+    original_tap = device.tap
+
+    def ignored_all(x, y, **kwargs):
+        if device.screen.kind == "tasks_other":
+            device.taps.append((x, y))
+            return True
+        return original_tap(x, y, **kwargs)
+
+    device.tap = ignored_all
+    try:
+        with pytest.raises(TaskError, match="did not reach tasks, tasks_empty"):
+            r.enter()
+        assert device.taps == [HOME_TASKS] + [ALL_TAB] * 3
+        assert device.claims == 0
+    finally:
+        r.journal.close()
+
+
+def test_changed_screen_during_tasks_entry_settle_gets_no_retry(config):
+    device = Device(config.package)
+    r = harness(config, device)
+    original_sleep = r.sleep
+    device.tap = lambda x, y, **kwargs: device.taps.append((x, y)) or True
+
+    def sleep(seconds):
+        original_sleep(seconds)
+        if seconds == 10:
+            device.screen = Screen("unknown")
+
+    r.sleep = sleep
+    try:
+        with pytest.raises(TaskError, match="did not reach"):
+            r.enter()
+        assert device.taps == [HOME_TASKS]
+        assert device.claims == 0
+    finally:
+        r.journal.close()
+
+
+@pytest.mark.parametrize("fault", ["stale", "foreground"])
+def test_tasks_entry_retry_requires_fresh_home_and_foreground(config, fault):
+    device = Device(config.package)
+    r = harness(config, device)
+    original_wait = r.wait
+    waits = 0
+    device.tap = lambda x, y, **kwargs: device.taps.append((x, y)) or True
+
+    def wait(*args, **kwargs):
+        nonlocal waits
+        frame = original_wait(*args, **kwargs)
+        waits += 1
+        if waits == 3:
+            if fault == "stale":
+                r.sleep(6)
+            else:
+                device.package = "com.android.settings"
+        return frame
+
+    r.wait = wait
+    try:
+        with pytest.raises(TaskError, match="fresh recognized|Foreground changed"):
+            r.enter()
+        assert device.taps == [HOME_TASKS]
     finally:
         r.journal.close()
 

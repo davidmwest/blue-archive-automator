@@ -105,8 +105,9 @@ def test_ambiguous_repeated_grid_rows_do_not_establish_overlap(scrolled):
     assert lr.scrolled_grid_overlap(previous, current) == 0
 
 
-def test_reader_logs_all_thirteen_items_once_after_scrolled_overlap(scrolled, tmp_path):
-    _, pngs, pages = scrolled
+@pytest.mark.parametrize("receipt", ["scrolled", "bounty_scroll"])
+def test_reader_logs_every_item_once_after_scrolled_overlap(receipt, request, tmp_path):
+    _, pngs, pages = request.getfixturevalue(receipt)
     config = Config(serial="127.0.0.1:5695", package="com.nexon.bluearchive",
                     state_dir=tmp_path / "state", run_dir=tmp_path / "runs")
     directory = config.run_dir / "reader"
@@ -115,10 +116,17 @@ def test_reader_logs_all_thirteen_items_once_after_scrolled_overlap(scrolled, tm
     evidence.write_bytes(pngs[0])
     runner = SimpleNamespace(config=config, clock=lambda: 0., journal=journal,
                              task="spend_ap")
-    expected_names = [f"Loot {i}" for i in range(12)] + ["Credit Points"]
+    expected_quantities = (
+        [1, 2, 2, 1, 1, 1, 3, 3, 4, 1, 1, 1, 1187]
+        if receipt == "scrolled" else
+        [40, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1,
+         4, 1, 1, 1, 1, 4, 1, 3, 1, 150000]
+    )
+    expected_names = [f"Loot {i}" for i in range(len(expected_quantities) - 1)] + ["Credit Points"]
     identity = {card.icon: expected_names[i] for i, card in enumerate(pages[0].cards)}
-    identity.update({card.icon: expected_names[i + 6]
-                     for i, card in enumerate(pages[1].cards)})
+    for page_index, parsed in enumerate(pages[1:], start=1):
+        identity.update({card.icon: expected_names[i + 6 * page_index]
+                         for i, card in enumerate(parsed.cards)})
 
     class ReplayReader(lr.ReceiptReader):
         """Replay real parsed cards; no device or OCR timing is simulated."""
@@ -129,7 +137,7 @@ def test_reader_logs_all_thirteen_items_once_after_scrolled_overlap(scrolled, tm
             self.inspected = []
 
         def capture(self):
-            png = pngs[self.position] if self.position < 2 else b"returned sweep"
+            png = pngs[self.position] if self.position < len(pngs) else b"returned sweep"
             return Capture(png, 0., config.package)
 
         def read(self, cap):
@@ -141,7 +149,8 @@ def test_reader_logs_all_thirteen_items_once_after_scrolled_overlap(scrolled, tm
             return cap
 
         def pan(self, cap, kind, left):
-            self.position = max(0, self.position - 1) if left else min(1, self.position + 1)
+            self.position = (max(0, self.position - 1) if left
+                             else min(len(pngs) - 1, self.position + 1))
             cap = self.capture()
             return cap, self.read(cap)
 
@@ -151,19 +160,17 @@ def test_reader_logs_all_thirteen_items_once_after_scrolled_overlap(scrolled, tm
             return cap, name
 
         def input(self, cap, target, *, end=None):
-            assert target == (640, 533) and self.position == 1 and end is None
-            self.position = 2
+            assert target == (640, 533) and self.position == len(pngs) - 1 and end is None
+            self.position = len(pngs)
 
     try:
         reader = ReplayReader()
         result = reader.run()
-        assert reader.position == 2
+        assert reader.position == len(pngs)
         assert result["items_complete"]
         assert reader.inspected == expected_names
         assert [item["name"] for item in result["items"]] == expected_names
-        assert [item["quantity"] for item in result["items"]] == [
-            1, 2, 2, 1, 1, 1, 3, 3, 4, 1, 1, 1, 1187,
-        ]
+        assert [item["quantity"] for item in result["items"]] == expected_quantities
     finally:
         journal.close()
 
@@ -173,4 +180,70 @@ def test_scroll_fixtures_exclude_account_and_background(scrolled):
     for png in pngs:
         image = decode_frame(png).copy()
         image[114:604, 314:964] = 0
+        assert not np.any(image)
+
+
+@pytest.fixture(scope="module")
+def bounty_scroll():
+    """The real 120px jump plus an offline, smaller 60px viewport translation."""
+    vision = StartupVision()
+    pngs = [(FIXTURES / f"loot-bounty-grid-native-{side}.png").read_bytes()
+            for side in ("before", "after")]
+    native = [cv2.imdecode(np.frombuffer(png, np.uint8), cv2.IMREAD_COLOR) for png in pngs]
+    # Reconstruct only saved receipt pixels in their unscrolled row positions.
+    # This intermediate frame models the shorter drag; it is not live evidence.
+    strip = np.zeros_like(native[0])
+    strip[356:754, 642:1918] = native[0][356:754, 642:1918]
+    strip[754:1124, 642:1918] = native[1][544:914, 642:1918]
+    middle = native[0].copy()
+    middle[356:918, 642:1918] = strip[476:1038, 642:1918]
+    pngs.insert(1, lr.encode(middle))
+    return vision, pngs, [lr.page(png, vision) for png in pngs]
+
+
+def test_native_bounty_partial_row_cannot_prove_overlap(bounty_scroll):
+    _, _, (before, _, after) = bounty_scroll
+    assert before.kind == after.kind == "grid"
+    assert len(before.cards) == 12
+    assert len(after.cards) == 10
+    assert all(card.box[3] == 89 for card in before.cards + after.cards)
+    assert before.trailing_clipped and not before.leading_clipped
+    assert after.leading_clipped and not after.trailing_clipped
+    assert lr.scrolled_grid_overlap(before.cards, after.cards) == 0
+    assert after.cards[-1].quantity == 150000
+
+
+def test_shorter_grid_scroll_preserves_a_complete_row_without_double_counting(bounty_scroll):
+    _, _, (before, middle, after) = bounty_scroll
+    # The first step has six complete cards in common. The final step repeats
+    # the next six; clipped frames are never counted or used as identity.
+    assert middle.kind == "grid" and len(middle.cards) == 12
+    for previous, current in ((before, middle), (middle, after)):
+        assert all(lr.same_card(a, b) for a, b in zip(previous.cards[-6:], current.cards[:6]))
+    items = before.cards + middle.cards[6:] + after.cards[6:]
+    assert len(items) == 22
+    assert [card.quantity for card in items] == [
+        40, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1,
+        4, 1, 1, 1, 1, 4, 1, 3, 1, 150000,
+    ]
+
+
+def test_grid_pan_moves_less_than_one_row(monkeypatch):
+    runner = SimpleNamespace(clock=lambda: 0.)
+    reader = lr.ReceiptReader(runner, None, Path("receipt.png"))
+    movements = []
+    monkeypatch.setattr(reader, "input", lambda cap, start, *, end: movements.append((start, end)))
+    monkeypatch.setattr(reader, "capture", lambda: "capture")
+    monkeypatch.setattr(reader, "read", lambda cap: lr.Page("grid"))
+    reader.pan("capture", "grid", False)
+    reader.pan("capture", "grid", True)
+    assert movements[0] == tuple(reversed(movements[1]))
+    assert movements[0][0][1] - movements[0][1][1] == 60
+
+
+def test_native_grid_fixtures_exclude_background(bounty_scroll):
+    _, pngs, _ = bounty_scroll
+    for png in pngs:
+        image = cv2.imdecode(np.frombuffer(png, np.uint8), cv2.IMREAD_COLOR)
+        image[228:1208, 628:1928] = 0
         assert not np.any(image)

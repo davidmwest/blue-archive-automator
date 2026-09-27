@@ -1,6 +1,6 @@
 # Lessons
 
-Lessons is the third game task, following restart and Cafe. It uses the global English client with the shared [display adapter](getting-started.md); its original live validation used 1280×720 and 320 DPI. Higher-resolution coverage is offline. This document defines its policy and verification contract; the validation section records the observed results and remaining limits.
+Lessons is the third game task, following restart and Cafe. It uses the global English client with the shared [display adapter](getting-started.md). Completed lessons have live validation at 1280×720 and 320 DPI; a 1440p visit has completed a full survey, but a native-resolution lesson receipt still needs verification. This document defines its policy and verification contract; the validation section records the observed results and remaining limits.
 
 ## What a visit does
 
@@ -45,6 +45,8 @@ Balancing rank progress is a preference, not a mathematical claim that this alwa
 The runner recognizes controls and values from fresh screenshots with local image processing and OCR. Student artwork is not used to infer ownership. Locked locations, completed rooms, names, ticket counts, ownership markers, and rank/XP displays each need explicit observed evidence.
 
 The location survey is bounded and checks for repeated pages and duplicate locations. An unknown screen, inconsistent ticket count, incomplete survey, ambiguous room confirmation, or exhausted timeout stops the run with evidence. A frame used for input must still be fresh after recognition and persistence, and Blue Archive must remain the foreground package.
+
+The total time allowance is set once from the initial verified ticket count, limited by `max_tickets`: two minutes plus eight minutes per authorized ticket, with a 30-minute minimum and a 90-minute ceiling. Seven tickets receive 58 minutes. Time is measured from the original run start, including setup; later observations cannot extend it. An invalid initial count cannot increase the allowance, and ticket inconsistencies still stop spending. The separate 2,500-input limit remains in force. These bounds allow for a fresh survey before every ticket; they do not guarantee completion on every machine.
 
 Every lesson has a before/after record with the location, room, selected policy, score, tickets before/after, and any readable reward or rank change. A confirmation tap records an attempt. A verified lesson records completion. Relationship increases are recorded only when the result screen supports them; school XP or a ticket decrement alone does not prove a relationship reward.
 
@@ -99,6 +101,8 @@ The final local run is `lessons-20260924T064611-02b9e014`. Full screenshots, sur
 September 26 saved room grids exposed a thin relationship-rank `1` that remained below the OCR confidence threshold in the original crops. A fallback now checks the complete heart label at two scales and requires agreement. Sanitized Shiratori and Red Winter replays recover both missed ranks, and planner tests preserve the correct relationship tie-break. Conflicting or unreadable ranks still block comparisons that need them. The live retry (`lessons-20260926T152150-bcf1051a`) surveyed all 94 rooms across 12 schools before each selection, completed seven verified lessons, confirmed zero tickets remaining, and returned home.
 
 After the September 26 daily reset, a device preflight rejected an expired frame without sending its tap. The recovery run (`lessons-20260926T215356-7107c68b`) used the remaining four tickets, surveyed all 94 rooms across 12 schools before each selection, verified each receipt and ticket decrement, and returned home at zero tickets. Those four lessons provided eight owned-student opportunities. The narrowly bounded stale-frame retry is covered offline; this successful recovery did not require triggering that timing race again.
+
+On September 27, a 1440p survey checked all 94 rooms across 12 schools in 4 minutes 47 seconds and selected a room with three owned students. The run stopped before spending because the native confirmation border and partial ticket-arrow OCR did not pass verification. Saved-screen regressions now cover those readings without weakening room, ownership, cost, or freshness checks. Fake-clock tests cover seven fresh surveys beyond the old fixed 30-minute allowance, configured ticket limits, and the global time and input ceilings. A completed native lesson remains unverified; the earlier completed visits above used 720p.
 
 All live spending used the relationship policy. The school-rank policy is covered by observed-data and multi-ticket rank/XP tests, including switching schools after each ticket, but a real school rank-up popup remains unverified as described above. Live Windows execution and broader account/layout coverage remain future checks.
 

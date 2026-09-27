@@ -72,6 +72,36 @@ def projected_ap(words):
     return matches[0] if len(matches) == 1 else None
 
 
+HARD_PROJECTION = r"[^0-9]*(\d+)\s*→\s*(\d+)\s*\|?\s*Remaining:\s*(\d+)/3"
+HARD_PROJECTION_BOUNDS = (825, 372, 1105, 416)
+
+
+def reread_hard_projection(native, vision):
+    """Resolve overlapping full-frame OCR with two exact, agreeing crop reads."""
+    bounds = (830, 375, 1110, 412)
+    crop = native_game_region(native, bounds)
+    reads = []
+    for scale in (1, 2):
+        enlarged = cv2.resize(crop, (280 * scale, 37 * scale))
+        padded = cv2.copyMakeBorder(
+            enlarged, 25, 25, 25, 25, cv2.BORDER_CONSTANT,
+            value=(255, 255, 255),
+        )
+        words = sorted(vision.read(padded), key=lambda w: w.box[0])
+        text = " ".join(w.text.strip() for w in words)
+        match = re.fullmatch(HARD_PROJECTION, text)
+        if not match or any(w.confidence < .95 for w in words):
+            return None
+        reads.append((match.groups(), min(w.confidence for w in words)))
+    if reads[0][0] != reads[1][0]:
+        return None
+    before, after, remaining = reads[0][0]
+    return Word(
+        f"{before}→{after} Remaining: {remaining}/3",
+        min(r[1] for r in reads), HARD_PROJECTION_BOUNDS,
+    )
+
+
 def area_arrow(frame, x):
     hsv = cv2.cvtColor(frame[330:391, x : x + 42], cv2.COLOR_BGR2HSV)
     return (
@@ -136,10 +166,8 @@ def classify_ap(frame, words, *, home=False):
         ]
         stage_match = identities[0] if len(identities) == 1 else None
         count = number(words, (904, 309, 970, 358))
-        projection = text_in(words, (825, 372, 1105, 416))
-        parsed = re.fullmatch(
-            r"[^0-9]*(\d+)\s*→\s*(\d+)\s*\|?\s*Remaining:\s*(\d+)/3", projection
-        )
+        projection = text_in(words, HARD_PROJECTION_BOUNDS)
+        parsed = re.fullmatch(HARD_PROJECTION, projection)
         # Sweep previews show attempts AFTER the selected batch. The mission
         # button retains the current daily allowance; reconcile both counters.
         actual = re.search(
@@ -405,6 +433,21 @@ class APVision:
         frame = decode_frame(png)
         words = read_game_words(png, self.startup)
         native = decode_native_frame(png)
+        if (
+            has(words, "mission info", (440, 80, 850, 130))
+            and bright(frame, (420, 92, 495, 122))
+            and has(words, "sweep", (850, 235, 1010, 290))
+            and re.search(r"Remaining:\s*\d/3$", text_in(words, (840, 490, 1125, 547)))
+            and not re.fullmatch(HARD_PROJECTION, text_in(words, HARD_PROJECTION_BOUNDS))
+        ):
+            # Native OCR can overlap "102" and "2→82", duplicating a digit.
+            # Re-read pixels; never repair a number by stripping that digit.
+            # Valid but contradictory projections retain the original guards.
+            projection = reread_hard_projection(native, self.startup)
+            if projection is not None:
+                previous = within(words, HARD_PROJECTION_BOUNDS)
+                words = [word for word in words if word not in previous]
+                words.append(projection)
         if has(words, "mission info", (440, 80, 850, 130)) and not any(
             re.match(r"^[1-9]\d?-[123](?=\D|$)", w.text)
             for w in within(words, (130, 220, 620, 280))

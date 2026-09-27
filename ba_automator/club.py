@@ -90,7 +90,10 @@ def classify_club(frame, words, *, home=False):
         has(words, "social", (590, 170, 800, 245))
         and has(words, "club", (180, 300, 340, 355))
         and has(words, "friends", (500, 300, 720, 355))
-        and has(words, "assistant", (860, 300, 1090, 355))
+        and (has(words, "assistant", (860, 300, 1090, 355))
+             # The leading card icon can merge into the heading at 1440p.
+             # Its independent description still identifies the third card.
+             or has(words, "set up and manage assistants", (820, 350, 1100, 390)))
         and bright(frame, (200, 365, 410, 410))
     ):
         return ClubScreen(

@@ -18,12 +18,13 @@ from .loot_icon_mask import isolate_compact_card
 from .runtime import Capture, TaskError
 from .vision import (
     decode_frame, decode_native_frame, native_game_region, read_game_words,
-    read_native_game_words,
+    read_native_game_words, Word,
 )
 
 RECEIPT_TIMEOUT = 240
 REWARD_RECEIPT_TIMEOUT = 900
 TASK_NOTICE_TIMEOUT = 12
+TASK_NOTICE_QUIET_TIME = .5
 GRID_ENTRY_TIMEOUT = 8
 GRID_RETURN_TIMEOUT = 8
 TOOLTIP_RETURN_TIMEOUT = 8
@@ -31,6 +32,10 @@ TOOLTIP_RETURN_TIMEOUT = 8
 # bands can make a clipped card look almost full and change width each frame.
 # Discover only within the opaque interior; anything touching it is partial.
 REWARD_LEFT, REWARD_RIGHT = 104, 1176
+# Full List has rounded viewport corners and a four-pixel opaque edge. A
+# clipped frame can retain 85 of its usual 89 pixels and otherwise look full.
+GRID_EDGE = 4
+GRID_SCROLL_STEP = 60
 
 
 @dataclass(frozen=True)
@@ -108,16 +113,54 @@ def read_game_crop(vision, native, box, scale=3):
     return vision.read(large)
 
 
-def amount(words):
+def amount_values(words):
     values = set()
     for word in words:
         # An explicit x prefix is required: never turn arbitrary icon text into loot.
-        match = re.fullmatch(r"[-—_\s]*[xX×]\s*([\d,]+)", word.text.strip())
+        match = re.fullmatch(r"[-—_\s]*[xX×]\s*([\d,]+)([Kk]?)", word.text.strip())
         if match and word.confidence >= 0.65:
-            value = int(match[1].replace(",", ""))
+            value = int(match[1].replace(",", "")) * (1000 if match[2] else 1)
             if 0 < value <= 999999999:
                 values.add(value)
+    return values
+
+
+def amount(words):
+    values = amount_values(words)
     return next(iter(values)) if len(values) == 1 else None
+
+
+def small_card_amount(vision, native, box):
+    """Only unreadable labels permit smaller crops; conflicting labels do not."""
+    x, y, w, h = box
+    for bounds, scale in (((x, y, x + w, y + h + 3), 3),
+                          ((x + 5, y + h - 24, x + w - 2, y + h - 1), 4)):
+        values = amount_values(read_game_crop(vision, native, bounds, scale))
+        if values:
+            return next(iter(values)) if len(values) == 1 else None
+    return narrow_small_card_amount(vision, native, box)
+
+
+def narrow_small_card_amount(vision, native, box):
+    """Resolve artwork lettering only with two agreeing quantity-only reads.
+
+    Compact cards put the earned quantity in the lower-right corner. Some
+    artwork contains high-contrast lettering that dominates the larger crop.
+    This last fallback still requires a complete x-prefixed, confident label
+    at both scales; a bare inventory number or a conflicting read is unknown.
+    """
+    x, y, w, h = box
+    bounds = (x + w // 2 - 2, y + h - 24, x + w - 2, y + h - 1)
+    values = []
+    for scale in (4, 5):
+        words = read_game_crop(vision, native, bounds, scale)
+        if len(words) != 1 or words[0].confidence < .90:
+            return None
+        value = amount(words)
+        if value is None:
+            return None
+        values.append(value)
+    return values[0] if values[0] == values[1] else None
 
 
 def grid_tier(words):
@@ -287,6 +330,41 @@ def read_tooltip(native, vision):
     return tooltip(image, words)
 
 
+def reward_heading_words(png, vision, words=None, *, isolated=False):
+    """Read the exact reward title, with a generously padded isolated fallback.
+
+    Full native OCR can read a passing star as part of the C in ACQUIRED.
+    Cropping at the canonical text scale sometimes resolves it. An alternate
+    spelling is never evidence, and low-confidence isolated reads stay unknown.
+    """
+    def heading(candidates, bounds=(340, 105, 940, 210)):
+        left, top, right, bottom = bounds
+        selected = sorted(
+            (w for w in candidates if left <= w.box[0] < w.box[2] <= right
+             and top <= w.box[1] < w.box[3] <= bottom),
+            key=lambda w: w.box[0],
+        )
+        if (selected and all(w.confidence >= .95 for w in selected)
+                and "".join(w.normalized.replace(" ", "") for w in selected)
+                == "rewardacquired"):
+            return selected
+        return []
+
+    if not isolated:
+        exact = heading(read_game_words(png, vision) if words is None else words)
+        if exact:
+            return exact
+    native = decode_native_frame(png)
+    if native.shape[:2] == (720, 1280):
+        return []
+    crop = cv2.resize(native_game_region(native, (335, 103, 945, 213)), (610, 110))
+    return heading([
+        Word(w.text, w.confidence, tuple(
+            value + (335 if i % 2 == 0 else 103) for i, value in enumerate(w.box)
+        )) for w in vision.read(crop)
+    ], bounds=(335, 103, 945, 213))
+
+
 def page(png, vision):
     image = decode_frame(png)
     native = decode_native_frame(png)
@@ -298,7 +376,10 @@ def page(png, vision):
         kind, row, left, right = "sweep", 512, 370, 1087
     elif "lessonreport" in labels and "lessonreward" in labels and "confirm" in labels:
         kind, row, left, right = "lesson", 493, 430, 850
-    elif "rewardacquired" in labels and (
+    elif (
+        "rewardacquired" in labels
+        or ("touchtocontinue" in labels and reward_heading_words(png, vision, words))
+    ) and (
         "touchtocontinue" in labels or image[130:185, 375:900].mean() > 70
     ):
         kind = "reward"
@@ -341,7 +422,8 @@ def page(png, vision):
         full = [
             (x, y, w, h)
             for x, y, w, h in rects
-            if 95 <= w <= 115 and 83 <= h <= 94 and y > 1 and y + h < 280
+            if (95 <= w <= 115 and 83 <= h <= 94
+                and y > GRID_EDGE and y + h < 279)
         ]
         if full:
             top = min(r[1] for r in full)
@@ -364,9 +446,13 @@ def page(png, vision):
                     grid_tier(words),
                 )
             )
-        clipped = any(
-            w > 60 and h > 8 and (y <= 1 or y + h >= 280) for x, y, w, h in rects
+        leading_clipped = any(
+            w > 60 and h > 8 and y <= GRID_EDGE for x, y, w, h in rects
         )
+        trailing_clipped = any(
+            w > 60 and h > 8 and y + h >= 279 for x, y, w, h in rects
+        )
+        clipped = leading_clipped or trailing_clipped
     elif kind in {"sweep", "lesson"}:
         # Standard slanted small cards have separate dark bottom shadows. Their
         # artwork is arbitrary; the border determines the hitbox, not the sprite.
@@ -395,11 +481,7 @@ def page(png, vision):
             if x < left or x + w > right:
                 clipped = True
                 continue
-            qty = amount(read_game_crop(vision, native, (x, y, x + w, y + h + 3)))
-            if qty is None:
-                qty = amount(
-                    read_game_crop(vision, native, (x + 5, row - 22, x + w - 2, row + 1), 4)
-                )
+            qty = small_card_amount(vision, native, (x, y, w, h))
             cards.append(
                 Card(
                     (x, y, w, h),
@@ -472,7 +554,7 @@ def same_pixels(first, second):
 def task_notice_visible(image):
     """Detect the transient task-progress banner only to wait without input.
 
-    Its dark panel and gold progress strip overlap Sweep Complete's heading.
+    Its dark panel and gold or cyan progress strip overlap Sweep Complete's heading.
     No text or receipt identity is inferred here: once the banner leaves, the
     normal receipt parser and strict input guard still have to pass.
     """
@@ -483,7 +565,25 @@ def task_notice_visible(image):
     strip = cv2.cvtColor(image[54:76, 487:794], cv2.COLOR_BGR2HSV)
     gold = ((strip[:, :, 0] >= 16) & (strip[:, :, 0] <= 38)
             & (strip[:, :, 1] > 130) & (strip[:, :, 2] > 170))
-    return float(gold.mean()) > .45
+    if float(gold.mean()) > .45:
+        return True
+    # An unfinished daily/achievement task uses a partly filled cyan bar.
+    # Several notices can follow one another, so wait for the whole sequence
+    # to leave rather than treating a color/fill change as a different receipt.
+    # Only the fixed left-anchored progress bar qualifies; recognition grants
+    # no input, and clean heading/card identity must still pass afterward.
+    cyan = ((strip[:, :, 0] >= 80) & (strip[:, :, 0] <= 110)
+            & (strip[:, :, 1] > 130) & (strip[:, :, 2] > 170))
+    rects = [cv2.boundingRect(c) for c in cv2.findContours(
+        cyan.astype(np.uint8) * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE,
+    )[0]]
+    return any(x <= 4 and y <= 4 and width >= 6 and height >= 14
+               for x, y, width, height in rects)
+
+
+def task_notice_heading(image):
+    """Exact pixels covering the moving notice and the receipt heading beneath it."""
+    return image[5:135, 420:930].tobytes()
 
 
 def same_grid_icon(a, b):
@@ -679,30 +779,36 @@ def same_receipt_view(before, after, expected, *, vision=None):
         return True
     # A large star can pass directly over the heading while all cards remain
     # unchanged. Verify the same complete heading in the same position. Keep
-    # the full-frame OCR scale: cropping this slanted heading clips its corners
-    # and has produced a false cedilla even though full-frame OCR reads it well.
+    # full-frame OCR first; a generous isolated crop can resolve native OCR's
+    # overlapping sparkle without clipping the slanted title's corners.
     # Only words inside the heading region are evidence; background labels are
     # never accepted. The caller still enforces the fresh capture's deadline.
     if vision is None or min(np.count_nonzero(t[0]) for t in (old_title, new_title)) < 2000:
         return False
-    headings = [sorted(
-        (word for word in read_game_words(png, vision)
-         if 340 <= word.box[0] < word.box[2] <= 940
-         and 105 <= word.box[1] < word.box[3] <= 210),
-        key=lambda word: word.box[0],
-    ) for png in (before, after)]
-    for words in headings:
-        if (not words or any(w.confidence < .95 for w in words)
-                or "".join(w.normalized.replace(" ", "") for w in words) != "rewardacquired"):
-            return False
+    headings = [reward_heading_words(png, vision) for png in (before, after)]
+    if not all(headings):
+        return False
     # OCR may merge the two words, including their intervening whitespace,
     # when a star crosses their shared edge.
     # The exact phrase and its total occupied rectangle still identify the
     # heading, independent of that segmentation choice.
-    bounds = [(min(w.box[0] for w in words), min(w.box[1] for w in words),
-               max(w.box[2] for w in words), max(w.box[3] for w in words))
-              for words in headings]
-    return all(abs(a - b) <= 3 for a, b in zip(*bounds))
+    def same_heading_bounds(headings):
+        if not all(headings):
+            return False
+        bounds = [(min(w.box[0] for w in words), min(w.box[1] for w in words),
+                   max(w.box[2] for w in words), max(w.box[3] for w in words))
+                  for words in headings]
+        return all(abs(a - b) <= 3 for a, b in zip(*bounds))
+
+    if same_heading_bounds(headings):
+        return True
+    if all(decode_native_frame(png).shape[:2] == (720, 1280) for png in (before, after)):
+        return False
+    # Isolated OCR may give the slanted phrase a taller bounding rectangle.
+    # Compare like-for-like reads instead of widening the position tolerance.
+    return same_heading_bounds([
+        reward_heading_words(png, vision, isolated=True) for png in (before, after)
+    ])
 
 
 def same_card(a, b):
@@ -849,9 +955,11 @@ class ReceiptReader:
         self.tooltip_origin = None
         self.timeout = RECEIPT_TIMEOUT
 
-    def capture(self):
+    def capture(self, *, wait_for_stable_heading=False):
         r = self.r
-        notice_started = None
+        wait_started = r.clock() if wait_for_stable_heading else None
+        notice_seen = False
+        clear_heading, clear_since = None, None
         while True:
             if r.clock() - self.started > self.timeout or self.inputs >= 160:
                 r.fail("Reward inspection reached its bounded limit; receipt saved")
@@ -860,25 +968,40 @@ class ReceiptReader:
             at = r.clock()
             cap = Capture(r.device.screenshot(), at, r.config.package)
             # Timestamp must precede capture: the caller's freshness rules still apply.
-            if not task_notice_visible(decode_frame(cap.png)):
-                if notice_started is not None:
+            image = decode_frame(cap.png)
+            if not task_notice_visible(image):
+                if wait_started is None:
+                    return cap
+                # A departing banner can fade below its color threshold while
+                # still covering heading pixels. Require a quiet interval after
+                # it leaves; this grants no input or receipt identity on its own.
+                heading = task_notice_heading(image)
+                if heading != clear_heading:
+                    clear_heading, clear_since = heading, at
+                elif at - clear_since >= TASK_NOTICE_QUIET_TIME:
                     r.journal.record("receipt_task_notice_cleared",
-                                     waited=r.clock() - notice_started)
-                return cap
-            if notice_started is None:
-                notice_started = at
-                self.evidence_frame(cap, "task-notice")
-                r.journal.record("receipt_waiting_for_task_notice")
-            if r.clock() - notice_started >= TASK_NOTICE_TIMEOUT:
+                                     waited=r.clock() - wait_started,
+                                     notice_seen=notice_seen)
+                    return cap
+            else:
+                clear_heading, clear_since = None, None
+                if wait_started is None:
+                    wait_started = at
+                if not notice_seen:
+                    notice_seen = True
+                    self.evidence_frame(cap, "task-notice")
+                    r.journal.record("receipt_waiting_for_task_notice")
+            if r.clock() - wait_started >= TASK_NOTICE_TIMEOUT:
                 r.fail("Task progress notice did not clear before reward inspection")
             r.sleep(.25)
 
     def read(self, cap):
         result = page(cap.png, self.vision)
         self.observed = (cap.png, result)
-        if result.kind == "reward":
-            # Season receipts can contain dozens of named cards. Reading every
-            # tooltip and proving page overlap takes longer than a sweep panel.
+        if result.kind in {"reward", "grid"}:
+            # Full Lists and season receipts can contain dozens of cards.
+            # Native OCR plus every tooltip in the 22-card Bounty receipt takes
+            # more than the short sweep-panel budget. Inputs/pages stay bounded.
             self.timeout = REWARD_RECEIPT_TIMEOUT
         return result
 
@@ -1034,7 +1157,10 @@ class ReceiptReader:
     def pan(self, cap, kind, left):
         # Overlap is required to prove no cards were skipped by momentum.
         if kind == "grid":
-            start, end = ((650, 255), (650, 375)) if left else ((650, 375), (650, 255))
+            # A row is 95px apart; a 120px swipe can clip the only shared row
+            # at the top. Move less than one row to retain a complete overlap.
+            top, bottom = (650, 315), (650, 315 + GRID_SCROLL_STEP)
+            start, end = (top, bottom) if left else (bottom, top)
         else:
             start, end = ((480, 367), (875, 367)) if left else ((875, 367), (480, 367))
         self.input(cap, start, end=end)
@@ -1227,7 +1353,7 @@ class ReceiptReader:
                         break
                 else:
                     self.r.fail("Reward receipt beginning could not be verified")
-                if kind == "reward" and p.leading_clipped:
+                if p.leading_clipped:
                     self.r.fail("Reward receipt beginning still contains a partial card")
             stable = 0
             previous_keys = []
@@ -1316,7 +1442,7 @@ class ReceiptReader:
                 if stable >= 2:
                     # A left partial at the end was covered by the preceding
                     # ordered overlap. A right partial still hides unread loot.
-                    incomplete_edge = p.trailing_clipped if kind == "reward" else p.clipped
+                    incomplete_edge = p.trailing_clipped
                     complete = all_named and not incomplete_edge
                     break
             else:
@@ -1379,7 +1505,7 @@ def settle_initial_sweep_notice(runner, frame, vision, evidence):
     original = page(frame.capture.png, vision)
     reader = ReceiptReader(runner, vision, evidence)
     reader.timeout = 30
-    cap = reader.capture()
+    cap = reader.capture(wait_for_stable_heading=True)
     current = reader.read(cap)
     if (original.kind != "sweep" or current.kind != "sweep"
             or not same_sweep_below_notice(frame.capture.png, cap.png)):
@@ -1406,7 +1532,7 @@ def recover_sweep_receipt(runner, frame, vision, evidence, error, *, tooltip_ori
         raise error
     reader = ReceiptReader(runner, vision, evidence)
     reader.timeout = 30
-    cap = reader.capture()
+    cap = reader.capture(wait_for_stable_heading=True)
     current = reader.read(cap)
     reader.evidence_frame(cap, "inspection-incomplete")
     if current.kind == "tooltip" and tooltip_origin is not None:

@@ -8,7 +8,9 @@ from .crafting_vision import bright, has, yellow, within
 from .shop_vision import text_in
 from .vision import read_game_words, classify, decode_frame
 
-HOME_TASKS = (50, 234)
+# The text label is the recognized Home control. The illustration above it
+# remained visible while three accepted taps failed to open Tasks at 1440p.
+HOME_TASKS = (50, 261)
 ALL_TAB = (571, 111)
 HOME_BUTTON = (1237, 23)
 

@@ -1,5 +1,6 @@
 """Replay observed Lessons controls without loading an OCR model or an account."""
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -291,6 +292,84 @@ def test_confirmation_waits_for_its_final_position_before_parsing_students():
     shifted[4:] = frame[:-4]
     screen = analyze(vision, shifted)
     assert screen.kind == "unknown" and not screen.inspection_complete
+
+
+class NativeConfirmationOCR:
+    def __init__(self):
+        path = FIXTURES / "lesson-hyakki-preview-native.json"
+        self.reads = json.loads(path.read_text())["reads"]
+        self.full_words = self.reads[0]["words"]
+        self.crops = {item["sha256"]: item["words"] for item in self.reads[1:]}
+
+    def read(self, frame):
+        recorded = (self.full_words if frame.shape[:2] == (1440, 2560)
+                    else self.crops.get(hashlib.sha256(frame.tobytes()).hexdigest(), []))
+        return [Word(item["text"], item["confidence"], tuple(item["box"])) for item in recorded]
+
+
+def native_confirmation():
+    frame = cv2.imread(str(FIXTURES / "lesson-hyakki-preview-native.png"))
+    ocr = NativeConfirmationOCR()
+    return frame, ocr, LessonVision(ocr)
+
+
+def test_native_confirmation_recovers_settled_border_and_complete_ticket_cost():
+    frame, ocr, vision = native_confirmation()
+    assert not any("→" in word["text"] for word in ocr.full_words)
+    screen = analyze(vision, frame)
+    assert screen.kind == "confirm"
+    assert screen.room_name == "Hyakkiyako Shopping District"
+    assert (screen.tickets, screen.tickets_after) == (7, 6)
+    assert [(student.owned, student.bond) for student in screen.students] == [(True, 9), (True, 11), (True, 11)]
+    assert screen.inspection_complete and screen.start_target == (639, 550)
+
+
+@pytest.mark.parametrize("pixels", [-4, -2, -1, 1, 2, 4])
+def test_native_confirmation_still_rejects_translated_animation(pixels):
+    frame, _, vision = native_confirmation()
+    shifted = np.roll(frame, pixels, axis=0)
+    screen = analyze(vision, shifted)
+    assert screen.kind == "unknown" and not screen.inspection_complete
+
+
+def test_native_confirmation_rejects_dimmed_modal():
+    frame, _, vision = native_confirmation()
+    screen = analyze(vision, (frame.astype(float) * .45).astype(np.uint8))
+    assert screen.kind == "unknown"
+
+
+@pytest.mark.parametrize("first,second,confidence", [
+    ("7→6", "6→5", .99), ("7→6", "6", .99),
+    ("7→6", "", .99), ("7→5", "7→5", .99),
+    ("7→6", "7→6", .89), ("0→0", "0→0", .99),
+])
+def test_native_confirmation_cost_needs_two_complete_confident_agreeing_reads(first, second, confidence):
+    frame, ocr, vision = native_confirmation()
+    for item, text in zip(ocr.reads[1:3], (first, second)):
+        ocr.crops[item["sha256"]] = [{"text": text, "confidence": confidence, "box": [0, 0, 100, 50]}] if text else []
+    screen = analyze(vision, frame)
+    assert screen.kind == "confirm"
+    assert (screen.tickets, screen.tickets_after) == (None, None)
+
+
+@pytest.mark.parametrize("number,expected", [("6", (7, 6)), ("5", (None, None))])
+def test_native_confirmation_cost_respects_partial_full_frame_number(number, expected):
+    frame, ocr, vision = native_confirmation()
+    # The unredacted live frame retained only the arrow's final digit.
+    ocr.full_words.append({"text": number, "confidence": .99996,
+                           "box": [1514, 990, 1540, 1022]})
+    screen = analyze(vision, frame)
+    assert (screen.tickets, screen.tickets_after) == expected
+
+
+def test_native_confirmation_cost_cannot_override_ambiguous_complete_arrows():
+    frame, ocr, vision = native_confirmation()
+    ocr.full_words.extend([
+        {"text": "7→6", "confidence": .99, "box": [1434, 974, 1546, 1036]},
+        {"text": "6→5", "confidence": .99, "box": [1434, 974, 1546, 1036]},
+    ])
+    screen = analyze(vision, frame)
+    assert (screen.tickets, screen.tickets_after) == (None, None)
 
 
 def test_relationship_rank_up_is_an_intermediate_screen_with_a_known_dismissal():

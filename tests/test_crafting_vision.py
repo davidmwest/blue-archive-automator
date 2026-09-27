@@ -36,6 +36,16 @@ def test_dimmed_background_never_authorizes_list_or_craft(vision):
         assert result.kind == 'unknown'
 
 
+def test_native_loading_material_waits_without_disabling_saved_preset(vision):
+    pending = vision.analyze((FIXTURES / 'crafting-native-material-loading.png').read_bytes())
+    assert pending.kind == 'unknown'
+    assert pending.target is None
+    assert 'still loading' in pending.reason
+    # Once the material has actually rendered, zero inventory is read normally.
+    ready = vision.analyze((FIXTURES / 'crafting-zero-keys.png').read_bytes())
+    assert (ready.kind, ready.owned, ready.required) == ('quick', 0, 1)
+
+
 def test_no_node_setup_and_use_off_disable_without_editing_preset(vision):
     frame=decode_frame((FIXTURES/'crafting-quick.png').read_bytes())
     words=vision.startup.read(frame)

@@ -1,6 +1,6 @@
 # engineering notes
 
-the project automates a small, repetitive part of Blue Archive through its visible interface. the useful engineering problem is knowing when an action is justified, whether it worked, and when to stop. this retrospective covers restart, Cafe, and Lessons; the [high-level design](design.md) sets the forward plan. development uses AI assistance; runtime decisions use the rules described below.
+the project automates a small, repetitive part of Blue Archive through its visible interface. the useful engineering problem is knowing when an action is justified, whether it worked, and when to stop. these notes cover the core routines and failures found during live validation; the [high-level design](design.md) sets the forward plan. development uses AI assistance; runtime decisions use the rules described below.
 
 ## constraints that shaped the design
 
@@ -36,11 +36,84 @@ Lessons separates observation, selection, and execution. the [planner](../ba_aut
 
 the runner cycles through every unlocked school and checks that the observed ranks add up to the game's Total Area Rank. it repeats the survey before each ticket, including changes to relationship ranks and completed rooms. this takes longer than selecting a batch from one screenshot, but gives every decision a current, inspectable basis. a school allowlist and ticket budget make the scope explicit.
 
+at 1440p, one live survey of 94 rooms took 4 minutes 47 seconds, before returning to the chosen room or verifying its receipt. seven surveys at that pace cannot fit the old fixed 30-minute task limit. the runner now sets its total allowance once, after reading the initial ticket count: `min(90 minutes, max(30 minutes, 2 minutes + 8 minutes × authorized tickets))`. authorized tickets are the smaller of the observed count and `max_tickets`; a configured zero still means all available tickets. seven tickets receive 58 minutes, while zero through three retain 30 minutes. this allows time for the observed work; it does not guarantee completion on a slower machine.
+
+the deadline stays anchored to the original run start, including setup, and never resets after a survey or ticket. an unreadable count cannot extend it, and a count first obtained after the initial 30-minute deadline is too late. later ticket changes still fail reconciliation. the fixed 90-minute ceiling and 2,500-input ceiling remain in force, and expiry leaves remaining tickets unspent. the journal records the count, configured limit, authorized count, and calculated allowance. fake-clock tests complete seven fresh surveys beyond the old deadline and verify the configured ticket limit, original start time, invalid and changed counts, and both ceilings.
+
 recognition also needs to distinguish the interface from its artwork. pink hair is not an ownership marker; the portrait border and protruding relationship heart must agree. a completed room keeps its white header, so availability uses the dimmed standard portrait borders. the tests include both cases using sanitized game captures.
 
 one live lesson returned a valid report and reduced the ticket count, then stopped because the grid-close tap ripple briefly covered the school name. the fix waits for the expected name to become readable; it does not loosen identity matching. each spend still needs a matching report, the expected one-ticket decrement, and a completed room. Start is never replayed when a result is uncertain. the failed run also exposed a dashboard bug: its result pointed to the successful restart step. failures now use the final task's journal, keeping the useful evidence attached to the actual failure.
 
 another completed lesson exposed a smaller OCR issue: the overview's visible `4/7` counter disappeared from the full-frame text. the fallback reads only the labeled ticket control at two enlarged scales and requires agreement. a missing count triggers bounded recapture; conflicting reads remain unknown. the actual frame and synthetic counters cover zero through four tickets without treating a missing digit as zero.
+
+## recovering the first native-resolution daily
+
+the first full daily after the native OCR migration started on schedule but
+finished with several recognition failures. sharper pixels changed text
+segmentation: stage numbers joined their titles, a padlock joined a boss name,
+and overlapping AP digits made a completed sweep look unresolved. targeted
+reads now require agreement on complete names or counters, with independent
+checks on stage identity, costs, attempts, and tickets. locked Assault rows
+need corroborating names across rows; a contradictory valid counter is never
+rewritten. Social can use its readable Assistant description when the heading
+merges with an icon. Cafe notices still need all three dimmed HUD anchors and
+their expected labels. an unreadable value stays unknown.
+
+loading also happens in layers. a Cafe comic may have no loading label, a
+Lessons HUD may appear before its room controls respond, and Quick Craft may
+show a material counter before the material's icon. the runners now wait for
+those observed loading states. Scrimmage waits for its settled list before
+reading stars. Lessons and Tasks can retry ignored navigation within explicit
+attempt and time limits; Lessons also requires unchanged school, XP, and
+tickets. Tasks taps the menu label instead of its illustration. this recovery
+never retries a spending input.
+
+the next native Lessons visit completed a survey of 94 rooms across 12 schools
+and selected a room with three owned students. it stopped before spending:
+the settled confirmation's border blended across a canonical pixel, and
+whole-frame OCR omitted part of the `7→6` ticket arrow. recognition now checks
+the actual native border and reads the complete cost at two crop scales, with
+agreement required against any visible partial digits. room identity, student
+ownership and relationship ranks, freshness, and the single-ticket cost remain
+separate checks. saved-screen regressions cover the fix and reject moving or
+dimmed confirmations. this is live survey evidence; a completed native lesson
+receipt and a full successful daily are still awaiting verification.
+
+Tactical Challenge exposed a performance problem: repeated crop reads left
+too little time to act on a fresh frame. a cache now reuses level readings only
+when all 16 native input crops and the account-level ceiling match exactly.
+names, ranks, tickets, hidden slots, and cooldowns are still read afresh. one
+saved menu's recognition fell from 4.54 to 2.38 seconds on the development Mac;
+the five-second input deadline stayed unchanged. a missing standby clock uses
+its labeled crop and never becomes an assumed zero.
+
+loot inspection needed its own loading and geometry fixes. a reward heading
+obscured by sparkles gets an exact cropped read; compact quantities require
+agreeing reads, including explicit `K` suffixes. Full List ignores clipped
+edge cards and scrolls in smaller overlapping steps, preserving ordered
+overlap before declaring coverage complete. its time allowance now matches
+the 15-minute large-receipt allowance, with the existing input cap. inspection
+also waits for fading task banners to leave a stable receipt. missing names
+or unproven coverage still appear as incomplete loot.
+
+the interrupted Hard 4-3 sweep was reconciled from its existing reward receipt
+and the saved transition from 122 to 102 AP and two to one remaining attempts.
+Hard 1-2 had a one-sweep receipt and a verified 365 to 345 AP transition; its
+unobserved remaining-attempt count stayed unknown. both recoveries advanced
+the rotation without replaying the sweep or duplicating loot. the original
+free-pack receipt's completeness was corrected for its 10 AP and 10,000
+credits. the five-sweep Bounty receipt grew from 12 to all 22 observed card
+quantities and icons, including 150,000 credits; nine names remain unknown, so
+it still reports incomplete identification. these were repairs to existing
+records while dispatch was paused, not new reward claims.
+
+the recovery also exposed tests writing synthetic command events into the
+real daily text log. those tests now isolate their state and log directories.
+cleanup removed 264 exact, pinned test records under the log's cross-process
+lock, backed up the complete original, and preserved genuine events. no
+device commands or other live state came from those test cases. sanitized
+captures cover the recognition fixes in regression tests; full evidence and
+the repair audit stay local.
 
 ## evidence and its limits
 
@@ -48,7 +121,8 @@ another completed lesson exposed a smaller OCR issue: the overview's visible `4/
 
 the 1440p migration passed live startup through the title screen and announcements to home, plus a red-dot scan. five Total Assault sweeps also completed. their receipt initially arrived while the game was still animating, before Final rewards and Confirm appeared. the collector now waits up to 90 seconds for that final control without replaying the sweep or weakening freshness checks. live recovery logged 500 Total Assault Coins and 50 Advanced Total Assault Coins, verified zero tickets, and returned home. this is recovered live evidence, not a claim that the original run completed uninterrupted. a separate 1440p run at 20 FPS completed measured scans of both Cafe floors and returned home in 468.2 seconds. earnings were empty, and no new relationship increases were verified. this checks navigation and camera coverage at that frame rate; it does not add live high-resolution gift, invitation, or rank-up evidence. 1080p and 2160p have offline coverage only.
 
-the earlier Cafe and Lessons validation below used 720p.
+the earlier Cafe and completed Lessons validation below used 720p. the native
+daily survey described above does not replace completed-lesson evidence.
 
 a documented live run on BlueStacks Air completed restart, measured scans of both unlocked Cafe floors, home verification, and idle closure in 425.5 seconds. it found empty earnings and verified zero new relationship increases. earlier calibration runs verified reward receipts and relationship hearts/rank-up feedback. another player's layout passed a separate camera-movement check. these are observed runs, not a benchmark or a guarantee of finding every obscured student.
 

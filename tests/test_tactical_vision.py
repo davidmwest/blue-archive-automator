@@ -3,6 +3,7 @@
 from dataclasses import replace
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -13,7 +14,7 @@ from ba_automator.tactical_vision import (
     ObservedOpponent, TacticalBattleVision, _cooldown, _level_crops, _read_level,
     same_opponent, same_opponent_identity,
 )
-from ba_automator.vision import StartupVision, Word
+from ba_automator.vision import StartupVision, Word, decode_native_frame
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 
@@ -57,6 +58,95 @@ def test_observed_menu_reads_all_visible_levels_and_hidden_cards(vision):
     assert [p.choice.rank for p in result.opponents] == [400, 471, 540]
     assert result.sampled_ranks == (400, 471, 540)
     assert result.refresh_seconds == 119
+
+
+def test_repeated_level_pixels_avoid_ocr_but_changed_pixels_and_ceiling_do_not(vision, monkeypatch):
+    image, words = fixture('opponents')
+    vision._level_cache.clear()
+    batches = []
+    original = vision.startup.ocr.text_rec
+
+    def recognize(request):
+        batches.append(len(request.img))
+        return original(request)
+
+    monkeypatch.setattr(vision.startup.ocr, 'text_rec', recognize)
+    first = vision.classify(image, words)
+    assert len(first.opponents) == 3
+    assert batches == [9 * 16]
+    assert vision.classify(image.copy(), words) == first
+    assert batches == [9 * 16]
+    assert len(vision._level_cache) <= 18
+
+    # Metadata must still come from this capture, not from the level cache.
+    changed_words = tuple(replace(w, text='Rank 399') if w.text == 'Rank 400' else w
+                          for w in words)
+    changed = vision.classify(image, changed_words)
+    assert changed.opponents[0].choice.rank == 399
+    assert batches == [9 * 16]
+
+    altered = image.copy()
+    altered[208:212, 759:763] = 0
+    vision.classify(altered, words)
+    assert batches[-1] == 16
+    assert len(batches) == 2
+
+    # Identical glyphs under a changed account level require fresh recognition
+    # and cannot retain a level higher than the newly observed ceiling.
+    limited_words = tuple(replace(w, text=w.text.replace('Lv.90', 'Lv.80'))
+                          if w.text.startswith('Lv.90') else w for w in words)
+    limited = vision.classify(image, limited_words)
+    assert limited_words != words
+    assert len(batches) == 3
+    assert limited.opponents == ()
+
+
+def test_level_cache_keys_native_pixels_and_discards_previous_view(vision, monkeypatch):
+    vision = TacticalBattleVision(vision.startup)
+    image, words = fixture('opponents')
+    native = cv2.resize(image, (2560, 1440), interpolation=cv2.INTER_NEAREST)
+    vision._level_cache.clear()
+    batches = []
+    observed_level = 42
+
+    def recognize(request):
+        batches.append(len(request.img))
+        return SimpleNamespace(
+            txts=[f'Lv.{observed_level}' if index % 16 in (0, 1, 8)
+                  else str(observed_level) for index in range(len(request.img))],
+            scores=[.99] * len(request.img))
+
+    monkeypatch.setattr(vision.startup.ocr, 'text_rec', recognize)
+    first = vision._opponents(image, words, native_frame=native)
+    assert len(first) == 3
+    assert all(p.choice.visible_levels == (42, 42, 42) for p in first)
+    assert batches == [9 * 16]
+    previous_keys = set(vision._level_cache)
+    assert vision._opponents(image, words, native_frame=native.copy()) == first
+    assert batches == [9 * 16]
+
+    # The canonical image is deliberately unchanged. A cache based only on
+    # its 720p pixels would reuse the old level despite new native evidence.
+    native[416:424, 1518:1526] = 0
+    observed_level = 41
+    changed = vision._opponents(image, words, native_frame=native)
+    assert changed[0].choice.visible_levels == (41, 42, 42)
+    assert batches == [9 * 16, 16]
+    current_keys = set(vision._level_cache)
+    assert len(previous_keys - current_keys) == 1
+    assert len(current_keys - previous_keys) == 1
+    assert len(current_keys) <= 9
+
+    # Lowering an account ceiling rejects the previously valid units rather
+    # than retaining either cached interpretation of those same native pixels.
+    limited_words = tuple(replace(w, text=w.text.replace('Lv.90', 'Lv.40'))
+                          if w.text.startswith('Lv.90') else w for w in words)
+    limited = vision._opponents(image, limited_words, native_frame=native)
+    assert batches == [9 * 16, 16, 9 * 16]
+    assert limited == ()
+    assert all(key[0] == 40 and value is None
+               for key, value in vision._level_cache.items())
+    assert len(vision._level_cache) <= 9
 
 
 def test_detail_checks_projected_ticket_and_preserves_opponent_identity(vision):
@@ -318,6 +408,47 @@ def test_cooldown_requires_observed_clock_and_rejects_invalid_seconds():
     assert _cooldown((label, Word('e -:--', .75, (166, 518, 214, 538)))) == 0
     assert _cooldown((label, Word('e 01:52', .75, (166, 518, 240, 538)))) is None
     assert _cooldown((Word('e -:--', .75, (166, 518, 214, 538)),)) is None
+
+
+def test_native_missing_clock_is_read_from_labeled_crop(vision, monkeypatch):
+    prefix = FIXTURES / 'tactical-battles-native-missing-clock'
+    png = prefix.with_suffix('.png').read_bytes()
+    words = tuple(Word(row['text'], row['confidence'], tuple(row['box']))
+                  for row in json.loads(prefix.with_suffix('.json').read_text()))
+    assert _cooldown(words) is None
+    original_read = vision.startup.read
+    crops = []
+
+    def read(image):
+        if image.shape[:2] == (1440, 2560):
+            # Replay canonical observations at native coordinates. Only the
+            # unchanged, sanitized clock strip is read with actual OCR below.
+            return [replace(w, box=tuple(value * 2 for value in w.box)) for w in words]
+        crops.append(image.shape[:2])
+        return original_read(image)
+
+    monkeypatch.setattr(vision.startup, 'read', read)
+    monkeypatch.setattr(vision, '_opponents', lambda *args, **kwargs: ())
+    result = vision.analyze(png)
+    assert (result.kind, result.tickets, result.cooldown) == ('tactical', 5, 0)
+    assert crops == [(94, 460)]
+    assert result.refresh_target == (1174, 147)
+    assert result.opponents == ()
+
+
+@pytest.mark.parametrize('observed,expected', [
+    ([], None),
+    ([Word('Standby Time', .99, (18, 18, 264, 84))], None),
+    ([Word('--:--', .99, (276, 38, 328, 64))], None),
+    ([Word('Standby Time', .99, (18, 18, 264, 84)),
+      Word('01:72', .99, (276, 38, 390, 64))], None),
+    ([Word('Standby Time', .99, (18, 18, 264, 84)),
+      Word('01:12', .99, (276, 38, 390, 64))], 72),
+])
+def test_native_clock_recovery_requires_valid_labeled_observation(vision, monkeypatch, observed, expected):
+    png = (FIXTURES / 'tactical-battles-native-missing-clock.png').read_bytes()
+    monkeypatch.setattr(vision.startup, 'read', lambda crop: observed)
+    assert vision._native_cooldown(decode_native_frame(png)) == expected
 
 
 @pytest.mark.parametrize('text,score,expected', [

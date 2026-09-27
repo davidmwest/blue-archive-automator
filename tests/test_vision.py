@@ -2,16 +2,39 @@
 
 import builtins
 import os
+from pathlib import Path
 from types import SimpleNamespace
 
 import cv2
 import numpy as np
 import pytest
 
-from ba_automator.vision import StartupVision, VisionError, Word, classify, decode_frame, publisher_splash
+from ba_automator.vision import StartupVision, VisionError, Word, classify, decode_frame, publisher_splash, illustrated_loading
 
 
 HOME_MATCHES = {"home_left": (74, 288), "home_right": (1160, 665)}
+
+
+def test_illustrated_loading_requires_title_art_and_black_border():
+    frame = decode_frame((Path(__file__).parent / "fixtures/loading-comic.png").read_bytes())
+    words = [Word("Lunch Break for the School Lunch Club", .99, (399, 108, 880, 153))]
+    assert illustrated_loading(frame, words)
+    assert not illustrated_loading(frame, [])
+    assert not illustrated_loading(np.zeros_like(frame), words)
+    assert not illustrated_loading(frame, words + [Word("Confirm", .99, (550, 640, 720, 680))])
+    frame[:50] = 255
+    assert not illustrated_loading(frame, words)
+
+
+def test_illustrated_loading_observation_never_taps(monkeypatch):
+    data = (Path(__file__).parent / "fixtures/loading-comic.png").read_bytes()
+    vision = StartupVision.__new__(StartupVision)
+    vision.assets = []
+    vision.read = lambda _: [Word("Lunch Break for the School Lunch Club", .99, (399, 108, 880, 153))]
+    observation = vision.analyze(data)
+    assert observation.state == "loading"
+    assert observation.detector == "illustrated_loading"
+    assert observation.target is None
 
 
 @pytest.mark.parametrize("initial_flag", [None, "0"])

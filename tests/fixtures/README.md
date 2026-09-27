@@ -119,6 +119,13 @@ AP samples (`ap-*.png`) retain the AP counters needed to verify spending, while 
 
 Task reward samples (`task-rewards-*.png`) were captured on 2026-09-24 at 1280×720. They retain only the Tasks notification and home anchors, page controls, or reward header/cards/continue label. Account identity, balances, the mascot illustration, and unrelated background are masked. They cover active/absent badges, enabled Claim All, the separate daily completion reward, an empty page, and both ends of a scrolling receipt.
 
+`task-rewards-home-ignored-native.png` retains the Tasks icon, label, red dot,
+and both Home anchors from the September 27 20:26 UTC failed visit at 2560×1440.
+Account identity, balances, and unrelated artwork are masked. All saved frames
+remained on Home after three accepted taps on the illustration. This fixture
+verifies the label and badge are still recognized; it cannot prove that Android
+delivered input or that the revised label target opens Tasks in a live visit.
+
 Home notification samples (`red-dots-*.png`) were captured on 2026-09-24. They mask account identity/balances and private Club details, retaining the fixed badges, Social cards, Free Daily Pack price/confirmation/exhausted state, attendance notice, and receipts. No paid checkout was entered for these captures.
 
 Tactical Challenge reward samples (`tactical-time-ready.png`, `tactical-checked.png`, and `tactical-time-receipt.png`) were captured on 2026-09-24 local time. Account and opponent identities/ranks are masked. They retain an available Time Reward, the disabled controls after collection, and its actual 70,570-credit receipt. The enabled Daily Reward color state is synthesized only inside a test; it is not presented as a live daily-claim capture.
@@ -616,3 +623,160 @@ masked. The regression reads both parts of the same unique AP fraction; it
 does not infer a level-up from a larger balance alone. These images establish
 the observed capacity change, not a subsequent level-up dialog or completed
 live recovery. Game-derived fixtures remain outside the project's MIT grant.
+
+`assault-menu-locked-native.png` preserves the September 27 native 2560×1440
+difficulty list. Account identity, balances, and unrelated panels are masked;
+the paired JSON contains fresh OCR of the sanitized image. Full-frame OCR
+joins padlock graphics to the locked boss names. Regressions require matching
+native crop readings and a separately observed unlocked-row boss, preserve
+the event dates and ticket count, and leave locked rows without input targets.
+This fixture verifies offline recognition, not a completed live recovery.
+Game-derived fixtures remain outside the project's MIT grant.
+
+`assault-menu-all-locked-native.png` preserves the same September 27 native
+list after scrolling to its bottom: Insane, Torment, and Lunatic are all
+explicitly locked. Only the title and difficulty panel remain; currency,
+account rank, points, and unrelated panels are masked. Its JSON contains fresh
+OCR of the sanitized image. Padlocks corrupt two full-frame boss names, but
+two native crops of every row independently read the same boss. Regressions
+require agreement within and across rows, retain ticket/date checks, and never
+expose an input target for a locked row. This is an offline recognition fixture,
+not evidence of a completed live survey. Game-derived fixtures remain outside
+the project's MIT grant.
+
+`tickets-bounty-native-joined-heading.png` and
+`tickets-scrimmage-native-joined-heading.png` preserve September 27 native
+2560×1440 Mission Info dialogs, the task heading, and AP needed for projection
+checks. Account identity, other balances, and unrelated panels are black.
+Native OCR merges each stage index and title; tests still require the numeric
+index to agree with the stage letter before recognizing a sweep target.
+
+`tactical-battles-native-missing-clock.png` retains only the September 27 native
+standby clock strip and small color guard regions. Account names, opponent
+portraits, and other screen content are removed. Its JSON replays the original
+full-frame menu OCR with account/opponent identity removed; full-frame OCR
+omitted the idle clock. The regression reads the actual native clock crop and
+requires an explicit valid clock alongside its label, never an inferred zero.
+
+`crafting-native-material-loading.png` retains the September 27 native Quick
+Craft modal with a blank material image and a loading spinner. All account
+resources and surrounding content are black. The small matching template
+`craft_material_pending.png` contains only the blank card interior. This loading
+state must wait without input or disabling the saved preset; only a rendered
+keystone can authorize the existing zero-inventory path. These fixtures verify
+offline recognition, not completed live recoveries. Game-derived fixtures
+remain outside the project's MIT grant.
+
+`ap-hard-native-overlap.png` preserves the September 27 native 2560×1440
+Hard 4-3 mission detail after a one-ticket sweep: 102/220 AP and one remaining
+attempt. Native full-frame OCR duplicates the final digit of `102` into the
+projection `102 → 82`, preventing detail recognition after the successful
+receipt. Two separately scaled, padded crop reads must agree exactly; AP,
+attempt, quantity, cost, and three-star checks remain in force. Unrelated
+account balances and surrounding header controls are masked. This archived
+frame, together with the original receipt and persisted intent, establishes
+the completed 122→102 AP / 2→1 attempt transition; the fixture itself performs
+no state reconciliation or new sweep.
+
+`loading-comic.png` preserves a September 27 Cafe loading illustration with a
+black border and centered title; it contains no account identity or balances.
+Tests require the title, artwork, and black surround together. This state may
+only wait within the existing navigation deadline, never authorize input.
+`club-social-native.png` retains the three Social cards at native 2560×1440;
+account information and surrounding panels are masked. The assistant icon
+merges into its heading in native OCR, so its exact explanatory text supplies
+the third card's identity alongside Social, Friends, and Club. Both fixtures
+are game-derived and remain outside the project's MIT grant.
+
+`loot-free-pack-native-before.png` and `loot-free-pack-native-sparkle.png`
+preserve the September 27 native free-pack receipt for 10,000 Credit Points
+and 10 AP. A sparkle causes whole-frame OCR to read `REWARD AGQUIRED!`.
+An isolated, generously padded heading crop reads the exact phrase with high
+confidence while card names, quantities, and positions remain unchanged.
+Only the heading, receipt viewport, and continuation hint are retained; the
+account and underlying shop are masked. Tests retain rejection of unreadable
+headings, shifted cards, and changed quantities. These archived fixtures verify
+recognition without another claim. All three game-derived images are outside
+the project's MIT grant.
+
+`cafe-visitors-native.png` preserves the September 27, 2026 native 2560×1440
+Visiting Student List notice from a failed daily Cafe visit. Only its Guide title,
+list heading, Confirm control, and three dimmed Cafe HUD anchors remain; room,
+student portraits, bond levels, balances, and other account content are masked.
+After canonical normalization the Comfort label matches the older template at
+0.98237, just below the former 0.985 correlation threshold. The regression uses
+actual native OCR and permits 0.98 only for this dimmed Comfort anchor; exact
+notice labels, title/edit correlations, pixel residuals, and consistent dimming
+are still required. Missing or corrupted anchors and unrelated dialog text
+remain rejected. This is an offline recognition regression, not proof of a
+completed live dismissal.
+
+`loot-bounty-grid-native-before.png` and `loot-bounty-grid-native-after.png`
+retain only the September 27 native 2560×1440 Bounty Full List. The former
+120px drag moved the shared row into the viewport edge: its cards appeared
+85px tall instead of 89px, so overlap correctly failed. The fixtures cover
+partial-frame exclusion, directional clipping, and the explicit `x150K`
+credit quantity. An offline test reconstructs a 60px intermediate viewport
+from these saved pixels to verify overlap and 22-item deduplication; this is
+synthetic navigation evidence, not a live short-drag verification. Account
+identity, balances, and background screens are blacked out. These game-derived
+images remain outside the project's MIT grant.
+
+`tickets-bounty-native-missing-arrow.png` and its sanitized OCR sidecar retain
+the September 27 native Desert Railroad H selector at quantity four, with
+10 tickets projected to become six. Whole-frame OCR omitted the arrow while
+reading both numbers. Recovery requires two independently scaled native crop
+reads to prove the same complete projection, then retains the original stage,
+quantity, resource, and three-star checks. Currency balances are masked; the
+AP and ticket values needed for those guards remain. No ticket is spent by
+this offline regression.
+
+`tickets-scrimmage-native-crossfade.png` and `tickets-scrimmage-native-settled.png`
+retain consecutive native Trinity list frames from the same daily run. The
+crossfade made its headings readable while stars and buttons were translucent,
+briefly reporting cleared stages as zero stars. Recognition now waits for the
+navy Stage List header to settle. The stable frame still distinguishes the two
+three-star stages, the uncleared stage, and the locked stage; inconsistent star
+counts during a survey remain an error. Currency balances are masked. These
+game-derived fixtures remain outside the project's MIT grant.
+
+`lesson-hyakki-preview-native.png` and its recorded OCR sidecar retain the
+September 27 native 2560×1440 Hyakkiyako Shopping District confirmation. Its
+settled top edge blends into canonical row87, just beyond the former brightness
+cutoff; the two native rows correctly bracket the modal. Whole-frame OCR also
+omits part or all of the `7→6` ticket arrow. Two scoped native crop reads must
+agree on its complete single-ticket projection without contradicting visible
+digits. The fixture preserves room identity and three owned-student hearts
+(9, 11, 11), while masking the account header and surrounding scene. Shifted,
+dimmed, contradictory, incomplete, and low-confidence variants must remain
+unusable for spending. This is offline confirmation-recognition evidence,
+not proof of a completed native-resolution lesson. The game-derived fixture
+is outside the project's MIT grant.
+
+`loot-sweep-task-progress-native-refresh-before.png` and `...-after.png`
+retain the September 27 native Hard 3-2 sweep receipt with a partial cyan
+achievement-progress banner, then the same receipt after it disappears.
+The earlier detector only waited for gold completion banners. These fixtures
+verify that a partly filled cyan bar also triggers a bounded wait without
+input; the uncovered heading, close control, complete Final row, quantities,
+and Confirm button remain exact before the clean receipt can be used.
+Account identity, balances, and surrounding scenes are masked. These are
+saved observation frames, not proof of a retried live collection. The
+game-derived fixtures remain outside the project's MIT grant.
+
+`loot-native-amulet-quantity.png` retains only the native Final-row Traffic
+Safety Amulet card from the September 27 Hard 2-1 receipt. Its Japanese
+artwork lettering overwhelms both the whole-card and wide bottom-strip OCR;
+two independent lower-right quantity crops at 4× and 5× must instead agree
+on the complete, confident `x1` label. Everything outside that card is masked.
+This tests earned quantity recognition, not item-name inference or inventory
+totals. The game-derived fixture remains outside the project's MIT grant.
+
+`loot-sweep-task-fading-native-{visible,fading,clear}.png` preserves the native
+1440p heading/control and Final-row pixels from the September 27 Hard 1-2
+one-sweep receipt (`spend_ap-20260927T201412-34498b04`, receipt 0122). All pixels
+outside those recognition regions, including account identifiers and balances,
+are blacked out. The fading frame no longer has a detectable cyan progress bar,
+but it still changes the heading: the strict receipt guard must reject it while
+the bounded, input-free capture wait allows the animation to finish. These are
+saved real frames; the fixture does not establish any additional resource spend.

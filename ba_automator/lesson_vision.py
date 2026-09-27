@@ -8,6 +8,7 @@ heart must agree. All coordinates are scoped to an identified screen or modal.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 import re
 
 import cv2
@@ -158,6 +159,49 @@ class LessonVision:
         self._bond_cache: dict[bytes, int | None] = {}
         self._header_cache: dict[bytes, str | None] = {}
         self._ticket_cache: dict[bytes, tuple[int | None, int | None]] = {}
+        self._cost_cache: dict[bytes, tuple[int | None, int | None]] = {}
+
+    def _confirmation_cost(self, words, native_frame):
+        bounds = (680, 475, 790, 524)
+        selected = _within(words, bounds)
+        expression = r"(\d+)\s*(?:→|->|>)\s*(\d+)"
+        counts = _unique_matches(selected, expression)
+        if len(counts) == 1:
+            return int(counts[0][1]), int(counts[0][2])
+        if counts or native_frame.shape[1] <= 1280:
+            return None, None
+        # Native full-frame OCR can retain only the final digit of the cost.
+        # A recovery must read the complete arrow twice from this modal's
+        # own bubble; never derive a projected count from available tickets.
+        crop = native_game_region(native_frame, bounds)
+        key = crop.tobytes()
+        if key not in self._cost_cache:
+            candidates = []
+            for scale in (2, 3):
+                enlarged = cv2.resize(crop, (110 * scale, 49 * scale),
+                                      interpolation=cv2.INTER_CUBIC)
+                observed = self.startup.read(enlarged)
+                match = re.fullmatch(expression, _text(observed).strip())
+                if match and observed and all(word.confidence >= .9 for word in observed):
+                    before, after = int(match[1]), int(match[2])
+                    candidates.append((before, after) if 1 <= before <= 99 and after == before - 1
+                                      else (None, None))
+                else:
+                    candidates.append((None, None))
+            result = candidates[0] if candidates[0] == candidates[1] else (None, None)
+            if len(self._cost_cache) >= 64:
+                self._cost_cache.clear()
+            self._cost_cache[key] = result
+        result = self._cost_cache[key]
+        # Partial full-frame numbers must also agree with their position on
+        # the arrow. A conflicting observation is uncertainty, not permission.
+        for word in selected:
+            if re.fullmatch(r"\d+", word.text.strip()):
+                x = word.center[0]
+                expected = result[0] if 714 <= x <= 737 else result[1] if 752 <= x <= 778 else None
+                if expected is None or int(word.text.strip()) != expected:
+                    return None, None
+        return result
 
     def _tickets(self, frame, words, bounds, *, native_frame=None):
         result = _ticket_count(words, bounds)
@@ -394,15 +438,20 @@ class LessonVision:
                                 detail="Lesson Report is loading or its contents are incomplete")
         if (_has(words, "location info", (460, 85, 820, 140))
                 and _bright(frame, (310, 94, 450, 102))):
-            if not (float(frame[87, 390:490].mean()) < 180
-                    and float(frame[88, 390:490].mean()) > 235):
+            # The settled edge sits at canonical y=87.5. At native 1440p,
+            # downsampling blends its two sides into row 87 (observed 180.05),
+            # so verify the adjacent native rows instead of a mixed pixel.
+            scale = native_frame.shape[1] / 1280
+            edge = math.ceil(87.5 * scale)
+            left, right = round(390 * scale), round(490 * scale)
+            if not (float(native_frame[edge - 1, left:right].mean()) < 180
+                    and float(native_frame[edge, left:right].mean()) > 235):
                 return LessonScreen("unknown", words=words, inspection_complete=False,
                                     detail="The lesson confirmation is still moving or has an unsupported layout")
             _, name = _header_name(_within(words, (300, 150, 767, 209)), level=True)
             controls = [word for word in _within(words, (480, 510, 800, 595))
                         if word.normalized == "start lesson"]
-            counts = _unique_matches(_within(words, (680, 475, 790, 524)), r"(\d+)\s*(?:→|->|>)\s*(\d+)")
-            before, after = (int(counts[0][1]), int(counts[0][2])) if len(counts) == 1 else (None, None)
+            before, after = self._confirmation_cost(words, native_frame)
             # Portraits align to the right edge; there can be one to three. Detect
             # the actual leftmost occupied slot rather than assigning student names.
             students, complete = self._students(frame, 774, 156, slots=3, step=69,

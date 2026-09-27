@@ -124,6 +124,7 @@ def harness(tmp_path, monkeypatch):
     monkeypatch.setattr(lr, "page", page)
     monkeypatch.setattr(lr, "decode_frame", json.loads)
     monkeypatch.setattr(lr, "decode_native_frame", json.loads)
+    monkeypatch.setattr(lr, "task_notice_heading", lambda image: image["tip"] or "clear")
     monkeypatch.setattr(lr, "has_tooltip", lambda image: bool(image["tip"]))
     monkeypatch.setattr(lr, "read_tooltip", lambda image, vision: image["tip"])
     monkeypatch.setattr(lr, "reward_layout_stable", lambda before, after: before == after)
@@ -744,6 +745,30 @@ def test_receipt_waits_without_input_until_task_notice_leaves(harness, monkeypat
         "receipt_waiting_for_task_notice", "receipt_task_notice_cleared"]
 
 
+@pytest.mark.parametrize("initial_notice", [True, False])
+def test_departing_notice_must_stop_fading_before_capture_returns(harness, monkeypatch, initial_notice):
+    h = harness
+    monkeypatch.setattr(lr, "task_notice_visible", lambda image: image["tip"] == "task notice")
+    def animate(number):
+        assert h.inputs == []
+        h.tip = ({1: "task notice" if initial_notice else "fade-0",
+                  2: "fade-1", 3: "fade-2"}).get(number)
+    h.on_capture = animate
+    cap = h.reader().capture(wait_for_stable_heading=not initial_notice)
+    assert json.loads(cap.png)["tip"] is None
+    assert h.captures == 6 and h.now == 1.25
+    assert cap.is_fresh(h.now) and h.inputs == []
+
+
+def test_heading_that_keeps_changing_cannot_extend_notice_wait(harness, monkeypatch):
+    h = harness
+    monkeypatch.setattr(lr, "task_notice_visible", lambda image: False)
+    h.on_capture = lambda number: setattr(h, "tip", f"fade-{number}")
+    with pytest.raises(TaskError, match="notice did not clear"):
+        h.reader().capture(wait_for_stable_heading=True)
+    assert h.inputs == [] and h.now <= lr.TASK_NOTICE_TIMEOUT + .25
+
+
 @pytest.mark.parametrize("failure", ["persistent", "foreign_foreground"])
 def test_notice_wait_is_bounded_and_preserves_foreground_guard(harness, monkeypatch, failure):
     h = harness
@@ -1136,19 +1161,19 @@ def test_post_ocr_scroll_verification_is_bounded_and_keeps_freshness(harness, mo
     assert len(h.inputs) == 1
 
 
-@pytest.mark.parametrize("limit", ["time", "reward_time", "inputs"])
+@pytest.mark.parametrize("limit", ["time", "reward_time", "grid_time", "inputs"])
 def test_extended_receipt_budget_remains_bounded(harness, limit):
     h = harness
     reader = h.reader()
     assert reader.timeout == lr.RECEIPT_TIMEOUT == 240
-    if limit == "reward_time":
-        h.pages = [replace(h.pages[0], kind="reward")]
+    if limit in {"reward_time", "grid_time"}:
+        h.pages = [replace(h.pages[0], kind=limit.removesuffix("_time"))]
         reader.read(reader.capture())
         assert reader.timeout == lr.REWARD_RECEIPT_TIMEOUT == 900
-    if limit in {"time", "reward_time"}:
+    if limit in {"time", "reward_time", "grid_time"}:
         h.now = reader.timeout + .001
     else:
         reader.inputs = 160
     with pytest.raises(TaskError, match="bounded limit"):
         reader.capture()
-    assert h.inputs == [] and h.captures == (1 if limit == "reward_time" else 0)
+    assert h.inputs == [] and h.captures == (1 if limit in {"reward_time", "grid_time"} else 0)

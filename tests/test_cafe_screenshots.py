@@ -5,7 +5,7 @@ import pytest
 
 from ba_automator.cafe import earnings_amounts, reward_amounts
 from ba_automator.cafe_vision import CafeVision, scene_point
-from ba_automator.vision import StartupVision, Word, decode_frame
+from ba_automator.vision import StartupVision, Word, decode_frame, read_game_words
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -94,3 +94,46 @@ def test_delayed_visitor_notice_accepts_ocr_close_glyph_only_in_its_corner(visio
     assert vision.visitor_notice(image, labels) == (640, 458)
     assert vision.visitor_notice(image, labels + [Word("X", .99, (590, 330, 610, 350))]) is None
     assert vision.visitor_notice(image, labels + [Word("Purchase", .99, (590, 330, 680, 350))]) is None
+
+
+@pytest.fixture(scope="module")
+def native_visitors(vision):
+    png = (FIXTURES / "cafe-visitors-native.png").read_bytes()
+    return decode_frame(png), read_game_words(png, vision.startup)
+
+
+def test_native_visitor_notice_with_dimmed_comfort_label(vision, native_visitors):
+    image, words = native_visitors
+    assert not vision.is_cafe(image)
+    target = vision.visitor_notice(image, words)
+    assert target is not None
+    assert 635 <= target[0] <= 645 and 450 <= target[1] <= 465
+
+
+@pytest.mark.parametrize("obstruction", [
+    "title", "edit", "comfort", "different_comfort", "bright_comfort",
+    "missing_label", "duplicate_confirm", "purchase",
+])
+def test_native_visitor_notice_keeps_all_dialog_and_hud_guards(
+    vision, native_visitors, obstruction,
+):
+    original, original_words = native_visitors
+    image, words = original.copy(), list(original_words)
+    anchors = {"title": (102, 6, 173, 40), "edit": (70, 658, 124, 691),
+               "comfort": (964, 626, 1062, 660)}
+    if obstruction in anchors:
+        x1, y1, x2, y2 = anchors[obstruction]
+        image[y1:y2, x1:x2] = 0
+    elif obstruction == "different_comfort":
+        image[626:660, 964:1062] = image[626:660, 964:1062][:, ::-1]
+    elif obstruction == "bright_comfort":
+        image[626:660, 964:1062] = (
+            image[626:660, 964:1062].astype(float) * 2.4
+        ).clip(0, 255).astype("uint8")
+    elif obstruction == "missing_label":
+        words = [w for w in words if w.normalized != "visiting student list"]
+    elif obstruction == "duplicate_confirm":
+        words.extend(w for w in original_words if w.normalized == "confirm")
+    else:
+        words.append(Word("Purchase", .99, (590, 330, 680, 350)))
+    assert vision.visitor_notice(image, words) is None

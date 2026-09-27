@@ -42,6 +42,36 @@ def ticket_counter(words, bounds):
     return tuple(map(int, match.groups())) if match else None
 
 
+def reread_bounty_projection(native, reader, words):
+    """Recover an omitted arrow only when both native crop reads prove it."""
+    bounds = (855, 337, 1108, 384)
+    pieces = sorted(within(words, bounds), key=lambda word: word.box[0])
+    # Do not replace a complete, contradictory projection, guess omitted
+    # digits, or reinterpret Scrimmage's adjacent AP/ticket counters.
+    if (len(pieces) != 2 or any(word.confidence < .95 for word in pieces)
+            or any(not re.fullmatch(r"\d+", word.text.strip()) for word in pieces)
+            or not 1030 <= pieces[0].center[0] < pieces[1].center[0] <= 1100):
+        return None
+    expected = tuple(int(word.text) for word in pieces)
+    crop_bounds = (1010, 341, 1105, 392)
+    crop = native_game_region(native, crop_bounds)
+    confidence = []
+    for scale in (2, 3):
+        enlarged = cv2.resize(crop, (95 * scale, 51 * scale),
+                              interpolation=cv2.INTER_CUBIC)
+        padded = cv2.copyMakeBorder(enlarged, 8 * scale, 8 * scale,
+                                    8 * scale, 8 * scale, cv2.BORDER_CONSTANT,
+                                    value=(255, 255, 255))
+        observed = reader.read(padded)
+        if len(observed) != 1 or observed[0].confidence < .95:
+            return None
+        match = re.fullmatch(r"(\d+)\s*→\s*(\d+)", observed[0].text.strip())
+        if not match or tuple(map(int, match.groups())) != expected:
+            return None
+        confidence.append(observed[0].confidence)
+    return Word(f"{expected[0]}→{expected[1]}", min(confidence), crop_bounds)
+
+
 def classify_tickets(frame, words, *, home=False):
     ap = ap_value(words)
     unknown = TicketScreen("unknown", ap=ap)
@@ -107,14 +137,18 @@ def classify_tickets(frame, words, *, home=False):
         and bright(frame, (420, 125, 495, 152))
         and has(words, "sweep", (850, 200, 1010, 262))
     ):
-        identity = text_in(words, (195, 183, 620, 245))
+        # Native OCR may join the stage index to its title across the thin
+        # separator ("08Overpass H"). Parse the complete heading so both split
+        # and joined observations still have to prove the index/letter pair.
+        identity = " ".join(word.text for word in sorted(
+            within(words, (125, 183, 620, 245)), key=lambda word: word.box[0]
+        ))
         match = re.fullmatch(
-            "("
+            r"(\d{1,2})\s*(?:\|\s*)?("
             + "|".join(re.escape(STAGE_NAMES[a]) for a in AREAS[task])
             + r")\s*([A-Z])",
             identity,
         )
-        index = number(words, (125, 185, 195, 240))
         count = number(words, (904, 277, 970, 330))
         # Scrimmage's AP and ticket projections can be separate OCR words.
         # Preserve their boundary: joining 643→643 and 15→14 makes the middle
@@ -134,11 +168,11 @@ def classify_tickets(frame, words, *, home=False):
             else r"[^0-9]*(\d+)\s*→\s*(\d+)(?:\s*\|\s*|\s+)[^0-9]*(\d+)\s*→\s*(\d+)"
         )
         projected = re.fullmatch(pattern, projection)
-        if not (match and index and count and projected and ap is not None):
+        if not (match and count and projected and ap is not None):
             return unknown
-        title_name, stage = match.groups()
+        index, title_name, stage = match.groups()
         area = next(a for a in AREAS[task] if STAGE_NAMES[a] == title_name)
-        if index[0] != ord(stage) - 64:
+        if int(index) != ord(stage) - 64:
             return unknown
         values = list(map(int, projected.groups()))
         before_ap, after_ap, tickets, after_tickets = (
@@ -187,6 +221,12 @@ def classify_tickets(frame, words, *, home=False):
         ):
             return TicketScreen("menu", task=task, tickets=tickets[0], ap=ap)
     if has(words, "stage list", (820, 80, 1030, 136)):
+        # The area's title becomes readable during its crossfade, before the
+        # stars and Enter buttons reach their final colors. Require the solid
+        # navy header to have settled before reporting any star count.
+        header = frame[97:118, 820:850].astype("int16")
+        if float(abs(header - (114, 76, 45)).mean()) > 8:
+            return unknown
         heading = (
             text_in(words, (90, 130, 620, 183))
             .replace(" ", "")
@@ -249,7 +289,19 @@ class TicketVision:
         words = read_game_words(png, self.startup)
         home = {"home_left", "home_right"} <= self.startup.matches(frame).keys()
         screen = classify_tickets(frame, words, home=home)
-        if screen.kind != "unknown" or number(words, (904, 277, 970, 330)) != (0,):
+        count = number(words, (904, 277, 970, 330))
+        if (screen.kind == "unknown" and count and count[0] > 0
+                and has(words, "bounty", (80, 0, 310, 55))
+                and has(words, "mission info", (440, 110, 850, 170))
+                and has(words, "sweep", (850, 200, 1010, 262))):
+            projection = reread_bounty_projection(
+                decode_native_frame(png), self.startup, words,
+            )
+            if projection is not None:
+                pieces = within(words, (855, 337, 1108, 384))
+                repaired = [word for word in words if word not in pieces]
+                screen = classify_tickets(frame, [*repaired, projection], home=home)
+        if screen.kind != "unknown" or count != (0,):
             return screen
         # Whole-frame OCR can omit part or all of the exhausted ticket label.
         # Recovery needs agreeing enlarged observations; a zero quantity alone

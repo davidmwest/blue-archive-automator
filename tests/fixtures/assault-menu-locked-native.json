@@ -1,0 +1,182 @@
+[
+  {
+    "text": "Total Assault",
+    "confidence": 0.97982,
+    "box": [
+      104,
+      8,
+      283,
+      39
+    ]
+  },
+  {
+    "text": "Battle Select",
+    "confidence": 0.99821,
+    "box": [
+      656,
+      85,
+      904,
+      135
+    ]
+  },
+  {
+    "text": "Total Assault Ticket",
+    "confidence": 0.9906,
+    "box": [
+      914,
+      88,
+      1072,
+      109
+    ]
+  },
+  {
+    "text": "09/21 19:00",
+    "confidence": 0.99992,
+    "box": [
+      1150,
+      88,
+      1245,
+      112
+    ]
+  },
+  {
+    "text": "3/6",
+    "confidence": 0.99967,
+    "box": [
+      936,
+      109,
+      978,
+      139
+    ]
+  },
+  {
+    "text": "- 09/28 11:59",
+    "confidence": 0.98619,
+    "box": [
+      1140,
+      109,
+      1245,
+      133
+    ]
+  },
+  {
+    "text": "Extreme",
+    "confidence": 0.99997,
+    "box": [
+      676,
+      160,
+      769,
+      186
+    ]
+  },
+  {
+    "text": "Drumbarka",
+    "confidence": 0.99879,
+    "box": [
+      671,
+      184,
+      899,
+      231
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99991,
+    "box": [
+      1114,
+      195,
+      1204,
+      230
+    ]
+  },
+  {
+    "text": "Insane",
+    "confidence": 0.99993,
+    "box": [
+      675,
+      294,
+      752,
+      320
+    ]
+  },
+  {
+    "text": "Drumbarka8",
+    "confidence": 0.92659,
+    "box": [
+      666,
+      301,
+      991,
+      373
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99983,
+    "box": [
+      1114,
+      329,
+      1201,
+      364
+    ]
+  },
+  {
+    "text": "Unlocks upon clearing the lower difficulty.",
+    "confidence": 0.99486,
+    "box": [
+      755,
+      358,
+      1153,
+      388
+    ]
+  },
+  {
+    "text": "Torment",
+    "confidence": 0.99999,
+    "box": [
+      677,
+      428,
+      773,
+      455
+    ]
+  },
+  {
+    "text": "Drumbarka6",
+    "confidence": 0.94109,
+    "box": [
+      667,
+      438,
+      990,
+      505
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99975,
+    "box": [
+      1114,
+      462,
+      1202,
+      499
+    ]
+  },
+  {
+    "text": "Unlocks upon clearing the lower difficulty.",
+    "confidence": 0.9988,
+    "box": [
+      756,
+      493,
+      1153,
+      523
+    ]
+  },
+  {
+    "text": "Lunatic",
+    "confidence": 0.99997,
+    "box": [
+      675,
+      563,
+      760,
+      589
+    ]
+  }
+]

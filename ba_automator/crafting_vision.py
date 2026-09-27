@@ -65,7 +65,7 @@ def yellow(frame, bounds):
                   & (hsv[:, :, 1] >= 100) & (hsv[:, :, 2] >= 180)).mean()) > .3
 
 
-def classify_crafting(frame, words, *, keystone=False, home=False):
+def classify_crafting(frame, words, *, keystone=False, material_pending=False, home=False):
     # Confirmation is recognized before dimmed Quick Craft controls behind it.
     confirmation = number(words, (450, 285, 850, 400), r'Craft (\d) time\(s\)\?')
     if (has(words, 'notice', (500, 130, 780, 200)) and confirmation
@@ -82,6 +82,11 @@ def classify_crafting(frame, words, *, keystone=False, home=False):
                 and has(words, 'use on', (70, 228, 180, 267))
                 and has(words, 'edit', (620, 235, 760, 299))):
             return CraftScreen('unknown', reason='Quick Craft setup is not readable')
+        # The modal labels and 0/1 counter can appear before its item art.
+        # A matched empty card is loading evidence, not an unsupported preset.
+        # Wait for the actual keystone image before authorizing any input.
+        if material_pending and not keystone:
+            return CraftScreen('unknown', reason='Quick Craft material image is still loading')
         ratios = [w for w in within(words, (800, 190, 1235, 474)) if re.fullmatch(r'[\d,]+/[\d,]+', w.text.strip())]
         # This implementation spends keystones and the displayed credit fee only.
         # Additional material cards must not disappear merely because their
@@ -147,6 +152,8 @@ class CraftVision:
         self.startup = startup
         data = files('ba_automator').joinpath('assets/craft_keystone.png').read_bytes()
         self.keystone = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        pending = files('ba_automator').joinpath('assets/craft_material_pending.png').read_bytes()
+        self.material_pending = cv2.imdecode(np.frombuffer(pending, np.uint8), cv2.IMREAD_COLOR)
 
     def analyze(self, png):
         frame = decode_frame(png)
@@ -154,6 +161,8 @@ class CraftVision:
         native = decode_native_frame(png)
         sample = frame[198:296, 812:943]
         error = cv2.minMaxLoc(cv2.matchTemplate(sample, self.keystone, cv2.TM_SQDIFF_NORMED))[0]
+        pending_error = cv2.minMaxLoc(cv2.matchTemplate(
+            sample, self.material_pending, cv2.TM_SQDIFF_NORMED))[0]
         if error < .025:
             # Zero inventory is red and may vanish in full-frame OCR. Read the
             # same fixed inventory counter at 2x without assuming missing means 0.
@@ -167,4 +176,5 @@ class CraftVision:
                         box = tuple((n // 2) + (x1 if i % 2 == 0 else y1) for i, n in enumerate(word.box))
                         words.append(Word(word.text, word.confidence, box))
         home = {'home_left', 'home_right'} <= self.startup.matches(frame).keys()
-        return classify_crafting(frame, words, keystone=error < .025, home=home)
+        return classify_crafting(frame, words, keystone=error < .025,
+                                 material_pending=pending_error < .001, home=home)

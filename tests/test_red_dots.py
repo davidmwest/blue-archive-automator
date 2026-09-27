@@ -79,6 +79,18 @@ def test_club_live_fixtures(startup, name, kind):
         assert result.red_dot
 
 
+def test_native_social_icon_merged_with_assistant_heading(startup):
+    data = (FIXTURES / "club-social-native.png").read_bytes()
+    result = ClubVision(startup).analyze(data)
+    assert result.kind == "social"
+    assert result.target == (310, 383)
+    assert result.red_dot
+    from ba_automator.vision import read_game_words
+    words = read_game_words(data, startup)
+    assert classify_club(decode_frame(data), [w for w in words
+        if w.normalized not in {"assistant", "set up and manage assistants"}]).kind == "unknown"
+
+
 def test_real_badges_and_overlay_rejection(startup):
     assert BadgeVision(startup).analyze(png("home-badges")).badges == (
         "free_pack",
