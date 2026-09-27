@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 from .actions import record_action
-from .loot_receipts import inspect_receipt
+from .loot_receipts import REWARD_RECEIPT_TIMEOUT, inspect_receipt
 from .ap_policy import choose_hard, default_order, sweep_count, sweep_refill
 from .ap_state import read_state, write_state
 from .ap_vision import APVision
@@ -13,10 +13,21 @@ from .shop_runtime import ShopRunner
 
 VISIT_SECONDS = 1800
 VISIT_INPUTS = 1200
-# A receipt may need 90 seconds to appear and 240 seconds to inspect. Keep
-# enough room to close it, verify the spend, and return to a stable Home.
-SWEEP_SECONDS_RESERVE = 480
+# Native Full Lists may use the full reward-inspection budget. The additional
+# five minutes cover confirmation, receipt appearance, bounded recovery,
+# resource verification and Home; never begin a paid sweep on the old short
+# sweep-panel budget.
+SWEEP_SECONDS_RESERVE = REWARD_RECEIPT_TIMEOUT + 300
+# Receipt inspection permits 160 inputs; recovery, verification and Home use
+# fewer than the remaining 40. Quantity selection is checked separately below.
 SWEEP_INPUTS_RESERVE = 200
+
+
+class SweepDeferred(Exception):
+    """The unpaid detail is still open; resume it in a fresh AP visit."""
+
+    def __init__(self, frame):
+        self.frame = frame
 
 
 class APRunner(ShopRunner):
@@ -322,6 +333,8 @@ class APRunner(ShopRunner):
             )
         ):
             self.fail("Sweep does not fit the verified stage, attempts, or AP floor")
+        if not self.can_start_sweep():
+            raise SweepDeferred(frame)
         frame = self.selected_quantity(frame, count)
         screen = frame.screen
         if (
@@ -334,6 +347,11 @@ class APRunner(ShopRunner):
             or screen.target is None
         ):
             self.fail("Sweep projection changed; no AP spent")
+        # Selecting a commission quantity can take many reads/inputs. Check
+        # again while the detail is still unpaid, before opening confirmation
+        # or persisting an intent; both strategies can yield from this screen.
+        if not self.can_start_sweep():
+            raise SweepDeferred(frame)
         self.journal.save_image(
             f"before-sweep-{self.actions:04d}.png", frame.capture.png
         )
@@ -476,10 +494,14 @@ class APRunner(ShopRunner):
                         )
                     )
                     if count:
-                        frame = self.sweep(frame, count)
-                    summary = (
-                        "Remaining AP cannot cover another commission above the floor"
-                    )
+                        try:
+                            frame = self.sweep(frame, count)
+                        except SweepDeferred as deferred:
+                            frame = deferred.frame
+                            continue_soon = True
+                    summary = ("AP visit paused before its limit; continuing in one minute"
+                               if continue_soon else
+                               "Remaining AP cannot cover another commission above the floor")
                     self.go_home(frame)
                 else:
                     summary = "No three-star commission is available"
@@ -543,7 +565,12 @@ class APRunner(ShopRunner):
                         frame = detail
                         continue_soon = True
                         break
-                    detail = self.sweep(detail, 1, next_stage=choice.next_stage)
+                    try:
+                        detail = self.sweep(detail, 1, next_stage=choice.next_stage)
+                    except SweepDeferred as deferred:
+                        frame = deferred.frame
+                        continue_soon = True
+                        break
                     self.tap(detail, (1127, 109), "Return to Hard stage list")
                     frame = self.wait("hard_list")
                 else:

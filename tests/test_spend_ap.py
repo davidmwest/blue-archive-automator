@@ -264,7 +264,8 @@ def test_hard_visit_yields_after_verified_sweep_and_resumes_next_stage(runner, l
 
 
 @pytest.mark.parametrize("limit", ["time", "inputs"])
-def test_hard_navigation_consuming_reserve_yields_before_spending(runner, limit):
+@pytest.mark.parametrize("consumed_during", ["navigation", "quantity_selection"])
+def test_hard_navigation_consuming_reserve_yields_before_spending(runner, limit, consumed_during):
     from datetime import datetime, timezone, timedelta
     from ba_automator.ap_vision import APStage
     from ba_automator.spend_ap import (
@@ -282,15 +283,18 @@ def test_hard_navigation_consuming_reserve_yields_before_spending(runner, limit)
                     *[APScreen("home", ap=160) for _ in range(3)]])
     taps = []
 
+    def consume_reserve():
+        if limit == "time":
+            elapsed[0] = VISIT_SECONDS - SWEEP_SECONDS_RESERVE
+        else:
+            runner.actions = VISIT_INPUTS - SWEEP_INPUTS_RESERVE
+
     def wait(kinds, *, predicate=lambda s: True, **kwargs):
         screen = next(screens)
         assert screen.kind in ({kinds} if isinstance(kinds, str) else kinds)
         assert predicate(screen)
-        if screen.kind == "detail":
-            if limit == "time":
-                elapsed[0] = VISIT_SECONDS - SWEEP_SECONDS_RESERVE
-            else:
-                runner.actions = VISIT_INPUTS - SWEEP_INPUTS_RESERVE
+        if screen.kind == "detail" and consumed_during == "navigation":
+            consume_reserve()
         return frame(runner, screen)
 
     def tap(f, target, description):
@@ -301,13 +305,131 @@ def test_hard_navigation_consuming_reserve_yields_before_spending(runner, limit)
     runner.wait, runner.tap = wait, tap
     runner.enter_hard = lambda: frame(runner, listing)
     runner.hard_area = lambda f, stage: f
-    runner.sweep = lambda *args, **kwargs: pytest.fail("must reserve receipt time before spending")
+    def select_quantity(f, count):
+        assert f.screen.kind == "detail" and count == 1
+        consume_reserve()
+        return f
+
+    if consumed_during == "navigation":
+        runner.sweep = lambda *args, **kwargs: pytest.fail("must reserve receipt time before spending")
+    else:
+        runner.selected_quantity = select_quantity
     assert runner.run().status == "success"
     saved = read_state(runner.config)
     assert taps == ["Inspect Hard 13-3", "Close mission info", "Return home"]
     assert saved["next_stage"] == "13-3" and saved["last_ap"] == 160
     assert saved["pending"] is None and saved["blocked_reason"] is None
     assert datetime.fromisoformat(saved["next_check_at"]) == now + timedelta(minutes=1)
+
+
+@pytest.mark.parametrize("limit", ["time", "inputs"])
+@pytest.mark.parametrize("consumed_during", ["navigation", "quantity_selection"])
+def test_commission_reserve_yields_unpaid_and_preserves_hard_cursor(runner, limit, consumed_during):
+    from datetime import datetime, timezone, timedelta
+    from ba_automator.spend_ap import (
+        SWEEP_INPUTS_RESERVE, SWEEP_SECONDS_RESERVE, VISIT_INPUTS, VISIT_SECONDS,
+    )
+
+    now = datetime(2026, 9, 27, tzinfo=timezone.utc)
+    runner.config = replace(runner.config, ap_strategy="reports")
+    runner.wall_clock = lambda: now
+    elapsed = [0]
+    runner.clock = lambda: elapsed[0]
+    runner.state["next_stage"] = "13-2"
+    runner.save()
+    screens = iter([APScreen("home", ap=210), APScreen("commission_list", strategy="reports"),
+                    *[APScreen("home", ap=210) for _ in range(3)]])
+    prepared = frame(runner, detail(strategy="reports", stage="J", ap=210,
+                                   count=2, cost=40, after=130, remaining=None))
+    taps = []
+
+    def consume_reserve():
+        if limit == "time":
+            elapsed[0] = VISIT_SECONDS - SWEEP_SECONDS_RESERVE
+        else:
+            runner.actions = VISIT_INPUTS - SWEEP_INPUTS_RESERVE
+
+    def open_detail(*args):
+        if consumed_during == "navigation":
+            consume_reserve()
+        return prepared
+
+    def select_quantity(f, count):
+        assert consumed_during == "quantity_selection"
+        assert f is prepared and count == 2
+        consume_reserve()
+        return f
+
+    def wait(kinds, *, predicate=lambda s: True, **kwargs):
+        runner.budget()
+        screen = next(screens)
+        assert screen.kind in ({kinds} if isinstance(kinds, str) else kinds)
+        assert predicate(screen)
+        return frame(runner, screen)
+
+    def tap(f, target, description):
+        runner.budget()
+        taps.append(description)
+        runner.actions += 1
+
+    runner.wait, runner.tap = wait, tap
+    runner.survey_commission = lambda _: "J"
+    runner.commission_detail = open_detail
+    runner.selected_quantity = select_quantity
+    assert runner.run().status == "success"
+    saved = read_state(runner.config)
+    assert taps == ["Close mission info", "Return home"]
+    assert saved["pending"] is None and saved["blocked_reason"] is None
+    assert saved["next_stage"] == "13-2" and saved["last_ap"] == 210
+    assert datetime.fromisoformat(saved["next_check_at"]) == now + timedelta(minutes=1)
+    actions = (runner.config.state_dir / "important-actions.jsonl").read_text()
+    assert "ap_visit_yielded" in actions and "ap_sweep_requested" not in actions
+
+
+def test_full_native_receipt_budget_leaves_time_to_verify_spend_and_home(runner, monkeypatch):
+    from ba_automator import spend_ap
+    from ba_automator.loot_receipts import REWARD_RECEIPT_TIMEOUT
+
+    elapsed = [spend_ap.VISIT_SECONDS - spend_ap.SWEEP_SECONDS_RESERVE - 1]
+    runner.clock = lambda: elapsed[0]
+    runner.actions = spend_ap.VISIT_INPUTS - spend_ap.SWEEP_INPUTS_RESERVE - 1
+    assert runner.can_start_sweep()
+    screens = iter([
+        APScreen("confirm", ap=160, cost=20, count=1, target=(767, 505)),
+        APScreen("receipt", ap=140, count=1, target=(640, 583)),
+        detail(ap=140, after=120, remaining=2),
+    ])
+    inputs = []
+
+    def wait(kinds, **kwargs):
+        elapsed[0] += 90 if kinds == "receipt" else 35
+        runner.budget()
+        return frame(runner, next(screens))
+
+    def tap(f, *args):
+        runner.budget()
+        if f.screen.kind == "confirm":
+            assert read_state(runner.config)["pending"]["stage"] == "13-3"
+        inputs.append(f.screen.kind)
+        runner.actions += 1
+
+    def inspect(r, receipt, evidence):
+        assert r is runner
+        elapsed[0] += REWARD_RECEIPT_TIMEOUT
+        r.actions += 160
+        return receipt
+
+    runner.wait, runner.tap = wait, tap
+    monkeypatch.setattr(spend_ap, "inspect_receipt", inspect)
+    result = runner.sweep(frame(runner, detail()), 1, next_stage="13-2")
+    assert result.screen.ap == 140 and inputs == ["detail", "confirm", "receipt"]
+    saved = read_state(runner.config)
+    assert saved["pending"] is None and saved["next_stage"] == "13-2"
+    # There is still time/input room for receipt recovery and stable Home.
+    elapsed[0] += 130
+    runner.actions += 12
+    runner.budget()
+    assert not runner.can_start_sweep()
 
 
 @pytest.mark.parametrize(
