@@ -11,9 +11,110 @@ import pytest
 from ba_automator import loot_receipts as lr
 from ba_automator.config import Config
 from ba_automator.runtime import Capture, Journal
-from ba_automator.vision import StartupVision, decode_frame
+from ba_automator.vision import StartupVision, Word, decode_frame
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+@pytest.fixture
+def half_pixel_scroll(monkeypatch):
+    """Saved Bounty pixels; only heading/quantity OCR is recorded, not replayed."""
+    pngs = [(FIXTURES / f"loot-bounty-grid-half-pixel-{side}.png").read_bytes()
+            for side in ("before", "after")]
+    amounts = ([40, 1, 1, 1, 1, 1, 1, 2, 1, 1, 2, 1],
+               [1, 2, 1, 1, 2, 1, 2, 1, 1, 2, 2, 2])
+    pages = []
+    monkeypatch.setattr(lr, "read_native_game_words", lambda *_: [
+        Word("Full List", 1., (575, 129, 705, 158)),
+        Word("Okay", 1., (600, 520, 680, 550)),
+    ])
+    for png, quantities in zip(pngs, amounts):
+        observed = iter(quantities)
+        monkeypatch.setattr(lr, "read_game_crop", lambda *_: [
+            Word(f"x{next(observed)}", 1., (240, 210, 320, 250)),
+        ])
+        pages.append(lr.page(png, object()))
+        assert next(observed, None) is None
+    return None, pngs, pages
+
+
+def test_half_pixel_scroll_proves_only_the_saved_six_card_overlap(half_pixel_scroll):
+    _, pngs, (before, after) = half_pixel_scroll
+    assert before.kind == after.kind == "grid"
+    assert len(before.cards) == len(after.cards) == 12
+    assert [card.box[3] for card in before.cards[-6:]] == [89] * 6
+    assert [card.box[3] for card in after.cards[:6]] == [88] * 6
+    assert all(a.box[1] - b.box[1] == 51
+               for a, b in zip(before.cards[-6:], after.cards[:6]))
+    assert lr.scrolled_grid_overlap(before.cards, after.cards) == 6
+    # The six repeated cards are never credited twice; the remaining clipped
+    # bottom row still requires another scroll, not a claim of full coverage.
+    merged = before.cards + after.cards[6:]
+    assert len(merged) == 18
+    assert [c.quantity for c in merged] == [
+        40, 1, 1, 1, 1, 1, 1, 2, 1, 1, 2, 1, 2, 1, 1, 2, 2, 2,
+    ]
+    assert before.trailing_clipped and after.trailing_clipped
+    assert not before.leading_clipped and after.leading_clipped
+    assert not any(lr.same_card(a, b)
+                   for a, b in zip(before.cards[-6:], after.cards[:6]))
+    assert not lr.ReceiptReader.same(before, after)
+    assert not lr.same_receipt_view(*pngs, before)
+
+
+@pytest.mark.parametrize("change", [
+    "quantity", "missing_quantity", "tier", "column", "width", "two_pixel_height",
+    "different_item", "artwork", "silhouette", "interior_alpha", "invalid_icon",
+    "conflicting_names", "reordered", "different_translation", "single_card",
+])
+def test_half_pixel_scroll_still_rejects_changed_or_unproven_cards(half_pixel_scroll, change):
+    _, _, (before, after) = half_pixel_scroll
+    original, changed = before.cards[6], after.cards[0]
+    if change == "quantity":
+        changed = replace(changed, quantity=2)
+    elif change == "missing_quantity":
+        changed = replace(changed, quantity=None)
+    elif change == "tier":
+        changed = replace(changed, tier="T3")
+    elif change in {"column", "width", "two_pixel_height", "different_translation"}:
+        box = list(changed.box)
+        index = {"column": 0, "width": 2, "two_pixel_height": 3,
+                 "different_translation": 1}[change]
+        box[index] += -1 if change == "two_pixel_height" else 2
+        changed = replace(changed, box=tuple(box))
+    elif change == "different_item":
+        # Same quantity and width/height, different school tech-note artwork.
+        changed = replace(changed, icon=after.cards[3].icon)
+    elif change == "invalid_icon":
+        changed = replace(changed, icon=b"not an image")
+    elif change == "conflicting_names":
+        before = replace(before, cards=before.cards[:6] + (
+            replace(original, name="Advanced Tactical Training Blu-ray (Abydos)"),
+        ) + before.cards[7:])
+        changed = replace(changed, name="Advanced Tactical Training Blu-ray (Gehenna)")
+    elif change == "reordered":
+        after = replace(after, cards=after.cards[1:2] + after.cards[:1] + after.cards[2:])
+        changed = after.cards[0]
+    elif change == "single_card":
+        assert lr.scrolled_grid_overlap((original,), (changed,)) == 0
+        return
+    else:
+        image = cv2.imdecode(np.frombuffer(changed.icon, np.uint8), cv2.IMREAD_UNCHANGED)
+        if change == "artwork":
+            image[20:35, 30:50, :3] = 0
+        elif change == "interior_alpha":
+            image[40, 50, 3] = 0
+        else:
+            image[20:35, 30:50, 3] = 0
+        changed = replace(changed, icon=lr.encode(image))
+    assert lr.scrolled_grid_overlap(before.cards, (changed,) + after.cards[1:]) == 0
+
+
+def test_half_pixel_grid_fixtures_exclude_background(half_pixel_scroll):
+    for png in half_pixel_scroll[1]:
+        image = cv2.imdecode(np.frombuffer(png, np.uint8), cv2.IMREAD_COLOR)
+        image[228:1208, 628:1928] = 0
+        assert not np.any(image)
 
 
 @pytest.fixture(scope="module")

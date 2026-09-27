@@ -874,28 +874,49 @@ def same_scrolled_grid_card(a, b):
 
     Compact Full List cards are rendered at fractional scroll positions. Even
     a settled 15px move changes antialiasing inside their artwork and a handful
-    of border pixels. Keep the quantity, tier, column and dimensions exact;
-    admit only the small, observed rendering difference inside the card frame.
+    of border pixels. Keep quantity, tier, column and width exact. A one-pixel
+    height difference permits one fixed half-pixel center alignment, never a
+    search for a matching crop. Admit only small changes inside the card frame.
     ``same_card`` and ``same_receipt_view`` remain strict for every input.
     """
     if (a.quantity is None or a.quantity != b.quantity or a.tier != b.tier
-            or a.box[2:] != b.box[2:] or a.box[0] != b.box[0]
-            or not (83 <= a.box[3] <= 94 and 95 <= a.box[2] <= 115)):
+            or a.box[2] != b.box[2] or abs(a.box[3] - b.box[3]) > 1
+            or a.box[0] != b.box[0]
+            or not all(83 <= c.box[3] <= 94 and 95 <= c.box[2] <= 115
+                       for c in (a, b))):
         return False
     if complete_name(a.name) and complete_name(b.name) and a.name != b.name:
         return False
-    if same_card(a, b):
+    align_height = a.box[3] != b.box[3]
+    if not align_height and same_card(a, b):
         return True
     first, second = [cv2.imdecode(np.frombuffer(c.icon, np.uint8), cv2.IMREAD_UNCHANGED)
                      for c in (a, b)]
-    if (first is None or second is None or first.shape != second.shape
-            or first.shape != (a.box[3], a.box[2], 4)):
+    if any(image is None or image.shape != (card.box[3], card.box[2], 4)
+           for image, card in ((first, a), (second, b))):
         return False
+    if align_height:
+        height, width = min(a.box[3], b.box[3]), a.box[2]
+        # The contour gains a boundary row at a fractional scroll position;
+        # artwork keeps its size. Center-align, without stretching the card.
+        first, second = [
+            cv2.warpAffine(image, np.float32([[1, 0, 0], [0, 1, -.5]]),
+                           (width, height)) if image.shape[0] > height else image
+            for image in (first, second)
+        ]
     # Alpha comes from the full white card outline. Neighboring cards are not
     # evidence, and clipping or a changed silhouette cannot establish overlap.
-    masks = [image[:, :, 3] != 0 for image in (first, second)]
-    if np.count_nonzero(masks[0] != masks[1]) > 16:
+    masks = [image[:, :, 3] > (127 if align_height else 0)
+             for image in (first, second)]
+    different = masks[0] != masks[1]
+    if np.count_nonzero(different) > (32 if align_height else 16):
         return False
+    if align_height:
+        interior = cv2.erode((masks[0] | masks[1]).astype(np.uint8),
+                             np.ones((3, 3), np.uint8),
+                             borderType=cv2.BORDER_CONSTANT, borderValue=0).astype(bool)
+        if np.any(different & interior):
+            return False
     visible = cv2.erode((masks[0] & masks[1]).astype(np.uint8),
                         np.ones((5, 5), np.uint8)).astype(bool)
     if np.count_nonzero(visible) < 4000:

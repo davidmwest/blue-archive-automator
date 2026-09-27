@@ -865,3 +865,15 @@ unchanged AP, and active controls remain separate checks. Tests reject partial,
 contradictory, and low-confidence counters. The fixtures mask the surrounding
 scene and retain only recognition regions; they authorize no additional sweep.
 Game-derived fixtures remain outside the project's MIT grant.
+
+`loot-bounty-grid-half-pixel-{before,after}.png` preserves the two native
+Full List pages from the September 27 Classroom H five-sweep receipt
+(`bounties-20260927T223039-9157ec6c`, receipt 2). After a 51px upward movement,
+the same six cards have normalized contour heights of 89px and 88px. A fixed
+half-pixel center alignment must prove their ordered overlap without relaxing
+strict input identity or changing any observed quantity. Heading and quantity
+OCR are recorded in the lightweight replay; card discovery, silhouettes, icons,
+and overlap comparison use the real saved pixels. Both pages still have a
+clipped bottom row, so this fixture does not prove complete receipt coverage.
+Only the Full List modal remains; surrounding account details and balances are
+masked. The game-derived fixtures remain outside the project's MIT grant.
