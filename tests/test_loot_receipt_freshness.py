@@ -78,13 +78,22 @@ def test_changed_card_text_requires_exact_confident_reparse(
     words = [] if reading == "missing" else [Word(text, confidence, (0, 0, 20, 20))]
     calls = []
 
-    def read_crop(*args):
-        calls.append(True)
+    def read_crop(vision, image, scale=3):
+        calls.append(scale)
         return words
 
     monkeypatch.setattr(lr, "read_crop", read_crop)
     assert lr.same_receipt_view(before, lr.encode(image), DAILY, vision=object()) is accepted
-    assert calls == [True]
+    if field == "name":
+        assert calls == [3]
+    elif reading == "missing" or confidence < .85:
+        # An unreadable initial count may try a larger crop, but the same
+        # invalid reading must stop there without authorizing input.
+        assert calls == [2, 4]
+    else:
+        # A confident count, including one that contradicts the receipt,
+        # must not be overridden by additional reads.
+        assert calls == [2]
 
 
 def test_named_card_identity_allows_animation_but_not_changed_name_count_or_size():
