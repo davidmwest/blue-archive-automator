@@ -992,14 +992,80 @@ def test_heading_validation_cannot_extend_capture_deadline(harness, monkeypatch)
     cap = reader.capture()
     reader.read(cap)
     h.now += 6
+    checks = []
 
     def slow_heading_check(*args, **kwargs):
+        checks.append(h.now)
         h.now += 6
         return True
 
     monkeypatch.setattr(lr, "same_receipt_view", slow_heading_check)
-    with pytest.raises(TaskError, match="input expired or foreground changed"):
+    with pytest.raises(TaskError, match="capture expired before inspection input"):
         reader.input(cap, h.pages[0].cards[0].target)
+    assert len(checks) == 3
+    assert h.inputs == []
+    assert cap.captured_at == 0 and cap.deadline == 5
+
+
+@pytest.mark.parametrize("kind", ["reward", "sweep"])
+def test_expired_identity_validation_reobserves_before_one_unsent_input(harness, monkeypatch, kind):
+    h = harness
+    h.pages = [replace(h.pages[0], kind=kind)]
+    reader = h.reader()
+    cap = reader.capture()
+    reader.read(cap)
+    h.now += 6
+    checks = []
+    # Distinct snapshots model harmless particles. Only the strict identity
+    # matcher can promote them as the reference for the next observation.
+    h.runner.device.screenshot = lambda: str(h.now).encode()
+
+    def verify(before, after, expected, **kwargs):
+        checks.append((before, after, expected))
+        assert h.inputs == []
+        if len(checks) == 1:
+            h.now += 6.87  # Actual native Cafe heading comparison duration.
+        return True
+
+    monkeypatch.setattr(lr, "same_receipt_view", verify)
+    reader.input(cap, h.pages[0].cards[0].target)
+    assert len(checks) == 2
+    assert checks[0][0] == cap.png
+    assert checks[1][0] == checks[0][1]
+    assert all(check[2] == h.pages[0] for check in checks)
+    assert h.inputs == [("tap", h.pages[0].cards[0].target)]
+    assert cap.captured_at == 0 and cap.deadline == 5
+    events = [json.loads(line) for line in
+              (h.evidence.parent / "events.jsonl").read_text().splitlines()]
+    failures = [e for e in events if e["event"] == "receipt_revalidation_failed"]
+    assert [e["reason"] for e in failures] == ["expired_validation"]
+    assert failures[0]["fresh_age"] == pytest.approx(6.87)
+    accepted = [e for e in events if e["event"] == "receipt_revalidated"]
+    assert len(accepted) == 1 and accepted[0]["fresh_age"] < 5
+
+
+@pytest.mark.parametrize("change", ["receipt", "foreground"])
+def test_expired_identity_validation_never_authorizes_a_later_changed_screen(harness, monkeypatch, change):
+    h = harness
+    reader = h.reader()
+    cap = reader.capture()
+    reader.read(cap)
+    h.now += 6
+    checks = []
+
+    def verify(*args, **kwargs):
+        checks.append(h.now)
+        if len(checks) == 1:
+            h.now += 6
+            if change == "foreground":
+                h.foreground = "com.android.settings"
+            return True
+        return False
+
+    monkeypatch.setattr(lr, "same_receipt_view", verify)
+    with pytest.raises(TaskError):
+        reader.input(cap, h.pages[0].cards[0].target)
+    assert len(checks) <= 2
     assert h.inputs == []
 
 

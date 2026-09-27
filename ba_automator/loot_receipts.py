@@ -1053,28 +1053,42 @@ class ReceiptReader:
                 if self.observed is not None and self.observed[0] == cap.png
                 else None
             )
-            attempts = 3 if expected and expected.kind == "reward" else 1
+            reference = cap
+            attempts = 3
             for attempt in range(attempts):
                 fresh = self.capture()
                 fresh_in_time = fresh.is_fresh(r.clock())
                 matches = fresh_in_time and same_receipt_view(
-                    cap.png, fresh.png, expected, vision=self.vision
+                    reference.png, fresh.png, expected, vision=self.vision
                 )
-                if matches:
+                # Strict identity OCR can itself outlast a native capture's
+                # deadline. It proves what was shown, never a right to tap an
+                # expired frame. Reobserve without input; comparing against
+                # the just-verified pixels can avoid repeating expensive OCR.
+                valid_in_time = fresh.is_fresh(r.clock())
+                if matches and valid_in_time:
                     break
-                self.evidence_frame(cap, "refresh-before")
+                self.evidence_frame(reference, "refresh-before")
                 self.evidence_frame(fresh, "refresh-after")
                 r.journal.record(
                     "receipt_revalidation_failed",
-                    reason="changed_receipt" if fresh_in_time else "expired_capture",
+                    reason=("expired_capture" if not fresh_in_time else
+                            "expired_validation" if matches else "changed_receipt"),
                     fresh_age=r.clock() - fresh.captured_at,
                     attempt=attempt + 1,
                 )
-                if not fresh_in_time or attempt + 1 == attempts:
+                retry_expired_validation = matches and not valid_in_time
+                if matches:
+                    reference = fresh
+                matches = False
+                if (not fresh_in_time or attempt + 1 == attempts
+                        or (not retry_expired_validation
+                            and not (expected and expected.kind == "reward"))):
                     break
                 # A passing particle may obscure an otherwise stationary
                 # heading. Wait without input, then compare another fresh frame
-                # to the original recognized receipt using every same guard.
+                # using the same identity guards. A mismatching frame never
+                # becomes the next comparison reference.
                 self.evidence_frame(fresh, f"refresh-rejected-{attempt + 1}")
                 r.sleep(.25)
             if not matches:
