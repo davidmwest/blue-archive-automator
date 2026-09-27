@@ -764,6 +764,15 @@ unusable for spending. This is offline confirmation-recognition evidence,
 not proof of a completed native-resolution lesson. The game-derived fixture
 is outside the project's MIT grant.
 
+`lesson-haruhabara-preview-native.png` and its recorded OCR sidecar retain
+the September 27 native Haruhabara Multimedia Center confirmation before
+the fourth lesson. Full-frame OCR splits its confident `4→3` ticket cost
+into `4` and `→3`; scoped crop agreement must corroborate both visible
+digits. Only the Location Info modal and its original OCR remain; the
+account header and surrounding scene are masked. The fixture tests safe
+confirmation recognition, not a fourth ticket spend. The game-derived
+fixture is outside the project's MIT grant.
+
 The native Lessons sidecar includes absolute source pixel boxes and output
 shapes for every recorded crop. Replay resizes those exact fixture regions on
 the current OpenCV build, since cubic interpolation can round differently

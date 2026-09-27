@@ -1,0 +1,263 @@
+{
+  "description": "Sanitized native 1440p Location Info before the fourth lesson; original full-frame OCR retained only inside the modal, plus recorded local crop OCR. Account resource bar and background removed. Full-frame OCR splits the visible 4→3 into two words.",
+  "reads": [
+    {
+      "shape": [
+        1440,
+        2560,
+        3
+      ],
+      "sha256": "08f4c2ac629644b79823705983f180bfb867bf74c72cb577396867ccd15ec74a",
+      "words": [
+        {
+          "text": "Location Info",
+          "confidence": 0.99995,
+          "box": [
+            1069,
+            193,
+            1491,
+            266
+          ]
+        },
+        {
+          "text": "Lv. 2|Haruhabara Multimedia Center",
+          "confidence": 0.97845,
+          "box": [
+            629,
+            335,
+            1534,
+            394
+          ]
+        },
+        {
+          "text": "A large electronics franchise store, also known as Multimedia Haruba. While the",
+          "confidence": 0.99263,
+          "box": [
+            632,
+            436,
+            1933,
+            479
+          ]
+        },
+        {
+          "text": "store mainly sells electronics, products like gaming devices, toys, and figures",
+          "confidence": 0.99281,
+          "box": [
+            630,
+            485,
+            1882,
+            531
+          ]
+        },
+        {
+          "text": "can also be found here.",
+          "confidence": 0.97403,
+          "box": [
+            632,
+            534,
+            1021,
+            577
+          ]
+        },
+        {
+          "text": "Lesson Rewards",
+          "confidence": 0.99997,
+          "box": [
+            1120,
+            627,
+            1442,
+            670
+          ]
+        },
+        {
+          "text": "LOCATION PASS",
+          "confidence": 0.82841,
+          "box": [
+            659,
+            728,
+            709,
+            748
+          ]
+        },
+        {
+          "text": "EXP",
+          "confidence": 0.99968,
+          "box": [
+            719,
+            764,
+            768,
+            798
+          ]
+        },
+        {
+          "text": "x100",
+          "confidence": 0.87498,
+          "box": [
+            683,
+            787,
+            767,
+            828
+          ]
+        },
+        {
+          "text": "Tips",
+          "confidence": 0.9998,
+          "box": [
+            754,
+            865,
+            864,
+            920
+          ]
+        },
+        {
+          "text": "Only currently recruited students can earn Relationship Points.",
+          "confidence": 0.99992,
+          "box": [
+            873,
+            870,
+            1845,
+            918
+          ]
+        },
+        {
+          "text": "4",
+          "confidence": 1.0,
+          "box": [
+            1439,
+            990,
+            1464,
+            1021
+          ]
+        },
+        {
+          "text": "→3",
+          "confidence": 0.99841,
+          "box": [
+            1469,
+            984,
+            1545,
+            1028
+          ]
+        },
+        {
+          "text": "Start Lesson",
+          "confidence": 0.99991,
+          "box": [
+            1080,
+            1067,
+            1479,
+            1132
+          ]
+        }
+      ]
+    },
+    {
+      "shape": [
+        110,
+        170,
+        3
+      ],
+      "sha256": "ea68ff16a11c6b1d9c155f6816f09974a549f2a8bba34d8593d4d08f7bc66444",
+      "words": [
+        {
+          "text": "23",
+          "confidence": 0.99874,
+          "box": [
+            0,
+            0,
+            169,
+            109
+          ]
+        }
+      ],
+      "source_box": [
+        1620,
+        370,
+        1688,
+        414
+      ]
+    },
+    {
+      "shape": [
+        110,
+        170,
+        3
+      ],
+      "sha256": "df33d28ac51af9684c11d79d512f2793be396c3c7a019972598b7504192d31cc",
+      "words": [],
+      "source_box": [
+        1896,
+        370,
+        1964,
+        414
+      ]
+    },
+    {
+      "shape": [
+        105,
+        135,
+        3
+      ],
+      "sha256": "b6ef7564081b85dd8583a9035fb87c6e01c452e2c7ddaac8ae77bce71c487aef",
+      "words": [],
+      "source_box": [
+        1904,
+        378,
+        1958,
+        420
+      ]
+    },
+    {
+      "shape": [
+        66,
+        69,
+        3
+      ],
+      "sha256": "1fa065ad9d26a58912fdb07cb0878c2d4c25916482944b9357706def3075ec49",
+      "words": [
+        {
+          "text": "11",
+          "confidence": 0.99836,
+          "box": [
+            0,
+            4,
+            68,
+            65
+          ]
+        }
+      ],
+      "source_box": [
+        1908,
+        374,
+        1954,
+        418
+      ]
+    },
+    {
+      "shape": [
+        110,
+        115,
+        3
+      ],
+      "sha256": "36240ace47c30f08a6550c2175b248ec464ac3d9685c296bd54a838f721da36c",
+      "words": [
+        {
+          "text": "11",
+          "confidence": 0.99802,
+          "box": [
+            0,
+            5,
+            114,
+            109
+          ]
+        }
+      ],
+      "source_box": [
+        1908,
+        374,
+        1954,
+        418
+      ]
+    }
+  ]
+}

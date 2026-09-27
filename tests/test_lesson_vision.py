@@ -295,8 +295,8 @@ def test_confirmation_waits_for_its_final_position_before_parsing_students():
 
 
 class NativeConfirmationOCR:
-    def __init__(self):
-        path = FIXTURES / "lesson-hyakki-preview-native.json"
+    def __init__(self, name="hyakki"):
+        path = FIXTURES / f"lesson-{name}-preview-native.json"
         self.reads = json.loads(path.read_text(encoding="utf-8"))["reads"]
         self.full_words = self.reads[0]["words"]
         self.crops = {item["sha256"]: item["words"] for item in self.reads[1:]}
@@ -321,9 +321,9 @@ class NativeConfirmationOCR:
         return [Word(item["text"], item["confidence"], tuple(item["box"])) for item in recorded]
 
 
-def native_confirmation():
-    frame = cv2.imread(str(FIXTURES / "lesson-hyakki-preview-native.png"))
-    ocr = NativeConfirmationOCR()
+def native_confirmation(name="hyakki"):
+    frame = cv2.imread(str(FIXTURES / f"lesson-{name}-preview-native.png"))
+    ocr = NativeConfirmationOCR(name)
     return frame, ocr, LessonVision(ocr)
 
 
@@ -336,6 +336,58 @@ def test_native_confirmation_recovers_settled_border_and_complete_ticket_cost():
     assert (screen.tickets, screen.tickets_after) == (7, 6)
     assert [(student.owned, student.bond) for student in screen.students] == [(True, 9), (True, 11), (True, 11)]
     assert screen.inspection_complete and screen.start_target == (639, 550)
+
+
+def test_native_confirmation_reads_complete_cost_split_into_adjacent_words():
+    frame, ocr, vision = native_confirmation("haruhabara")
+    assert any(word["text"] == "4" for word in ocr.full_words)
+    assert any(word["text"] == "→3" for word in ocr.full_words)
+    screen = analyze(vision, frame)
+    assert screen.kind == "confirm"
+    assert screen.room_name == "Haruhabara Multimedia Center"
+    assert (screen.tickets, screen.tickets_after) == (4, 3)
+    assert [(student.owned, student.bond) for student in screen.students] == [
+        (True, 23), (False, None), (True, 11)]
+    assert screen.inspection_complete and screen.start_target == (640, 549)
+
+
+@pytest.mark.parametrize("before,after,confidence", [
+    ("4", "→3", .89), ("4", "3", .99), ("4", "→2", .99),
+    ("4", "→5", .99), ("0", "→-1", .99), ("4", "→3 5", .99),
+    ("", "→3", .99), ("4", "→", .99),
+])
+def test_split_confirmation_cost_needs_complete_confident_single_ticket_expression(before, after, confidence):
+    frame, ocr, vision = native_confirmation("haruhabara")
+    for word in ocr.full_words:
+        if word["text"] == "4":
+            word.update(text=before, confidence=confidence)
+        elif word["text"] == "→3":
+            word.update(text=after, confidence=confidence)
+    screen = analyze(vision, frame)
+    assert screen.kind == "confirm"
+    assert (screen.tickets, screen.tickets_after) == (None, None)
+
+
+@pytest.mark.parametrize("box", [
+    [1440, 984, 1546, 1028],  # overlapping words
+    [1400, 984, 1430, 1028],  # arrow to the left of the before count
+    [1468, 950, 1546, 970],  # separate text line within the bubble
+    [1600, 984, 1680, 1028],  # outside this modal's cost bubble
+])
+def test_split_confirmation_cost_requires_same_line_nonoverlapping_scoped_words(box):
+    frame, ocr, vision = native_confirmation("haruhabara")
+    next(word for word in ocr.full_words if word["text"] == "→3")["box"] = box
+    screen = analyze(vision, frame)
+    assert (screen.tickets, screen.tickets_after) == (None, None)
+
+
+def test_native_confirmation_can_read_arrow_as_a_separate_word():
+    frame, ocr, vision = native_confirmation("haruhabara")
+    arrow = next(word for word in ocr.full_words if word["text"] == "→3")
+    arrow.update(text="→", box=[1468, 984, 1502, 1028])
+    ocr.full_words.append({"text": "3", "confidence": .999, "box": [1504, 984, 1546, 1028]})
+    screen = analyze(vision, frame)
+    assert (screen.tickets, screen.tickets_after) == (4, 3)
 
 
 def test_native_confirmation_replay_requires_actual_fixture_crop_pixels():

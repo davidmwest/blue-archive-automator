@@ -168,6 +168,22 @@ class LessonVision:
         counts = _unique_matches(selected, expression)
         if len(counts) == 1:
             return int(counts[0][1]), int(counts[0][2])
+        # Native OCR can split a fully visible cost into "4" and "→3".
+        # Join only adjacent words on the same line inside this bubble; every
+        # word must be confident and the entire text must be one single cost.
+        if not counts and len(selected) > 1:
+            ordered = sorted(selected, key=lambda word: word.box[0])
+            aligned = all(
+                left.box[2] <= right.box[0]
+                and min(left.box[3], right.box[3]) - max(left.box[1], right.box[1])
+                >= .5 * min(left.box[3] - left.box[1], right.box[3] - right.box[1])
+                for left, right in zip(ordered, ordered[1:])
+            )
+            match = re.fullmatch(expression, " ".join(word.text.strip() for word in ordered))
+            if aligned and match and all(word.confidence >= .9 for word in ordered):
+                before, after = int(match[1]), int(match[2])
+                if 1 <= before <= 99 and after == before - 1:
+                    return before, after
         if counts or native_frame.shape[1] <= 1280:
             return None, None
         # Native full-frame OCR can retain only the final digit of the cost.
