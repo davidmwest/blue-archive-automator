@@ -1648,9 +1648,14 @@ def test_daily_summary_preserves_completed_work_and_identifies_failed_steps(conf
                               "aborted": terminal in {"failed", "stopped"}}) + "\n"
 
     class SummaryFactory(ProcessFactory):
+        def __init__(self):
+            super().__init__()
+            self.ready = threading.Event()
+
         def __call__(self, arguments, **options):
             process = super().__call__(arguments, **options)
             process.stdout = SummaryOutput(process)
+            self.ready.set()
             return process
 
     factory = SummaryFactory()
@@ -1658,7 +1663,10 @@ def test_daily_summary_preserves_completed_work_and_identifies_failed_steps(conf
     controller = DashboardController(config_path, process_factory=factory, wall_clock=lambda: now)
     try:
         controller.enqueue("daily")
-        eventually(lambda: len(factory.processes) == 1)
+        # Dispatch durably writes the Daily claim and config before launching.
+        # This test checks summary handling, not filesystem/startup latency.
+        assert factory.ready.wait(15), controller.status()
+        assert len(factory.processes) == 1
         factory.processes[0].finish(0 if terminal == "success" else 130 if terminal == "stopped" else 1)
         eventually(lambda: controller.status()["current_job"] is None)
         status = controller.status()
