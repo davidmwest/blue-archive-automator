@@ -110,7 +110,7 @@ collecting Cafe AP clears its storage. when automatic AP spending is enabled, a 
 
 a successful Cafe job schedules the next visit for three hours and 15 seconds later. failures retry after 15 minutes; three consecutive failures pause retries until you press resume. the schedule survives server restarts. queued jobs don't. no login service or operating-system schedule is installed, so keep `serve` running for scheduled visits.
 
-**do everything** resumes the queue and checks what can run. the current batch finishes first, then enabled jobs that are due run in order, followed by a fresh check for red dots and excess AP. clicking again while that pass is pending or running doesn't add another pass. your AP floor, spending settings, and unresolved spending holds still apply; a Daily already attempted this game day isn't repeated.
+**do everything** resumes the queue and checks what can run. the current batch finishes first, then enabled jobs that are due run in order, followed by a fresh check for red dots and excess AP. when their daily battle settings are enabled, Total Assault and Tactical Challenge also get a catch-up visit even if Daily was already attempted. clicking again while that pass is pending or running doesn't add another pass. your AP floor, spending settings, and unresolved spending holds still apply; the whole Daily plan isn't repeated.
 
 **pause queue** lets the current job finish. open **manual controls** to pick one task, just resume queued work, or **stop now + pause** to interrupt the active job. failed-job notices appear below these controls. settings changes are rejected while any job is active or queued. press **Ctrl+C** to stop a CLI run or the server.
 

@@ -587,6 +587,12 @@ class DashboardController:
                        "created_at": _timestamp()}
                 self._queue.append(job)
                 self._queued(job)
+            if (self.config.total_assault_enabled_in_daily
+                    and not any(job["task"] in {"daily", "total_assault"} for job in self._queue)):
+                job = {"id": uuid4().hex, "task": "total_assault", "source": "available",
+                       "created_at": _timestamp()}
+                self._queue.append(job)
+                self._queued(job)
             # Explicit catch-up always gets a fresh final home scan, even when
             # no schedule is due or the periodic check-in timer is disabled.
             # Its ordinary badge/AP follow-ups still honor opt-ins and holds.

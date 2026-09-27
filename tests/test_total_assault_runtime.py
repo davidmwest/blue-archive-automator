@@ -49,6 +49,20 @@ def qualify(runner):
     assault_state.record_mock(runner.config, CONTEXT, TEAM, WIN, runner.run_dir.name, now=NOW)
 
 
+def test_difficulty_survey_records_event_period_without_shadowing_journal_event(runner):
+    stages = tuple(AssaultStage(tier, CONTEXT.boss, (1100, 300), False)
+                   for tier in ("normal", "hardcore", "lunatic"))
+    menu = frame("menu", boss=CONTEXT.boss, event_period=CONTEXT.event_id,
+                 tickets=6, stages=stages)
+    runner.swipe = lambda *args: pytest.fail("The complete list needs no scrolling")
+    observed, current = runner.survey(menu)
+    assert current is menu and observed["hardcore"].locked is False
+    records = [json.loads(line) for line in (runner.run_dir / "events.jsonl").read_text().splitlines()]
+    survey = next(record for record in records if record["event"] == "difficulty_survey")
+    assert survey["event_period"] == CONTEXT.event_id
+    assert survey["tickets"] == 6 and survey["boss"] == CONTEXT.boss
+
+
 def test_real_input_requires_fresh_mock_in_this_run(runner):
     sent = []
     runner.tap = lambda *args: sent.append(args)

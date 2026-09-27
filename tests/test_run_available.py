@@ -77,19 +77,21 @@ def test_active_job_and_queued_work_finish_before_one_catchup_scan(controlled):
     assert len(factory.processes) == 3
 
 
-def test_available_runs_enabled_tactical_battles_before_reward_scan_once(controlled):
+@pytest.mark.parametrize("battle_task", ["tactical_battles", "total_assault"])
+def test_available_runs_enabled_battles_before_reward_scan_once(controlled, battle_task):
     controller, factory = controlled
-    configure(controller, tactical_battles_enabled_in_daily=True,
+    configure(controller, **{f"{battle_task}_enabled_in_daily": True},
               tactical_battles_preserve_tickets=1)
     with controller._condition:
         result = controller.run_available()
-        assert [job["task"] for job in result["jobs"]] == ["tactical_battles", "red_dots"]
+        assert [job["task"] for job in result["jobs"]] == [battle_task, "red_dots"]
         assert all(job["source"] == "available" for job in result["jobs"])
         assert controller.run_available()["jobs"] == []
     eventually(lambda: len(factory.processes) == 1)
-    assert factory.processes[0].arguments[-1] == "tactical_battles"
-    assert task_plan("tactical_battles", controller.config) == (
-        "restart", "tactical_battles", "tactical_rewards", "red_dots")
+    assert factory.processes[0].arguments[-1] == battle_task
+    reward_task = "assault_rewards" if battle_task == "total_assault" else "tactical_rewards"
+    assert task_plan(battle_task, controller.config) == (
+        "restart", battle_task, reward_task, "red_dots")
     factory.processes[0].finish()
     eventually(lambda: len(factory.processes) == 2)
     assert factory.processes[1].arguments[-1] == "red_dots"
@@ -100,12 +102,15 @@ def test_available_runs_enabled_tactical_battles_before_reward_scan_once(control
 
 def test_available_daily_plan_covers_tactical_battles_without_duplicate_job(controlled):
     controller, _ = controlled
-    configure(controller, daily_schedule_enabled=True, tactical_battles_enabled_in_daily=True)
+    configure(controller, daily_schedule_enabled=True, tactical_battles_enabled_in_daily=True,
+              total_assault_enabled_in_daily=True)
     result = controller.run_available()
     assert [job["task"] for job in result["jobs"]] == ["daily", "red_dots"]
     plan = task_plan("daily", controller.config)
     assert plan.count("tactical_battles") == 1
     assert plan.index("tactical_battles") < plan.index("tactical_rewards")
+    assert plan.count("total_assault") == 1
+    assert plan.index("total_assault") < plan.index("assault_rewards")
 
 
 def test_available_tactical_catchup_does_not_replay_completed_daily(controlled):
@@ -116,6 +121,65 @@ def test_available_tactical_catchup_does_not_replay_completed_daily(controlled):
     result = controller.run_available()
     assert [job["task"] for job in result["jobs"]] == ["tactical_battles", "red_dots"]
     assert daily_schedule.read_state(controller.config) == saved
+
+
+@pytest.mark.parametrize("status", ["success", "failed", "stopped", "running", "skipped"])
+@pytest.mark.parametrize("enabled", [False, True])
+def test_available_total_assault_honors_opt_in_after_todays_daily(controlled, status, enabled):
+    controller, _ = controlled
+    configure(controller, daily_schedule_enabled=True, total_assault_enabled_in_daily=enabled)
+    saved = occurrence(status)
+    daily_schedule.write_state(controller.config, saved)
+    with controller._condition:
+        result = controller.run_available()
+        assert [job["task"] for job in result["jobs"]] == (
+            ["total_assault", "red_dots"] if enabled else ["red_dots"])
+        assert controller.run_available()["jobs"] == []
+    assert daily_schedule.read_state(controller.config) == saved
+
+
+def test_available_raid_catchup_waits_for_active_and_queued_jobs(controlled):
+    controller, factory = controlled
+    configure(controller, total_assault_enabled_in_daily=True, checkin_schedule_enabled=False)
+    controller.enqueue("restart")
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    controller.enqueue("tasks")
+    assert controller.run_available()["pending"]
+    assert controller.run_available()["jobs"] == []
+    factory.processes[0].finish()
+    eventually(lambda: len(factory.processes) == 2)
+    assert factory.processes[1].arguments[-1] == "tasks"
+    assert controller.status()["run_available_pending"]
+    factory.processes[1].finish()
+    eventually(lambda: len(factory.processes) == 3)
+    assert factory.processes[2].arguments[-1] == "total_assault"
+    assert controller.run_available()["jobs"] == []
+    factory.processes[2].finish()
+    eventually(lambda: len(factory.processes) == 4)
+    assert factory.processes[3].arguments[-1] == "red_dots"
+    assert controller.run_available()["jobs"] == []
+    factory.processes[3].finish()
+    eventually(lambda: not controller.status()["run_available_active"])
+    assert factory.max_active == 1
+    assert len(factory.processes) == 4
+
+
+def test_available_combines_enabled_battles_serially_before_scan(controlled):
+    controller, factory = controlled
+    configure(controller, tactical_battles_enabled_in_daily=True,
+              total_assault_enabled_in_daily=True, checkin_schedule_enabled=False)
+    with controller._condition:
+        result = controller.run_available()
+        assert [job["task"] for job in result["jobs"]] == [
+            "tactical_battles", "total_assault", "red_dots"]
+    for index, task in enumerate(("tactical_battles", "total_assault", "red_dots")):
+        eventually(lambda: len(factory.processes) == index + 1)
+        assert factory.processes[index].arguments[-1] == task
+        assert controller.run_available()["jobs"] == []
+        factory.processes[index].finish()
+    eventually(lambda: not controller.status()["run_available_active"])
+    assert factory.max_active == 1 and len(factory.processes) == 3
 
 
 def test_pausing_before_batch_drains_retains_request_without_dispatch(controlled):

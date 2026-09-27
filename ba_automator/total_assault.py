@@ -76,8 +76,14 @@ class TotalAssaultRunner(AssaultAssistantMixin, AssaultBattleMixin, ShopRunner):
                 self.fail("Total Assault event changed while surveying difficulties")
             for stage in frame.screen.stages:
                 old = observed.get(stage.difficulty)
-                if old is not None and old.locked != stage.locked:
-                    self.fail("Total Assault difficulty lock changed during the survey")
+                if old is not None and old.locked is not None:
+                    # A clipped row may become readable on the next scroll,
+                    # or lose its control again. Only definite observations
+                    # can contradict or replace a verified lock status.
+                    if stage.locked is None:
+                        continue
+                    if old.locked != stage.locked:
+                        self.fail("Total Assault difficulty lock changed during the survey")
                 observed[stage.difficulty] = stage
             signature = tuple((stage.difficulty, stage.locked) for stage in frame.screen.stages)
             if "lunatic" in observed or signature == previous:
@@ -85,7 +91,7 @@ class TotalAssaultRunner(AssaultAssistantMixin, AssaultBattleMixin, ShopRunner):
             previous = signature
             self.swipe(frame, (1050, 530), (1050, 270), "Inspect harder Total Assault difficulties")
             frame = self.wait("menu")
-        self.journal.record("difficulty_survey", event=identity[1], boss=identity[0],
+        self.journal.record("difficulty_survey", event_period=identity[1], boss=identity[0],
                             tickets=identity[2], stages=[asdict(s) for s in observed.values()])
         return observed, frame
 

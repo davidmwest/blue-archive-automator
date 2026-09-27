@@ -11,6 +11,7 @@ from ba_automator.config import Config, ConfigError
 from ba_automator.locking import LockError
 from ba_automator.runtime import RunResult, TaskError
 from ba_automator.task_execution import run_daily_plan
+from ba_automator.tasks import task_plan
 
 
 def result(task, status="success"):
@@ -55,6 +56,25 @@ def test_multiple_failures_each_get_one_navigation_recovery_and_no_task_retry():
     assert calls == ["restart", "bounties", "restart", "lessons", "restart", "spend_ap", "restart", "tasks"]
     assert [item["task"] for item in summary["failed_tasks"]] == ["bounties", "lessons", "spend_ap"]
     assert summary["completed_tasks"] == ["restart", "tasks"]
+
+
+def test_enabled_daily_raid_still_runs_once_after_unrelated_task_failures(tmp_path):
+    config = Config(serial="127.0.0.1:5695", package="com.nexon.bluearchive",
+                    state_dir=tmp_path / "state", total_assault_enabled_in_daily=True)
+    run, calls, events = harness({
+        "free_pack": TaskError("receipt is still animating", Path("free-pack-trace")),
+        "cafe": TaskError("visitor name could not be read", Path("cafe-trace")),
+        "lessons": TaskError("room capture expired", Path("lesson-trace")),
+    })
+    summary = run_daily_plan(task_plan("daily", config), run, events.append)
+    assert summary["status"] == "partial_failure" and not summary["aborted"]
+    assert calls.count("total_assault") == 1
+    assert calls.count("assault_rewards") == 1
+    assert calls[calls.index("lessons") + 1:calls.index("assault_rewards") + 1] == [
+        "restart", "total_assault", "assault_rewards",
+    ]
+    assert "total_assault" in summary["completed_tasks"]
+    assert [item["task"] for item in summary["failed_tasks"]] == ["free_pack", "cafe", "lessons"]
 
 
 def test_final_notification_failure_does_not_trigger_pointless_recovery():

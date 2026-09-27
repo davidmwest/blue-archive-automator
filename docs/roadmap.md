@@ -99,3 +99,7 @@ The Important Actions header links to a full plain-text log saved as `YYYY-MM-DD
 ## Total Assault
 
 A dedicated Total Assault task adds target difficulty and mock-win margin settings, an optional Daily step, and a standalone queue action. The policy tests auto formation, optionally substitutes a matching assistant for the least-damage striker, requires a second mock for that new team, and reuses only a verified team for real entry. It then sweeps remaining tickets at the requested target. Staged live validation completed the Hardcore assistant mock, real clear, and five-ticket sweep, with **600 Total Assault Coins and 60 Advanced Total Assault Coins** verified and zero tickets remaining. Recognition fixes were added between these steps; a fresh uninterrupted daemon run remains unverified. Required easier-tier unlocks use the same policy checks but retain research and offline coverage only. The evidence and recognized battle-screen limits belong in [Total Assault](total-assault.md).
+
+## Final Restriction Release — proposed
+
+[The design proposal](final-restriction-release.md) covers Fury of Set's seasonal floor progression, ten-student teams, earned rewards, and bounded combat continuations. Start with screen capture and reward-only inspection, then validate one low-floor Auto clear with a player-prepared formation. Tier progression, assistants, and scripted skills follow separately. No implementation or live validation is claimed; current entry costs, result recovery, and reward behavior still need observation.

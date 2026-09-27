@@ -66,6 +66,7 @@ search_minutes = 10 # 1..30; fractional minutes are supported
 [total_assault]
 # Mock-test this difficulty before spending a ticket; stop if it cannot be verified.
 difficulty = "hardcore" # normal, hard, very_hard, hardcore, extreme, insane, torment, lunatic
+# With daily.schedule_enabled, visit once per game day regardless of any badge.
 enabled_in_daily = false
 # Minimum seconds left in a winning mock battle before allowing the real attempt.
 comfort_seconds = 30

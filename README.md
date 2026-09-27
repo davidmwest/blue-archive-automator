@@ -63,7 +63,7 @@ turn on **run daily after reset** in settings to run that plan once per game day
 
 between jobs, it checks red dots and AP every 30 minutes by default. change that interval or turn it off in settings. a successful check after another job resets the timer, so it doesn't wake the game just to look again. reward collection and AP spending use the same queue and your existing settings. [periodic check-ins →](docs/getting-started.md#periodic-check-ins)
 
-most of the time, the controls are just **do everything** and **pause queue**. do everything resumes the queue, finishes anything already in progress, runs enabled jobs that are due, then checks for red dots and extra AP right away. it also uses remaining Tactical Challenge tickets above your reserve when enabled. it keeps your AP floor and spending settings. individual jobs and the immediate stop button are under **manual controls**. failed jobs show up underneath, when there's something to look at.
+most of the time, the controls are just **do everything** and **pause queue**. do everything resumes the queue, finishes anything already in progress, runs enabled jobs that are due, then checks for red dots and extra AP right away. it also checks Total Assault tickets and remaining Tactical Challenge tickets above your reserve when their daily battle settings are enabled, even if today's Daily was already attempted. it keeps your AP floor and spending settings. individual jobs and the immediate stop button are under **manual controls**. failed jobs show up underneath, when there's something to look at.
 
 tactical challenge gives each usable ticket its own 10-minute search window by default, adjustable in settings. it spends the first 37% setting a benchmark, then gradually relaxes toward the weakest quarter of teams it has seen. after ten minutes, it keeps searching and relaxes one observed score tier per unsuccessful refresh until an eligible opponent qualifies. the timer never consumes a ticket; the manual-play reserve stays available. [tactical settings →](docs/getting-started.md#tactical-challenge)
 
@@ -80,6 +80,8 @@ the first profile is the global English game at **1280×720, 320 DPI**. use a de
 [the engineering notes](docs/engineering.md) walk through the missed-student bug and the camera fix. [the design](docs/design.md) sets the task contracts and build order; [the architecture](docs/architecture.md) describes the code that exists today.
 
 ## what's next
+
+Final Restriction Release, the mode with Fury of Set, has a [design proposal](docs/final-restriction-release.md): seasonal progress, a saved ten-student team, and one floor attempt at a time so AP and cafe work can keep moving. it's a plan, not an implemented job yet.
 
 capture an actual school rank-up, repeat Cafe visits after cooldown, and validate invitation selection across deeper lists and capped students. AP spending now has its own floor and rotation policy. crafting refill checks and event farming follow one verified routine at a time.
 

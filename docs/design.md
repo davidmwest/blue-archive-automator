@@ -214,3 +214,7 @@ Tactical Challenge separates reward collection from battle policy. The reward ta
 ## Total Assault policy
 
 Total Assault has a configurable target difficulty, defaulting to Hardcore, and separate opt-in Daily inclusion. An observed prerequisite ladder may require easier clears, but every real entry needs a winning mock at that difficulty. Auto formation is tested first. A failed or marginal mock may replace the least-damage striker with an eligible assistant matching the attack type, ordered by stars then level, followed by a second mock. The exact passing team is reused for real entry; remaining tickets are swept only after the target clear and sweep eligibility are verified. Unavailable assistants, unreadable evidence, or unsuccessful mocks produce a player-facing failure rather than an untested real attempt. See [Total Assault](total-assault.md).
+
+## Final Restriction Release proposal
+
+The [Final Restriction Release design](final-restriction-release.md) proposes seasonal progression for Fury of Set and future bosses. A short, badge-independent daily check would collect earned rewards and request eligible combat work. Opt-in climbing would use a verified ten-student formation, configured target, and persisted attempt limits, with one battle per queue visit so due AP, Cafe, and Crafting work can run between attempts. This is a proposal only; no Final Restriction Release runner or configuration keys exist yet.

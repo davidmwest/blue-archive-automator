@@ -238,6 +238,10 @@
       : "check every location first. use tickets on rooms with the most owned students; higher relationships break ties.";
     const packEnabled = ["monthly", "half_monthly", "ap"].some((key) => status?.config?.[`packs_${key}_enabled`]);
     $("daily-plan").textContent = `daily does restart → club → free pack → ${packEnabled ? "packs → " : ""}mail → café${status?.config?.bounties_enabled_in_daily === false ? "" : " → bounties"}${status?.config?.scrimmages_enabled_in_daily === false ? "" : " → scrimmages"}${status?.config?.tactical_battles_enabled_in_daily === false ? "" : " → tactical battles"} → tactical rewards${status?.config?.lessons_enabled_in_daily === false ? "" : " → lessons"}${status?.config?.total_assault_enabled_in_daily ? " → total assault" : ""} → raid rewards${status?.config?.ap_schedule_enabled ? " → spend AP" : ""} → collect tasks. home and campaign red dots queue their collection jobs when a run finishes.`;
+    $("total-assault-schedule-status").textContent = !status?.config ? "loading raid schedule…"
+      : !status.config.total_assault_enabled_in_daily ? "automatic raid battles are off. daily still checks rank and points rewards."
+      : !status.config.daily_schedule_enabled ? "raid battles are included in daily, but automatic daily runs are off."
+      : "raid battles are scheduled with daily after reset. no notification dot needed.";
     const packs = status?.schedule?.packs;
     $("packs-status").textContent = packs?.blocked_reason
       ? `paused: ${packs.blocked_reason}. check the game, then queue a pack check.`

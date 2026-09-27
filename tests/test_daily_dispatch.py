@@ -8,6 +8,7 @@ import pytest
 from ba_automator import daily_schedule
 from ba_automator.config import Config
 from ba_automator.server import ApiError, DashboardController
+from ba_automator.tasks import task_plan
 from test_server import ProcessFactory, config_path, eventually  # shared offline process harness
 
 
@@ -78,6 +79,43 @@ def test_daily_catches_up_once_and_survives_server_restart(config_path):
             controller._enqueue_scheduled()
         assert not second.processes
         assert not controller.status()["queue"]
+    finally:
+        controller.close()
+
+
+@pytest.mark.parametrize("raid_enabled", [False, True])
+def test_daily_dispatches_raid_once_per_day_without_badge_observations(config_path, raid_enabled):
+    enable(config_path, '[total_assault]\nenabled_in_daily=' + str(raid_enabled).lower()
+           + '\ndifficulty="hardcore"\n[checkin]\nschedule_enabled=false\n')
+    now = [NOW]
+    factory = ProcessFactory()
+    controller = DashboardController(config_path, process_factory=factory, wall_clock=lambda: now[0])
+    try:
+        # The dispatcher has received no screen or red-dot observations. Raid
+        # spending depends on the saved opt-in, not a reward notification.
+        for day in range(2):
+            if day:
+                now[0] += timedelta(days=1)
+                wake(controller)
+            eventually(lambda: len(factory.processes) == day + 1)
+            process = factory.processes[day]
+            assert process.arguments[-1] == "daily"
+            snapshot = Config.from_file(process.arguments[4])
+            plan = task_plan("daily", snapshot)
+            assert plan.count("total_assault") == int(raid_enabled)
+            assert plan.count("assault_rewards") == 1
+            assert snapshot.total_assault_difficulty == "hardcore"
+            with controller._condition:
+                controller._enqueue_scheduled()
+                controller._enqueue_scheduled()
+                assert not controller._queue
+            process.finish()
+            eventually(lambda: controller.status()["current_job"] is None)
+            with controller._condition:
+                controller._enqueue_scheduled()
+                assert not controller._queue
+                assert len(factory.processes) == day + 1
+        assert factory.max_active == 1
     finally:
         controller.close()
 

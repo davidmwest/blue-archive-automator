@@ -1,6 +1,12 @@
 # Total Assault
 
-pick the difficulty you want in **settings → total assault**, then **queue total assault**. Hardcore is the default. including it in Daily is a separate switch, off by default; when enabled it runs after Lessons and before AP spending and Tasks collection. this changes the manually queued Daily plan, not a nightly schedule. the café timer doesn't run it.
+pick the difficulty you want in **settings → total assault**. Hardcore is the default. turn on **use total assault tickets in daily** and **settings → daily routine → run daily after reset** to check the raid automatically every game day. the raid runs after Lessons and before AP spending and Tasks collection, whether its badge is red, yellow, green, or absent. no badge detection is required for the daily visit.
+
+raid ticket spending is off by default for new profiles. the settings page shows whether automatic raid battles are enabled or whether the Daily timer still needs turning on. the existing Daily scheduler runs once after the Global reset at 19:00 UTC plus the configured delay, catches up on the current game day after downtime, and remembers its attempt across dashboard restarts. it uses the same serial queue as the other jobs; it does not add a second independent raid timer. keep the daemon running and the computer awake. the café timer doesn't run raids.
+
+for an immediate visit, click **do everything** with raid spending enabled, or open the manual jobs and queue **total assault**. do everything includes one raid check even when today's Daily was already attempted; if Daily is due, its raid step covers that check. changing the raid switch alone doesn't replay the routine or silently spend tickets immediately. a failed or interrupted Daily remains in the log for review, and the next game day still schedules normally.
+
+an isolated failure in another daily job does not skip the raid: the runner records the failure, verifies home, then continues the enabled plan. a broken device connection, corrupt configuration, filesystem failure, or inability to verify home still stops the run. those require fixing the underlying problem before any further game input.
 
 the plan is to prove the team works before using a real ticket:
 
@@ -18,9 +24,15 @@ the difficulty setting accepts Normal, Hard, Very Hard, Hardcore, Extreme, Insan
 ```toml
 [total_assault]
 difficulty = "hardcore"
-enabled_in_daily = false
+enabled_in_daily = true
 comfort_seconds = 30
+
+[daily]
+schedule_enabled = true
+reset_delay_minutes = 1
 ```
+
+this example enables automatic raid spending; the shipped configuration keeps `total_assault.enabled_in_daily = false` until you opt in.
 
 CLI: `ba --config config/local.toml total_assault`. the queue uses an immutable settings snapshot and the existing per-instance lock, logs its decisions in the daily text log, and records verified rewards in Loot Gathered. configuring this task adds no AI dependency.
 
@@ -62,11 +74,13 @@ assistant identity comes from the visible lender name, student, stars, and level
 
 ## Validation status
 
+on September 26, daily raid spending was found disabled in the development profile and enabled. a new live run exposed a survey logging collision (`event` passed twice); that is fixed with a regression test. the retry surveyed the raid, auto-created a team, and won its free Hardcore mock in `04:10.167`, leaving **19.833 seconds**. it correctly rejected that margin and began assistant selection. the user requested an emulator restart, so the run was stopped before the assistant mock or any real entry. all **six tickets remained unspent**, with no pending spend intent. this verifies the logging fix and narrow-win fallback again; it does not establish a fresh uninterrupted six-ticket run.
+
 the following is the September 25, 2026 staging checkpoint. this is staged live validation: recognition and transition fixes were added between steps. a fresh uninterrupted run of the finished daemon has not yet been verified. offline tests are separate from live validation; a passing policy test doesn't establish that a boss can be beaten.
 
 | Area | Evidence so far |
 | --- | --- |
-| Configuration and integration | Offline coverage for settings validation, TOML snapshots, CLI startup gating, optional daily ordering, and dashboard queue integration. |
+| Configuration and integration | Offline coverage for settings validation, TOML snapshots, CLI startup gating, optional daily ordering, and dashboard queue integration. Daily dispatch coverage verifies that an enabled raid is included exactly once without any badge observation, respects the opt-out, and returns in the next game day's plan without creating a second raid job. |
 | Planning and spending guards | Offline coverage for observed difficulty locks, assistant choice, exact-team qualification, expiry, persisted ticket intents, and blocking ambiguous or repeated spending. |
 | Screen recognition | Sanitized local captures cover the menu, difficulty details, formation, assistant selection and fee, entry confirmation, auto controls, battle timer, damage report, winning result, real reward receipt, season-record notice, sweep confirmation, sweep receipt, and zero-ticket detail. The tested fallback starts from a recognized victory with insufficient time left and a complete striker damage report. A guarded loss recognizer has offline coverage, but an actual defeated or timed-out mock's result and recovery flow have not been captured locally. An unrecognized result stops the job rather than guessing its outcome or authorizing a ticket. Captured layouts do not establish support for every boss or language. |
 | First Hardcore mock | The auto team defeated Drumbarka in `04:29.667`, leaving **0.333 seconds**. It did **not** qualify for real entry at the default margin. The damage report was read; no survivor count was inferred. |
