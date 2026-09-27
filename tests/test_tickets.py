@@ -1188,7 +1188,7 @@ def test_scrimmage_recovers_entire_missing_zero_label(vision, scrimmage_missing_
 
     startup = Startup()
     screen = TicketVision(startup).analyze(png)
-    assert startup.crops == [(92, 138), (138, 207)]
+    assert startup.crops == [(88, 138), (132, 207)]
     assert (screen.kind, screen.task, screen.area, screen.stage) == (
         "detail", "scrimmages", "Millennium", "B",
     )
@@ -1299,7 +1299,7 @@ def test_native_zero_fragment_requires_complete_exhausted_crop_proofs(vision, na
 
     startup = Startup()
     screen = TicketVision(startup).analyze(png)
-    assert startup.crops == [(92, 138), (138, 207)]
+    assert startup.crops == [(88, 138), (132, 207)]
     assert (screen.kind, screen.task, screen.area, screen.stage) == (
         "detail", "bounties", "Classroom", "H",
     )
@@ -1456,6 +1456,71 @@ def test_native_right_fragment_preserves_counter_identity(native_right_fragment,
             confidence = {"weak_crop": .94, "nan_crop": float("nan"),
                           "infinite_crop": float("inf")}.get(fault, .99)
             return [Word(text, confidence, (0, 0, 100, 30))]
+
+        def matches(self, image):
+            return {}
+
+    result = TicketVision(Startup()).analyze(png)
+    assert result.kind == "unknown" and result.target is None
+
+
+@pytest.fixture(scope="module")
+def native_scrimmage_zero_fragment():
+    import json
+    from ba_automator.vision import Word
+
+    fixture = Path(__file__).parent / "fixtures/tickets-scrimmage-native-zero-fragment"
+    words = [Word(**w) for w in json.loads(fixture.with_suffix(".json").read_text())["words"]]
+    return fixture.with_suffix(".png").read_bytes(), words
+
+
+def test_native_scrimmage_zero_crop_excludes_bubble_rule(vision, native_scrimmage_zero_fragment):
+    png, words = native_scrimmage_zero_fragment
+    assert classify_tickets(decode_frame(png), words).kind == "unknown"
+
+    class Startup:
+        def __init__(self):
+            self.crops = []
+
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            self.crops.append(image.shape[:2])
+            return vision.startup.read(image)
+
+        def matches(self, image):
+            return {}
+
+    startup = Startup()
+    screen = TicketVision(startup).analyze(png)
+    assert startup.crops == [(88, 138), (132, 207)]
+    assert (screen.kind, screen.task, screen.area, screen.stage, screen.stars) == (
+        "detail", "scrimmages", "Millennium", "B", 3,
+    )
+    assert (screen.ap, screen.after_ap, screen.count, screen.tickets,
+            screen.after_tickets, screen.target) == (612, 612, 0, 0, 0, None)
+
+
+@pytest.mark.parametrize("fault", ["ap_changed", "ap_missing", "hud_disagrees", "ticket_conflict"])
+def test_native_scrimmage_exhaustion_retains_independent_balance_guards(
+    native_scrimmage_zero_fragment, fault,
+):
+    from ba_automator.vision import Word
+
+    png, original = native_scrimmage_zero_fragment
+    if fault == "ap_changed":
+        words = [replace(w, text="612→611") if w.text == "612→612" else w for w in original]
+    elif fault == "ap_missing":
+        words = [w for w in original if w.text != "612→612"]
+    elif fault == "hud_disagrees":
+        words = [replace(w, text="613/220") if w.text == "612/220" else w for w in original]
+    else:
+        words = [*original, Word("1", .99, (1080, 356, 1094, 372))]
+
+    class Startup:
+        def read(self, image):
+            assert image.shape[:2] == (1440, 2560), "invalid detail must not recover a zero label"
+            return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
 
         def matches(self, image):
             return {}

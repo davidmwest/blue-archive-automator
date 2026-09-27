@@ -1,0 +1,234 @@
+{
+  "words": [
+    {
+      "text": "Scrimmage",
+      "confidence": 0.99997,
+      "box": [
+        102,
+        7,
+        262,
+        43
+      ]
+    },
+    {
+      "text": "612/220",
+      "confidence": 0.99999,
+      "box": [
+        507,
+        9,
+        587,
+        37
+      ]
+    },
+    {
+      "text": "Mission Info",
+      "confidence": 0.99995,
+      "box": [
+        546,
+        122,
+        733,
+        157
+      ]
+    },
+    {
+      "text": "Clear Unit",
+      "confidence": 0.99961,
+      "box": [
+        176,
+        128,
+        283,
+        153
+      ]
+    },
+    {
+      "text": "Rec.",
+      "confidence": 0.99177,
+      "box": [
+        654,
+        186,
+        706,
+        213
+      ]
+    },
+    {
+      "text": "02Millennium B",
+      "confidence": 0.99519,
+      "box": [
+        140,
+        195,
+        415,
+        233
+      ]
+    },
+    {
+      "text": "Lv.50",
+      "confidence": 0.97183,
+      "box": [
+        647,
+        210,
+        709,
+        239
+      ]
+    },
+    {
+      "text": "Sweep",
+      "confidence": 0.99994,
+      "box": [
+        899,
+        219,
+        970,
+        247
+      ]
+    },
+    {
+      "text": "Enemy/Syn.",
+      "confidence": 0.99942,
+      "box": [
+        177,
+        258,
+        292,
+        286
+      ]
+    },
+    {
+      "text": "Min",
+      "confidence": 0.99991,
+      "box": [
+        764,
+        286,
+        812,
+        314
+      ]
+    },
+    {
+      "text": "0",
+      "confidence": 0.99959,
+      "box": [
+        925,
+        288,
+        945,
+        316
+      ]
+    },
+    {
+      "text": "Max",
+      "confidence": 0.99958,
+      "box": [
+        1055,
+        286,
+        1110,
+        315
+      ]
+    },
+    {
+      "text": "Mission Objectives (\u2606)",
+      "confidence": 0.99762,
+      "box": [
+        320,
+        311,
+        544,
+        340
+      ]
+    },
+    {
+      "text": "Clear",
+      "confidence": 0.99998,
+      "box": [
+        182,
+        353,
+        240,
+        379
+      ]
+    },
+    {
+      "text": "612\u2192612",
+      "confidence": 0.99884,
+      "box": [
+        914,
+        351,
+        1012,
+        375
+      ]
+    },
+    {
+      "text": "0",
+      "confidence": 0.99986,
+      "box": [
+        1042,
+        355,
+        1057,
+        373
+      ]
+    },
+    {
+      "text": "All students survive",
+      "confidence": 0.99995,
+      "box": [
+        182,
+        389,
+        376,
+        412
+      ]
+    },
+    {
+      "text": "Start Sweep",
+      "confidence": 0.9999,
+      "box": [
+        850,
+        388,
+        1019,
+        426
+      ]
+    },
+    {
+      "text": "Clear within 120 second(s)",
+      "confidence": 0.99994,
+      "box": [
+        182,
+        420,
+        439,
+        447
+      ]
+    },
+    {
+      "text": "Expected Rewards",
+      "confidence": 0.99994,
+      "box": [
+        341,
+        471,
+        526,
+        497
+      ]
+    },
+    {
+      "text": "612\u2192612",
+      "confidence": 0.9995,
+      "box": [
+        931,
+        476,
+        1028,
+        499
+      ]
+    },
+    {
+      "text": "0",
+      "confidence": 0.99983,
+      "box": [
+        1059,
+        479,
+        1074,
+        497
+      ]
+    },
+    {
+      "text": "Start Mission",
+      "confidence": 0.99992,
+      "box": [
+        823,
+        517,
+        1047,
+        558
+      ]
+    }
+  ]
+}

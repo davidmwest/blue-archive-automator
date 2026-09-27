@@ -877,3 +877,14 @@ and overlap comparison use the real saved pixels. Both pages still have a
 clipped bottom row, so this fixture does not prove complete receipt coverage.
 Only the Full List modal remains; surrounding account details and balances are
 masked. The game-derived fixtures remain outside the project's MIT grant.
+
+`tickets-scrimmage-native-zero-fragment.png` and its recorded OCR retain the
+September 27 Millennium B detail after the final five Scrimmage tickets were
+spent (`scrimmages-20260927T231227-fb8e45c6`). Native whole-frame OCR retained
+only the initial zero of `0→-`; the pale bubble border reduced confidence in
+both enlarged readings. The projection crop excludes that border, retains the
+full digits/arrow/dash, and still requires two complete, confident observations.
+AP, stage, zero quantity, and no-input exhaustion guards remain independent.
+Unrelated account balances are masked. This fixture proves the already-spent
+balance, not permission to repeat the sweep. The game-derived fixture remains
+outside the project's MIT grant.

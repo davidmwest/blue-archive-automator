@@ -377,7 +377,10 @@ class TicketVision:
             ]
             # Exclude the ticket icon and neighboring AP digits; leave blank
             # margin so the dash is not confused with the bubble's edge.
-            bounds, margin = (1040, 348, 1093, 378), 8
+            # The bubble's pale bottom border begins at y=376. Excluding it
+            # leaves the complete digits/arrow/dash but avoids treating that
+            # horizontal rule as part of the dash at enlarged OCR scales.
+            bounds, margin = (1040, 348, 1093, 376), 8
         else:
             return screen
         recovered = classify_tickets(frame, recovered_words)
