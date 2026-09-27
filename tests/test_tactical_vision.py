@@ -17,6 +17,7 @@ from ba_automator.tactical_vision import (
 from ba_automator.vision import StartupVision, Word, decode_native_frame
 
 FIXTURES = Path(__file__).parent / 'fixtures'
+OPPONENT_LEVELS = {400: (90, 90, 90), 471: (90, 90, 67), 540: (89, 83, 77)}
 
 
 @pytest.fixture(scope='module')
@@ -30,6 +31,38 @@ def fixture(name):
     words = tuple(Word(row['text'], row['confidence'], tuple(row['box']))
                   for row in json.loads(prefix.with_suffix('.json').read_text()))
     return frame, words
+
+
+@pytest.fixture
+def recorded_menu_vision(vision, monkeypatch):
+    """Replay actual crop reads with exact pixels, independent of CPU OCR drift."""
+    frame, _ = fixture('opponents')
+    metadata = json.loads((FIXTURES / 'tactical-battles-opponents-levels.json').read_text(
+        encoding='utf-8'))
+    readings = {}
+    for label in metadata['labels']:
+        crops = _level_crops(frame, *label['origin'])
+        assert len(crops) == len(label['reads'])
+        for crop, reading in zip(crops, label['reads']):
+            readings[(crop.shape, crop.tobytes())] = reading
+
+    def recognize(request):
+        values = [readings.get((crop.shape, crop.tobytes()), ('', 0.))
+                  for crop in request.img]
+        return SimpleNamespace(txts=[value[0] for value in values],
+                               scores=[value[1] for value in values])
+
+    monkeypatch.setattr(vision.startup.ocr, 'text_rec', recognize)
+    return TacticalBattleVision(vision.startup)
+
+
+def assert_observed_menu_levels(result):
+    observed = {opponent.choice.rank: opponent.choice.visible_levels
+                for opponent in result.opponents}
+    # The last row produces ambiguous crop reads on some CPU runtimes. An
+    # omission is safe; every accepted level still has to match actual pixels.
+    assert {400, 471} <= observed.keys()
+    assert observed.items() <= OPPONENT_LEVELS.items()
 
 
 def test_delayed_entry_trace_has_real_campaign_then_opponent_detail(vision):
@@ -49,8 +82,8 @@ def test_delayed_entry_trace_has_real_campaign_then_opponent_detail(vision):
     assert detail.target is None
 
 
-def test_observed_menu_reads_all_visible_levels_and_hidden_cards(vision):
-    result = vision.classify(*fixture('opponents'))
+def test_recorded_menu_reads_all_visible_levels_and_hidden_cards(recorded_menu_vision):
+    result = recorded_menu_vision.classify(*fixture('opponents'))
     assert result.kind == 'tactical'
     assert (result.rank, result.tickets, result.cooldown) == (571, 5, 0)
     assert [p.choice.visible_levels for p in result.opponents] == [
@@ -60,7 +93,17 @@ def test_observed_menu_reads_all_visible_levels_and_hidden_cards(vision):
     assert result.refresh_seconds == 119
 
 
-def test_repeated_level_pixels_avoid_ocr_but_changed_pixels_and_ceiling_do_not(vision, monkeypatch):
+def test_local_ocr_menu_accepts_only_correct_visible_levels(vision):
+    result = vision.classify(*fixture('opponents'))
+    assert (result.kind, result.rank, result.tickets, result.cooldown) == (
+        'tactical', 571, 5, 0)
+    assert result.sampled_ranks == (400, 471, 540)
+    assert result.refresh_seconds == 119
+    assert_observed_menu_levels(result)
+
+
+def test_repeated_level_pixels_avoid_ocr_but_changed_pixels_and_ceiling_do_not(recorded_menu_vision, monkeypatch):
+    vision = recorded_menu_vision
     image, words = fixture('opponents')
     vision._level_cache.clear()
     batches = []
@@ -210,11 +253,13 @@ def test_history_identity_survives_level_up_but_entry_still_requires_current_lev
 
 def test_visible_unreadable_level_omits_candidate_instead_of_assuming_hidden(vision):
     frame, words = fixture('opponents')
+    before = vision.classify(frame, words)
     frame[205:230, 740:782] = 0
     result = vision.classify(frame, words)
     assert result.kind == 'tactical' and result.tickets == 5
     assert 400 not in [op.choice.rank for op in result.opponents]
-    assert len(result.opponents) == 2
+    assert result.opponents == tuple(op for op in before.opponents if op.choice.rank != 400)
+    assert any(op.choice.rank == 471 for op in result.opponents)
 
 
 def test_hidden_card_must_be_observed_not_inferred_from_missing_ocr(vision):
@@ -354,13 +399,21 @@ def test_portrait_background_cannot_discount_level_eighty_eight_to_thirty_eight(
     crops = _level_crops(frame, 1070, 524)
     readings = vision.startup.ocr.text_rec(TextRecInput(crops))
     values = list(zip(readings.txts, readings.scores))
-    assert _read_level(values[:13], 88) == 38
     assert any(text == '88' and confidence >= .94 for text, confidence in values[13:])
     assert _read_level(values, 88) is None
 
     detail = vision.classify(*fixture('clipped-eighty-eight-detail'))
     assert (detail.kind, detail.rank, detail.tickets, detail.after_tickets) == ('opponent', 541, 4, 3)
     assert detail.opponents[0].choice.visible_levels == (86, 88, 88)
+
+
+def test_recorded_portrait_reads_reject_eighty_eight_discounted_to_thirty_eight():
+    # Retain the original unsafe interpretation as a deterministic regression.
+    # A different CPU may conservatively reject it even before the taller reads.
+    path = FIXTURES / 'tactical-battles-clipped-eighty-eight-levels.json'
+    values = json.loads(path.read_text(encoding='utf-8'))['reads']
+    assert _read_level(values[:13], 88) == 38
+    assert _read_level(values, 88) is None
 
 
 @pytest.mark.parametrize('level', [1, 8, 30, 38, 67, 73, 88, 90])
@@ -383,7 +436,7 @@ def test_entire_local_ocr_path_handles_outline_fonts_and_help_icon(vision):
         assert result.kind == kind
         if kind == 'tactical':
             assert result.all_ahead
-            assert len(result.opponents) == 3
+            assert_observed_menu_levels(result)
 
 
 def test_all_ahead_requires_three_distinct_verified_ranks(vision):

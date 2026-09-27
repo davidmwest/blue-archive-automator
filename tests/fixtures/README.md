@@ -468,6 +468,17 @@ synthetic names. These samples prove navigation and recognition, not victories.
 `assets/tactical-hidden-student.png` is the small gray question-mark card used
 to distinguish a deliberately concealed student from unreadable visible text.
 
+`tactical-battles-opponents-levels.json` records the 16 OCR crop readings for
+each visible portrait in the sanitized opponent list. The deterministic replay
+reconstructs each source crop locally and requires identical incoming pixels;
+this isolates parser and cache tests from CPU-dependent recognition confidence.
+Separate OCR integration tests still require the two unambiguous candidates
+and validate every accepted level against the observed list. They permit the
+third candidate to be omitted when its readings are uncertain, never misread.
+`tactical-battles-clipped-eighty-eight-levels.json` records the original macOS
+38 interpretation and the taller crops that correctly veto it, so that exact
+regression remains covered even when another CPU rejects the early reads first.
+
 `tactical-battles-clipped-eight` preserves a real misreading found during the
 first ladder test: the last visible student's level is 80, while tight OCR
 crops confidently read 30. Wider crops retaining the complete glyph contradict
@@ -752,6 +763,12 @@ dimmed, contradictory, incomplete, and low-confidence variants must remain
 unusable for spending. This is offline confirmation-recognition evidence,
 not proof of a completed native-resolution lesson. The game-derived fixture
 is outside the project's MIT grant.
+
+The native Lessons sidecar includes absolute source pixel boxes and output
+shapes for every recorded crop. Replay resizes those exact fixture regions on
+the current OpenCV build, since cubic interpolation can round differently
+between platforms. Changed incoming pixels still receive no recorded result;
+the original capture hashes remain available as provenance.
 
 `loot-sweep-task-progress-native-refresh-before.png` and `...-after.png`
 retain the September 27 native Hard 3-2 sweep receipt with a partial cyan

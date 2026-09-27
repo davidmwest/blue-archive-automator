@@ -72,7 +72,8 @@ def test_difficulty_survey_records_event_period_without_shadowing_journal_event(
     runner.swipe = lambda *args: pytest.fail("The complete list needs no scrolling")
     observed, current = runner.survey(menu)
     assert current is menu and observed["hardcore"].locked is False
-    records = [json.loads(line) for line in (runner.run_dir / "events.jsonl").read_text().splitlines()]
+    records = [json.loads(line) for line in
+               (runner.run_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()]
     survey = next(record for record in records if record["event"] == "difficulty_survey")
     assert survey["event_period"] == CONTEXT.event_id
     assert survey["tickets"] == 6 and survey["boss"] == CONTEXT.boss

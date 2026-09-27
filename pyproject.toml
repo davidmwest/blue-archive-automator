@@ -27,7 +27,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<9"]
+dev = [
+    "pytest>=8,<9",
+    # Windows lacks the IANA database used by the daily-reset DST tests.
+    "tzdata; sys_platform == 'win32'",
+]
 
 [project.urls]
 Repository = "https://github.com/davidmwest/blue-archive-automator"

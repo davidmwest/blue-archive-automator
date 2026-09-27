@@ -297,13 +297,27 @@ def test_confirmation_waits_for_its_final_position_before_parsing_students():
 class NativeConfirmationOCR:
     def __init__(self):
         path = FIXTURES / "lesson-hyakki-preview-native.json"
-        self.reads = json.loads(path.read_text())["reads"]
+        self.reads = json.loads(path.read_text(encoding="utf-8"))["reads"]
         self.full_words = self.reads[0]["words"]
         self.crops = {item["sha256"]: item["words"] for item in self.reads[1:]}
+        # INTER_CUBIC can round pixels differently across OpenCV/CPU builds.
+        # Reconstruct the exact fixture regions locally instead of requiring
+        # Mac-generated resize hashes on Linux and Windows. Incoming pixels
+        # must still match: a shifted or different crop gets no recorded OCR.
+        source = cv2.imread(str(path.with_suffix(".png")))
+        self.crop_keys = {}
+        for item in self.reads[1:]:
+            x1, y1, x2, y2 = item["source_box"]
+            height, width = item["shape"][:2]
+            crop = cv2.resize(source[y1:y2, x1:x2], (width, height),
+                              interpolation=cv2.INTER_CUBIC)
+            key = hashlib.sha256(crop.tobytes()).hexdigest()
+            self.crop_keys[key] = item["sha256"]
 
     def read(self, frame):
         recorded = (self.full_words if frame.shape[:2] == (1440, 2560)
-                    else self.crops.get(hashlib.sha256(frame.tobytes()).hexdigest(), []))
+                    else self.crops.get(self.crop_keys.get(
+                        hashlib.sha256(frame.tobytes()).hexdigest()), []))
         return [Word(item["text"], item["confidence"], tuple(item["box"])) for item in recorded]
 
 
@@ -322,6 +336,16 @@ def test_native_confirmation_recovers_settled_border_and_complete_ticket_cost():
     assert (screen.tickets, screen.tickets_after) == (7, 6)
     assert [(student.owned, student.bond) for student in screen.students] == [(True, 9), (True, 11), (True, 11)]
     assert screen.inspection_complete and screen.start_target == (639, 550)
+
+
+def test_native_confirmation_replay_requires_actual_fixture_crop_pixels():
+    frame, ocr, _ = native_confirmation()
+    first = ocr.reads[1]
+    x1, y1, x2, y2 = first["source_box"]
+    crop = frame[y1:y2, x1:x2].copy()
+    assert [word.text for word in ocr.read(crop)] == ["7→6"]
+    crop[0, 0] ^= 1
+    assert ocr.read(crop) == []
 
 
 @pytest.mark.parametrize("pixels", [-4, -2, -1, 1, 2, 4])

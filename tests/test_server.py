@@ -1674,7 +1674,11 @@ def test_daily_summary_preserves_completed_work_and_identifies_failed_steps(conf
             assert "bounties: Earlier ticket sweep needs receipt review" in notice
         else:
             assert status["failed_jobs"] == []
-        text = controller.daily_log_text("2026-09-25").decode()
+        # Logs use the host's local calendar date, not the game's reset day.
+        # This injected instant is September 25 in Los Angeles, but September 26 in UTC.
+        local_now = now.astimezone()
+        text = controller.daily_log_text(local_now.date().isoformat()).decode()
+        assert local_now.isoformat(timespec="milliseconds") in text
         assert '"completed_tasks":["restart","cafe","scrimmages"]' in text
         assert len(factory.processes) == 1
     finally:
