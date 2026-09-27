@@ -1,7 +1,8 @@
 """Serial battle flow preserves tickets across scouting, result waits and failures."""
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from types import SimpleNamespace as NS
 
 import pytest
@@ -615,6 +616,62 @@ def test_changed_detail_team_levels_never_opens_formation(runner):
     assert runner.inputs[-1] == ((1014, 97), "Close rejected opponent detail")
     assert runner.search_state.remaining_seconds == 10
     assert state.read_state(runner.config)["pending"] is None
+
+
+@pytest.mark.parametrize('change', [None, 'name', 'account', 'avatar', 'team',
+                                   'tickets', 'projection', 'reserve', 'rank', 'behind'])
+def test_registered_preview_keeps_all_battle_entry_guards(runner, monkeypatch, change):
+    from ba_automator.tactical_vision import _signature
+    from ba_automator.vision import decode_frame
+
+    fixtures = Path(__file__).parent / 'fixtures'
+    listed = decode_frame((fixtures / 'tactical-portrait-native-shift-list.png').read_bytes())
+    png = (fixtures / 'tactical-portrait-native-shift-detail.png').read_bytes()
+    selected = ObservedOpponent(Opponent('listed', 469, 79, (78, 79, 79)),
+                                'Scout', (830, 409),
+                                _signature(listed, (484, 365, 526, 401)))
+    observed = replace(selected, choice=replace(selected.choice, opponent_id='detail'),
+                       signature=_signature(decode_frame(png), (278, 179, 320, 215)))
+    if change == 'name':
+        observed = replace(observed, name='Another scout')
+    elif change == 'account':
+        observed = replace(observed, choice=replace(observed.choice, level=80))
+    elif change == 'avatar':
+        selected = replace(selected, signature=_signature(listed, (484, 206, 526, 242)))
+    elif change == 'team':
+        observed = replace(observed, choice=replace(observed.choice, visible_levels=(79, 79, 79)))
+    elif change == 'behind':
+        observed = replace(observed, choice=replace(observed.choice, rank=524))
+    detail = frame('opponent', rank=522 if change == 'rank' else 523,
+                   opponents=(observed,), tickets=3 if change == 'tickets' else 4,
+                   after_tickets=2 if change == 'projection' else 3, target=(640, 575))
+    detail.capture.png = png
+    monkeypatch.setattr('ba_automator.tactical_runtime.same_opponent', same_opponent)
+
+    def wait(kinds, **kwargs):
+        if kinds == {'formation', 'timeout_notice'}:
+            raise RuntimeError('Reached formation; test stops before battle')
+        if change == 'reserve':
+            runner.reserve = 4
+        return detail
+
+    runner.wait = wait
+    returned = frame(tickets=4, rank=523)
+    runner.menu = lambda: returned
+    if change is None:
+        with pytest.raises(RuntimeError, match='Reached formation'):
+            runner.battle(frame(tickets=4, rank=523), selected)
+        assert runner.inputs[-1] == ((640, 575), 'Open the saved attack formation')
+        registration = [data for event, data in runner.events
+                        if event == ('opponent_portrait_registered',)]
+        assert len(registration) == 1
+        assert registration[0]['offset'] == [0, 2]
+        assert registration[0]['correlation'] >= .95
+    else:
+        assert runner.battle(frame(tickets=4, rank=523), selected) == (returned, None)
+        assert runner.inputs[-1] == ((1014, 97), 'Close rejected opponent detail')
+        assert not any(event == ('opponent_portrait_registered',) for event, _ in runner.events)
+    assert state.read_state(runner.config)['pending'] is None
 
 
 def test_unreadable_team_in_verified_preview_restarts_search_without_entering(runner):

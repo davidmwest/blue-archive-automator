@@ -468,6 +468,16 @@ synthetic names. These samples prove navigation and recognition, not victories.
 `assets/tactical-hidden-student.png` is the small gray question-mark card used
 to distinguish a deliberately concealed student from unreadable visible text.
 
+`tactical-portrait-native-{shift,aligned}-{list,detail}.png` retain only the
+public character avatars and a two-pixel canonical registration margin from
+two September 27 native 1440p list/preview pairs. Names, ranks, teams, balances,
+and every other part of the screen are masked; tests supply synthetic identity
+metadata without OCR. One preview displaces the matching avatar down two
+canonical pixels, dropping ordinary correlation to 0.639; registration restores
+0.986. The earlier aligned pair keeps its original crop. These fixtures prove
+portrait recognition only, not a battle or ticket spend, and remain excluded
+from the MIT grant described in the third-party notices.
+
 `tactical-battles-opponents-levels.json` records the 16 OCR crop readings for
 each visible portrait in the sanitized opponent list. The deterministic replay
 reconstructs each source crop locally and requires identical incoming pixels;

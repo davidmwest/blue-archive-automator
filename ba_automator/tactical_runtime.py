@@ -16,7 +16,8 @@ from . import tactical_retry as retry
 from .tactical_formation import TacticalFormationMixin
 from .tactical_search import SearchPolicy, SearchState
 from .tactical_vision import (
-    ObservedOpponent, TacticalBattleVision, same_opponent, same_opponent_identity,
+    ObservedOpponent, TacticalBattleVision, detail_portrait_alignment,
+    same_opponent, same_opponent_identity,
 )
 from .vision import VisionError, decode_frame
 
@@ -417,8 +418,14 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
             return self.restart_rejected_search(
                 self.menu(), tickets_before=before, reason="Opponent selection expired")
         self.journal.save_image(f"opponent-{candidate.choice.opponent_id}-detail.png", detail.capture.png)
-        if (len(detail.screen.opponents) != 1
-                or not same_opponent(candidate, detail.screen.opponents[0])
+        alignment = None
+        identity_matches = (len(detail.screen.opponents) == 1
+                            and same_opponent(candidate, detail.screen.opponents[0]))
+        if len(detail.screen.opponents) == 1 and not identity_matches:
+            alignment = detail_portrait_alignment(
+                candidate, detail.screen.opponents[0], detail.capture.png)
+            identity_matches = alignment is not None
+        if (not identity_matches
                 or detail.screen.rank != rank_before
                 or detail.screen.opponents[0].choice.rank >= detail.screen.rank
                 or detail.screen.opponents[0].choice.visible_levels != candidate.choice.visible_levels
@@ -433,6 +440,10 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
             return self.restart_rejected_search(
                 self.menu(), tickets_before=before,
                 reason="Opponent or projected ticket count changed")
+        if alignment is not None:
+            self.journal.record("opponent_portrait_registered",
+                                offset=list(alignment[:2]), correlation=alignment[2],
+                                opponent_id=candidate.choice.opponent_id)
         self.tap(detail, detail.screen.target, "Open the saved attack formation")
         formation = self.wait({"formation", "timeout_notice"})
         if formation.screen.kind == "timeout_notice":

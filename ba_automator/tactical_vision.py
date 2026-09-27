@@ -18,7 +18,7 @@ from .crafting_vision import bright, cyan, has, within, yellow
 from .shop_vision import text_in
 from .tactical_battles import Opponent
 from .tactical_rewards import classify_tactical
-from .vision import Word, decode_native_frame, native_game_region, read_game_words, classify, decode_frame
+from .vision import VisionError, Word, decode_native_frame, native_game_region, read_game_words, classify, decode_frame
 
 
 @dataclass(frozen=True)
@@ -71,14 +71,51 @@ def same_opponent_identity(left, right):
     name = _normalized_name(left.name)
     if not name or name != _normalized_name(right.name):
         return False
+    return _portrait_similarity(left.signature, right.signature) >= .82
+
+
+def _portrait_similarity(left, right):
     try:
-        a = np.frombuffer(bytes.fromhex(left.signature), np.uint8)
-        b = np.frombuffer(bytes.fromhex(right.signature), np.uint8)
+        a = np.frombuffer(bytes.fromhex(left), np.uint8)
+        b = np.frombuffer(bytes.fromhex(right), np.uint8)
     except (ValueError, TypeError):
-        return False
+        return -1.
     if a.size != 24 * 24 or b.size != a.size or min(a.std(), b.std()) < 8:
-        return False
-    return float(np.corrcoef(a, b)[0, 1]) >= .82
+        return -1.
+    return float(np.corrcoef(a, b)[0, 1])
+
+
+def detail_portrait_alignment(selected, observed, png):
+    """Register a slightly displaced preview portrait, never a new identity.
+
+    A native preview shifted its avatar two canonical pixels while retaining
+    the same name and levels. Search only that small translation, using a
+    stricter .95 correlation than the ordinary .82 identity comparison. This
+    does not alter stored identities or replace the caller's ticket/team gates.
+    """
+    name = _normalized_name(selected.name)
+    if (selected.choice.level != observed.choice.level or not name
+            or name != _normalized_name(observed.name)):
+        return None
+    try:
+        frame = decode_frame(png)
+    except (VisionError, TypeError, ValueError):
+        return None
+    bounds = (278, 179, 320, 215)
+    # The extra pixels must belong to this exact recognized preview capture.
+    if _signature(frame, bounds) != observed.signature:
+        return None
+    best = None
+    for dy in range(-2, 3):
+        for dx in range(-2, 3):
+            if dx == dy == 0:
+                continue
+            shifted = tuple(value + (dx if index % 2 == 0 else dy)
+                            for index, value in enumerate(bounds))
+            score = _portrait_similarity(selected.signature, _signature(frame, shifted))
+            if score >= .95 and (best is None or score > best[2]):
+                best = (dx, dy, score)
+    return best
 
 
 def _signature(frame, bounds):
