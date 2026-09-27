@@ -1285,11 +1285,9 @@ class DashboardController:
             if state["day_key"] != game_day(self._wall_clock()) or tickets is None:
                 return f"{prefix}; ticket counts unavailable"
             reserve = selected.tactical_battles_preserve_tickets
-            timeouts = len(state["timed_out_searches"])
-            allowances = tactical_state.search_allowances(state, tickets, reserve)
+            available = tactical_state.search_allowances(state, tickets, reserve)
             return (f"{prefix}; {tickets} ticket{'s' if tickets != 1 else ''} left, reserve {reserve}; "
-                    f"{timeouts} search timeout{'s' if timeouts != 1 else ''}; "
-                    f"{allowances} search allowance{'s' if allowances != 1 else ''} left today")
+                    f"{available} ticket{'s' if available != 1 else ''} available for automation")
         except (TacticalStateError, OSError, ValueError) as exc:
             self._log(f"Could not read Tactical Challenge completion counts: {exc}", "error")
             return f"{prefix}; ticket counts unavailable"

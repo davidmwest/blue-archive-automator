@@ -9,7 +9,7 @@ import pytest
 from ba_automator import tactical_state as state
 from ba_automator import tactical_survey as survey
 from ba_automator.club import game_day
-from ba_automator.tactical_battles import Opponent
+from ba_automator.tactical_battles import Opponent, opponent_score
 from ba_automator.tactical_runtime import TacticalBattleRunner
 from ba_automator.tactical_search import SearchPolicy, SearchState
 from ba_automator.tactical_vision import ObservedOpponent
@@ -122,6 +122,21 @@ def assert_no_battle(runner, tickets=5):
     assert runner.inputs[-1:] == [((1237, 23), "Return home from Tactical Challenge battles")]
 
 
+def refresh_once_then_defer(runner, current, *, seconds=1):
+    acknowledgments = 0
+
+    def refresh(previous):
+        nonlocal acknowledgments
+        runner.active_seconds += seconds
+        runner.last_refresh_acknowledged = acknowledgments == 0
+        if runner.last_refresh_acknowledged:
+            runner.refresh_count += 1
+        acknowledgments += 1
+        return current
+
+    runner.refresh = refresh
+
+
 def test_unfinished_search_resumes_time_scores_and_counters_across_queue_visits(runner):
     runner.reserve = runner.config.tactical_battles_preserve_tickets = 4
     current = stronger_menu()
@@ -143,120 +158,106 @@ def test_unfinished_search_resumes_time_scores_and_counters_across_queue_visits(
 
     next_visit(runner, queue_seconds=1800)
     assert survey.continuation_due(runner.config, now=runner.now.timestamp())
-    assert runner.run_menu(current) == "success"
+    current = frame()  # No eligible opponent to select as overtime begins.
+    assert runner.run_menu(current) == "deferred"
     resumed = load(runner)
     assert resumed["search"].elapsed_seconds == 600
     assert resumed["search"].refreshes == 6
-    assert resumed["search"].observations == 7  # Initial list recorded only once.
+    assert resumed["search"].observations == 4  # Empty draws and rereads add no score.
+    assert resumed["search"].overtime_refreshes == 1
     assert resumed["created_at"] == first["created_at"]
+    assert resumed["search_id"] == first["search_id"]
     assert resumed["search"].scores == first["search"].scores
     assert_no_battle(runner)
-    assert not survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
+    assert survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
 
 
-def test_last_exhausted_search_survives_restart_without_another_refresh_allowance(runner):
+def test_deadline_search_resumes_overtime_without_consuming_the_remaining_ticket(runner):
     runner.reserve = runner.config.tactical_battles_preserve_tickets = 4
     checkpoint(runner, elapsed=600)
-    next_visit(runner, queue_seconds=5 * 3600)
-    runner.refresh = lambda f: pytest.fail("Exhausted allowance cannot refresh again")
-    assert runner.run_menu(stronger_menu()) == "success"
-    assert load(runner)["search"].exhausted
+    prior = load(runner)
+    next_visit(runner, queue_seconds=3600)
+    refresh_once_then_defer(runner, frame())
+    assert runner.run_menu(frame()) == "deferred"
+    saved = load(runner)
+    assert saved["search"].elapsed_seconds == 600
+    assert saved["search"].overtime_refreshes == 1
+    assert saved["search_id"] == prior["search_id"]
+    assert state.read_state(runner.config)["timed_out_searches"] == []
     assert_no_battle(runner)
-    assert not survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
+    assert survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
 
 
-def test_three_ticket_allowances_time_out_across_restarts_without_spending_tickets(runner):
-    """Four tickets and reserve one authorize three searches, even after a timeout."""
-    search_ids = []
-
-    def refresh(previous):
-        runner.active_seconds += 100
-        runner.refresh_count += 1
-        runner.last_refresh_acknowledged = True
-        # A weak opponent establishes the benchmark, then disappears. The
-        # deadline must never force an attack against the stronger current list.
-        if runner.search_state.elapsed_seconds < 200:
-            return frame(observed("best"), tickets=4)
-        return stronger_menu(tickets=4)
-
-    runner.refresh = refresh
-    for allowance in range(3):
-        assert runner.run_menu(frame(observed("best"), tickets=4)) == "deferred"
-        partial = load(runner)
-        search_ids.append(partial["search_id"])
-        assert partial["search"].elapsed_seconds == 300
-        assert partial["search"].refreshes == 3
-        assert len(state.read_state(runner.config)["timed_out_searches"]) == allowance
-        assert_no_battle(runner, tickets=4)
-
-        next_visit(runner, queue_seconds=1800)
-        assert survey.continuation_due(runner.config, now=runner.now.timestamp())
-        expected = "deferred" if allowance < 2 else "success"
-        assert runner.run_menu(stronger_menu(tickets=4)) == expected
-        history = state.read_state(runner.config)
-        assert history["timed_out_searches"] == search_ids
-        assert state.search_allowances(history, 4, 1) == 2 - allowance
-        assert_no_battle(runner, tickets=4)
-        saved = load(runner)
-        if allowance < 2:
-            assert saved["search_id"] not in search_ids
-            assert saved["search"].elapsed_seconds == 0
-            assert saved["search"].observations == 0
-            assert saved["search"].scores == {}
-        else:
-            assert saved["search_id"] == search_ids[-1]
-            assert saved["search"].elapsed_seconds == 600
-            assert saved["search"].refreshes == 6
-        next_visit(runner)
-
-    assert len(set(search_ids)) == 3
-    assert not survey.continuation_due(runner.config, now=runner.now.timestamp())
-    runner.refresh = lambda f: pytest.fail("All three daily search allowances are used")
-    assert runner.run_menu(stronger_menu(tickets=4)) == "success"
-    assert state.read_state(runner.config)["timed_out_searches"] == search_ids
-    assert_no_battle(runner, tickets=4)
-
-
-def test_interruption_after_timeout_accounting_retries_checkpoint_rotation_once(runner, monkeypatch):
+def test_overtime_tiers_survive_queue_restarts_without_skipping_unspent_tickets(runner):
     checkpoint(runner, elapsed=600)
-    exhausted = load(runner)
+    original = load(runner)
+    # Remember stronger distinct tiers without putting them on the current list.
+    candidates = [observed("tier-" + str(level), level=level) for level in (70, 80, 90)]
+    search = original["search"]
+    for person in candidates:
+        search.scores[person.choice.opponent_id] = opponent_score(person.choice)
+        original["identities"][person.choice.opponent_id] = asdict(person)
+    survey.save_survey(runner.config, day_key=game_day(runner.now), own_rank=100,
+                       search=search, identities=original["identities"],
+                       now=runner.now.timestamp())
+
+    for step in range(1, 4):
+        next_visit(runner)
+        refresh_once_then_defer(runner, frame(tickets=4))
+        assert runner.run_menu(frame(tickets=4)) == "deferred"
+        saved = load(runner)
+        assert saved["search_id"] == original["search_id"]
+        assert saved["search"].elapsed_seconds == 600
+        assert saved["search"].overtime_refreshes == step
+        assert saved["search"].overtime_threshold == search.scores[candidates[step - 1].choice.opponent_id]
+        history = state.read_state(runner.config)
+        assert history["timed_out_searches"] == []
+        assert state.search_allowances(history, 4, 1) == 3
+        assert survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
+        assert_no_battle(runner, tickets=4)
+
+
+def test_interruption_before_overtime_save_keeps_old_progress_and_ticket_guards(runner, monkeypatch):
+    checkpoint(runner, elapsed=600)
+    original = load(runner)
     real_save = survey.save_survey
 
     def interrupted_save(*args, **kwargs):
-        if kwargs["search"].elapsed_seconds == 0:
-            raise OSError("Interrupted before replacing exhausted search")
+        if kwargs["search"].overtime_refreshes:
+            raise OSError("Interrupted before saving overtime")
         return real_save(*args, **kwargs)
 
     monkeypatch.setattr(survey, "save_survey", interrupted_save)
-    runner.refresh = lambda f: pytest.fail("Rotation does not refresh the opponent list")
-    with pytest.raises(OSError, match="Interrupted before replacing"):
-        runner.run_menu(stronger_menu(tickets=4))
-    assert state.read_state(runner.config)["timed_out_searches"] == [exhausted["search_id"]]
-    assert load(runner)["search_id"] == exhausted["search_id"]
-    assert load(runner)["search"].exhausted
+    refresh_once_then_defer(runner, frame(tickets=4))
+    with pytest.raises(OSError, match="Interrupted before saving overtime"):
+        runner.run_menu(frame(tickets=4))
+    assert state.read_state(runner.config)["timed_out_searches"] == []
+    assert load(runner)["search_id"] == original["search_id"]
+    assert load(runner)["search"].elapsed_seconds == 600
+    assert load(runner)["search"].overtime_refreshes == 0
 
     next_visit(runner)
     monkeypatch.setattr(survey, "save_survey", real_save)
+    refresh_once_then_defer(runner, frame(tickets=4))
     assert survey.continuation_due(runner.config, now=runner.now.timestamp())
-    assert runner.run_menu(stronger_menu(tickets=4)) == "deferred"
+    assert runner.run_menu(frame(tickets=4)) == "deferred"
     history = state.read_state(runner.config)
-    assert history["timed_out_searches"] == [exhausted["search_id"]]
-    assert state.search_allowances(history, 4, 1) == 2
-    fresh = load(runner)
-    assert fresh["search_id"] != exhausted["search_id"]
-    assert fresh["search"].remaining_seconds == 600
-    assert fresh["search"].observations == 0
+    assert state.search_allowances(history, 4, 1) == 3
+    saved = load(runner)
+    assert saved["search_id"] == original["search_id"]
+    assert saved["search"].remaining_seconds == 0
+    assert saved["search"].overtime_refreshes == 1
+    assert saved["search"].observations == 2
     assert_no_battle(runner, tickets=4)
 
 
 @pytest.mark.parametrize("first_won", [False, True], ids=["defeat", "victory"])
-def test_battle_after_timeout_starts_fresh_next_ticket_search_and_keeps_daily_history(runner, first_won):
-    # One timeout leaves two automatic battles available from four tickets.
-    checkpoint(runner, elapsed=600)
-    assert runner.run_menu(stronger_menu(tickets=4)) == "deferred"
-    timeout_ids = state.read_state(runner.config)["timed_out_searches"]
-    assert len(timeout_ids) == 1
-    next_visit(runner)
+def test_four_tickets_spend_down_to_reserve_across_visits_despite_legacy_timeouts(runner, first_won):
+    # Historical searches did not spend game tickets; all three remain usable.
+    state.observe_ladder(runner.config, game_day(runner.now), tickets=4, rank=100, now=runner.now)
+    timeout_ids = [format(i, "032x") for i in range(1, 4)]
+    for search_id in timeout_ids:
+        state.record_search_timeout(runner.config, game_day(runner.now), search_id, now=runner.now)
 
     candidates = tuple(observed(str(i), rank=70 + i, level=50 + i * 10) for i in range(3))
     current = [frame(*candidates, tickets=4)]
@@ -294,20 +295,107 @@ def test_battle_after_timeout_starts_fresh_next_ticket_search_and_keeps_daily_hi
     assert next_search["search"].elapsed_seconds == 0
     assert next_search["search_id"] != searches[0][1]
     next_visit(runner)
+    assert runner.run_menu(current[0]) == "deferred"
+    assert [identity for identity, _, _ in searches] == ["0", "1"]
+    assert load(runner)["search"].elapsed_seconds == 0
+    next_visit(runner)
     assert runner.run_menu(current[0]) == "success"
 
-    assert [identity for identity, _, _ in searches] == ["0", "1"]
-    assert searches[0][1] != searches[1][1]
+    assert [identity for identity, _, _ in searches] == ["0", "1", "2"]
+    assert len({search_id for _, search_id, _ in searches}) == 3
     for _, _, snapshot in searches:
         assert snapshot["elapsed_seconds"] == 240
         assert snapshot["refreshes"] == 4
         assert snapshot["benchmark_observations"] == 4
     assert "0" not in searches[1][2]["scores"]
+    assert "0" not in searches[2][2]["scores"]
+    assert "1" not in searches[2][2]["scores"]
     history = state.read_state(runner.config)
-    assert history["attempts"] == {"0": 1, "1": 1}
+    assert history["attempts"] == {"0": 1, "1": 1, "2": 1}
     assert history["timed_out_searches"] == timeout_ids
-    assert history["last_tickets"] == 2
-    assert state.search_allowances(history, 2, 1) == 0
+    assert history["last_tickets"] == 1
+    assert state.search_allowances(history, 1, 1) == 0
+    assert not survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
+
+
+def test_overtime_admitted_current_opponent_uses_remaining_ticket_then_stops_at_reserve(runner):
+    checkpoint(runner, elapsed=600)
+    current = stronger_menu(tickets=2)
+    refresh_once_then_defer(runner, current)
+    battles = []
+
+    def battle(current_frame, candidate):
+        battles.append((candidate.choice.opponent_id, runner.search_state.to_dict()))
+        intent = state.begin_battle(runner.config, game_day(runner.now),
+                                     candidate.choice.opponent_id, 2, 100, now=runner.now)
+        state.complete_battle(runner.config, intent, tickets_after=1,
+                              won=False, rank_after=100, now=runner.now)
+        return stronger_menu(tickets=1), False
+
+    runner.battle = battle
+    assert runner.run_menu(current) == "success"
+    assert len(battles) == 1
+    identity, snapshot = battles[0]
+    assert identity == "new-a"
+    assert snapshot["elapsed_seconds"] == 600
+    assert snapshot["overtime_refreshes"] == 1
+    assert snapshot["overtime_threshold"] == opponent_score(current.screen.opponents[0].choice)
+    assert state.read_state(runner.config)["last_tickets"] == 1
+    assert load(runner) is None
+    assert not survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
+
+
+def test_rejected_preview_restarts_timer_across_visits_without_replaying_fought_opponents(runner):
+    runner.reserve = runner.config.tactical_battles_preserve_tickets = 3
+    day = game_day(runner.now)
+    state.observe_ladder(runner.config, day, tickets=5, rank=100, now=runner.now)
+    previous = state.begin_battle(runner.config, day, "previous", 5, 100, now=runner.now)
+    state.complete_battle(runner.config, previous, tickets_after=4,
+                          won=False, rank_after=100, now=runner.now)
+    checkpoint(runner, elapsed=300)
+    original = load(runner)
+    candidates = (observed("previous", level=20), observed("target", level=50),
+                  observed("other", level=70))
+    current = frame(*candidates, tickets=4)
+    entered = []
+
+    def rejected_preview(current_frame, candidate):
+        assert candidate.choice.opponent_id == "target"
+        runner.active_seconds += 301  # Yield after rejection, before the new benchmark.
+        return runner.restart_rejected_search(
+            current_frame, tickets_before=4, reason="Detail level differs from list")
+
+    runner.battle = rejected_preview
+    assert runner.run_menu(current) == "deferred"
+    saved = load(runner)
+    assert saved["search_id"] != original["search_id"]
+    assert saved["search"].elapsed_seconds == 0
+    assert saved["search"].overtime_refreshes == 0
+    assert "previous" not in saved["search"].scores
+    assert state.read_state(runner.config)["attempts"] == {"previous": 1}
+    assert state.read_state(runner.config)["pending"] is None
+
+    def refresh(previous_frame):
+        runner.active_seconds += 60
+        runner.refresh_count += 1
+        runner.last_refresh_acknowledged = True
+        return current
+
+    def verified_battle(current_frame, candidate):
+        entered.append((candidate.choice.opponent_id, runner.search_state.elapsed_seconds))
+        intent = state.begin_battle(runner.config, day, candidate.choice.opponent_id,
+                                     4, 100, preserve=3, now=runner.now)
+        state.complete_battle(runner.config, intent, tickets_after=3,
+                              won=False, rank_after=100, preserve=3, now=runner.now)
+        return frame(*candidates, tickets=3), False
+
+    next_visit(runner)
+    runner.refresh = refresh
+    runner.battle = verified_battle
+    assert runner.run_menu(current) == "success"
+    assert entered == [("target", 240)]
+    assert state.read_state(runner.config)["attempts"] == {"previous": 1, "target": 1}
+    assert state.read_state(runner.config)["last_tickets"] == 3
     assert not survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
 
 
@@ -316,7 +404,7 @@ def test_rank_changes_between_visits_never_renew_unspent_ticket_search(runner):
     checkpoint(runner, elapsed=500)
     created = load(runner)["created_at"]
     next_visit(runner)
-    current = stronger_menu(rank=101)
+    current = frame(rank=101)
 
     def refresh(previous):
         runner.active_seconds += 25
@@ -325,18 +413,22 @@ def test_rank_changes_between_visits_never_renew_unspent_ticket_search(runner):
         return current
 
     runner.refresh = refresh
-    assert runner.run_menu(current) == "success"
-    assert runner.refresh_count == 4
+    assert runner.run_menu(current) == "deferred"
+    assert runner.refresh_count == 12
     saved = load(runner)
     assert saved["search"].exhausted
+    assert saved["search"].overtime_refreshes == 9
     assert saved["created_at"] == created
     assert saved["own_rank"] == 101
     assert_no_battle(runner)
 
     next_visit(runner)
-    runner.refresh = lambda f: pytest.fail("Another defensive rank loss cannot restore time")
-    assert runner.run_menu(stronger_menu(rank=102)) == "success"
+    runner.last_refresh_acknowledged = False
+    runner.refresh = lambda f: f
+    assert runner.run_menu(frame(rank=102)) == "deferred"
     assert load(runner)["search"].exhausted
+    assert load(runner)["search"].overtime_refreshes == 9
+    assert load(runner)["created_at"] == created
     assert_no_battle(runner)
 
 
@@ -344,14 +436,17 @@ def test_first_place_visit_preserves_prior_budget_if_rank_later_changes(runner):
     runner.reserve = runner.config.tactical_battles_preserve_tickets = 4
     checkpoint(runner, elapsed=600)
     next_visit(runner)
-    runner.refresh = lambda f: pytest.fail("No refresh at first place or with an exhausted budget")
+    runner.refresh = lambda f: pytest.fail("No refresh at first place")
     assert runner.run_menu(stronger_menu(rank=1)) == "success"
     assert load(runner)["search"].exhausted
     assert load(runner)["status"] == "blocked"
     assert not survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
     next_visit(runner)
-    assert runner.run_menu(stronger_menu(rank=102)) == "success"
+    refresh_once_then_defer(runner, frame(rank=102))
+    assert runner.run_menu(frame(rank=102)) == "deferred"
     assert load(runner)["search"].exhausted
+    assert load(runner)["search"].overtime_refreshes == 1
+    assert survey.continuation_due(runner.config, now=runner.now.timestamp() + 61)
     assert_no_battle(runner)
 
 

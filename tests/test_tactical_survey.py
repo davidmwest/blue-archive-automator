@@ -182,10 +182,12 @@ def test_server_reset_expires_even_an_exhausted_survey(config, exhausted):
     assert not survey.continuation_due(config, now=before_reset + 120)
 
 
-def test_exhausted_budget_is_retained_all_day_and_never_scheduled(config):
+def test_deadline_checkpoint_continues_overtime_without_resetting_elapsed_time(config):
     save(config, search=search_state(600))
-    assert load(config, now=NOW + 5 * 3600)["search"].exhausted
-    assert not survey.continuation_due(config, now=NOW + 60)
+    assert survey.continuation_due(config, now=NOW + 60)
+    expired = load(config, now=NOW + 5 * 3600)
+    assert expired["search"].deadline_reached
+    assert expired["status"] == "blocked"
     assert not survey.continuation_due(config, now=NOW + 5 * 3600)
     original = survey.survey_path(config).read_bytes()
     with pytest.raises(ValueError, match="already used"):
@@ -303,8 +305,9 @@ def test_invalid_save_cannot_replace_good_checkpoint(config):
 
 
 @pytest.mark.parametrize("guard", ["pending", "blocked", "reserve", "unreadable"])
-def test_due_survey_never_bypasses_battle_history_guards(config, guard):
-    save(config)
+@pytest.mark.parametrize("elapsed", [20, 600])
+def test_due_survey_never_bypasses_battle_history_guards(config, guard, elapsed):
+    save(config, search=search_state(elapsed))
     when = datetime.fromtimestamp(NOW, timezone.utc)
     if guard == "pending":
         tactical_state.begin_battle(config, DAY, "opponent-a", 5, 571, now=when)
@@ -347,49 +350,64 @@ def test_identity_count_is_bounded(config, monkeypatch):
         save(config, identities=people)
 
 
-def test_legacy_exhausted_checkpoint_has_stable_identity_and_allows_next_ticket(config):
+@pytest.mark.parametrize("version", [3, 4])
+def test_legacy_exhausted_checkpoint_resumes_same_search_with_stable_identity(config, version):
     save(config, search=search_state(600))
-    corrupt(config, lambda value: (value.update(version=3), value.pop("search_id")))
+    def downgrade(value):
+        value["version"] = version
+        if version == 3:
+            value.pop("search_id")
+        value["search"]["version"] = 1
+        value["search"].pop("overtime_refreshes")
+        value["search"].pop("overtime_threshold")
+    corrupt(config, downgrade)
+    old_checkpoint = survey.survey_path(config).read_bytes()
     original = load(config)
     assert original["search_id"] == load(config)["search_id"]
     assert original["search"].elapsed_seconds == 600
+    assert original["search"].overtime_refreshes == 0
+    assert survey.survey_path(config).read_bytes() == old_checkpoint
     when = datetime.fromtimestamp(NOW, timezone.utc)
     tactical_state.observe_ladder(config, DAY, tickets=4, rank=571, now=when)
-    assert survey.continuation_due(config, now=NOW + 5 * 3600)
+    assert not survey.continuation_due(config, now=NOW + 5 * 3600)
     tactical_state.record_search_timeout(config, DAY, original["search_id"], now=when)
     assert survey.continuation_due(config, now=NOW + 60)
-    save(config, search=search_state(0), search_id="b" * 32, now=NOW + 60)
+    resumed = original["search"]
+    resumed.observe((Opponent(**identity()["choice"]),), refreshed=True)
+    save(config, search=resumed, now=NOW + 60)
     restored = load(config, now=NOW + 60)
-    assert restored["search_id"] == "b" * 32
-    assert restored["search"].remaining_seconds == 600
-    assert restored["created_at"] == NOW + 60
+    assert restored["search_id"] == original["search_id"]
+    assert restored["search"].remaining_seconds == 0
+    assert restored["search"].overtime_refreshes == 1
+    assert restored["created_at"] == NOW
     assert tactical_state.read_state(config)["timed_out_searches"] == [original["search_id"]]
 
 
-def test_rotation_cannot_reset_unfinished_or_unaccounted_search(config):
+@pytest.mark.parametrize("elapsed", [200, 600])
+def test_rotation_cannot_reset_search_even_with_legacy_timeout_audit(config, elapsed):
     when = datetime.fromtimestamp(NOW, timezone.utc)
     tactical_state.observe_ladder(config, DAY, tickets=4, rank=571, now=when)
-    save(config, search=search_state(200))
-    with pytest.raises(ValueError, match="accounted timeout"):
+    save(config, search=search_state(elapsed))
+    with pytest.raises(ValueError, match="same search identity"):
         save(config, search=search_state(0), search_id="c" * 32)
-    save(config, search=search_state(600))
-    with pytest.raises(ValueError, match="accounted timeout"):
+    tactical_state.record_search_timeout(config, DAY, load(config)["search_id"], now=when)
+    with pytest.raises(ValueError, match="same search identity"):
         save(config, search=search_state(0), search_id="c" * 32)
-    assert load(config)["search"].elapsed_seconds == 600
+    assert load(config)["search"].elapsed_seconds == elapsed
 
 
-def test_last_allowance_stops_continuation_before_and_after_timeout_accounting(config):
+def test_last_ticket_above_reserve_continues_after_historical_timeout(config):
     when = datetime.fromtimestamp(NOW, timezone.utc)
     tactical_state.observe_ladder(config, DAY, tickets=2, rank=571, now=when)
     save(config, search=search_state(600))
-    assert not survey.continuation_due(config, now=NOW + 60)
+    assert survey.continuation_due(config, now=NOW + 60)
     tactical_state.record_search_timeout(config, DAY, load(config)["search_id"], now=when)
-    assert not survey.continuation_due(config, now=NOW + 60)
-    with pytest.raises(ValueError, match="accounted timeout"):
+    assert survey.continuation_due(config, now=NOW + 60)
+    with pytest.raises(ValueError, match="same search identity"):
         save(config, search=search_state(0), search_id="d" * 32)
 
 
-def test_failed_atomic_rotation_remains_resumable_without_new_allowance(config, monkeypatch):
+def test_failed_atomic_overtime_save_keeps_prior_progress_resumable(config, monkeypatch):
     when = datetime.fromtimestamp(NOW, timezone.utc)
     tactical_state.observe_ladder(config, DAY, tickets=4, rank=571, now=when)
     save(config, search=search_state(600))
@@ -398,8 +416,44 @@ def test_failed_atomic_rotation_remains_resumable_without_new_allowance(config, 
     def failed(*args):
         raise OSError("disk failure")
     monkeypatch.setattr(Path, "replace", failed)
+    progressed = before["search"]
+    progressed.observe((Opponent(**identity()["choice"]),), refreshed=True)
     with pytest.raises(OSError, match="disk failure"):
-        save(config, search=search_state(0), search_id="e" * 32)
+        save(config, search=progressed, now=NOW + 60)
     assert load(config)["search_id"] == before["search_id"]
     assert load(config)["search"].exhausted
+    assert load(config)["search"].overtime_refreshes == 0
     assert survey.continuation_due(config, now=NOW + 60)
+
+
+@pytest.mark.parametrize("field", ["overtime_refreshes", "overtime_threshold"])
+def test_overtime_checkpoint_cannot_move_backwards(config, field):
+    search = search_state(600)
+    search.observe((Opponent(**identity()["choice"]),), refreshed=True)
+    save(config, search=search)
+    before = survey.survey_path(config).read_bytes()
+    setattr(search, field, 0 if field == "overtime_refreshes" else None)
+    with pytest.raises(ValueError, match="overtime progress"):
+        save(config, search=search, now=NOW + 60)
+    assert survey.survey_path(config).read_bytes() == before
+
+
+def test_clearing_resolved_search_allows_fresh_timer_without_resetting_battle_history(config):
+    when = datetime.fromtimestamp(NOW, timezone.utc)
+    tactical_state.observe_ladder(config, DAY, tickets=4, rank=571, now=when)
+    save(config, search=search_state(600))
+    old_id = load(config)["search_id"]
+    history = tactical_state.state_path(config).read_bytes()
+    survey.clear_survey(config)
+    save(config, search=search_state(0), now=NOW + 60)
+    restored = load(config, now=NOW + 60)
+    assert restored["search_id"] != old_id
+    assert restored["search"].remaining_seconds == 600
+    assert tactical_state.state_path(config).read_bytes() == history
+
+
+def test_overtime_does_not_dispatch_from_a_previous_days_ticket_observation(config):
+    previous = datetime.fromtimestamp(NOW - 86400, timezone.utc)
+    tactical_state.observe_ladder(config, "2026-09-25", tickets=4, rank=571, now=previous)
+    save(config, search=search_state(600))
+    assert not survey.continuation_due(config, now=NOW + 60)

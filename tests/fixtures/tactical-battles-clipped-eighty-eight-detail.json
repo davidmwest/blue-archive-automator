@@ -1,0 +1,122 @@
+[
+  {
+    "text": "Time Left 01:51",
+    "confidence": 0.99998,
+    "box": [
+      270,
+      83,
+      427,
+      110
+    ]
+  },
+  {
+    "text": "Battle Opponent",
+    "confidence": 0.99997,
+    "box": [
+      512,
+      77,
+      770,
+      118
+    ]
+  },
+  {
+    "text": "Rank 494",
+    "confidence": 0.96895,
+    "box": [
+      350,
+      178,
+      500,
+      215
+    ]
+  },
+  {
+    "text": "Outdoor Zone 4",
+    "confidence": 0.96663,
+    "box": [
+      917,
+      233,
+      1025,
+      256
+    ]
+  },
+  {
+    "text": "Lv.88 Scout3",
+    "confidence": 0.99995,
+    "box": [
+      257,
+      268,
+      366,
+      292
+    ]
+  },
+  {
+    "text": "Opponent Info",
+    "confidence": 0.99056,
+    "box": [
+      256,
+      298,
+      412,
+      328
+    ]
+  },
+  {
+    "text": "VS",
+    "confidence": 0.98238,
+    "box": [
+      607,
+      297,
+      667,
+      344
+    ]
+  },
+  {
+    "text": "My Info",
+    "confidence": 0.99632,
+    "box": [
+      902,
+      315,
+      988,
+      346
+    ]
+  },
+  {
+    "text": "Rank 541",
+    "confidence": 0.94283,
+    "box": [
+      349,
+      378,
+      499,
+      415
+    ]
+  },
+  {
+    "text": "Lv.79 Player",
+    "confidence": 0.98703,
+    "box": [
+      254,
+      467,
+      360,
+      493
+    ]
+  },
+  {
+    "text": "4\u21923",
+    "confidence": 0.99915,
+    "box": [
+      689,
+      512,
+      750,
+      539
+    ]
+  },
+  {
+    "text": "Attack Formation",
+    "confidence": 0.98216,
+    "box": [
+      538,
+      559,
+      747,
+      585
+    ]
+  }
+]

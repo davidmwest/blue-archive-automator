@@ -103,14 +103,13 @@ def _timed_out_searches(value):
 
 
 def search_allowances(state, tickets, preserve=DEFAULT_PRESERVE_TICKETS):
-    """Count unspent ticket searches without restoring timed-out allowances.
+    """Count actual tickets available above the manual-play reserve.
 
-    A battle reduces the observed ticket count. A timeout keeps its ticket but
-    consumes one search opportunity for this game day. The caller supplies the
-    current day's durable state and the latest observed ticket count.
+    Historical search timeouts remain audit evidence only. Reaching the search
+    threshold starts overtime; it cannot consume an unspent game ticket.
     """
-    timed_out = _timed_out_searches(state["timed_out_searches"])
-    return max(0, ticket_budget(tickets, preserve) - len(timed_out))
+    _timed_out_searches(state["timed_out_searches"])
+    return ticket_budget(tickets, preserve)
 
 
 def _identities(value):
@@ -281,11 +280,10 @@ def observe_ladder(config, day_key, *, tickets, rank, preserve=DEFAULT_PRESERVE_
 
 
 def record_search_timeout(config, day_key, search_id, *, now=None):
-    """Consume one search allowance, preserving its ticket and other searches.
+    """Retain an idempotent timeout audit without consuming a game ticket.
 
-    Persist before replacing an exhausted survey. Repeating the same stable ID
-    after an interruption is a read-only no-op, so checkpoint rotation cannot
-    count one timeout twice. Pending battles and holds must be resolved first.
+    Kept for legacy callers and history. Current searches continue into overtime
+    with the same identity. Pending battles and holds must be resolved first.
     """
     _search_id(search_id)
     now = _now(now)
@@ -298,8 +296,8 @@ def record_search_timeout(config, day_key, search_id, *, now=None):
         raise TacticalStateError("Tactical Challenge search timeout history reached its limit")
     state["timed_out_searches"].append(search_id)
     state["last_summary"] = (
-        "Tactical Challenge search timed out; its ticket was kept; "
-        f'{len(state["timed_out_searches"])} search allowance(s) used without a battle today'
+        "Tactical Challenge search threshold recorded; its ticket remains available; "
+        f'{len(state["timed_out_searches"])} historical timeout(s) recorded today'
     )
     return _save(config, state, now)
 

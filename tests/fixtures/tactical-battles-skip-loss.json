@@ -1,0 +1,32 @@
+[
+  {
+    "text": "Battle Result",
+    "confidence": 0.99998,
+    "box": [
+      540,
+      190,
+      742,
+      228
+    ]
+  },
+  {
+    "text": "LOSE",
+    "confidence": 0.99974,
+    "box": [
+      501,
+      257,
+      792,
+      395
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99993,
+    "box": [
+      574,
+      444,
+      705,
+      483
+    ]
+  }
+]

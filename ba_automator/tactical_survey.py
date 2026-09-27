@@ -2,7 +2,7 @@
 
 These files contain search progress, never ticket-spending permission. The
 battle intent remains in tactical_state. Active evidence blocks after four
-hours; its consumed budget remains recorded for the game day across rank changes.
+hours; elapsed time and overtime progress survive same-day rank changes.
 Mutating callers hold the instance lock; the scheduler reads atomic snapshots.
 """
 
@@ -26,7 +26,7 @@ from . import tactical_state
 MAX_AGE_SECONDS = 4 * 60 * 60
 MAX_FILE_BYTES = 10 * 1024 * 1024
 MAX_ENTRIES = 1000
-# Version 4 identifies each ticket's finite-time search for timeout accounting.
+# Version 4 identifies each ticket's search across queue visits and overtime.
 # Durable battle history and daily exclusions live in a separate file.
 CHECKPOINT_VERSION = 4
 _KEYS = {"version", "day_key", "own_rank", "status", "search", "identities",
@@ -80,8 +80,8 @@ def _identities(value):
 
 
 def _validate(value, now, *, fresh=True):
-    # Version 3 had one search per day after a timeout. Its stable identity
-    # lets migration charge that allowance exactly once, including after a crash.
+    # Older exhausted searches resume under one stable identity. Migration must
+    # preserve elapsed time rather than renew the benchmark or skip a ticket.
     if (isinstance(value, dict) and value.get("version") == 3
             and set(value) == _KEYS - {"search_id"}):
         seed = json.dumps([value["day_key"], value["created_at"]])
@@ -104,9 +104,9 @@ def _validate(value, now, *, fresh=True):
     search = SearchState.from_dict(value["search"])
     if fresh and value["day_key"] != _day(now):
         raise ValueError("Saved search crossed daily reset")
-    if fresh and not search.exhausted and now - created >= MAX_AGE_SECONDS:
-        # Stale evidence cannot schedule work, but forgetting its consumed time
-        # would grant another full allowance on a manual or bounded retry.
+    if fresh and now - created >= MAX_AGE_SECONDS:
+        # Stale evidence cannot schedule work, including during overtime.
+        # Preserve progress so a read or manual retry cannot renew its age.
         value = dict(value, status="blocked")
     identities = _identities(value["identities"])
     if any(key not in identities for key in search.scores):
@@ -147,8 +147,7 @@ def _continuation_metadata(path, fingerprint):
         value = _validate(raw, _number(raw["updated_at"]), fresh=False)
         return {key: value[key] for key in (
             "day_key", "own_rank", "status", "created_at", "updated_at", "due_at", "search_id"
-        )} | {"time_budget_seconds": value["search"].policy.time_budget_seconds,
-              "remaining_seconds": value["search"].remaining_seconds}
+        )} | {"time_budget_seconds": value["search"].policy.time_budget_seconds}
     except (OSError, ValueError, TypeError, KeyError, OverflowError, RecursionError):
         return None
 
@@ -171,18 +170,14 @@ def save_survey(config, *, day_key, own_rank, search, identities, now,
     matching = _matches(previous, day_key, search.policy.time_budget_seconds)
     search_id = search_id or (previous["search_id"] if matching else uuid4().hex)
     if matching and search_id != previous["search_id"]:
-        history = tactical_state.read_state(config)
-        if (not previous["search"].exhausted
-                or history["day_key"] != day_key
-                or previous["search_id"] not in history["timed_out_searches"]
-                or history["pending"] or history["blocked_reason"]
-                or history["last_tickets"] is None
-                or not tactical_state.search_allowances(
-                    history, history["last_tickets"], config.tactical_battles_preserve_tickets)):
-            raise ValueError("A new search requires an accounted timeout and another ticket allowance")
-        matching = False
+        raise ValueError("Keep the same search identity until its battle is resolved")
     if matching and search.elapsed_seconds < previous["search"].elapsed_seconds:
         raise ValueError("Saved search cannot restore an already used time budget")
+    if matching and (search.overtime_refreshes < previous["search"].overtime_refreshes
+                     or (previous["search"].overtime_threshold is not None
+                         and (search.overtime_threshold is None
+                              or search.overtime_threshold < previous["search"].overtime_threshold))):
+        raise ValueError("Saved search cannot reset overtime progress")
     created = previous["created_at"] if matching else now
     value = {"version": CHECKPOINT_VERSION, "search_id": search_id,
              "day_key": day_key, "own_rank": own_rank,
@@ -213,7 +208,7 @@ def _write(config, value, now):
 
 
 def load_survey(config, *, day_key, own_rank, time_budget_seconds, now):
-    """Keep same-day progress across passive rank changes, including exhaustion.
+    """Keep same-day progress across passive rank changes, including overtime.
 
     The stored rank remains provenance. The runner checks current candidates
     against the freshly observed rank; a defensive loss cannot renew a budget.
@@ -255,7 +250,7 @@ def continuation_due(config, *, now):
     except OSError:
         return False
     if (value is None or value["due_at"] > now or value["updated_at"] > now
-            or (value["remaining_seconds"] > 0 and now - value["created_at"] >= MAX_AGE_SECONDS)
+            or now - value["created_at"] >= MAX_AGE_SECONDS
             or value["day_key"] != _day(now) or value["status"] != "active"
             or value["time_budget_seconds"] != config.tactical_battles_search_minutes * 60):
         return False
@@ -263,14 +258,11 @@ def continuation_due(config, *, now):
         history = tactical_state.read_state(config)
     except tactical_state.TacticalStateError:
         return False
-    if history["pending"] or history["blocked_reason"]:
+    if (history["pending"] or history["blocked_reason"]
+            or history["day_key"] not in (None, value["day_key"])):
         return False
     tickets = history["last_tickets"]
     if tickets is None:
-        return value["remaining_seconds"] > 0
-    remaining = tactical_state.search_allowances(history, tickets, config.tactical_battles_preserve_tickets)
-    # Before migration/timeout accounting the expired allowance still counts
-    # against this total. After accounting it must not be subtracted twice.
-    if value["remaining_seconds"] <= 0 and value["search_id"] not in history["timed_out_searches"]:
-        remaining -= 1
-    return remaining > 0
+        return True  # The runner must observe current tickets before entry.
+    return tactical_state.search_allowances(
+        history, tickets, config.tactical_battles_preserve_tickets) > 0

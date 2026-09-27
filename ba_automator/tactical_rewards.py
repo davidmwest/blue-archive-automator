@@ -163,8 +163,12 @@ class TacticalRewardsRunner(ShopRunner):
         return self.finish()
 
     def run(self):
-        self.navigate("home", "campaign", (1200, 641))
-        frame = self.navigate("campaign", "tactical", (868, 581))
+        frame = self.navigate("home", "campaign", (1200, 641))
+        # Campaign can remain visible for several seconds after this tap is
+        # accepted. Repeating it may hit an opponent on the arriving menu.
+        self.tap(frame, (868, 581), "Open tactical")
+        self.phase("Waiting for the Tactical Challenge reward menu")
+        frame = self.wait("tactical", timeout=60)
         return self.collect_menu(frame)
 
 

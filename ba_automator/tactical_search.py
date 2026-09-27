@@ -1,10 +1,11 @@
-"""Time-bounded opponent selection without a target reacquisition search.
+"""Timed opponent selection with gradual overtime relaxation.
 
 The first 37% of active search time establishes a reference population. Later
 lists may supply a current opponent at or below its gradually relaxed empirical
 percentile. This is an operational heuristic, not a secretary-problem guarantee:
 the game supplies repeated, discrete, changing opponents rather than a random
-permutation. Queue waiting must never be passed to ``advance``.
+permutation. After the configured time, each acknowledged refresh admits the
+next observed strength tier. Queue waiting never advances this policy.
 """
 
 from dataclasses import dataclass, field
@@ -14,7 +15,7 @@ import random
 from .tactical_battles import Opponent, opponent_score
 
 
-VERSION = 1
+VERSION = 2
 BENCHMARK_FRACTION = 0.37
 FINAL_PERCENTILE = 0.25
 MAX_IDENTITIES = 1000
@@ -78,6 +79,8 @@ class SearchState:
     scores: dict[str, float] = field(default_factory=dict)
     benchmark_ids: set[str] = field(default_factory=set)
     initial_observed: bool = False
+    overtime_refreshes: int = 0
+    overtime_threshold: float | None = None
 
     def __post_init__(self):
         self._validate()
@@ -91,6 +94,14 @@ class SearchState:
         _count(self.refreshes, "refresh count")
         _count(self.observations, "observation count")
         _count(self.benchmark_observations, "benchmark observation count")
+        _count(self.overtime_refreshes, "overtime refresh count")
+        if (self.overtime_refreshes > self.refreshes
+                or (self.overtime_refreshes and not self.deadline_reached)):
+            raise ValueError("Inconsistent overtime refresh count")
+        if self.overtime_threshold is not None:
+            if (_number(self.overtime_threshold, "overtime threshold") <= 0
+                    or not self.overtime_refreshes):
+                raise ValueError("An overtime threshold requires an acknowledged refresh")
         if type(self.initial_observed) is not bool:
             raise ValueError("Invalid initial observation flag")
         if not 0 <= self.benchmark_observations <= self.observations <= self.refreshes + int(self.initial_observed):
@@ -112,23 +123,32 @@ class SearchState:
             raise ValueError("Benchmark observations require a reference population")
         if bool(self.scores) != bool(self.observations):
             raise ValueError("Readable observations require scores")
+        if self.overtime_threshold is not None and (
+                not self.scores or self.overtime_threshold > max(self.scores.values())):
+            raise ValueError("Overtime threshold must come from observed scores")
 
     @property
     def remaining_seconds(self):
         return max(0.0, self.policy.time_budget_seconds - self.elapsed_seconds)
 
     @property
-    def exhausted(self):
+    def deadline_reached(self):
         return self.remaining_seconds == 0
 
     @property
+    def exhausted(self):
+        """Compatibility alias for the time threshold, not a stop condition."""
+        return self.deadline_reached
+
+    @property
     def estimated_refreshes(self):
-        if not self.refreshes or self.elapsed_seconds <= 0:
+        within_time = self.refreshes - self.overtime_refreshes
+        if not within_time or self.elapsed_seconds <= 0:
             return None
-        return math.floor(self.policy.time_budget_seconds * self.refreshes / self.elapsed_seconds)
+        return math.floor(self.policy.time_budget_seconds * within_time / self.elapsed_seconds)
 
     def advance(self, seconds):
-        """Charge active searching only; clamp overruns at the hard deadline."""
+        """Charge active time until the threshold; overtime advances by refresh."""
         seconds = _number(seconds, "search time increment")
         self.elapsed_seconds = min(self.policy.time_budget_seconds, self.elapsed_seconds + seconds)
 
@@ -166,21 +186,41 @@ class SearchState:
         self.refreshes += int(refreshed)
         if not refreshed:
             self.initial_observed = True
-        if not opponents:
-            return
-        self.observations += 1
-        benchmarking = self.elapsed_seconds < self.policy.benchmark_seconds
-        if benchmarking:
-            self.benchmark_observations += 1
-        for opponent in opponents:
-            identity = opponent.opponent_id
-            score = opponent_score(opponent)
-            self.scores[identity] = max(self.scores.get(identity, score), score)
+        if opponents:
+            self.observations += 1
+            benchmarking = self.elapsed_seconds < self.policy.benchmark_seconds
             if benchmarking:
-                self.benchmark_ids.add(identity)
+                self.benchmark_observations += 1
+            for opponent in opponents:
+                identity = opponent.opponent_id
+                score = opponent_score(opponent)
+                self.scores[identity] = max(self.scores.get(identity, score), score)
+                if benchmarking:
+                    self.benchmark_ids.add(identity)
+        if refreshed and self.deadline_reached:
+            self.overtime_refreshes += 1
+            self._advance_overtime()
+
+    def _benchmark_threshold(self, percentile):
+        if self.benchmark_observations < MIN_BENCHMARK_OBSERVATIONS:
+            return None
+        reference = sorted(self.scores[key] for key in self.benchmark_ids)
+        return reference[math.floor(percentile * (len(reference) - 1))]
+
+    def _advance_overtime(self):
+        if not self.scores:
+            return
+        baseline = self._benchmark_threshold(FINAL_PERCENTILE)
+        if baseline is None:
+            # No useful early benchmark: overtime still requires observed,
+            # caller-verified eligible opponents before setting a threshold.
+            baseline = min(self.scores.values())
+        floor = max(baseline, self.overtime_threshold or baseline)
+        higher = sorted({score for score in self.scores.values() if score > floor})
+        self.overtime_threshold = higher[0] if higher else floor
 
     def decide(self, current_opponents, *, rng=None):
-        """Choose only from the current list; a deadline never forces a battle.
+        """Choose only from the current list, including admitted overtime tiers.
 
         The floor-index percentile is conservative for small populations and
         never invents a threshold between observed scores. Equality qualifies
@@ -192,10 +232,9 @@ class SearchState:
         progress = max(0.0, (self.elapsed_seconds / self.policy.time_budget_seconds
                              - BENCHMARK_FRACTION) / (1 - BENCHMARK_FRACTION))
         percentile = min(FINAL_PERCENTILE, progress * FINAL_PERCENTILE)
-        threshold = None
-        if self.benchmark_observations >= MIN_BENCHMARK_OBSERVATIONS:
-            reference = sorted(self.scores[key] for key in self.benchmark_ids)
-            threshold = reference[math.floor(percentile * (len(reference) - 1))]
+        threshold = self._benchmark_threshold(percentile)
+        if self.deadline_reached and self.overtime_threshold is not None:
+            threshold = max(threshold or self.overtime_threshold, self.overtime_threshold)
         candidates = []
         if not benchmarking and threshold is not None:
             # A current reading may only worsen its own previous score; this
@@ -207,11 +246,11 @@ class SearchState:
                 best = min(score for score, _ in qualified)
                 candidates = [identity for score, identity in qualified if score == best]
         selected = (rng or random.SystemRandom()).choice(candidates) if candidates else None
-        phase = ("accepted" if selected is not None else "exhausted" if self.exhausted
+        phase = ("accepted" if selected is not None else "overtime" if self.deadline_reached
                  else "benchmark" if benchmarking else "search")
         return SearchDecision(phase, threshold, percentile, selected, tuple(candidates),
                               self.elapsed_seconds, self.remaining_seconds,
-                              self.estimated_refreshes, not self.exhausted and selected is None)
+                              self.estimated_refreshes, selected is None)
 
     def to_dict(self):
         self._validate()
@@ -221,12 +260,20 @@ class SearchState:
                 "observations": self.observations,
                 "benchmark_observations": self.benchmark_observations,
                 "scores": dict(self.scores), "benchmark_ids": sorted(self.benchmark_ids),
-                "initial_observed": self.initial_observed}
+                "initial_observed": self.initial_observed,
+                "overtime_refreshes": self.overtime_refreshes,
+                "overtime_threshold": self.overtime_threshold}
 
     @classmethod
     def from_dict(cls, value):
         keys = {"version", "policy", "elapsed_seconds", "refreshes", "observations",
-                "benchmark_observations", "scores", "benchmark_ids", "initial_observed"}
+                "benchmark_observations", "scores", "benchmark_ids", "initial_observed",
+                "overtime_refreshes", "overtime_threshold"}
+        if isinstance(value, dict) and type(value.get("version")) is int and value["version"] == 1:
+            legacy_keys = keys - {"overtime_refreshes", "overtime_threshold"}
+            if set(value) != legacy_keys:
+                raise ValueError("Unsupported legacy opponent search state")
+            value = dict(value, version=VERSION, overtime_refreshes=0, overtime_threshold=None)
         if not isinstance(value, dict) or set(value) != keys or type(value["version"]) is not int or value["version"] != VERSION:
             raise ValueError("Unsupported opponent search state")
         policy = value["policy"]

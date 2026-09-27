@@ -1,4 +1,4 @@
-"""The bounded search must never turn an expired budget into a forced battle."""
+"""Search relaxes one observed strength tier per acknowledged overtime refresh."""
 
 import copy
 import json
@@ -62,9 +62,9 @@ def test_one_initial_frame_or_missing_data_cannot_authorize_battle():
     decision = state.decide([candidate])
     assert state.observations == state.benchmark_observations == 1
     assert decision.threshold is None
-    assert decision.phase == "exhausted"
+    assert decision.phase == "overtime"
     assert decision.opponent_id is None
-    assert not decision.can_refresh
+    assert decision.can_refresh
 
 
 def test_late_observations_do_not_repair_missing_benchmark():
@@ -95,17 +95,17 @@ def test_strong_current_candidate_is_rejected_at_deadline_without_fallback():
     state, candidates = benchmark()
     state.advance(90)
     decision = state.decide([candidates[-1]])
-    assert decision.phase == "exhausted"
+    assert decision.phase == "overtime"
     assert decision.opponent_id is None
     assert decision.remaining_seconds == 0
-    assert not decision.can_refresh
+    assert decision.can_refresh
 
 
 def test_empty_current_list_does_not_select_remembered_best():
     state, _ = benchmark()
     state.advance(90)
     assert state.decide([]).opponent_id is None
-    assert state.decide([]).phase == "exhausted"
+    assert state.decide([]).phase == "overtime"
 
 
 def test_new_weak_opponent_can_qualify_without_becoming_reference():
@@ -167,14 +167,156 @@ def test_actual_refresh_estimate_uses_elapsed_active_time():
     assert state.estimated_refreshes == 100
 
 
-def test_elapsed_overrun_is_clamped_and_never_enables_refresh():
+def test_elapsed_overrun_reaches_soft_threshold_without_forcing_a_match():
     state, _ = benchmark()
     state.advance(1000)
     assert state.elapsed_seconds == 100
     assert state.exhausted
-    assert not state.decide([]).can_refresh
+    assert state.deadline_reached
+    assert state.decide([]).can_refresh
+    assert state.decide([]).opponent_id is None
     state.advance(1)
     assert state.elapsed_seconds == 100
+
+
+def test_overtime_admits_next_observed_tier_per_acknowledged_refresh():
+    state, candidates = benchmark(levels=(50, 55, 60))
+    state.advance(90)
+    assert state.decide([candidates[2]]).threshold == opponent_score(candidates[0])
+    assert state.decide([candidates[2]]).opponent_id is None
+
+    state.observe([candidates[2]])
+    first = state.decide([candidates[2]])
+    assert state.overtime_refreshes == 1
+    assert first.threshold == opponent_score(candidates[1])
+    assert first.opponent_id is None
+    assert first.can_refresh
+
+    state.observe([candidates[2]])
+    second = state.decide([candidates[2]])
+    assert state.overtime_refreshes == 2
+    assert second.threshold == opponent_score(candidates[2])
+    assert second.opponent_id == candidates[2].opponent_id
+    assert not second.can_refresh
+
+
+def test_overtime_starts_above_existing_percentile_and_counts_distinct_tiers():
+    state, candidates = benchmark(levels=(40, 50, 50, 60, 70))
+    state.advance(90)
+    assert state.decide([]).threshold == opponent_score(candidates[1])
+    state.observe([candidates[-1]])
+    assert state.decide([]).threshold == opponent_score(candidates[3])
+    state.observe([candidates[-1]])
+    assert state.decide([candidates[-1]]).opponent_id == candidates[-1].opponent_id
+
+
+def test_overtime_never_selects_a_remembered_opponent_absent_from_current_list():
+    state, candidates = benchmark(levels=(50, 55, 60))
+    state.advance(90)
+    state.observe([])
+    assert state.overtime_refreshes == 1
+    assert state.decide([]).threshold == opponent_score(candidates[1])
+    assert state.decide([]).candidate_ids == ()
+    assert state.decide([]).opponent_id is None
+    # Partial current lists are already filtered and verified by the caller.
+    assert state.decide([candidates[2]]).opponent_id is None
+    state.observe([candidates[2]])
+    assert state.decide([candidates[2]]).candidate_ids == (candidates[2].opponent_id,)
+
+
+def test_overtime_reads_and_queue_resumes_do_not_advance_threshold():
+    state, candidates = benchmark(levels=(50, 55, 60))
+    state.advance(90)
+    state.observe([candidates[-1]])
+    restored = SearchState.from_dict(json.loads(json.dumps(state.to_dict())))
+    before = restored.to_dict()
+    for _ in range(10):
+        restored.advance(600)
+        decision = restored.decide([candidates[-1]])
+        assert decision.opponent_id is None
+        assert decision.threshold == opponent_score(candidates[1])
+    assert restored.to_dict() == before
+    restored.observe([candidates[-1]])
+    assert restored.overtime_refreshes == 2
+    assert restored.decide([candidates[-1]]).opponent_id == candidates[-1].opponent_id
+
+
+def test_new_low_scores_cannot_make_overtime_threshold_regress():
+    state, candidates = benchmark(levels=(50, 55, 60))
+    state.advance(90)
+    state.observe([candidates[-1]])
+    assert state.overtime_threshold == opponent_score(candidates[1])
+    # Scores learned later may introduce tiers between earlier ones. The next
+    # refresh must still advance from the persisted ceiling, not an array index.
+    state.observe([opponent("new-low", 30), opponent("new-middle", 52)])
+    assert state.overtime_threshold == opponent_score(candidates[-1])
+
+
+def test_new_strong_overtime_candidate_is_not_accepted_until_its_tier_is_admitted():
+    state, candidates = benchmark(levels=(50, 55, 60))
+    state.advance(90)
+    strong = opponent("new-strong", 90)
+    state.observe([strong])
+    assert state.decide([strong]).opponent_id is None
+    state.observe([strong])
+    assert state.decide([strong]).opponent_id is None
+    state.observe([strong])
+    assert state.overtime_threshold == opponent_score(strong)
+    assert state.decide([strong]).opponent_id == strong.opponent_id
+    assert state.decide([candidates[0]]).opponent_id == candidates[0].opponent_id
+
+
+def test_overtime_missing_benchmark_requires_acknowledged_verified_observation():
+    state = SearchState(SearchPolicy(100))
+    state.observe([], refreshed=False)
+    state.advance(100)
+    candidate = opponent("verified-current", 60)
+    assert state.decide([candidate]).threshold is None
+    state.observe([])
+    assert state.decide([candidate]).threshold is None
+    state.observe([candidate])
+    assert not state.benchmark_ids
+    assert state.decide([candidate]).opponent_id == candidate.opponent_id
+    assert SearchState.from_dict(state.to_dict()).to_dict() == state.to_dict()
+
+
+def test_overtime_refreshes_do_not_inflate_within_budget_refresh_estimate():
+    state, candidates = benchmark(levels=(50, 55, 60))
+    state.advance(90)
+    estimate = state.estimated_refreshes
+    for _ in range(5):
+        state.observe([candidates[-1]])
+    assert state.refreshes == 6
+    assert state.overtime_refreshes == 5
+    assert state.estimated_refreshes == estimate == 1
+
+
+def test_legacy_expired_search_migrates_without_resetting_time_or_skipping_tiers():
+    state, candidates = benchmark(levels=(50, 55, 60))
+    state.advance(90)
+    encoded = state.to_dict()
+    del encoded["overtime_refreshes"]
+    del encoded["overtime_threshold"]
+    encoded["version"] = 1
+    restored = SearchState.from_dict(encoded)
+    assert restored.elapsed_seconds == 100
+    assert restored.refreshes == state.refreshes
+    assert restored.scores == state.scores
+    assert restored.overtime_refreshes == 0
+    assert restored.overtime_threshold is None
+    assert restored.decide([candidates[-1]]).opponent_id is None
+    restored.observe([candidates[-1]])
+    assert restored.overtime_refreshes == 1
+    assert restored.overtime_threshold == opponent_score(candidates[1])
+    assert restored.to_dict()["version"] == 2
+
+
+def test_legacy_state_cannot_smuggle_an_overtime_authorization():
+    state, _ = benchmark()
+    encoded = state.to_dict()
+    encoded["version"] = 1
+    with pytest.raises(ValueError, match="legacy"):
+        SearchState.from_dict(encoded)
 
 
 def test_resume_preserves_threshold_counter_and_remaining_budget_without_wall_time():
@@ -216,7 +358,7 @@ def test_invalid_time_increments_are_rejected(value):
 
 
 @pytest.mark.parametrize("field,value", [
-    ("version", True), ("version", 2), ("elapsed_seconds", -1),
+    ("version", True), ("version", 3), ("elapsed_seconds", -1),
     ("elapsed_seconds", 101), ("elapsed_seconds", float("nan")),
     ("refreshes", True), ("refreshes", -1), ("refreshes", 10001),
     ("observations", 99), ("observations", 0),
@@ -227,6 +369,11 @@ def test_invalid_time_increments_are_rejected(value):
     ("scores", {"a": float("inf")}), ("scores", {"a": True}),
     ("scores", {" ": 10}), ("scores", {}),
     ("policy", {"time_budget_seconds": 0}), ("policy", {}),
+    ("overtime_refreshes", True), ("overtime_refreshes", -1),
+    ("overtime_refreshes", 10001), ("overtime_refreshes", 1),
+    ("overtime_threshold", True), ("overtime_threshold", 0),
+    ("overtime_threshold", -1), ("overtime_threshold", float("nan")),
+    ("overtime_threshold", 100),
 ])
 def test_invalid_persisted_state_is_rejected(field, value):
     state, _ = benchmark()

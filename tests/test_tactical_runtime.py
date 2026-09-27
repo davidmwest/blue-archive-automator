@@ -204,7 +204,14 @@ def test_unsent_refresh_defers_without_counting_a_draw_or_fighting(runner):
     (119, 112, 11.358, True),  # Live failure: valid reset was rejected at 1:52.
     (115, 119, 0, False),
     (115, 119, -1, False),
-    (115, 119, 20, False),
+    (115, 119, 20, True),
+    (111, 118, 40, True),   # A delayed network response can outlast OCR alone.
+    (111, 71, 40, False),   # Ordinary countdown never acknowledges a refresh.
+    (30, 119, 35, False),   # A possibly expired original list is ambiguous.
+    (5, 119, 4, True),
+    (5, 119, 10, False),    # The same expiry check applies to fast responses.
+    (10, 119, 10, False),
+    (115, 119, 60, False),
     (115, 119, float("inf"), False),
     (115, 119, float("nan"), False),
 ])
@@ -236,6 +243,35 @@ def test_refresh_ack_uses_capture_elapsed_time_for_identical_lists(
     assert sleeps == [1.3]  # No artificial wait for the clock to tick down.
     event = next(fields for names, fields in runner.events if names == ("opponents_refreshed",))
     assert event["changed"] is False and event["acknowledged"] is acknowledged
+
+
+@pytest.mark.parametrize("settle_at", [8, 28, None])
+def test_refresh_waits_read_only_for_loading_overlay(runner, settle_at):
+    runner.wait = ShopRunner.wait.__get__(runner)
+    initial = frame(refresh_seconds=111, sampled_ranks=(70, 71, 72),
+                    refresh_target=(1174, 147), rank=100)
+
+    def capture():
+        runner.now[0] += 2
+        settled = settle_at is not None and runner.now[0] >= settle_at
+        screen = NS(kind="tactical" if settled else "unknown", rank=100,
+                    tickets=5, opponents=(), refresh_seconds=119,
+                    sampled_ranks=(70, 71, 72))
+        return ShopFrame(Capture(b"image", runner.now[0], "test"), screen)
+
+    runner.capture = capture
+    if settle_at is None:
+        with pytest.raises(RuntimeError, match="did not reach"):
+            runner.refresh(initial)
+        assert runner.now[0] >= 40
+        assert not runner.last_refresh_acknowledged
+    else:
+        result = runner.refresh(initial)
+        assert result.screen.kind == "tactical"
+        assert runner.now[0] >= settle_at
+        assert runner.last_refresh_acknowledged
+    assert runner.inputs == [((1174, 147), "Refresh Tactical Challenge opponents")]
+    assert runner.refresh_count == 1
 
 
 @pytest.mark.parametrize("timer", [None, -1, 122, True, "119", float("nan"), float("inf")])
@@ -542,9 +578,11 @@ def test_changed_detail_ticket_projection_never_opens_formation(runner):
     candidate = Candidate(Opponent("enemy", 80, 79))
     runner.wait = lambda *a, **k: frame("opponent", opponents=(candidate,),
                                        tickets=5, after_tickets=3)
-    with pytest.raises(RuntimeError, match="projected ticket"):
-        runner.battle(frame(tickets=5, rank=100), candidate)
-    assert len(runner.inputs) == 1
+    returned = frame(tickets=5, rank=100)
+    runner.menu = lambda: returned
+    assert runner.battle(frame(tickets=5, rank=100), candidate) == (returned, None)
+    assert runner.inputs[-1] == ((1014, 97), "Close rejected opponent detail")
+    assert runner.search_state.remaining_seconds == 10
     assert state.read_state(runner.config)["pending"] is None
 
 
@@ -556,9 +594,11 @@ def test_changed_detail_rank_never_opens_formation(runner, player_rank, opponent
     runner.wait = lambda *a, **k: frame(
         "opponent", rank=player_rank, opponents=(fresh,), tickets=5, after_tickets=4,
         target=(640, 570))
-    with pytest.raises(RuntimeError, match="Opponent or projected ticket count changed"):
-        runner.battle(frame(tickets=5, rank=100), selected)
-    assert len(runner.inputs) == 1
+    returned = frame(tickets=5, rank=100)
+    runner.menu = lambda: returned
+    assert runner.battle(frame(tickets=5, rank=100), selected) == (returned, None)
+    assert runner.inputs[-1] == ((1014, 97), "Close rejected opponent detail")
+    assert runner.search_state.remaining_seconds == 10
     assert runner.inputs[0][0] == selected.target
     assert state.read_state(runner.config)["pending"] is None
 
@@ -569,9 +609,33 @@ def test_changed_detail_team_levels_never_opens_formation(runner):
     runner.wait = lambda *a, **k: frame(
         "opponent", rank=100, opponents=(fresh,), tickets=5, after_tickets=4,
         target=(640, 570))
-    with pytest.raises(RuntimeError, match="Opponent or projected ticket count changed"):
-        runner.battle(frame(tickets=5, rank=100), selected)
-    assert len(runner.inputs) == 1
+    returned = frame(tickets=5, rank=100)
+    runner.menu = lambda: returned
+    assert runner.battle(frame(tickets=5, rank=100), selected) == (returned, None)
+    assert runner.inputs[-1] == ((1014, 97), "Close rejected opponent detail")
+    assert runner.search_state.remaining_seconds == 10
+    assert state.read_state(runner.config)["pending"] is None
+
+
+def test_unreadable_team_in_verified_preview_restarts_search_without_entering(runner):
+    selected = Candidate(Opponent("enemy", 80, 79, (79, 75, 70)))
+    runner.search_state = benchmark_search(runner, elapsed=9)
+    runner.save_search()
+    previous = runner.search_id
+    runner.wait = lambda *a, **k: frame(
+        "opponent", rank=100, opponents=(), tickets=5, after_tickets=4,
+        target=None)
+    returned = frame(tickets=5, rank=100)
+    runner.menu = lambda: returned
+
+    assert runner.battle(frame(tickets=5, rank=100), selected) == (returned, None)
+    assert runner.inputs == [
+        (selected.target, "Inspect selected Tactical Challenge opponent"),
+        ((1014, 97), "Close rejected opponent detail"),
+    ]
+    assert runner.search_id != previous
+    assert runner.search_state.remaining_seconds == 10
+    assert runner.search_state.scores == {}
     assert state.read_state(runner.config)["pending"] is None
 
 
@@ -1064,9 +1128,12 @@ def test_account_level_change_in_detail_still_blocks_entry(runner, monkeypatch):
     runner.wait = lambda *a, **k: frame(
         "opponent", rank=100, opponents=(changed,), tickets=5, after_tickets=4,
         target=(640, 570))
-    with pytest.raises(RuntimeError, match="Opponent or projected ticket count changed"):
-        runner.battle(frame(tickets=5, rank=100), selected)
-    assert runner.inputs == [(selected.target, "Inspect selected Tactical Challenge opponent")]
+    returned = frame(tickets=5, rank=100)
+    runner.menu = lambda: returned
+    assert runner.battle(frame(tickets=5, rank=100), selected) == (returned, None)
+    assert runner.inputs == [(selected.target, "Inspect selected Tactical Challenge opponent"),
+                             ((1014, 97), "Close rejected opponent detail")]
+    assert runner.search_state.remaining_seconds == 10
     assert state.read_state(runner.config)["pending"] is None
 
 
@@ -1177,38 +1244,32 @@ def benchmark_search(runner, *, elapsed=4):
     return search
 
 
-@pytest.mark.parametrize("qualifies", [True, False])
-def test_deadline_uses_a_fresh_final_menu_without_sending_another_refresh(runner, qualifies):
-    runner.search_state = benchmark_search(runner, elapsed=9)
-    before = observed("strong", rank=75, level=90)
-    after = observed("final", rank=72, level=40 if qualifies else 89)
-    old_menu = frame(rank=100, all_ahead=True, opponents=(before,),
-                     sampled_ranks=(70, 71, 75), refresh_seconds=119,
-                     refresh_target=(1174, 147))
-    final_menu = frame(rank=100, all_ahead=True, opponents=(after,),
-                       sampled_ranks=(70, 71, 72), refresh_seconds=118)
-    captures = []
-    runner.menu = lambda: captures.append(runner.clock()) or final_menu
-    current, choices = runner.scout(old_menu)
-    assert current is final_menu
-    assert choices == ((after.choice,) if qualifies else ())
-    assert runner.search_state.exhausted
-    assert runner.search_state.elapsed_seconds == 10
-    assert runner.search_state.refreshes == 1
-    assert runner.refresh_count == 0 and runner.inputs == []
-    assert captures == [1]
+def test_overtime_can_refresh_after_waiting_for_timer_headroom(runner):
+    runner.search_state = benchmark_search(runner, elapsed=10)
+    initial = frame(rank=100, sampled_ranks=(70, 71, 72), refresh_seconds=119,
+                    refresh_target=(1174, 147), captured_at=0)
+    ready = frame(rank=100, sampled_ranks=(70, 71, 72), refresh_seconds=114,
+                  refresh_target=(1174, 147), captured_at=5)
+    reset = frame(rank=100, sampled_ranks=(70, 71, 72), refresh_seconds=119,
+                  captured_at=10)
+    observations = iter((ready, reset))
+    runner.menu = lambda: next(observations)
+    assert runner.refresh(initial) is reset
+    assert runner.last_refresh_acknowledged
+    assert runner.refresh_count == 1
+    assert len(runner.inputs) == 1
 
 
 @pytest.mark.parametrize("qualifies", [True, False])
-def test_exhausted_search_never_renews_its_allowance_after_four_hours(runner, qualifies):
+def test_overtime_still_rejects_four_hour_old_evidence(runner, qualifies):
     from ba_automator import tactical_survey as survey
     runner.search_state = benchmark_search(runner, elapsed=10)
     runner.survey_created_at = runner.wall_clock().timestamp() - survey.MAX_AGE_SECONDS - 1
     candidate = observed("current", rank=70, level=40 if qualifies else 89)
     current = frame(rank=100, all_ahead=True, opponents=(candidate,), sampled_ranks=(70, 71, 72))
-    runner.refresh = lambda f: pytest.fail("An exhausted search cannot refresh again")
-    assert runner.scout(current)[1] == ((candidate.choice,) if qualifies else ())
-    assert runner.search_state.exhausted and not runner.survey_expired
+    runner.refresh = lambda f: pytest.fail("Stale observations cannot authorize more scouting")
+    assert runner.scout(current)[1] == ()
+    assert runner.search_state.exhausted and runner.survey_expired
     assert runner.inputs == []
 
 
@@ -1281,27 +1342,34 @@ def test_completed_battle_starts_a_fresh_benchmark_and_excludes_fought_opponents
     assert not survey.survey_path(runner.config).exists()
 
 
-def test_expired_opponent_preview_keeps_consumed_search_time_and_does_not_fallback(runner):
+def test_rejected_preview_discards_bad_benchmark_and_gives_fresh_timer(runner):
     from ba_automator import tactical_survey as survey
-    candidates = tuple(observed(str(i), rank=70 + i, level=50 + i * 10) for i in range(3))
-    initial = frame(rank=100, tickets=2, opponents=candidates, cooldown=0)
-    refreshes = timed_refresh(runner, initial)
-    attempted = []
-    strong = observed("strong", rank=60, level=90)
-    def battle(f, candidate):
-        attempted.append(candidate.choice.opponent_id)
-        runner.now[0] += 6  # All remaining time is spent on an expired preview.
-        return frame(rank=100, tickets=2, all_ahead=True, opponents=(strong,),
-                     sampled_ranks=(60, 61, 62), cooldown=0), None
-    runner.battle = battle
-    assert runner.run_menu(initial) == "done"
-    assert attempted == ["0"] and len(refreshes) == 4
+    old = observed("old", level=50)
+    seed_history(runner, observed("fought"))
+    runner.search_state = benchmark_search(runner, elapsed=9)
+    runner.save_search()
+    previous = runner.search_id
+    runner.run_day = "2026-09-26"
+    returned = frame(tickets=4, rank=100)
+    assert runner.restart_rejected_search(returned, tickets_before=4, reason="Bad OCR") == (returned, None)
     saved = survey.load_survey(runner.config, day_key="2026-09-26", own_rank=100,
                               time_budget_seconds=10, now=runner.wall_clock().timestamp())
-    assert saved["search"].exhausted
-    assert saved["search"].scores.keys() == {"0", "1", "2"}
-    assert state.read_state(runner.config)["attempts"] == {}
-    assert state.read_state(runner.config)["last_tickets"] == 2
+    assert saved["search_id"] != previous
+    assert saved["search"].remaining_seconds == 10
+    assert saved["search"].scores == {} and saved["search"].refreshes == 0
+    assert state.read_state(runner.config)["attempts"] == {"fought": 1}
+    assert state.read_state(runner.config)["pending"] is None
+
+
+@pytest.mark.parametrize("tickets", [3, 5, None])
+def test_rejected_preview_cannot_reset_search_with_changed_ticket_count(runner, tickets):
+    runner.search_state = benchmark_search(runner, elapsed=9)
+    runner.save_search()
+    previous = runner.search_id
+    with pytest.raises(RuntimeError, match="Ticket count changed"):
+        runner.restart_rejected_search(frame(tickets=tickets, rank=100),
+                                        tickets_before=4, reason="Bad OCR")
+    assert runner.search_id == previous and runner.search_state.remaining_seconds == 1
 
 
 def test_recovered_loss_discards_previous_match_checkpoint_before_fresh_search(runner):
@@ -1501,7 +1569,7 @@ def test_verified_ignored_refresh_retries_once_and_counts_only_acknowledged_draw
     assert resets == [False, True]
 
 
-@pytest.mark.parametrize("limit", ["deadline", "chunk", "day"])
+@pytest.mark.parametrize("limit", ["chunk", "day"])
 def test_ignored_refresh_cannot_retry_past_existing_limits(runner, limit):
     initial, ignored, _ = ignored_refresh_frames()
     runner.search_state = SearchState(SearchPolicy(time_budget_seconds=5 if limit == "deadline" else 30))
@@ -1520,8 +1588,6 @@ def test_ignored_refresh_cannot_retry_past_existing_limits(runner, limit):
     assert len(runner.inputs) == 1
     assert not runner.last_refresh_acknowledged
     assert runner.search_state.refreshes == 0
-    if limit == "deadline":
-        assert runner.search_state.exhausted
 
 
 @pytest.mark.parametrize("change", ["ranks", "own_rank", "tickets", "identity", "unreadable", "timer_jump"])

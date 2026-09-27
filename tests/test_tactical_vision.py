@@ -10,7 +10,7 @@ import pytest
 
 from ba_automator.tactical_battles import Opponent
 from ba_automator.tactical_vision import (
-    ObservedOpponent, TacticalBattleVision, _cooldown, _read_level,
+    ObservedOpponent, TacticalBattleVision, _cooldown, _level_crops, _read_level,
     same_opponent, same_opponent_identity,
 )
 from ba_automator.vision import StartupVision, Word
@@ -41,8 +41,10 @@ def test_delayed_entry_trace_has_real_campaign_then_opponent_detail(vision):
     assert any(w.normalized == 'battle opponent' for w in words)
     assert any(w.normalized == 'attack formation' for w in words)
     detail = vision.classify(image, words)
-    # Uncertain unit-level OCR prevents entry authorization on this capture.
-    assert detail.kind == 'unknown'
+    # Uncertain unit-level OCR permits closing the proven preview, but never
+    # authorizes formation entry or another Campaign navigation input.
+    assert detail.kind == 'opponent'
+    assert detail.opponents == ()
     assert detail.target is None
 
 
@@ -67,6 +69,36 @@ def test_detail_checks_projected_ticket_and_preserves_opponent_identity(vision):
     changed = replace(menu.opponents[0], choice=replace(menu.opponents[0].choice, rank=333))
     assert same_opponent(changed, detail.opponents[0])
     assert not same_opponent(changed, replace(detail.opponents[0], signature='00' * 576))
+
+
+def test_ambiguous_detail_levels_allow_backout_but_never_formation_entry(vision):
+    frame, words = fixture('ambiguous-preview')
+    result = vision.classify(frame, words)
+    assert (result.kind, result.rank, result.tickets, result.after_tickets) == (
+        'opponent', 541, 2, 1)
+    # The real first 79 lacks independent strong reads; the real 77 has a
+    # conflicting clipped 7. Preserve those strict exclusions. A known dialog
+    # can be closed and the search restarted without spending a ticket.
+    assert result.opponents == () and result.target is None
+    assert result.refresh_target is None
+    result = vision.analyze((FIXTURES / 'tactical-battles-ambiguous-preview.png').read_bytes())
+    assert result.kind == 'opponent' and result.opponents == () and result.target is None
+
+
+def test_preview_backout_requires_complete_layout_rank_and_ticket_projection(vision):
+    frame, words = fixture('ambiguous-preview')
+    for label in ('Battle Opponent', 'Opponent Info', 'My Info', 'Attack Formation',
+                  'Rank 541', '2→1'):
+        changed = tuple(w for w in words if w.text != label)
+        assert vision.classify(frame, changed).kind == 'unknown'
+    for replacement in ('2→2', '2→0', '1→2', '2/1'):
+        changed = tuple(replace(w, text=replacement) if w.text == '2→1' else w for w in words)
+        assert vision.classify(frame, changed).kind == 'unknown'
+    for label in ('Rank 541', '2→1'):
+        changed = tuple(replace(w, confidence=.89) if w.text == label else w for w in words)
+        assert vision.classify(frame, changed).kind == 'unknown'
+    frame[543:601, 528:751] = 0
+    assert vision.classify(frame, words).kind == 'unknown'
 
 
 def test_history_identity_survives_level_up_but_entry_still_requires_current_level():
@@ -107,6 +139,53 @@ def test_unreadable_opponents_leave_menu_usable_for_next_refresh(vision):
     result = vision.classify(*fixture('menu-ready'))
     assert result.kind == 'tactical' and result.tickets == 5
     assert result.refresh_target == (1174, 147)
+
+
+def test_loading_overlay_blocks_the_still_readable_old_menu(vision):
+    frame, words = fixture('refresh-loading')
+    result = vision.classify(frame, words)
+    assert result.kind == 'unknown'
+    assert result.target is None and result.refresh_target is None
+    assert result.opponents == () and result.sampled_ranks == ()
+    assert result.tickets is None and result.refresh_seconds is None
+    # This is the actual failure: the old timer and controls remain perfectly
+    # readable while the refresh request is pending. They must not be used.
+    without_loading = tuple(w for w in words if w.text != 'NowLoading')
+    underlying = vision.classify(frame, without_loading)
+    assert (underlying.kind, underlying.tickets, underlying.refresh_seconds) == (
+        'tactical', 2, 105)
+    assert underlying.refresh_target == (1174, 147)
+    assert vision.analyze(
+        (FIXTURES / 'tactical-battles-refresh-loading.png').read_bytes()).kind == 'unknown'
+
+
+@pytest.mark.parametrize('text', ['NowLoading', 'Now Loading', 'Now Loading...',
+                                 'Now Loading …', 'NOW LOADING'])
+def test_loading_guard_accepts_spacing_and_ellipsis_variants(vision, text):
+    frame, words = fixture('refresh-loading')
+    words = tuple(replace(w, text=text) if w.text == 'NowLoading' else w for w in words)
+    assert vision.classify(frame, words).kind == 'unknown'
+
+
+def test_loading_guard_does_not_match_unrelated_names_or_labels(vision):
+    frame, words = fixture('refresh-loading')
+    original = next(w for w in words if w.text == 'NowLoading')
+    others = tuple(w for w in words if w is not original)
+    for replacement in (
+            replace(original, box=(470, 293, 670, 320)),
+            replace(original, text='Loading'),
+            replace(original, text='Now Loading Complete')):
+        assert vision.classify(frame, others + (replacement,)).kind == 'tactical'
+
+
+def test_menu_authorization_returns_after_a_completed_refresh(vision):
+    # Independent real captures: a pending request must yield no controls;
+    # the observed settled post-refresh menu supplies its new countdown.
+    pending = vision.classify(*fixture('refresh-loading'))
+    completed = vision.classify(*fixture('refresh-121'))
+    assert pending.kind == 'unknown' and pending.refresh_target is None
+    assert completed.kind == 'tactical' and completed.refresh_seconds == 121
+    assert completed.refresh_target == (1174, 147)
 
 
 def test_observed_post_battle_ticket_label_without_space_still_recognizes_menu(vision):
@@ -169,6 +248,36 @@ def test_clipped_seven_cannot_make_level_seventy_five_look_like_fifteen(vision):
     assert 429 not in [op.choice.rank for op in result.opponents]
     values = [('Lv.75', .838), ('Lv.75', .80)] + [('15', .99)] * 7
     assert _read_level(values + [('15', .99), ('15', .99)], 90) is None
+
+
+def test_portrait_background_cannot_discount_level_eighty_eight_to_thirty_eight(vision):
+    # The list's 14–16px crops read 38. One uncertain 88 guard was insufficient
+    # to veto it. More vertical context preserves confident contradictory 88s;
+    # the opponent must be omitted, never assigned either guessed score.
+    from rapidocr.ch_ppocr_rec.typings import TextRecInput
+
+    frame, words = fixture('clipped-eighty-eight')
+    result = vision.classify(frame, words)
+    assert (result.kind, result.rank, result.tickets) == ('tactical', 541, 4)
+    assert result.sampled_ranks == (394, 481, 494)
+    assert 494 not in [op.choice.rank for op in result.opponents]
+    crops = _level_crops(frame, 1070, 524)
+    readings = vision.startup.ocr.text_rec(TextRecInput(crops))
+    values = list(zip(readings.txts, readings.scores))
+    assert _read_level(values[:13], 88) == 38
+    assert any(text == '88' and confidence >= .94 for text, confidence in values[13:])
+    assert _read_level(values, 88) is None
+
+    detail = vision.classify(*fixture('clipped-eighty-eight-detail'))
+    assert (detail.kind, detail.rank, detail.tickets, detail.after_tickets) == ('opponent', 541, 4, 3)
+    assert detail.opponents[0].choice.visible_levels == (86, 88, 88)
+
+
+@pytest.mark.parametrize('level', [1, 8, 30, 38, 67, 73, 88, 90])
+def test_taller_guards_do_not_coerce_or_forbid_verified_low_levels(level):
+    readings = [(f'Lv.{level}', .98)] * 2 + [(str(level), .99)] * 6
+    readings += [(f'Lv.{level}', .98)] + [(str(level), .99)] * 7
+    assert _read_level(readings, 90) == level
 
 
 def test_lower_level_opponent_detail_uses_enlarged_digits(vision):
@@ -304,6 +413,28 @@ def test_observed_skipped_victory_requires_reward_modal_evidence(vision):
         changed = tuple(replace(w, **changes) if w.text == 'WIN!' else w for w in words)
         assert vision.classify(frame, changed).kind == 'unknown'
     for bounds in ((205, 327, 505, 775), (498, 561, 533, 752)):
+        changed = frame.copy()
+        y1, y2, x1, x2 = bounds
+        changed[y1:y2, x1:x2] = 0
+        assert vision.classify(changed, words).kind == 'unknown'
+
+
+def test_observed_skipped_loss_requires_its_compact_modal_evidence(vision):
+    frame, words = fixture('skip-loss')
+    result = vision.classify(frame, words)
+    assert (result.kind, result.won, result.target) == ('result', False, (640, 465))
+    result = vision.analyze((FIXTURES / 'tactical-battles-skip-loss.png').read_bytes())
+    assert (result.kind, result.won, result.target) == ('result', False, (640, 465))
+    for text in ('Battle Result', 'LOSE', 'Confirm'):
+        changed = tuple(w for w in words if w.text != text)
+        assert vision.classify(frame, changed).kind == 'unknown'
+    for changes in ({'text': 'WIN'}, {'text': 'CLOSE'}, {'text': 'LOSE!'},
+                    {'confidence': .96}, {'box': (530, 280, 590, 305)},
+                    {'box': (510, 10, 800, 150)}):
+        changed = tuple(replace(w, **changes) if w.text == 'LOSE' else w for w in words)
+        assert vision.classify(frame, changed).kind == 'unknown'
+    for bounds in ((280, 387, 480, 801), (433, 501, 533, 752),
+                   (184, 235, 390, 523)):
         changed = frame.copy()
         y1, y2, x1, x2 = bounds
         changed[y1:y2, x1:x2] = 0

@@ -475,6 +475,15 @@ the candidate without authorizing an alternative value. This extends the
 earlier digit-crop regression to whole-label errors. Names, club badges, and
 account balances are masked or replaced with synthetic labels.
 
+`tactical-battles-clipped-eighty-eight` and `-detail` preserve the September 26
+opponent whose last visible level was read as 38 in the list but correctly as
+88 in the detail modal. Its actual visible levels are 86/88/88. Taller 18–20px
+list crops contradict the apparent 38, so the candidate is excluded rather
+than given a guessed score. The detail retains the unchanged 4→3 ticket
+projection; no battle was entered. Account balances, names, and badges are
+masked or replaced with synthetic labels. Game artwork and recognition pixels
+remain covered by the third-party notices, not the MIT grant.
+
 `tactical-battles-refresh-121` preserves an actual post-refresh countdown of
 `02:01`. The timer parser accepts that observed value while rejecting larger
 counts; live acknowledgement still requires elapsed-time evidence in the
@@ -551,3 +560,29 @@ identity, rank, or balance remains. Paired JSON retains only the modal's OCR.
 The live match changed rank 571 to 541 and tickets 5 to 4. This fixture covers
 the actual skipped victory layout; the full combat-page WIN test remains
 synthetic. Negative tests remove its required anchors or corrupt the title.
+
+`tactical-battles-skip-loss` preserves the September 26 skipped defeat's compact
+Battle Result modal. It has a large red LOSE title and a cyan Confirm button,
+with no reward row or combat timer. Everything outside the modal is masked;
+the paired JSON is fresh OCR of that sanitized image and contains only its
+three labels. Recognition requires the observed layout, colors, and exact
+large title. Negative tests remove those anchors or alter the title. This
+fixture establishes defeat recognition, not a subsequent live recovery.
+
+`tactical-battles-refresh-loading` preserves the September 26 refresh request
+whose old opponent list and 01:45 countdown remained readable under the
+bottom-right Now Loading overlay. The overlay now prevents all Tactical input
+authorization until it disappears. Account resources, player and opponent
+identities, profile banners, and the accumulated reward balance are masked;
+the paired JSON is fresh OCR of the sanitized frame. The completed-refresh
+regression uses the separate observed `tactical-battles-refresh-121` fixture;
+it does not claim those two captures belong to one live recovery.
+
+`tactical-battles-ambiguous-preview` preserves the September 26 opponent
+preview with visible levels 79, 77, and 79 and a projected ticket change from
+2 to 1. Its tiny text produces insufficient evidence for the first level and
+conflicting readings for the second. The proven dialog layout now permits a
+safe backout while providing no formation-entry target. The surrounding game,
+account profile/team, and banners are masked; the opponent name is replaced
+with a synthetic label. Paired JSON is fresh OCR of that sanitized image. This
+fixture tests recognition and conservative rejection, not a live retry.

@@ -518,17 +518,17 @@ def test_legacy_already_entered_second_battle_can_be_reconciled_without_replayin
         begin(config)
 
 
-def test_timeout_consumes_one_allowance_without_spending_a_ticket(config):
+def test_timeout_audit_does_not_consume_an_unspent_ticket(config):
     observe_ladder(config, DAY, tickets=4, rank=541, now=NOW)
     saved = record_search_timeout(config, DAY, "search-a", now=NOW + timedelta(minutes=10))
     assert saved["timed_out_searches"] == ["search-a"]
     assert saved["last_tickets"] == 4 and saved["last_rank"] == 541
     assert saved["pending"] is None and saved["attempts"] == {}
-    assert search_allowances(saved, 4, 1) == 2
-    assert "ticket was kept" in saved["last_summary"]
+    assert search_allowances(saved, 4, 1) == 3
+    assert "ticket remains available" in saved["last_summary"]
 
 
-def test_timeout_replay_after_restart_is_read_only_and_does_not_consume_another_allowance(config):
+def test_timeout_replay_after_restart_is_read_only_and_keeps_ticket_available(config):
     observe_ladder(config, DAY, tickets=4, rank=541, now=NOW)
     saved = record_search_timeout(config, DAY, "search-a", now=NOW)
     content = state_path(config).read_bytes()
@@ -536,51 +536,51 @@ def test_timeout_replay_after_restart_is_read_only_and_does_not_consume_another_
     again = record_search_timeout(restarted, DAY, "search-a", now=NOW + timedelta(minutes=5))
     assert again == saved
     assert state_path(config).read_bytes() == content
-    assert search_allowances(read_state(restarted), 4, 1) == 2
+    assert search_allowances(read_state(restarted), 4, 1) == 3
 
 
-def test_each_remaining_ticket_gets_one_allowance_and_timeouts_do_not_create_more(config):
+def test_every_physical_ticket_above_reserve_remains_available_after_legacy_timeouts(config):
     saved = observe_ladder(config, DAY, tickets=4, rank=541, now=NOW)
     assert search_allowances(saved, 4, 1) == 3
     for number in range(3):
         saved = record_search_timeout(config, DAY, f"search-{number}", now=NOW)
-        assert search_allowances(saved, 4, 1) == 2 - number
+        assert search_allowances(saved, 4, 1) == 3
     assert read_state(config)["last_tickets"] == 4
-    assert search_allowances(state_for_day(config, DAY, now=NOW), 4, 1) == 0
+    assert search_allowances(state_for_day(config, DAY, now=NOW), 4, 1) == 3
 
 
 @pytest.mark.parametrize("won", [False, True])
-def test_battle_completion_preserves_previously_timed_out_allowances(config, won):
+def test_battle_completion_preserves_timeout_audit_and_counts_actual_tickets(config, won):
     observe_ladder(config, DAY, tickets=4, rank=541, now=NOW)
     record_search_timeout(config, DAY, "search-a", now=NOW)
     intent = begin_battle(config, DAY, "opponent-a", 4, 541, now=NOW)
     saved = complete_battle(config, intent, tickets_after=3, won=won, rank_after=500 if won else 541, now=NOW)
     assert saved["timed_out_searches"] == ["search-a"]
     assert saved["attempts"] == {"opponent-a": 1}
-    assert search_allowances(saved, 3, 1) == 1
+    assert search_allowances(saved, 3, 1) == 2
 
 
-def test_rank_reserve_and_search_settings_changes_preserve_timeout_accounting(config):
+def test_rank_reserve_and_search_settings_changes_preserve_timeout_audit(config):
     observe_ladder(config, DAY, tickets=4, rank=541, now=NOW)
     record_search_timeout(config, DAY, "search-a", now=NOW)
     changed_config = SimpleNamespace(**vars(config), tactical_battles_search_minutes=20)
     saved = observe_ladder(changed_config, DAY, tickets=4, rank=580, preserve=2, now=NOW)
     assert saved["timed_out_searches"] == ["search-a"]
-    assert search_allowances(saved, 4, 2) == 1
-    assert search_allowances(saved, 4, 0) == 3
+    assert search_allowances(saved, 4, 2) == 2
+    assert search_allowances(saved, 4, 0) == 4
     assert read_state(config)["timed_out_searches"] == ["search-a"]
 
 
-def test_manual_ticket_use_cannot_restore_timed_out_allowances(config):
+def test_manual_ticket_use_reduces_actual_tickets_available(config):
     observe_ladder(config, DAY, tickets=4, rank=541, now=NOW)
     record_search_timeout(config, DAY, "search-a", now=NOW)
     saved = observe_ladder(config, DAY, tickets=3, rank=541, now=NOW)
-    assert search_allowances(saved, 3, 1) == 1
+    assert search_allowances(saved, 3, 1) == 2
     assert search_allowances(saved, 1, 1) == 0
     assert search_allowances(saved, 0, 1) == 0
 
 
-def test_new_day_resets_timeout_allowances(config):
+def test_new_day_resets_timeout_audit(config):
     record_search_timeout(config, DAY, "search-a", now=NOW)
     saved = state_for_day(config, "2026-09-27", now=NOW + timedelta(days=1))
     assert saved["timed_out_searches"] == []

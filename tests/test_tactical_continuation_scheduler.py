@@ -242,7 +242,7 @@ def test_real_failed_continuation_blocks_search_and_preserves_budget(controlled,
     controller.resume()
     eventually(lambda: len(factory.processes) == 1)
     # A failed child may leave an unresolved entry. Blocking its search must
-    # preserve both the consumed allowance and the durable spending intent.
+    # preserve both elapsed search time and the durable spending intent.
     tactical_state.begin_battle(controller.config, game_day(NOW), "opponent", 5, 500, now=NOW)
     intent_before = tactical_state.state_path(controller.config).read_bytes()
     factory.processes[0].finish(1)
@@ -259,11 +259,11 @@ def test_real_failed_continuation_blocks_search_and_preserves_budget(controlled,
 
 
 @pytest.mark.parametrize("outcome, tickets, timeouts, remaining", [
-    ("success", 4, 3, 0),  # All search allowances expired; the actual tickets remain.
+    ("success", 4, 3, 3),  # Legacy timeouts cannot consume physical tickets.
     ("success", 1, 0, 0),  # The manual-play reserve is still available.
-    ("deferred", 4, 1, 2),  # A saved search will continue after other queued work.
+    ("deferred", 4, 1, 3),  # A saved search will continue after other queued work.
 ])
-def test_tactical_completion_phase_reports_tickets_and_search_allowances(
+def test_tactical_completion_phase_reports_actual_tickets_available(
         controlled, monkeypatch, outcome, tickets, timeouts, remaining):
     controller, factory, _, _ = controlled
     tactical_state.observe_ladder(controller.config, game_day(NOW),
@@ -294,8 +294,8 @@ def test_tactical_completion_phase_reports_tickets_and_search_allowances(
     assert phase.startswith("Tactical Challenge search saved; queue continues"
                             if outcome == "deferred" else "Tactical Challenge visit finished")
     assert f"{tickets} ticket{'s' if tickets != 1 else ''} left, reserve 1" in phase
-    assert f"{timeouts} search timeout" in phase
-    assert f"{remaining} search allowances left today" in phase
+    assert f"{remaining} tickets available for automation" in phase
+    assert "allowance" not in phase
     assert "battles complete" not in phase
     assert result["result"]["status"] == "success"  # Existing API semantics remain intact.
     assert tactical_state.state_path(controller.config).read_bytes() == saved

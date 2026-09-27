@@ -1,7 +1,6 @@
 """Bounded ladder scouting and serial battles with durable ticket accounting."""
 
 from dataclasses import asdict, replace
-from uuid import uuid4
 
 from .actions import record_action
 from .club import game_day
@@ -85,9 +84,7 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
         return self.clock() - self.started < 1080 and self.actions < 1020
 
     def survey_evidence_expired(self):
-        """Expire stale observations without renewing an exhausted allowance."""
-        if self.search_state is not None and self.search_state.exhausted:
-            return False
+        """Never use stale observations to authorize a battle, including overtime."""
         created = getattr(self, "survey_created_at", None)
         if created is None or self.wall_clock().timestamp() - created < survey.MAX_AGE_SECONDS:
             return False
@@ -127,12 +124,6 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
             if type(seconds) is not int or not 0 <= seconds <= 121 or seconds <= 114:
                 break
             self.advance_search_clock()
-            if self.search_state is not None and self.search_state.remaining_seconds <= seconds - 114:
-                self.sleep(self.search_state.remaining_seconds)
-                self.advance_search_clock()
-                # An optional deadline selection still needs a fresh current
-                # list. This is a read only; no further refresh is sent.
-                return self.menu()
             self.sleep(seconds - 114)
             frame = self.menu()
         return frame
@@ -176,8 +167,7 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
             # A verified ignored input is not a new draw. Its observation and
             # waiting still consume the existing allowance, including at the
             # deadline. Never use the local retry to exceed a chunk or day.
-            if ((self.search_state is not None and self.search_state.exhausted)
-                    or not self.survey_time_available()
+            if (not self.survey_time_available()
                     or self.refresh_count >= 1000
                     or game_day(self.wall_clock()) != getattr(self, "run_day", game_day(self.wall_clock()))):
                 return frame
@@ -191,8 +181,6 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
         # still contribute to the measured refresh rate.
         frame = self.prepare_refresh(frame)
         self.advance_search_clock()
-        if self.search_state is not None and self.search_state.exhausted:
-            return frame, False
         before_seconds = frame.screen.refresh_seconds
         ranks = frame.screen.sampled_ranks
         if (type(before_seconds) is not int or not 0 <= before_seconds <= 114
@@ -230,9 +218,13 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
         # Two successive fresh lists can both show 1:59. An ignored tap would
         # count down over the elapsed interval; a reset adds several seconds.
         # The three-second margin exceeds timer rounding and capture jitter.
+        # A loading overlay may keep the old list visible for most of the
+        # menu's 40-second wait. Accept that delayed response only before the
+        # original timer could expire, so expiry cannot masquerade as a reset.
+        timely_response = 0 < elapsed < min(60, before_seconds)
         timer_reset = (type(after_seconds) is int
                        and 0 <= after_seconds <= 121
-                       and 0 < elapsed < 20
+                       and timely_response
                        and after_seconds - before_seconds + elapsed >= 3)
         # Changed ranks are useful diagnostic evidence, but cannot bypass the
         # independent timer check: that would favor changed over repeated draws.
@@ -287,46 +279,11 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
             search_id=getattr(self, "search_id", None))
 
     def clear_completed_search(self):
-        """End a proven match's search before any ancillary logging can fail."""
+        """Clear a resolved battle or rejected preview's disposable search."""
         self.search_state = self.search_clock = self.survey_resume = None
         self.search_id = None
         self.survey_created_at = None
         survey.clear_survey(self.config)
-
-    def expire_ticket_search(self, frame):
-        """Retain the ticket, charge its allowance once, and schedule the next.
-
-        Write the exhausted checkpoint before its durable timeout, then replace
-        it atomically. Either side of a crash remains resumable without granting
-        the same allowance twice or losing all remaining tickets' searches.
-        """
-        self.save_search()
-        already_recorded = self.search_id in state.read_state(self.config)["timed_out_searches"]
-        persisted = state.record_search_timeout(
-            self.config, self.run_day, self.search_id, now=self.wall_clock())
-        remaining = state.search_allowances(persisted, frame.screen.tickets, self.reserve)
-        if not already_recorded:
-            record_action(self.config, "tactical_search_exhausted",
-                          f"Tactical Challenge ticket search timed out; ticket kept, "
-                          f"{remaining} search allowance(s) remain today",
-                          task=self.task, search_id=self.search_id,
-                          search_minutes=self.search_policy.time_budget_seconds / 60,
-                          tickets=frame.screen.tickets, remaining_allowances=remaining)
-        self.phase(f"Ticket search timed out; {frame.screen.tickets} tickets kept, "
-                   f"{remaining} search allowance(s) left today")
-        if remaining:
-            previous = (self.search_state, self.search_id)
-            self.search_state = SearchState(self.search_policy)
-            self.search_id = uuid4().hex
-            try:
-                self.save_search()
-            except BaseException:
-                self.search_state, self.search_id = previous
-                raise
-            self.survey_created_at = self.wall_clock().timestamp()
-            self.survey_resume = None
-            self.defer_survey = True
-        return remaining
 
     def scout(self, frame):
         """Select from the visible list using this ticket's time budget."""
@@ -382,17 +339,18 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
                                                 for p in eligible])
                 estimate = (f"estimated {decision.estimated_refreshes} refreshes in the time budget"
                             if decision.estimated_refreshes is not None else "measuring refresh speed")
-                self.phase(f"Opponent search: {decision.remaining_seconds:.0f}s left; "
-                           f"{decision.phase}; {estimate}")
+                if decision.phase == "overtime":
+                    self.phase("Opponent search in overtime: widening the allowed score "
+                               f"after each refresh; current threshold {decision.threshold}")
+                else:
+                    self.phase(f"Opponent search: {decision.remaining_seconds:.0f}s left; "
+                               f"{decision.phase}; {estimate}")
                 if decision.opponent_id is not None:
                     selected = next(p for p in eligible if p.opponent_id == decision.opponent_id)
                     self.journal.record("opponent_selected", opponent=asdict(selected),
                                         strength_score=opponent_score(selected),
                                         threshold=decision.threshold, percentile=decision.percentile)
                     return frame, (selected,)
-                if self.search_state.exhausted:
-                    self.phase("Search time used up without a suitable visible opponent; keeping the ticket")
-                    break
                 if not self.survey_time_available():
                     self.defer_survey = True
                     break
@@ -403,8 +361,6 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
                 self.advance_search_clock()
                 refreshed = self.last_refresh_acknowledged
                 if not refreshed:
-                    if self.search_state.exhausted:
-                        continue
                     self.defer_survey = True
                     self.phase("No verified refresh; saving progress for another visit")
                     break
@@ -416,6 +372,30 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
         finally:
             self.advance_search_clock()
             self.search_clock = None
+
+    def restart_rejected_search(self, frame, *, tickets_before, reason):
+        """Recover a rejected pre-entry preview with a fresh search and timer."""
+        if frame.screen.tickets != tickets_before:
+            self.fail("Ticket count changed while rejecting an opponent; no battle entered")
+        if game_day(self.wall_clock()) != getattr(self, "run_day", game_day(self.wall_clock())):
+            self.fail("The game day changed while rejecting an opponent; no battle entered")
+        previous_search_id = getattr(self, "search_id", None)
+        self.clear_completed_search()
+        # Keep durable fought-opponent identities, but discard this search's
+        # potentially bad readings and benchmark. No battle intent exists yet.
+        self.observed = {}
+        self.restore_identities(state.read_state(self.config))
+        self.search_state = SearchState(self.search_policy)
+        self.run_day = game_day(self.wall_clock())
+        self.survey_own_rank = frame.screen.rank
+        self.survey_created_at = self.wall_clock().timestamp()
+        self.save_search()
+        self.journal.record("opponent_rejected", reason=reason,
+                            previous_search_id=previous_search_id,
+                            tickets=tickets_before, search_timer_reset=True)
+        self.search_restarted_after_rejection = True
+        self.phase("Opponent rejected before entry; restarting the search with a fresh timer")
+        return frame, None
 
     def battle(self, frame, candidate):
         if self.survey_evidence_expired():
@@ -434,7 +414,9 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
         detail = self.wait({"opponent", "timeout_notice"})
         if detail.screen.kind == "timeout_notice":
             self.tap(detail, detail.screen.target, "Dismiss expired opponent")
-            return self.menu(), None
+            return self.restart_rejected_search(
+                self.menu(), tickets_before=before, reason="Opponent selection expired")
+        self.journal.save_image(f"opponent-{candidate.choice.opponent_id}-detail.png", detail.capture.png)
         if (len(detail.screen.opponents) != 1
                 or not same_opponent(candidate, detail.screen.opponents[0])
                 or detail.screen.rank != rank_before
@@ -443,13 +425,20 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
                 or detail.screen.tickets != before
                 or detail.screen.after_tickets != before - 1
                 or detail.screen.after_tickets < self.reserve):
-            self.fail("Opponent or projected ticket count changed; no battle entered")
-        self.journal.save_image(f"opponent-{candidate.choice.opponent_id}-detail.png", detail.capture.png)
+            self.journal.record("opponent_preflight_rejected",
+                                expected=asdict(candidate.choice),
+                                observed=[asdict(p.choice) for p in detail.screen.opponents],
+                                tickets_before=before, projected_tickets=detail.screen.after_tickets)
+            self.tap(detail, (1014, 97), "Close rejected opponent detail")
+            return self.restart_rejected_search(
+                self.menu(), tickets_before=before,
+                reason="Opponent or projected ticket count changed")
         self.tap(detail, detail.screen.target, "Open the saved attack formation")
         formation = self.wait({"formation", "timeout_notice"})
         if formation.screen.kind == "timeout_notice":
             self.tap(formation, formation.screen.target, "Dismiss expired opponent")
-            return self.menu(), None
+            return self.restart_rejected_search(
+                self.menu(), tickets_before=before, reason="Opponent formation expired")
         formation = self.fill_attack_formation(formation)
         skip = self.config.tactical_battles_skip_battles
         if type(formation.screen.skip_selected) is not bool:
@@ -464,7 +453,8 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
             formation = self.wait("formation", predicate=lambda s: s.formation_seconds is not None)
         if formation.screen.formation_seconds < 10:
             self.tap(formation, (54, 33), "Leave expiring opponent formation")
-            return self.menu(), None
+            return self.restart_rejected_search(
+                self.menu(), tickets_before=before, reason="Opponent formation expired")
         if game_day(self.wall_clock()) != day:
             self.fail("The game day changed during formation; no battle entered")
         if not self.battle_time_available():
@@ -481,6 +471,7 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
                             estimated_team_levels=estimated_team_levels(candidate.choice),
                             strength_score=opponent_score(candidate.choice))
         self.tap(formation, formation.screen.target, "Mobilize saved Tactical Challenge team")
+        self.phase("Waiting for the Tactical Challenge battle result")
         # Skill cinematics pause the in-game timer. The live unskipped match
         # took more than four minutes despite only 1:28 of combat time.
         result = self.wait("result", timeout=600)
@@ -564,9 +555,6 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
             if game_day(self.wall_clock()) != day:
                 self.phase("The game day changed; the next daily visit will use the refreshed tickets")
                 break
-            if self.search_state is not None and self.search_state.exhausted:
-                self.expire_ticket_search(frame)
-                break
             # Standby is not scouting. Wait before choosing so the selected
             # current list remains valid for its immediate detail inspection.
             if getattr(frame.screen, "cooldown", 0):
@@ -583,9 +571,6 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
             except TacticalPlanningError:
                 choice = None
             if choice is None:
-                if (self.search_state is not None and self.search_state.exhausted
-                        and not self.survey_failure_reason and frame.screen.rank > 1):
-                    self.expire_ticket_search(frame)
                 break
             # Selection is only from this frame. No historical-target lookup
             # and no refreshes after the search to chase an absent opponent.
@@ -597,18 +582,19 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
                 self.phase("Battle time budget reserved for a future visit; no ticket spent")
                 self.defer_survey = True
                 break
+            self.search_restarted_after_rejection = False
             before_battle = self.clock()
             frame, won = self.battle(frame, candidate)
             if won is None:
                 if self.survey_expired:
                     break
-                # Preview expiration does not earn another ten-minute search.
-                self.search_state.advance(max(0, self.clock() - before_battle))
+                # Rejected/expired previews explicitly restart the search.
+                # Other deferrals keep the time already spent selecting.
+                if self.search_state is not None and not self.search_restarted_after_rejection:
+                    self.search_state.advance(max(0, self.clock() - before_battle))
                 expired_choices += 1
                 if expired_choices >= 2:
-                    self.defer_survey = not self.search_state.exhausted
-                    if self.search_state.exhausted:
-                        self.expire_ticket_search(frame)
+                    self.defer_survey = True
                     break
                 continue
             battles += 1
@@ -617,11 +603,10 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
             if battles >= 5:
                 break
         persisted = state.read_state(self.config)
-        timeouts = len(persisted["timed_out_searches"])
         allowances = state.search_allowances(persisted, frame.screen.tickets, self.reserve)
         self.phase(f"Tactical Challenge visit: {battles} battles; "
                    f"{frame.screen.tickets} tickets left, reserve {self.reserve}; "
-                   f"{timeouts} search timeout(s), {allowances} allowance(s) left today")
+                   f"{allowances} tickets available for automatic battles")
         if (self.search_state is not None and game_day(self.wall_clock()) == day
                 and frame.screen.rank == self.survey_own_rank
                 and ticket_budget(frame.screen.tickets, self.reserve)):

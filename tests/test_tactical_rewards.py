@@ -151,6 +151,49 @@ def test_unavailable_rewards_only_return_home(runner):
     assert taps == [(1237, 23)] and loot.snapshot(r.config)["receipt_count"] == 0
 
 
+@pytest.mark.parametrize("delay", [5, 28, 55])
+def test_delayed_campaign_transition_does_not_repeat_tap(runner, delay):
+    r = runner
+    now = [0.0]
+    r.clock = lambda: now[0]
+    r.sleep = lambda seconds: now.__setitem__(0, now[0] + seconds)
+    taps = []
+    r.tap = lambda f, target, detail: taps.append(target)
+
+    def capture():
+        # Simulate an accepted tap whose old Campaign screen lingers before
+        # briefly becoming unreadable during the actual scene transition.
+        kind = "campaign" if now[0] < delay - 1 else "unknown"
+        if now[0] >= delay:
+            kind = "tactical"
+        return ShopFrame(
+            Capture(png("checked"), now[0], r.config.package),
+            TacticalScreen(kind, tickets=1 if kind == "tactical" else None),
+        )
+
+    r.capture = capture
+    assert r.run().status == "success"
+    assert taps == [(868, 581), (1237, 23)]
+    assert now[0] >= delay
+
+
+def test_campaign_transition_timeout_does_not_repeat_input(runner):
+    r = runner
+    now = [0.0]
+    r.clock = lambda: now[0]
+    r.sleep = lambda seconds: now.__setitem__(0, now[0] + seconds)
+    taps = []
+    r.tap = lambda f, target, detail: taps.append(target)
+    r.capture = lambda: ShopFrame(
+        Capture(png("checked"), now[0], r.config.package),
+        TacticalScreen("campaign"),
+    )
+    with pytest.raises(TaskError, match="did not reach tactical"):
+        r.run()
+    assert taps == [(868, 581)]
+    assert 60 <= now[0] < 61
+
+
 def test_missing_receipt_does_not_retry_claim_or_report_loot(runner):
     r = runner
     taps = []

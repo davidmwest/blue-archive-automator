@@ -8,6 +8,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import cv2
+import numpy as np
+
 from ba_automator.adb import AdbDevice
 from ba_automator.config import Config
 from ba_automator.locking import InstanceLock, LockError
@@ -44,6 +47,7 @@ class FakeDevice:
         self.size = (1280, 720)
         self.foreground = package
         self.capture_error = None
+        self.frames = None
 
     def connect(self):
         self.calls.append("connect")
@@ -66,6 +70,8 @@ class FakeDevice:
         if self.capture_error is not None:
             raise self.capture_error
         self.frame += 1
+        if self.frames is not None:
+            return self.frames[min(self.frame - 1, len(self.frames) - 1)]
         # Vision owns real PNG validation. This runner consumes opaque captured bytes.
         return f"fake screenshot {self.frame}".encode()
 
@@ -406,6 +412,85 @@ class RestartTests(unittest.TestCase):
         self.assertTrue((raised.exception.run_dir / records[-1]["frame"]).exists())
         self.assertEqual(records[-1]["status"], "failed")
         self.assertEqual(self.device.calls.count("launch"), 1)
+
+    @staticmethod
+    def startup_png(*, logo=False):
+        frame = np.full((720, 1280, 3), 3, dtype=np.uint8)
+        if logo:
+            frame[340:380, 580:700] = 240
+        ok, encoded = cv2.imencode(".png", frame)
+        assert ok
+        return encoded.tobytes()
+
+    def test_sustained_black_unknown_screen_relaunches_once_and_recovers(self):
+        black = self.startup_png()
+        self.device.frames = [black]
+        result = self.run_task([Observation("unknown")] * 6 + [Observation("home")])
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.duration, 10)
+        self.assertEqual(self.device.calls.count("launch"), 2)
+        self.assertEqual(self.device.taps, [])
+        recoveries = [record for record in self.journal(result.run_dir)
+                      if record["event"] == "startup_recovery"]
+        self.assertEqual(len(recoveries), 1)
+        self.assertIn("blank black screen", recoveries[0]["reason"])
+        self.assertEqual((result.run_dir / recoveries[0]["frame"]).read_bytes(), black)
+        self.assertEqual([action["action"] for action in self.actions()],
+                         ["startup_recovery", "startup_recovered"])
+
+    def test_still_black_after_recovery_stops_and_releases_lock(self):
+        selected = self.config()
+        self.device.frames = [self.startup_png()]
+        with self.assertRaisesRegex(RestartError, "still stuck after one automatic force restart") as raised:
+            self.run_task([Observation("unknown")], selected=selected)
+        self.assertEqual(self.clock.now, 10)
+        self.assertEqual(self.device.calls.count("force_stop"), 2)
+        self.assertEqual(self.device.calls.count("launch"), 2)
+        self.assertEqual(self.device.taps, [])
+        self.assertEqual(self.journal(raised.exception.run_dir)[-1]["status"], "failed")
+        self.assertEqual([action["action"] for action in self.actions()],
+                         ["startup_recovery", "startup_recovery_failed"])
+        with InstanceLock(selected):
+            pass
+
+    def test_dark_unknown_screen_with_visible_content_does_not_recover(self):
+        self.device.frames = [self.startup_png(logo=True)]
+        with self.assertRaisesRegex(RestartError, "unknown-screen time limit"):
+            self.run_task([Observation("unknown")])
+        self.assertEqual(self.device.calls.count("launch"), 1)
+        self.assertEqual(self.device.taps, [])
+
+    def test_intervening_visible_content_interrupts_black_screen_evidence(self):
+        black = self.startup_png()
+        self.device.frames = [black, black, self.startup_png(logo=True), black]
+        with self.assertRaisesRegex(RestartError, "unknown-screen time limit"):
+            self.run_task([Observation("unknown")])
+        self.assertEqual(self.device.calls.count("launch"), 1)
+
+    def test_stale_black_frames_cannot_authorize_recovery(self):
+        self.device.frames = [self.startup_png()]
+        with self.assertRaisesRegex(RestartError, "unknown-screen time limit"):
+            self.run_task([Observation("unknown")], delay=6)
+        self.assertEqual(self.device.calls.count("launch"), 1)
+        self.assertEqual(self.device.taps, [])
+
+    def test_startup_timeout_and_black_screen_share_one_recovery_limit(self):
+        self.device.frames = [self.startup_png()]
+        with self.assertRaisesRegex(RestartError, "blank black screen.*still stuck"):
+            self.run_task([Observation("loading")] * 7 + [Observation("unknown")],
+                          selected=self.config(startup_timeout=7))
+        self.assertEqual(self.clock.now, 12)
+        self.assertEqual(self.device.calls.count("launch"), 2)
+        self.assertEqual(len([action for action in self.actions()
+                              if action["action"] == "startup_recovery"]), 1)
+
+    def test_black_screen_then_startup_timeout_cannot_recover_twice(self):
+        self.device.frames = [self.startup_png()]
+        with self.assertRaisesRegex(RestartError, "startup time limit.*still stuck"):
+            self.run_task([Observation("unknown")] * 6 + [Observation("loading")],
+                          selected=self.config(startup_timeout=7))
+        self.assertEqual(self.clock.now, 12)
+        self.assertEqual(self.device.calls.count("launch"), 2)
 
     def test_blocked_screen_never_taps(self):
         with self.assertRaisesRegex(RestartError, "Account sign-in required"):

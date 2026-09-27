@@ -14,6 +14,7 @@ from .locking import InstanceLock
 from .runtime import Capture, FRAME_MAX_AGE, HOME_STABLE_SECONDS, TRACE_LIMIT
 from .runtime import Journal, RunResult, TaskError
 from .tactical_state import ensure_restart_safe
+from .vision import VisionError, decode_frame
 
 # Compatibility for existing task callers and saved integrations.
 _Journal = Journal
@@ -31,7 +32,21 @@ KNOWN_STATES = ACTION_STATES | DOWNLOAD_STATES | {"home", "loading", "blocked", 
 
 
 class _StartupTimeout(RestartError):
-    """Only an exhausted startup budget permits an automatic force restart."""
+    """The startup budget expired before reaching a stable home screen."""
+
+
+class _BlackScreenTimeout(RestartError):
+    """Fresh unknown frames stayed entirely black for the unknown-screen budget."""
+
+
+def _is_blank_black(png: bytes) -> bool:
+    try:
+        frame = decode_frame(png)
+    except VisionError:
+        return False
+    # Require the entire game frame to be near black. A dark scene, a loading
+    # logo, or an unfamiliar dialog must not authorize this shorter recovery.
+    return bool(frame.max() <= 8)
 
 
 class _Budget:
@@ -77,8 +92,9 @@ def run_restart(
     """Restart the game and return only after its home screen remains unobstructed.
 
     The device and vision interfaces are deliberately injectable for screenshot replay
-    and deterministic tests. Startup timeout permits one force-stop/relaunch while
-    holding the same lock; subsequent tasks have not begun and are never replayed.
+    and deterministic tests. Startup timeout or a sustained blank black screen
+    permits one shared force-stop/relaunch while holding the same lock;
+    subsequent tasks have not begun and are never replayed.
     Ctrl-C is journaled and propagated after releasing the lock.
     """
     started = monotonic()
@@ -128,6 +144,7 @@ def run_restart(
         home_since: float | None = None
         home_count = 0
         unknown_since: float | None = None
+        black_since: float | None = None
         next_action_at = started
         pending_popup: dict | None = None
 
@@ -181,11 +198,22 @@ def run_restart(
             if state == "unknown":
                 if unknown_since is None:
                     unknown_since = now
+                if not stale and _is_blank_black(png):
+                    if black_since is None:
+                        black_since = now
+                else:
+                    black_since = None
                 if now - unknown_since >= config.unknown_timeout:
+                    if black_since is not None and now - black_since >= config.unknown_timeout:
+                        raise _BlackScreenTimeout(
+                            "Blue Archive stayed on a blank black screen until the unknown-screen time limit",
+                            run_dir,
+                        )
                     fail("No recognized startup screen appeared before the unknown-screen time limit; "
                          "review the local screenshot trace")
             else:
                 unknown_since = None
+                black_since = None
 
             if state == "home":
                 if home_since is None:
@@ -261,7 +289,7 @@ def run_restart(
             for attempt in range(MAX_STARTUP_RECOVERIES + 1):
                 try:
                     result = reach_home()
-                except _StartupTimeout as exc:
+                except (_StartupTimeout, _BlackScreenTimeout) as exc:
                     if attempt == MAX_STARTUP_RECOVERIES:
                         fail(f"{exc}; still stuck after one automatic force restart")
                     # Keep the same instance lock, journal, total input limit, and original
@@ -272,10 +300,12 @@ def run_restart(
                         journal.save_image(evidence, (run_dir / last_frame).read_bytes())
                     journal.record("startup_recovery", reason=str(exc), frame=evidence,
                                    attempt=attempt + 1, limit=MAX_STARTUP_RECOVERIES)
+                    recovery_reason = ("startup stayed black" if isinstance(exc, _BlackScreenTimeout)
+                                       else "startup timed out")
                     record_action(config, "startup_recovery",
-                                  "startup timed out. force-restarting Blue Archive once.",
+                                  f"{recovery_reason}. force-restarting Blue Archive once.",
                                   task="restart", run_dir=str(run_dir), frame=evidence)
-                    LOGGER.warning("restart: startup timed out; force-restarting Blue Archive once")
+                    LOGGER.warning("restart: %s; force-restarting Blue Archive once", recovery_reason)
                     recoveries += 1
                     original_download_deadline = budget.download_deadline
                     budget = _Budget(config, monotonic())

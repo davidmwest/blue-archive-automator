@@ -153,7 +153,12 @@ def _level_crops(frame, x, y):
             # crops can unanimously hallucinate 3 after clipping those strokes;
             # these wider reads retain the missing pixels for conflict checks.
             (11, 0, 22, 15, 6, False), (11, 0, 22, 15, 5, False),
-            (11, -1, 24, 16, 6, False), (10, -1, 25, 16, 5, False)):
+            (11, -1, 24, 16, 6, False), (10, -1, 25, 16, 5, False),
+            # Portrait backgrounds can still turn 88 into 38 in the above
+            # 14–16px crops. Retain extra vertical context for an additional
+            # contradiction check; these reads never replace a disputed level.
+            (12, -2, 25, 18, 6, False), (10, -3, 27, 20, 6, False),
+            (11, -2, 27, 18, 6, False)):
         crop = cv2.resize(frame[y + dy:y + dy + height, x + dx:x + dx + width],
                           None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
         if pad:
@@ -256,7 +261,8 @@ class TacticalBattleVision:
         if result.txts is None or len(result.txts) != len(images):
             return ()
         readings = list(zip(result.txts, result.scores))
-        levels = [_read_level(readings[i * 13:(i + 1) * 13], maximum)
+        reads_per_level = len(images) // len(visible)
+        levels = [_read_level(readings[i * reads_per_level:(i + 1) * reads_per_level], maximum)
                   for i, maximum in enumerate(visible)]
         opponents = []
         for level, name, rank, signature, target, indices in metadata:
@@ -280,8 +286,14 @@ class TacticalBattleVision:
         unknown = TacticalBattleScreen('unknown', words=tuple(words))
         if frame.shape[:2] != (720, 1280):
             return unknown
-        # Skipped victories use a compact reward modal rather than the full
-        # combat result page. Keep its evidence and target separate.
+        # Refresh keeps the old, fully readable opponent menu visible while
+        # the request is pending. Its countdown is not acknowledgement, and
+        # no underlying control may authorize input until loading disappears.
+        if _match(words, r'Now\s*Loading[.\s…]*', (900, 640, 1180, 707)):
+            return unknown
+        # Skipped battles use compact modals rather than the full combat
+        # result page. Victory includes rewards; defeat has a shorter modal
+        # with its own title and Confirm positions.
         compact_win = [w for w in within(words, (490, 190, 790, 335))
                        if w.text.strip() == 'WIN!' and w.confidence >= .97
                        and w.box[2] - w.box[0] >= 180
@@ -309,6 +321,17 @@ class TacticalBattleVision:
         result_hsv = cv2.cvtColor(frame[280:387, 480:801], cv2.COLOR_BGR2HSV)
         red = (((result_hsv[:, :, 0] <= 10) | (result_hsv[:, :, 0] >= 170))
                & (result_hsv[:, :, 1] >= 55) & (result_hsv[:, :, 2] >= 180))
+        compact_loss = [w for w in within(words, (480, 245, 810, 411))
+                        if w.text.strip() == 'LOSE' and w.confidence >= .97
+                        and w.box[2] - w.box[0] >= 180
+                        and w.box[3] - w.box[1] >= 85]
+        if (len(compact_loss) == 1 and red.mean() > .2
+                and _match(words, r'Battle Result', (510, 180, 775, 239))
+                and _match(words, r'Confirm', (540, 433, 747, 498))
+                and cyan(frame, (533, 433, 752, 501))
+                and bright(frame, (390, 184, 523, 235))):
+            return TacticalBattleScreen('result', words=tuple(words),
+                                        won=False, target=(640, 465))
         if (has(words, 'lose', (440, 240, 835, 420)) and red.mean() > .2
                 and result_time and int(result_time[1]) <= 3
                 and has(words, 'time', (550, 420, 638, 472))
@@ -359,10 +382,13 @@ class TacticalBattleVision:
             change = _match(words, r'(\d+)\s*[→➜]\s*(\d+)', (680, 500, 763, 544))
             rank = _rank(words, (337, 368, 512, 427))
             opponents = self._opponents(frame, words, detail=True)
-            if (change and rank and opponents and int(change[1]) - int(change[2]) == 1):
+            if (change and rank and int(change[1]) - int(change[2]) == 1):
+                # Recognize a proven preview even when its tiny level labels
+                # remain ambiguous. This permits a safe close and fresh search;
+                # only a fully read opponent supplies a formation-entry target.
                 return TacticalBattleScreen('opponent', words=tuple(words), rank=rank,
                     tickets=int(change[1]), after_tickets=int(change[2]),
-                    opponents=opponents, target=(640, 575))
+                    opponents=opponents, target=(640, 575) if opponents else None)
             return unknown
         if (any(re.fullmatch(r'attack formation(?: [0-9])?', w.normalized)
                 for w in within(words, (90, 0, 410, 48)))
