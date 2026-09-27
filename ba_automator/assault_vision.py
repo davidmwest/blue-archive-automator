@@ -282,6 +282,35 @@ class AssaultVision:
     def __init__(self, startup):
         self.startup = startup
 
+    def _exhausted_budget(self, png, screen):
+        """Read both disabled ticket costs when native OCR omits their digits.
+
+        Zero is evidence needed to reconcile a completed spend, never a default
+        for missing OCR. Two native crops of each cost must independently read
+        the game's exact zero/dash notation. This cannot expose a spend target.
+        """
+        if (screen.kind != "detail" or screen.tickets is not None or screen.count != 0
+                or any((screen.enter_target, screen.sweep_target, screen.sweep_max_target))):
+            return screen
+        cost_bounds = ((1035, 466, 1145, 514), (1000, 316, 1100, 366))
+        if any(text_in(screen.words, bounds).replace(" ", "") not in ("", "0→-")
+               for bounds in cost_bounds):
+            return screen
+        native = decode_native_frame(png)
+        # Exclude the ticket artwork and button edges. Batch the four short
+        # lines so this recovery stays within the normal input freshness limit.
+        crops = ((1070, 475, 1133, 505), (1069, 475, 1134, 506),
+                 (1027, 327, 1090, 357), (1025, 325, 1092, 359))
+        from rapidocr.ch_ppocr_rec.typings import TextRecInput
+        result = self.startup.ocr.text_rec(TextRecInput(
+            [native_game_region(native, bounds) for bounds in crops]))
+        if (result.txts is None or result.scores is None
+                or len(result.txts) != len(crops) or len(result.scores) != len(crops)
+                or any(text.replace(" ", "") != "0→-" for text in result.txts)
+                or any(score < .9 for score in result.scores)):
+            return screen
+        return replace(screen, tickets=0)
+
     def _locked_boss_names(self, png, screen):
         """Corroborate locked-row names when OCR joins their adjacent padlock.
 
@@ -348,6 +377,7 @@ class AssaultVision:
         home = {"home_left", "home_right"} <= self.startup.matches(frame).keys()
         screen = classify_assault(frame, words, home=home)
         screen = self._locked_boss_names(png, screen)
+        screen = self._exhausted_budget(png, screen)
         if screen.kind == "formation" and not any(w.normalized == "empty" for w in words):
             screen = classify_assault(frame, words, stars=formation_stars(
                 frame, self.startup, native_frame=decode_native_frame(png)))

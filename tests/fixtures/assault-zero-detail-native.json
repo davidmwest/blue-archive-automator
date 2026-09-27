@@ -1,0 +1,302 @@
+[
+  {
+    "text": "09/21 19:00",
+    "confidence": 0.99988,
+    "box": [
+      1150,
+      88,
+      1244,
+      111
+    ]
+  },
+  {
+    "text": "09/28 11:59",
+    "confidence": 0.99913,
+    "box": [
+      1151,
+      110,
+      1245,
+      134
+    ]
+  },
+  {
+    "text": "Room Info",
+    "confidence": 0.99995,
+    "box": [
+      181,
+      123,
+      286,
+      148
+    ]
+  },
+  {
+    "text": "Strategy Info",
+    "confidence": 0.96356,
+    "box": [
+      341,
+      123,
+      469,
+      152
+    ]
+  },
+  {
+    "text": "Room Info",
+    "confidence": 0.99995,
+    "box": [
+      558,
+      119,
+      721,
+      155
+    ]
+  },
+  {
+    "text": "HARDCORE",
+    "confidence": 0.99994,
+    "box": [
+      156,
+      194,
+      265,
+      215
+    ]
+  },
+  {
+    "text": "Rec.",
+    "confidence": 0.99117,
+    "box": [
+      639,
+      197,
+      692,
+      225
+    ]
+  },
+  {
+    "text": "Drumbarka",
+    "confidence": 0.99971,
+    "box": [
+      150,
+      215,
+      387,
+      261
+    ]
+  },
+  {
+    "text": "Lv.50",
+    "confidence": 0.99939,
+    "box": [
+      633,
+      222,
+      697,
+      250
+    ]
+  },
+  {
+    "text": "Sweep",
+    "confidence": 0.99994,
+    "box": [
+      903,
+      220,
+      973,
+      249
+    ]
+  },
+  {
+    "text": "2,400,000/2,400,000",
+    "confidence": 0.98315,
+    "box": [
+      162,
+      269,
+      342,
+      297
+    ]
+  },
+  {
+    "text": "Normal",
+    "confidence": 0.99995,
+    "box": [
+      503,
+      269,
+      577,
+      292
+    ]
+  },
+  {
+    "text": "Special",
+    "confidence": 0.99991,
+    "box": [
+      634,
+      267,
+      705,
+      296
+    ]
+  },
+  {
+    "text": "Min",
+    "confidence": 0.99991,
+    "box": [
+      767,
+      275,
+      815,
+      303
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.9996,
+    "box": [
+      927,
+      276,
+      949,
+      305
+    ]
+  },
+  {
+    "text": "Max",
+    "confidence": 0.99966,
+    "box": [
+      1058,
+      276,
+      1111,
+      304
+    ]
+  },
+  {
+    "text": "Common Skill",
+    "confidence": 0.96958,
+    "box": [
+      151,
+      319,
+      254,
+      340
+    ]
+  },
+  {
+    "text": "Phase 1",
+    "confidence": 0.9974,
+    "box": [
+      561,
+      320,
+      618,
+      338
+    ]
+  },
+  {
+    "text": "Enhanced Skill",
+    "confidence": 0.99817,
+    "box": [
+      156,
+      357,
+      250,
+      374
+    ]
+  },
+  {
+    "text": "EXSkill",
+    "confidence": 0.99926,
+    "box": [
+      288,
+      355,
+      350,
+      376
+    ]
+  },
+  {
+    "text": "EX Skill",
+    "confidence": 0.94547,
+    "box": [
+      397,
+      355,
+      458,
+      376
+    ]
+  },
+  {
+    "text": "EX Skill",
+    "confidence": 0.93961,
+    "box": [
+      505,
+      355,
+      566,
+      376
+    ]
+  },
+  {
+    "text": "EXSkill",
+    "confidence": 0.97232,
+    "box": [
+      612,
+      354,
+      674,
+      376
+    ]
+  },
+  {
+    "text": "En",
+    "confidence": 0.9997,
+    "box": [
+      704,
+      358,
+      725,
+      374
+    ]
+  },
+  {
+    "text": "Start Sweep",
+    "confidence": 0.99986,
+    "box": [
+      854,
+      367,
+      1022,
+      404
+    ]
+  },
+  {
+    "text": "Expected Rewards",
+    "confidence": 0.99997,
+    "box": [
+      343,
+      468,
+      520,
+      495
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99993,
+    "box": [
+      968,
+      525,
+      1059,
+      560
+    ]
+  },
+  {
+    "text": "Mock Battle",
+    "confidence": 0.99996,
+    "box": [
+      737,
+      530,
+      879,
+      556
+    ]
+  },
+  {
+    "text": "X10",
+    "confidence": 0.9535,
+    "box": [
+      178,
+      560,
+      206,
+      575
+    ]
+  },
+  {
+    "text": "x100",
+    "confidence": 0.9721,
+    "box": [
+      236,
+      557,
+      278,
+      577
+    ]
+  }
+]

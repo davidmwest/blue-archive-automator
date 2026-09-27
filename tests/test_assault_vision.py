@@ -538,3 +538,65 @@ def test_unreadable_zero_budget_does_not_invent_zero(missing):
     frame, words = capture("zero-detail")
     screen = classify_assault(frame, [word for word in words if word.text != missing])
     assert screen.kind == "detail" and screen.tickets is None
+
+
+def test_native_exhausted_detail_recovers_both_explicit_disabled_costs(vision):
+    before = classify_assault(*capture("zero-detail-native"))
+    assert before.kind == "detail" and before.count == 0 and before.tickets is None
+    result = vision.analyze((FIXTURES / "assault-zero-detail-native.png").read_bytes())
+    assert result.kind == "detail" and result.tickets == 0 and result.count == 0
+    assert result.boss == "Drumbarka" and result.difficulty == "hardcore"
+    assert result.event_period == "09/21 19:00 – 09/28 11:59"
+    assert result.enter_target is None and result.sweep_target is None and result.sweep_max_target is None
+
+
+@pytest.mark.parametrize("readings,confidence", [
+    (("0→-", "0→-", "0→-", "0→-"), .89),
+    (("0→-", "0→-", "1→0", "1→0"), .99),
+    (("0→-", "0→-", "0→-", None), .99),
+    (("0→-", "0→-", "0→-", "0→0"), .99),
+    (("0→-", "0→-", "0→-", "0→"), .99),
+])
+def test_native_exhausted_costs_need_four_complete_confident_agreeing_reads(readings, confidence):
+    before = classify_assault(*capture("zero-detail-native"))
+    result = AssaultVision(crop_reader(readings, confidence))._exhausted_budget(
+        (FIXTURES / "assault-zero-detail-native.png").read_bytes(), before)
+    assert result == before and result.tickets is None
+
+
+@pytest.mark.parametrize("change", ["unknown", "count_unknown", "count_positive", "tickets_known",
+                                    "enter", "sweep", "maximum", "contradictory_entry", "contradictory_sweep"])
+def test_exhausted_recovery_never_overrides_other_budget_evidence(change):
+    class OCR:
+        @property
+        def ocr(self):
+            pytest.fail("Ineligible or contradictory detail must not attempt zero recovery")
+
+    before = classify_assault(*capture("zero-detail-native"))
+    values = {"unknown": {"kind": "unknown"}, "count_unknown": {"count": None},
+              "count_positive": {"count": 1}, "tickets_known": {"tickets": 2},
+              "enter": {"enter_target": (1010, 545)}, "sweep": {"sweep_target": (940, 385)},
+              "maximum": {"sweep_max_target": (1085, 290)}}
+    if change.startswith("contradictory_"):
+        box = (1070, 475, 1133, 505) if change.endswith("entry") else (1027, 327, 1090, 357)
+        before = replace(before, words=(*before.words, Word("1→0", .99, box)))
+    else:
+        before = replace(before, **values[change])
+    assert AssaultVision(OCR())._exhausted_budget(
+        (FIXTURES / "assault-zero-detail-native.png").read_bytes(), before) == before
+
+
+@pytest.mark.parametrize("texts,scores", [(None, None), (["0→-"] * 3, [.99] * 3),
+                                          (["0→-"] * 4, None), (["0→-"] * 4, [.99] * 3)])
+def test_exhausted_cost_batch_requires_all_outputs(texts, scores):
+    reader = SimpleNamespace(ocr=SimpleNamespace(text_rec=lambda _: SimpleNamespace(txts=texts, scores=scores)))
+    before = classify_assault(*capture("zero-detail-native"))
+    assert AssaultVision(reader)._exhausted_budget(
+        (FIXTURES / "assault-zero-detail-native.png").read_bytes(), before) == before
+
+
+def test_corroborated_zero_only_changes_ticket_observation():
+    before = classify_assault(*capture("zero-detail-native"))
+    result = AssaultVision(crop_reader(("0→-",)))._exhausted_budget(
+        (FIXTURES / "assault-zero-detail-native.png").read_bytes(), before)
+    assert result == replace(before, tickets=0)
