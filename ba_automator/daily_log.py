@@ -94,8 +94,9 @@ def _locked(directory: Path):
             if os.name == "nt":
                 import msvcrt
 
-                if os.fstat(descriptor).st_size == 0:
-                    os.write(descriptor, b"\0")
+                # Windows permits locks beyond EOF. Initializing byte 0 before
+                # acquiring the lock races with another writer that already
+                # owns that byte, and Windows rejects the initialization write.
                 os.lseek(descriptor, 0, os.SEEK_SET)
                 msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
             else:

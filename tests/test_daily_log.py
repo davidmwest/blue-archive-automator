@@ -89,6 +89,73 @@ for number in range(24):
         assert {int(line.rsplit("number=", 1)[1]) for line in found} == set(range(24))
 
 
+@pytest.mark.parametrize("existing_lock", [b"", b"\0"])
+@pytest.mark.parametrize("body_fails", [False, True])
+def test_windows_log_lock_never_writes_a_contended_lock_byte(
+    tmp_path, monkeypatch, existing_lock, body_fails
+):
+    # Simulate a competing process owning byte 0, including beyond EOF. A
+    # pre-lock initialization write fails on Windows even when stat saw size 0.
+    (tmp_path / ".append.lock").write_bytes(existing_lock)
+    calls = []
+    descriptors = []
+
+    def forbidden_write(descriptor, data):
+        raise PermissionError("Another process owns the lock-file byte")
+
+    def locking(descriptor, operation, count):
+        assert os.lseek(descriptor, 0, os.SEEK_CUR) == 0
+        assert count == 1
+        descriptors.append(descriptor)
+        calls.append(operation)
+
+    monkeypatch.setattr(
+        daily_log,
+        "os",
+        SimpleNamespace(**(vars(os) | {"name": "nt", "write": forbidden_write})),
+    )
+    monkeypatch.setitem(
+        sys.modules, "msvcrt", SimpleNamespace(LK_LOCK=1, LK_UNLCK=0, locking=locking)
+    )
+
+    def append():
+        with daily_log._locked(tmp_path):
+            assert calls == [1]
+            if body_fails:
+                raise ValueError("Log append failed")
+
+    if body_fails:
+        with pytest.raises(ValueError, match="Log append failed"):
+            append()
+    else:
+        append()
+    assert calls == [1, 0]
+    assert descriptors[0] == descriptors[1]
+    with pytest.raises(OSError):
+        os.fstat(descriptors[0])
+    assert (tmp_path / ".append.lock").read_bytes() == existing_lock
+
+
+def test_windows_log_lock_failure_closes_handle_without_entering(tmp_path, monkeypatch):
+    descriptors = []
+
+    def locking(descriptor, operation, count):
+        assert operation == 1  # A failed acquisition must never try to unlock.
+        descriptors.append(descriptor)
+        raise PermissionError("Lock acquisition failed")
+
+    monkeypatch.setattr(daily_log, "os", SimpleNamespace(**(vars(os) | {"name": "nt"})))
+    monkeypatch.setitem(
+        sys.modules, "msvcrt", SimpleNamespace(LK_LOCK=1, LK_UNLCK=0, locking=locking)
+    )
+    with pytest.raises(PermissionError, match="Lock acquisition failed"):
+        with daily_log._locked(tmp_path):
+            pytest.fail("Shared log accessed without its lock")
+    assert len(descriptors) == 1
+    with pytest.raises(OSError):
+        os.fstat(descriptors[0])
+
+
 @pytest.mark.parametrize(
     "day",
     [
