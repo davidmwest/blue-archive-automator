@@ -54,7 +54,7 @@
         </div>
         <div class="run-actions primary-controls" aria-label="Automation controls">
           <button id="run-available" class="button primary" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z"/></svg>do everything</button>
-          <button id="pause-queue" class="button secondary" type="button" disabled>pause queue</button>
+          <button id="pause-queue" class="button secondary" type="button" aria-describedby="queue-control-note" disabled>pause queue</button>
         </div>
         <p id="queue-control-note" class="microcopy">run the enabled jobs that are due, then check red dots and AP. your settings and AP floor still apply.</p>
         <details id="manual-controls" class="manual-controls">
@@ -82,7 +82,6 @@
             </div>
             <p id="daily-plan" class="microcopy">daily does restart → club → free pack → mail → café → bounties → scrimmages → tactical battles → tactical rewards → lessons → collect tasks. home red dots queue their collection jobs when a run finishes.</p>
             <div class="manual-queue-actions">
-              <button id="resume-queue" class="button secondary small" type="button" hidden disabled>just resume the queue</button>
               <button id="stop-run" class="button danger small" type="button" disabled><span class="stop-icon" aria-hidden="true"></span>stop now + pause</button>
             </div>
             <p class="microcopy">stop now interrupts the current task. anything waiting stays in the queue.</p>

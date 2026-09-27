@@ -215,18 +215,16 @@
     $("run-lessons").disabled = unavailable;
     $("stop-run").disabled = unavailable || !active;
     $("capture").disabled = unavailable || active;
-    $("pause-queue").disabled = unavailable || paused;
+    $("pause-queue").disabled = unavailable;
     $("pause-queue").textContent = paused
-      ? active ? "pausing after this job" : "paused"
+      ? "resume queue"
       : active ? "pause after this job" : "pause queue";
     $("queue-control-note").textContent = paused
-      ? active ? "the current job is still finishing. no next job will start. do everything gets the queue moving again."
-        : "queue's paused. do everything checks what's ready and gets things moving again."
+      ? active ? "the current job is still finishing. resume queue lets the next job start after it."
+        : "queue's paused. resume queue picks up where you left off. do everything also checks what's ready."
       : status?.run_available_pending ? "finishing what's already queued, then checking what else is ready."
       : status?.run_available_active ? "getting through what's ready. everything runs one at a time."
       : "run the enabled jobs that are due, then check red dots and AP. your settings and AP floor still apply.";
-    $("resume-queue").hidden = !paused;
-    $("resume-queue").disabled = unavailable;
     const settingsLocked = active || Boolean(status?.capturing) || (queued && !paused);
     $("settings-fields").disabled = unavailable || settingsLocked;
     $("settings-lock-note").hidden = !settingsLocked;
@@ -283,7 +281,7 @@
       : running ? "nothing queued after this." : "nothing queued.";
     $("queue-empty").querySelector("p").textContent = paused
       ? running ? "the current job is still finishing. the queue will wait after that."
-        : "hit do everything when you’re ready to get going again."
+        : "hit resume queue to keep going, or do everything to check what’s ready."
       : "hit do everything, or let the next scheduled check handle it.";
     const signature = JSON.stringify(waiting);
     if (signature === queueSignature) return;
@@ -926,10 +924,15 @@
   $("run-scrimmages").addEventListener("click", () => void post("/api/run", { task: "scrimmages" }, "scrimmages are in the queue."));
   $("run-lessons").addEventListener("click", () => void post("/api/run", { task: "lessons" }, "lessons are in the queue."));
   $("stop-run").addEventListener("click", () => void post("/api/stop", {}, "stopping this task and pausing the queue. everything waiting stays there."));
-  $("pause-queue").addEventListener("click", () => void post("/api/pause", {}, isRunning()
-    ? "pausing after this job. it’s still finishing; no next job will start."
-    : "queue paused. hit do everything when you’re ready to get going again."));
-  $("resume-queue").addEventListener("click", () => void post("/api/resume", {}, "queue’s running again."));
+  $("pause-queue").addEventListener("click", () => {
+    if (status?.queue_paused) {
+      void post("/api/resume", {}, "queue’s running again.");
+    } else {
+      void post("/api/pause", {}, isRunning()
+        ? "pausing after this job. hit resume queue to keep going after it."
+        : "queue paused. hit resume queue when you’re ready to keep going.");
+    }
+  });
   $("capture").addEventListener("click", () => void post("/api/capture", {}));
   $("popup-show-more").addEventListener("click", () => { popupLimit += 6; renderPopups(); });
   $("clear-loot").addEventListener("click", async () => {
