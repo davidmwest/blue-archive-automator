@@ -44,7 +44,9 @@ Each spend records the stage, sweep count, cost, AP before/after, and a saved re
 
 Before confirming, the runner persists an intent in its per-instance `ap-*.json` state. It then verifies the completion receipt, AP change, and (for Hard missions) remaining attempt count before advancing the rotation. Unknown screens or changed costs stop input. A bounded recognition/navigation failure with no unresolved spend schedules another visit in 15 minutes. Startup failures also back off instead of disabling automatic AP spending. Existing holds, unresolved spends, unexpected runner errors, and an explicit stop still require review; the manual retry is **Spend AP** or `spend_ap --retry-ap`.
 
-An unresolved spending intent blocks even an explicit retry. Inspect the actual game, saved receipt, and ledger before reconciling it; restarting the dashboard never silently repeats the sweep. Level-ups that refund AP are currently an inspection case because the result no longer matches the expected AP decrement.
+An unresolved spending intent blocks even an explicit retry. Inspect the actual game, saved receipt, and ledger before reconciling it; restarting the dashboard never silently repeats the sweep.
+
+A single account level-up can refill AP during a sweep. The runner recognizes it only when the AP capacity increases by two, the receipt balance equals the projected balance plus the new capacity (allowing one regeneration tick), and the receipt count matches the requested sweeps. After closing the receipt, it verifies the capacity, balance, stage, and remaining Hard attempts before clearing the intent. The refill gets its own important action and the Hard rotation continues with the new balance. An unexplained increase or multiple level-ups still needs inspection.
 
 Natural AP regeneration can update the top balance while Mission Info still shows its previous sweep projection. That screen remains readable for result verification, but cannot authorize another sweep until its projection matches the current balance. Item inspection runs before the receipt is dismissed; [Loot Gathered](loot.md) records the exact names, quantities, and icons independently of the final spending check.
 
@@ -62,4 +64,8 @@ The bounded-visit continuation has offline coverage for elapsed-time and input l
 
 Calibration also found an ignored-scroll bug that selected report stage E for one 25 AP sweep. Consecutive boundary observations and a guard against downgrading a known clear now cover that failure. Real-screen regressions cover small/missing stage indices, split title boxes, and the distinction between projected and current Hard attempts.
 
-Commission Max, Min, plus, and minus controls were also checked live, including a two-sweep projection, without spending additional AP. Larger commission-batch receipts and AP-refunding level-ups still need live coverage; larger-count budgeting and confirmation checks have offline coverage.
+Commission Max, Min, plus, and minus controls were also checked live, including a two-sweep projection, without spending additional AP. Larger commission-batch receipts still need live coverage; larger-count budgeting and confirmation checks have offline coverage.
+
+A September 26 Hard 11-1 sweep leveled the account from 79 to 80: 156/218 AP projected 136, then became 356/220 after the 220 AP refill. Sanitized before/receipt fixtures cover that recognition. Runtime regressions verify that the refill cannot advance the cursor until the receipt count and post-sweep capacity, AP, and attempts all verify. This is replay coverage of the captured level-up, not a second live level-up under the new code.
+
+The old intent was reconciled separately against its saved receipt and the live Hard 11-1 counter (three attempts before, two afterward), then returned to verified Home without repeating the sweep. The normal queue resumed at Hard 10-3 and verified fresh sweeps with the 100 AP floor intact. The original receipt remains available as evidence; recovery did not invent identities for drops that had not been inspected.

@@ -3,7 +3,7 @@
 from datetime import timedelta
 from .actions import record_action
 from .loot_receipts import inspect_receipt
-from .ap_policy import choose_hard, default_order, sweep_count
+from .ap_policy import choose_hard, default_order, sweep_count, sweep_refill
 from .ap_state import read_state, write_state
 from .ap_vision import APVision
 from .locking import InstanceLock
@@ -355,6 +355,9 @@ class APRunner(ShopRunner):
             "count": count,
             "next_stage": next_stage,
             "run_dir": str(self.run_dir),
+            "ap_capacity_before": screen.ap_capacity,
+            "remaining_before": screen.remaining,
+            "requested_at": self.wall_clock().isoformat(),
         }
         self.save()
         self.important(
@@ -372,9 +375,24 @@ class APRunner(ShopRunner):
         receipt = self.wait("receipt", timeout=90, predicate=lambda s: s.ap is not None)
         receipt_name = f"sweep-receipt-{self.actions:04d}.png"
         self.journal.save_image(receipt_name, receipt.capture.png)
-        if not screen.after <= receipt.screen.ap <= screen.after + 1:
+        refill = sweep_refill(
+            screen.after, receipt.screen.ap, screen.ap_capacity, receipt.screen.ap_capacity
+        )
+        if refill is None or (refill and receipt.screen.count != count):
             self.fail(
                 "Sweep receipt AP differs from its projection; inspect possible level-up or interrupted results"
+            )
+        receipt_ap = receipt.screen.ap
+        receipt_capacity = receipt.screen.ap_capacity
+        if refill:
+            self.journal.record(
+                "ap_level_up_observed",
+                refill=refill,
+                capacity_before=screen.ap_capacity,
+                capacity_after=receipt_capacity,
+                expected_ap=screen.after,
+                receipt_ap=receipt_ap,
+                frame=receipt_name,
             )
         receipt = inspect_receipt(self, receipt, self.run_dir / receipt_name)
         rewards = receipt.screen.rewards
@@ -390,6 +408,11 @@ class APRunner(ShopRunner):
             or result.screen.ap < screen.after
             or screen.strategy == "elephs"
             and result.screen.remaining != screen.remaining - count
+            or refill
+            and (
+                result.screen.ap_capacity != receipt_capacity
+                or result.screen.ap < receipt_ap
+            )
         ):
             self.fail("Post-sweep AP or remaining attempts did not verify")
         self.state["pending"] = None
@@ -397,6 +420,16 @@ class APRunner(ShopRunner):
             self.state["next_stage"] = next_stage
         self.state["last_ap"] = result.screen.ap
         self.save()
+        if refill:
+            self.important(
+                "ap_level_up_refill",
+                f"Account level-up: AP capacity {screen.ap_capacity} → {receipt_capacity}; "
+                f"{refill} AP received. Sweep verified; continuing the AP plan.",
+                ap_received=refill,
+                capacity_before=screen.ap_capacity,
+                capacity_after=receipt_capacity,
+                evidence=str(self.run_dir / receipt_name),
+            )
         self.important(
             "ap_spent",
             f"Swept {screen.strategy} {screen.stage} ×{count}: {count*screen.cost} AP spent; {result.screen.ap} AP left. Receipt saved.",

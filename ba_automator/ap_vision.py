@@ -33,6 +33,7 @@ class APScreen:
     rewards: tuple[str, ...] = ()
     left: bool = False
     right: bool = False
+    ap_capacity: int | None = None
 
 
 def gold(frame, box):
@@ -87,8 +88,9 @@ def area_arrow(frame, x):
 
 
 def classify_ap(frame, words, *, home=False):
-    ap = ap_value(words)
-    unknown = APScreen("unknown", ap=ap)
+    balance = number(words, (493, 0, 620, 48), r"(\d+)/(\d+)")
+    ap, ap_capacity = balance if balance else (None, None)
+    unknown = APScreen("unknown", ap=ap, ap_capacity=ap_capacity)
     if (
         has(words, "sweep complete", (450, 65, 835, 125))
         and has(words, "confirm", (480, 535, 795, 625))
@@ -103,6 +105,7 @@ def classify_ap(frame, words, *, home=False):
         return APScreen(
             "receipt",
             ap=ap,
+            ap_capacity=ap_capacity,
             count=max(counts) if counts else None,
             target=(640, 583),
             rewards=rewards,
@@ -116,7 +119,8 @@ def classify_ap(frame, words, *, home=False):
         and cyan(frame, (660, 480, 860, 530))
     ):
         return APScreen(
-            "confirm", ap=ap, cost=int(match[1]), count=int(match[2]), target=(767, 505)
+            "confirm", ap=ap, cost=int(match[1]), count=int(match[2]),
+            target=(767, 505), ap_capacity=ap_capacity,
         )
     if (
         has(words, "mission info", (440, 80, 850, 130))
@@ -161,6 +165,7 @@ def classify_ap(frame, words, *, home=False):
             return APScreen(
                 "detail",
                 ap=ap,
+                ap_capacity=ap_capacity,
                 strategy="elephs",
                 stage=stage_match[1],
                 count=qty,
@@ -216,6 +221,7 @@ def classify_ap(frame, words, *, home=False):
                 return APScreen(
                     "detail",
                     ap=ap,
+                    ap_capacity=ap_capacity,
                     strategy=strategy,
                     stage=stage,
                     count=0,
@@ -229,6 +235,7 @@ def classify_ap(frame, words, *, home=False):
             return APScreen(
                 "detail",
                 ap=ap,
+                ap_capacity=ap_capacity,
                 strategy=strategy,
                 stage=stage,
                 count=count[0],
@@ -254,7 +261,7 @@ def classify_ap(frame, words, *, home=False):
             and has(words, "base defense", (940, 140, 1250, 220))
             and has(words, "item retrieval", (940, 255, 1250, 330))
         ):
-            return APScreen("commissions", ap=ap)
+            return APScreen("commissions", ap=ap, ap_capacity=ap_capacity)
         strategy = (
             "credits"
             if has(words, "item retrieval", (80, 125, 420, 195))
@@ -312,7 +319,8 @@ def classify_ap(frame, words, *, home=False):
             stages.sort(key=lambda s: s.id)
             return (
                 APScreen(
-                    "commission_list", ap=ap, strategy=strategy, stages=tuple(stages)
+                    "commission_list", ap=ap, strategy=strategy, stages=tuple(stages),
+                    ap_capacity=ap_capacity,
                 )
                 if stages
                 else unknown
@@ -323,7 +331,7 @@ def classify_ap(frame, words, *, home=False):
         and has(words, "mission", (680, 200, 865, 260))
         and has(words, "commissions", (620, 480, 810, 535))
     ):
-        return APScreen("campaign", ap=ap)
+        return APScreen("campaign", ap=ap, ap_capacity=ap_capacity)
     if (
         has(words, "mission", (80, 0, 230, 50))
         and bright(frame, (320, 5, 390, 32))
@@ -344,7 +352,10 @@ def classify_ap(frame, words, *, home=False):
             > 0.5
         )
         if not hard:
-            return APScreen("normal", ap=ap, area=area[0], left=left, right=right)
+            return APScreen(
+                "normal", ap=ap, area=area[0], left=left, right=right,
+                ap_capacity=ap_capacity,
+            )
         stages = []
         for word in within(words, (680, 210, 765, 510)):
             if not re.fullmatch(rf"{area[0]}-[123]", word.text):
@@ -375,13 +386,14 @@ def classify_ap(frame, words, *, home=False):
         return APScreen(
             "hard_list",
             ap=ap,
+            ap_capacity=ap_capacity,
             area=area[0],
             stages=tuple(stages),
             left=left,
             right=right,
         )
     if home:
-        return APScreen("home", ap=ap)
+        return APScreen("home", ap=ap, ap_capacity=ap_capacity)
     return unknown
 
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 from dataclasses import replace
 import pytest
-from ba_automator.ap_vision import APVision, classify_ap
+from ba_automator.ap_vision import APVision, ap_value, classify_ap
 from ba_automator.vision import StartupVision, decode_frame
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -102,6 +102,43 @@ def test_unknown_ap_and_wrong_projection_cannot_authorize_commission(vision):
         for w in words
     ]
     assert classify_ap(f, wrong).kind == "unknown"
+
+
+@pytest.mark.parametrize(
+    "name,kind,ap,capacity",
+    [
+        ("level-up-before", "detail", 156, 218),
+        ("level-up-receipt", "receipt", 356, 220),
+        ("credit-start", "confirm", 461, 218),
+    ],
+)
+def test_ap_capacity_retains_observed_level_up_refill(vision, name, kind, ap, capacity):
+    screen = vision.analyze((FIXTURES / f"ap-{name}.png").read_bytes())
+    assert (screen.kind, screen.ap, screen.ap_capacity) == (kind, ap, capacity)
+    if name == "level-up-before":
+        assert (screen.stage, screen.count, screen.cost, screen.after, screen.remaining) == (
+            "11-1", 1, 20, 136, 3,
+        )
+    if name == "level-up-receipt":
+        assert screen.count == 1
+
+
+@pytest.mark.parametrize("change", ["missing", "duplicate", "malformed"])
+def test_ap_and_capacity_require_the_same_unique_fraction(vision, change):
+    f = decode_frame((FIXTURES / "ap-level-up-receipt.png").read_bytes())
+    words = vision.startup.read(f)
+    balance = [w for w in words if w.text == "356/220"]
+    assert len(balance) == 1
+    if change == "missing":
+        words.remove(balance[0])
+    elif change == "duplicate":
+        words.append(replace(balance[0], text="356/218"))
+    else:
+        words = [replace(w, text="356/?") if w == balance[0] else w for w in words]
+    screen = classify_ap(f, words)
+    assert screen.kind == "receipt"
+    assert screen.ap is None and screen.ap_capacity is None
+    assert ap_value(words) is None
 
 
 def test_dimmed_stage_lists_are_rejected(vision):

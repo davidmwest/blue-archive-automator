@@ -396,6 +396,52 @@ def test_missing_receipt_blocks_replay_and_retains_old_cursor(runner):
         runner.run()
 
 
+@pytest.mark.parametrize("fault", [None, "receipt_count", "balance", "capacity", "attempts"])
+def test_level_up_refill_requires_receipt_and_post_sweep_proof(runner, fault):
+    before = detail(ap=156, after=136, ap_capacity=218)
+    receipt = APScreen("receipt", ap=356, ap_capacity=220,
+                       count=2 if fault == "receipt_count" else 1, target=(640, 583))
+    result = detail(ap=355 if fault == "balance" else 356, after=336,
+                    ap_capacity=218 if fault == "capacity" else 220,
+                    remaining=3 if fault == "attempts" else 2)
+    screens = iter([
+        APScreen("confirm", ap=156, ap_capacity=218, cost=20, count=1,
+                 target=(767, 505)), receipt, result,
+    ])
+    runner.wait = lambda *args, **kwargs: frame(runner, next(screens))
+    inputs = []
+
+    def tap(f, *args):
+        if f.screen.kind in {"confirm", "receipt"}:
+            saved = read_state(runner.config)
+            assert saved["pending"]["ap_capacity_before"] == 218
+            assert saved["pending"]["remaining_before"] == 3
+            assert saved["next_stage"] is None
+        inputs.append(f.screen.kind)
+
+    runner.tap = tap
+    if fault:
+        with pytest.raises(TaskError, match="projection|Post-sweep"):
+            runner.sweep(frame(runner, before), 1, next_stage="13-2")
+        saved = read_state(runner.config)
+        assert saved["pending"] and saved["next_stage"] is None
+        actions = (runner.config.state_dir / "important-actions.jsonl").read_text()
+        assert '"action": "ap_spent"' not in actions
+        assert '"action": "ap_level_up_refill"' not in actions
+        if fault == "receipt_count":
+            assert inputs == ["detail", "confirm"]
+    else:
+        verified = runner.sweep(frame(runner, before), 1, next_stage="13-2")
+        assert verified.screen.ap == 356
+        saved = read_state(runner.config)
+        assert saved["pending"] is None and saved["next_stage"] == "13-2"
+        assert saved["last_ap"] == 356
+        actions = (runner.config.state_dir / "important-actions.jsonl").read_text()
+        assert '"action": "ap_spent"' in actions
+        assert '"action": "ap_level_up_refill"' in actions
+        assert '"ap_received": 220' in actions
+
+
 def test_jobs_share_queue_plans_and_only_scan_has_no_spend(runner):
     c = runner.config
     assert task_plan("scan_ap", c) == ("restart", "scan_ap", "red_dots")

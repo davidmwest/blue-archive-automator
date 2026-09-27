@@ -598,3 +598,14 @@ freshness guards before input. A guarded live recovery also encountered the
 same unreadable heading, waited for a clean frame, logged all three coins, and
 closed the receipt. These game-derived fixtures remain outside the project's
 MIT grant.
+
+`ap-level-up-before.png` and `ap-level-up-receipt.png` preserve the September 26
+Hard 11-1 sweep that crossed an account-level threshold. The first frame shows
+156/218 AP, a one-sweep projection of 136 AP, and three remaining attempts. The
+receipt shows one sweep and 356/220 AP: the projected balance plus the new
+220 AP capacity. Its account XP animation still shows level 79 with 14 XP to
+the next level. Account name, unrelated balances, and reward identities are
+masked. The regression reads both parts of the same unique AP fraction; it
+does not infer a level-up from a larger balance alone. These images establish
+the observed capacity change, not a subsequent level-up dialog or completed
+live recovery. Game-derived fixtures remain outside the project's MIT grant.
