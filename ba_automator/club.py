@@ -13,7 +13,7 @@ from .home_badges import badges
 from .locking import InstanceLock
 from .shop_runtime import ShopRunner
 from .home_badges import notification_dot
-from .vision import classify, decode_frame
+from .vision import classify, decode_frame, read_game_words
 
 RESET_HOUR_UTC = 19
 
@@ -115,7 +115,7 @@ class ClubVision:
 
     def analyze(self, png, *, billing=False):
         frame = decode_frame(png)
-        words = self.startup.read(frame)
+        words = read_game_words(png, self.startup)
         home = (
             not billing and classify(words, self.startup.matches(frame)).state == "home"
         )

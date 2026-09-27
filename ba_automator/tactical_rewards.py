@@ -9,7 +9,7 @@ from .crafting_vision import has, bright, yellow, within
 from .locking import InstanceLock
 from .shop_runtime import ShopRunner
 from .shop_vision import classify_shop, text_in
-from .vision import classify, decode_frame
+from .vision import classify, decode_frame, read_game_words
 
 
 @dataclass(frozen=True)
@@ -74,7 +74,7 @@ class TacticalVision:
 
     def analyze(self, png, *, billing=False):
         frame = decode_frame(png)
-        words = self.startup.read(frame)
+        words = read_game_words(png, self.startup)
         home = (
             not billing and classify(words, self.startup.matches(frame)).state == "home"
         )

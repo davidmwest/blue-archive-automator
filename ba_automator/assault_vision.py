@@ -12,7 +12,7 @@ import numpy as np
 from .assault_policy import DIFFICULTIES, TeamMember, validate_team
 from .crafting_vision import bright, cyan, within, yellow
 from .shop_vision import classify_shop, has, text_in
-from .vision import Word, decode_frame
+from .vision import read_game_words, Word, decode_frame, decode_native_frame, native_game_region
 
 
 @dataclass(frozen=True)
@@ -91,7 +91,7 @@ DAMAGE_POINTS = ((307, 505), (531, 505), (755, 505), (979, 505),
                  (446, 635), (794, 635))
 
 
-def formation_stars(frame, startup):
+def formation_stars(frame, startup, *, native_frame=None):
     """Read all six enlarged star digits in one bounded local OCR invocation."""
     strip = np.full((130, 1020, 3), 255, np.uint8)
     colors = []
@@ -106,7 +106,9 @@ def formation_stars(frame, startup):
         # Blue UE digits need no OCR. Their different color can also cause the
         # text detector to join the entire strip into an unreadable word.
         if not equipped:
-            crop = cv2.resize(frame[y1:y2, x1:x2], (56, 56))
+            source = (native_game_region(native_frame, (x1, y1, x2, y2))
+                      if native_frame is not None else frame[y1:y2, x1:x2])
+            crop = cv2.resize(source, (56, 56))
             strip[35:91, index * 170 + 50:index * 170 + 106] = crop
     digits = startup.read(strip)
     stars = []
@@ -140,7 +142,7 @@ def damage_type(frame, point):
     return hits[0] if len(hits) == 1 else None
 
 
-def read_formation(frame, words, *, stars=(), startup=None):
+def read_formation(frame, words, *, stars=(), startup=None, native_frame=None):
     """Return a complete owned team, or no team when any field is unreadable.
 
     Assistant provenance is not inferred from a portrait or a student name. The
@@ -148,7 +150,7 @@ def read_formation(frame, words, *, stars=(), startup=None):
     team; the ordinary formation screen alone cannot establish that identity.
     """
     if not stars and startup is not None:
-        stars = formation_stars(frame, startup)
+        stars = formation_stars(frame, startup, native_frame=native_frame)
     if len(stars) != 6:
         return ()
     team = []
@@ -282,11 +284,12 @@ class AssaultVision:
 
     def analyze(self, png, *, billing=False):
         frame = decode_frame(png)
-        words = self.startup.read(frame)
+        words = read_game_words(png, self.startup)
         home = {"home_left", "home_right"} <= self.startup.matches(frame).keys()
         screen = classify_assault(frame, words, home=home)
         if screen.kind == "formation" and not any(w.normalized == "empty" for w in words):
-            screen = classify_assault(frame, words, stars=formation_stars(frame, self.startup))
+            screen = classify_assault(frame, words, stars=formation_stars(
+                frame, self.startup, native_frame=decode_native_frame(png)))
         if screen.kind == "unknown":
             # Lazy import keeps the navigation screen contract shared without a
             # module cycle, and reuses the same local OCR observation.

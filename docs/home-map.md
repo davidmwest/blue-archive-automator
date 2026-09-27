@@ -1,8 +1,10 @@
 # Home and Campaign map
 
-Coordinates refer to the global English 1280×720, 320 DPI profile. The map is stored in [`ba_automator/assets/home_map.json`](../ba_automator/assets/home_map.json) and displayed by the local dashboard. It is a reviewed navigation reference, not a generic click script.
+Coordinates refer to the global English layout in canonical **1280×720** space. The map is stored in [`ba_automator/assets/home_map.json`](../ba_automator/assets/home_map.json) and displayed by the local dashboard. Templates and color checks use this reference; text OCR reads native pixels and maps its boxes back to canonical coordinates. Targeted text crops retain native detail. The device adapter scales input back to the actual display. The map is a reviewed navigation reference, not a generic click script.
 
-All listed home controls were visually checked against a clear staging screenshot during the September 23–24, 2026 session. Cafe, Lesson, and Campaign were opened and their destinations verified. Lesson navigation was exercised during the Lessons implementation; this verifies the route independently of full task completion. `visual_verified` means the control and position were seen; `route_verified` means its destination was exercised. The existing `verified` flag follows route verification for the dashboard badge.
+All listed home controls were visually checked against a clear 1280×720, 320 DPI staging screenshot during the September 23–24, 2026 session. Cafe, Lesson, and Campaign were opened and their destinations verified. Lesson navigation was exercised during the Lessons implementation; this verifies the route independently of full task completion. `visual_verified` means the control and position were seen; `route_verified` means its destination was exercised. The existing `verified` flag follows route verification for the dashboard badge.
+
+The 1440p migration also verified clear home, red-dot scanning, and the Campaign route into Total Assault. It has not revalidated every control in this table at the new resolution. See [validation details](engineering.md#evidence-and-its-limits).
 
 | Home control | Center | Navigation status |
 | --- | --- | --- |

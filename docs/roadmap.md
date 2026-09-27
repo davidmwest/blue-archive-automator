@@ -56,7 +56,7 @@ Before farming, define playable-period checks, stage selection, resource limits,
 
 Offline tests run on macOS, Windows, and Ubuntu in [GitHub Actions](https://github.com/davidmwest/blue-archive-automator/actions/workflows/tests.yml). They verify implementation behavior without an emulator; they do not establish live platform support.
 
-Smoke-test installation, screenshot capture, input, restart, cafe, lessons, and interruption on Windows with BlueStacks 5 at the same 1280×720 and 320 DPI profile.
+Smoke-test installation, screenshot capture, input, restart, cafe, lessons, and interruption on Windows with BlueStacks 5, starting at 2560×1440 and 640 DPI and checking the 1280×720 fallback too.
 
 Run Blue Archive while the Azur Lane daemon is active on a different endpoint with a compatible shared ADB server. Confirm startup and recovery leave the other game connected. Measure OCR/capture latency and combined CPU, GPU, and memory use before choosing resource presets.
 

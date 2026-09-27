@@ -323,10 +323,11 @@ def test_owned_real_team_rechecks_no_borrowed_badges_and_complete_final_formatio
     runner.assistant = card().member  # Stale process state is cleared by proof.
     checked = []
     monkeypatch.setattr(assault_assistant, 'decode_frame', lambda png: 'decoded')
+    monkeypatch.setattr(assault_assistant, 'decode_native_frame', lambda png: 'native')
     monkeypatch.setattr(assault_assistant, 'verify_owned_quick',
-                        lambda image, words, *, startup: checked.append(image) or True)
+                        lambda image, words, *, startup, native_frame: checked.append((image, native_frame)) or True)
     result = runner.verify_real_owned(real_formation(members=expected), expected)
-    assert result is runner.final and runner.assistant is None and checked == ['decoded']
+    assert result is runner.final and runner.assistant is None and checked == [('decoded', 'native')]
     assert runner.taps == [(1205, 182), (1168, 593)]
 
 
@@ -339,6 +340,7 @@ def test_owned_real_verification_rejects_same_metadata_borrowed_copy_or_post_con
     runner = VerificationRunner(page(), final)
     runner.vision = SimpleNamespace(startup=object())
     monkeypatch.setattr(assault_assistant, 'decode_frame', lambda png: 'decoded')
+    monkeypatch.setattr(assault_assistant, 'decode_native_frame', lambda png: 'native')
     monkeypatch.setattr(assault_assistant, 'verify_owned_quick', lambda *args, **kwargs: not borrowed_badge)
     with pytest.raises(RuntimeError, match='contains an assistant|owned formation changed'):
         runner.verify_real_owned(real_formation(members=expected), expected)

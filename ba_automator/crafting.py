@@ -11,6 +11,7 @@ from .actions import record_action
 from .loot_receipts import inspect_receipt
 from .crafting_state import read_state, write_state
 from .crafting_vision import CraftVision
+from .display import is_supported_size
 from .locking import InstanceLock
 from .runtime import Capture, Journal, RunResult, TaskError, HOME_STABLE_SECONDS
 
@@ -266,8 +267,8 @@ class CraftingRunner:
                 self.state = read_state(self.config)
                 self.device.connect()
                 self.device.verify_package()
-                if self.device.display_size() != (1280, 720):
-                    self.fail('Crafting requires the 1280×720 display profile')
+                if not is_supported_size(self.device.display_size()):
+                    self.fail('Crafting requires a 16:9 landscape display from 1280×720 to 3840×2160')
                 frame = self.navigate('home', 'list')
                 frame = self.settled_list()
                 self.reconcile(frame)

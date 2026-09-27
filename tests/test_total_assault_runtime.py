@@ -10,8 +10,8 @@ from ba_automator import assault_state
 from ba_automator.assault_policy import AssaultContext, MockResult, TeamMember
 from ba_automator.assault_vision import AssaultScreen, AssaultStage
 from ba_automator.config import Config
-from ba_automator.runtime import TaskError
-from ba_automator.total_assault import TotalAssaultRunner
+from ba_automator.runtime import Capture, TaskError
+from ba_automator.total_assault import TotalAssaultRunner, run_total_assault
 
 
 NOW = datetime(2026, 9, 25, 8, tzinfo=timezone.utc)
@@ -47,6 +47,21 @@ def room(tickets=6):
 
 def qualify(runner):
     assault_state.record_mock(runner.config, CONTEXT, TEAM, WIN, runner.run_dir.name, now=NOW)
+
+
+@pytest.mark.parametrize('size', [(2560, 1440), (1920, 1200)])
+def test_assault_entry_guard_accepts_scaled_layout_but_rejects_changed_aspect(runner, monkeypatch, size):
+    calls = []
+    device = SimpleNamespace(connect=lambda: None, verify_package=lambda: None,
+                             display_size=lambda: size)
+    monkeypatch.setattr(TotalAssaultRunner, 'run', lambda self: calls.append('run'))
+    if size == (2560, 1440):
+        run_total_assault(runner.config, device, object(), vision=object())
+        assert calls == ['run']
+    else:
+        with pytest.raises(TaskError, match='16:9'):
+            run_total_assault(runner.config, device, object(), vision=object())
+        assert not calls
 
 
 def test_difficulty_survey_records_event_period_without_shadowing_journal_event(runner):
@@ -337,6 +352,77 @@ def test_receipt_collector_inspects_the_supplied_first_frame_before_waiting(runn
     assert [entry[0] for entry in events] == ["save", "inspect", "dismiss", "wait"]
 
 
+class ReceiptClock:
+    now = 0.0
+
+    def __call__(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.now += seconds
+
+
+@pytest.mark.parametrize("initial_state", ["animation", "expired_final"])
+def test_receipt_collector_waits_for_fresh_final_rewards_before_inspecting(
+        runner, monkeypatch, initial_state):
+    clock = ReceiptClock()
+    runner.clock, runner.sleep, runner.started = clock, clock.sleep, 0
+    initial = frame("receipt", target=None if initial_state == "animation" else (640, 583))
+    initial.capture = Capture(b"initial", -6 if initial_state == "expired_final" else 0,
+                              runner.config.package)
+    final = frame("receipt", target=(640, 583))
+    menu = frame("menu", tickets=0)
+    observations = iter((frame("unknown"), frame("receipt"), final, menu))
+    inspected, saved, sent, rewards = [], [], [], []
+
+    def capture():
+        current = next(observations)
+        current.capture = Capture(b"final" if current is final else b"other",
+                                  clock(), runner.config.package)
+        return current
+
+    def inspect(current_runner, current, evidence):
+        assert current is final and current.capture.is_fresh(clock())
+        inspected.append(current)
+        return current
+
+    runner.capture = capture
+    runner.journal.save_image = lambda name, png: saved.append(png)
+    runner.tap = lambda current, target, label: sent.append((current, target))
+    runner.important = lambda kind, *args, **kwargs: rewards.append(kind)
+    monkeypatch.setattr("ba_automator.total_assault.inspect_receipt", inspect)
+    assert runner.collect_receipts(initial) is menu
+    assert clock() == pytest.approx(1.4)
+    assert saved == [b"final"]
+    assert inspected == [final]
+    assert sent == [(final, (640, 583))]
+    assert rewards == ["total_assault_rewards_received"]
+
+
+def test_sweep_animation_timeout_preserves_intent_without_input_or_false_loot(runner, monkeypatch):
+    intent = sweep_intent(runner)
+    before = assault_state.read_state(runner.config)
+    clock = ReceiptClock()
+    runner.clock, runner.sleep, runner.started = clock, clock.sleep, 0
+
+    def capture():
+        current = frame("receipt")
+        current.capture = Capture(b"animation", clock(), runner.config.package)
+        return current
+
+    runner.capture = capture
+    runner.tap = lambda *args: pytest.fail("An animated receipt authorizes no input")
+    runner.important = lambda *args, **kwargs: pytest.fail("Animation is not verified loot")
+    runner.journal.save_image = lambda *args: pytest.fail("Only final rewards are receipt evidence")
+    monkeypatch.setattr("ba_automator.total_assault.inspect_receipt",
+                        lambda *args: pytest.fail("Do not inspect animated per-ticket rewards"))
+    with pytest.raises(TaskError, match="did not reach receipt"):
+        runner.collect_receipts(capture())
+    assert 90 <= clock() < 91
+    assert assault_state.read_state(runner.config) == before
+    assert before["pending"]["id"] == intent
+
+
 def test_receipt_that_stays_open_is_not_counted_or_dismissed_twice(runner, monkeypatch):
     receipt = frame("receipt", target=(620, 660),
                     items=({"name": "Credits", "quantity": 10_000},))
@@ -426,6 +512,52 @@ def test_reappearing_outcome_notice_is_not_acknowledged_again(runner, monkeypatc
     with pytest.raises(TaskError, match="repeated an outcome notice"):
         runner.collect_receipts(outcome)
     assert closed == ["outcome", "season_record"]
+
+
+def test_rank_summary_closes_once_without_claiming_loot_or_replaying_ticket(runner, monkeypatch):
+    qualify(runner)
+    intent = assault_state.begin_entry(runner.config, CONTEXT, TEAM, runner.run_dir.name, 6, now=NOW)
+    summary = frame("outcome", confirm_target=(640, 573))
+    menu = frame("menu", boss=CONTEXT.boss, event_period=CONTEXT.event_id, tickets=5)
+    sent, saved, notices = [], [], []
+    runner.tap = lambda current, target, detail: sent.append((current.screen.kind, target))
+    runner.journal.save_image = lambda name, png: saved.append(name)
+    runner.journal.record = lambda event, **details: notices.append((event, details))
+    runner.important = lambda *args, **kwargs: pytest.fail("Rank points are not item loot")
+    monkeypatch.setattr("ba_automator.total_assault.inspect_receipt",
+                        lambda *args: pytest.fail("A rank summary is not a reward receipt"))
+
+    def wait(kinds, **kwargs):
+        assert "outcome" not in kinds and "menu" in kinds
+        assert kwargs["timeout"] == 90
+        # Dismissing a notice itself does not prove ticket spending succeeded.
+        assert assault_state.read_state(runner.config)["pending"]["id"] == intent
+        return menu
+
+    runner.wait = wait
+    assert runner.collect_receipts(summary) is menu
+    assert sent == [("outcome", (640, 573))]
+    assert len(saved) == 1
+    assert notices == [("total_assault_outcome_notice", {"kind": "outcome", "context": {
+        "event_id": CONTEXT.event_id, "boss": CONTEXT.boss,
+        "difficulty": CONTEXT.difficulty, "day_key": CONTEXT.day_key}})]
+    assert assault_state.read_state(runner.config)["pending"]["id"] == intent
+
+
+def test_rank_summary_that_stays_open_stops_after_one_bounded_dismissal(runner):
+    summary = frame("outcome", confirm_target=(640, 573))
+    sent = []
+    runner.tap = lambda *args: sent.append(args)
+    runner.journal.save_image = lambda *args: None
+
+    def wait(kinds, **kwargs):
+        assert "outcome" not in kinds and kwargs["timeout"] == 90
+        raise TaskError("rank summary remained open until the bounded wait expired", runner.run_dir)
+
+    runner.wait = wait
+    with pytest.raises(TaskError, match="bounded wait expired"):
+        runner.collect_receipts(summary)
+    assert len(sent) == 1
 
 
 def record_real_clear(runner):

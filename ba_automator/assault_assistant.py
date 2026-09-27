@@ -7,7 +7,7 @@ from .assault_assistant_vision import (
 )
 from .assault_policy import choose_assistant, least_damage_striker, replace_striker, team_fingerprint
 from .shop_vision import text_in
-from .vision import decode_frame
+from .vision import decode_frame, decode_native_frame
 
 
 def best_at_observed_ceiling(page, damage_type, remaining_team):
@@ -44,7 +44,9 @@ class AssaultAssistantMixin:
     """Requires the serial runner's capture, wait, tap, swipe and journal APIs."""
 
     def verify_owned_quick(self, quick, *, real=False):
-        if not verify_owned_quick(decode_frame(quick.capture.png), quick.screen.words, startup=self.vision.startup):
+        if not verify_owned_quick(decode_frame(quick.capture.png), quick.screen.words,
+                                  startup=self.vision.startup,
+                                  native_frame=decode_native_frame(quick.capture.png)):
             self.fail('Real formation contains an assistant or unreadable slot; the ticket intent is held' if real else
                       'Auto formation contains an assistant or unreadable slot; no mock proof was established')
         self.assistant = None
@@ -146,7 +148,8 @@ class AssaultAssistantMixin:
         words = frame.screen.words
         screen = read_assistant_filter(image, words)
         if screen.kind == 'unknown':
-            screen = read_assistant_page(image, words, startup=self.vision.startup)
+            screen = read_assistant_page(image, words, startup=self.vision.startup,
+                                         native_frame=decode_native_frame(frame.capture.png))
         return replace(frame, screen=screen)
 
     def wait_assistant(self, kind='assistant', *, predicate=lambda screen: True, timeout=40):

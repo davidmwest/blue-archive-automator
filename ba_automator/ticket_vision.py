@@ -3,7 +3,7 @@
 from dataclasses import dataclass, replace
 import re
 import cv2
-from .vision import Word, decode_frame
+from .vision import decode_native_frame, native_game_region, read_game_words, Word, decode_frame
 from .crafting_vision import within, number, bright, cyan
 from .shop_vision import has, text_in
 from .ap_vision import APStage, ap_value, gold, mission_stars, classify_ap
@@ -246,7 +246,7 @@ class TicketVision:
 
     def analyze(self, png, *, billing=False):
         frame = decode_frame(png)
-        words = self.startup.read(frame)
+        words = read_game_words(png, self.startup)
         home = {"home_left", "home_right"} <= self.startup.matches(frame).keys()
         screen = classify_tickets(frame, words, home=home)
         if screen.kind != "unknown" or number(words, (904, 277, 970, 330)) != (0,):
@@ -268,24 +268,30 @@ class TicketVision:
                 replace(word, text="0→-") if word is candidate else word
                 for word in words
             ]
-            crop = frame[341:392, 1010:1105]
+            bounds, margin = (1010, 341, 1105, 392), 0
         elif missing_scrimmage_projection:
             # Scrimmage may omit the entire exhausted ticket projection. Its
             # AP projection must still independently prove no resource change.
             recovered_words = [*words, Word("0→-", 1.0, (1040, 348, 1093, 378))]
             # Exclude the ticket icon and neighboring AP digits; leave blank
             # margin so the dash is not confused with the bubble's edge.
-            crop = cv2.copyMakeBorder(frame[348:378, 1040:1093], 8, 8, 8, 8,
-                                      cv2.BORDER_CONSTANT, value=(255, 255, 255))
+            bounds, margin = (1040, 348, 1093, 378), 8
         else:
             return screen
         recovered = classify_tickets(frame, recovered_words)
         if (recovered.kind, recovered.count, recovered.tickets,
                 recovered.after_tickets, recovered.target) != ("detail", 0, 0, 0, None):
             return screen
+        native = decode_native_frame(png)
+        crop = native_game_region(native, bounds)
+        padding = round(margin * native.shape[1] / 1280)
+        if padding:
+            crop = cv2.copyMakeBorder(crop, padding, padding, padding, padding,
+                                      cv2.BORDER_CONSTANT, value=(255, 255, 255))
+        width, height = bounds[2] - bounds[0] + margin * 2, bounds[3] - bounds[1] + margin * 2
         # Both scales must independently read the complete zero projection.
         for scale in (2, 3):
-            enlarged = cv2.resize(crop, None, fx=scale, fy=scale,
+            enlarged = cv2.resize(crop, (width * scale, height * scale),
                                   interpolation=cv2.INTER_CUBIC)
             observed = self.startup.read(enlarged)
             if (len(observed) != 1 or observed[0].confidence < .9

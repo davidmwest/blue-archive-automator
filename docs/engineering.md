@@ -6,7 +6,11 @@ the project automates a small, repetitive part of Blue Archive through its visib
 
 the game exposes screenshots and input through ADB, rather than a supported task API. screens arrive asynchronously, announcements change, students animate, and Cafe furniture can be arbitrary. another automator may already share the host's ADB server.
 
-the first version fixes the client to English, 1280×720, and 320 DPI. that makes coordinates and recognition crops reproducible, at the cost of supporting fewer configurations. coordinates are still useful after a screen has been recognized. sending a sequence of clicks without checking the intervening states would make one unexpected popup affect every later action.
+the first version fixed the client to English, 1280×720, and 320 DPI. those coordinates remain the internal reference. the display adapter now accepts exact 16:9 frames from 720p through 2160p and scales input back to the display. templates and color checks use a 1280×720 image; text OCR reads native pixels, including native crops for targeted reads, then maps its boxes back to those coordinates. screenshots keep their original resolution. the recommended setup is 1440p at 640 DPI.
+
+that keeps one set of task coordinates while retaining sharper text and evidence. higher resolution increases rendering, OCR work, screenshot transfer, and storage. a 1440p home-screen OCR pass took about 1.8 seconds on the development Mac. the five-second input deadline still includes capture and recognition; we did not extend it to accommodate slower reads. timing varies by screen and hardware.
+
+coordinates are useful after a screen has been recognized. sending a sequence of clicks without checking the intervening states would make one unexpected popup affect every later action. unsupported geometry is rejected; the separate Google Play payment layout still requires its observed 720×1280 portrait resolution.
 
 local OpenCV and OCR provide the observations. OCR uses a local model; there is no LLM making runtime decisions or cloud inference call. reviewed JSON profiles describe event recognition, although event navigation and farming are not implemented yet. [ALAS](https://github.com/LmeSzinc/AzurLaneAutoScript) informed the overall approach; [ArisuAutoSweeper](https://github.com/TheFunny/ArisuAutoSweeper) and [BAAH](https://github.com/BlueArchiveArisHelper/BAAH) informed Cafe research. more detail is in the [architecture](architecture.md) and [Cafe notes](cafe.md).
 
@@ -41,6 +45,10 @@ another completed lesson exposed a smaller OCR issue: the overview's visible `4/
 ## evidence and its limits
 
 [camera tests](../tests/test_cafe_camera.py) exercise arbitrary generated layouts, moving sprites, occlusion, repeated patterns, perspective changes, and misleading fixed backgrounds. [scan tests](../tests/test_cafe_scan.py) check that unknown movement cannot certify an edge or silently skip an intermediate view. screenshot fixtures exercise actual OCR and template recognition; device and server tests cover stale input, protocol mismatches, locks, and serialized jobs.
+
+the 1440p migration passed live startup through the title screen and announcements to home, plus a red-dot scan. five Total Assault sweeps also completed. their receipt initially arrived while the game was still animating, before Final rewards and Confirm appeared. the collector now waits up to 90 seconds for that final control without replaying the sweep or weakening freshness checks. live recovery logged 500 Total Assault Coins and 50 Advanced Total Assault Coins, verified zero tickets, and returned home. this is recovered live evidence, not a claim that the original run completed uninterrupted. a separate 1440p run at 20 FPS completed measured scans of both Cafe floors and returned home in 468.2 seconds. earnings were empty, and no new relationship increases were verified. this checks navigation and camera coverage at that frame rate; it does not add live high-resolution gift, invitation, or rank-up evidence. 1080p and 2160p have offline coverage only.
+
+the earlier Cafe and Lessons validation below used 720p.
 
 a documented live run on BlueStacks Air completed restart, measured scans of both unlocked Cafe floors, home verification, and idle closure in 425.5 seconds. it found empty earnings and verified zero new relationship increases. earlier calibration runs verified reward receipts and relationship hearts/rank-up feedback. another player's layout passed a separate camera-movement check. these are observed runs, not a benchmark or a guarantee of finding every obscured student.
 

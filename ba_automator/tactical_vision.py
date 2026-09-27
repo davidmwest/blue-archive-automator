@@ -18,7 +18,7 @@ from .crafting_vision import bright, cyan, has, within, yellow
 from .shop_vision import text_in
 from .tactical_battles import Opponent
 from .tactical_rewards import classify_tactical
-from .vision import classify, decode_frame
+from .vision import decode_native_frame, native_game_region, read_game_words, classify, decode_frame
 
 
 @dataclass(frozen=True)
@@ -138,7 +138,7 @@ def _hidden(frame, x, y, template):
     return float(cv2.matchTemplate(crop, template, cv2.TM_CCOEFF_NORMED).max()) >= .88
 
 
-def _level_crops(frame, x, y):
+def _level_crops(frame, x, y, *, native_frame=None):
     crops = []
     # The outlined italic font is too small for full-screen text detection.
     # Padded whole labels retain "Lv"; digit crops handle low contrast, while
@@ -159,8 +159,11 @@ def _level_crops(frame, x, y):
             # contradiction check; these reads never replace a disputed level.
             (12, -2, 25, 18, 6, False), (10, -3, 27, 20, 6, False),
             (11, -2, 27, 18, 6, False)):
-        crop = cv2.resize(frame[y + dy:y + dy + height, x + dx:x + dx + width],
-                          None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+        source = (frame[y + dy:y + dy + height, x + dx:x + dx + width]
+                  if native_frame is None else native_game_region(
+                      native_frame, (x + dx, y + dy, x + dx + width, y + dy + height)))
+        crop = cv2.resize(source, (width * scale, height * scale),
+                          interpolation=cv2.INTER_CUBIC)
         if pad:
             crop = cv2.copyMakeBorder(crop, 0, 0, 10, 50, cv2.BORDER_REPLICATE)
         crops.append(crop)
@@ -224,7 +227,7 @@ class TacticalBattleVision:
         self.hidden_template = _asset('tactical-hidden-student.png')
         self.versus_template = _asset('tactical-versus.png')
 
-    def _opponents(self, frame, words, detail=False):
+    def _opponents(self, frame, words, detail=False, *, native_frame=None):
         specs = ((178, 532, (250, 252, 505, 299), (345, 173, 510, 222),
                   (278, 179, 320, 215), (640, 575)),) if detail else tuple(
             (y, 740, (450, y + 75, 733, y + 118),
@@ -252,7 +255,7 @@ class TacticalBattleVision:
                     continue
                 indices.append(len(visible))
                 visible.append(level)
-                images.extend(_level_crops(frame, card_x + 5, y + 1))
+                images.extend(_level_crops(frame, card_x + 5, y + 1, native_frame=native_frame))
             metadata.append((level, name, rank, signature, target, indices))
         if not images:
             return ()
@@ -279,10 +282,10 @@ class TacticalBattleVision:
 
     def analyze(self, png, *, billing=False):
         frame = decode_frame(png)
-        words = tuple(self.startup.read(frame))
-        return self.classify(frame, words, billing=billing)
+        words = tuple(read_game_words(png, self.startup))
+        return self.classify(frame, words, billing=billing, native_frame=decode_native_frame(png))
 
-    def classify(self, frame, words, *, billing=False):
+    def classify(self, frame, words, *, billing=False, native_frame=None):
         unknown = TacticalBattleScreen('unknown', words=tuple(words))
         if frame.shape[:2] != (720, 1280):
             return unknown
@@ -381,7 +384,7 @@ class TacticalBattleVision:
                 and yellow(frame, (528, 543, 751, 601))):
             change = _match(words, r'(\d+)\s*[→➜]\s*(\d+)', (680, 500, 763, 544))
             rank = _rank(words, (337, 368, 512, 427))
-            opponents = self._opponents(frame, words, detail=True)
+            opponents = self._opponents(frame, words, detail=True, native_frame=native_frame)
             if (change and rank and int(change[1]) - int(change[2]) == 1):
                 # Recognize a proven preview even when its tiny level labels
                 # remain ambiguous. This permits a safe close and fresh search;
@@ -419,7 +422,7 @@ class TacticalBattleVision:
             # OCR can join the circular refresh icon to the label as "Q".
             if rank is None or cooldown is None or not refresh_control:
                 return unknown
-            opponents = self._opponents(frame, words)
+            opponents = self._opponents(frame, words, native_frame=native_frame)
             ranks = tuple(_rank(words, (549, y - 7, 729, y + 45)) for y in (206, 365, 523))
             sampled = ranks if None not in ranks and len(set(ranks)) == 3 else ()
             all_ahead = bool(sampled) and all(value < rank for value in sampled)

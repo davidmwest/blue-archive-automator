@@ -4,6 +4,7 @@ from pathlib import Path
 from dataclasses import replace
 from types import SimpleNamespace
 import json
+import cv2
 import pytest
 import numpy as np
 
@@ -96,6 +97,18 @@ def test_final_row_only_and_owned_is_never_quantity(vision):
         lr.amount([Word("x1", 1, (0, 0, 20, 20)), Word("x2", 1, (0, 0, 20, 20))])
         is None
     )
+
+
+@pytest.mark.parametrize("native_size", [(2560, 1440), (3840, 2160)])
+def test_native_receipt_keeps_canonical_loot_targets_and_icons(vision, native_size):
+    original = (FIXTURES / "loot-sweep.png").read_bytes()
+    native = cv2.imencode(".png", cv2.resize(
+        decode_frame(original), native_size, interpolation=cv2.INTER_NEAREST,
+    ))[1].tobytes()
+    canonical_page, native_page = [lr.page(png, vision) for png in (original, native)]
+    assert native_page.kind == "sweep" and len(native_page.cards) == 9
+    assert native_page == canonical_page
+    assert lr.same_receipt_view(native, original, native_page, vision=vision)
 
 
 @pytest.mark.parametrize(
@@ -425,6 +438,7 @@ def test_overlapping_pages_are_inspected_once_and_receipt_survives_clear(
     )
     monkeypatch.setattr(lr, "page", current)
     monkeypatch.setattr(lr, "decode_frame", lambda png: png)
+    monkeypatch.setattr(lr, "decode_native_frame", lambda png: png)
     monkeypatch.setattr(lr, "has_tooltip", lambda image: bool(tip[0]))
     monkeypatch.setattr(lr, "read_tooltip", lambda image, vision: tip[0])
     monkeypatch.setattr(lr, "reward_layout_stable", lambda before, after: before == after)

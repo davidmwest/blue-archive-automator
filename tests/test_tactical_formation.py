@@ -167,7 +167,7 @@ def test_fill_one_blank_preserves_five_students_and_verifies_final_team(monkeypa
             assert kind == 'formation'
             return runner_frame('attack-formation')
 
-    monkeypatch.setattr(formation, 'read_roster_levels', lambda *args: (79,)*6)
+    monkeypatch.setattr(formation, 'read_roster_levels', lambda *args, **kwargs: (79,)*6)
     result = Runner()._fill_attack_slots(runner_frame('attack-formation'), tuple(original))
     assert inputs == [(1203, 162), (838, 271), (1130, 595)]
     assert formation.read_attack_slots(decode_frame(result.capture.png), result.screen.words)[0].student_id == 'Shun'

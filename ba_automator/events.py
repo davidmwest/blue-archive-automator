@@ -14,7 +14,7 @@ import re
 from typing import Mapping, Sequence
 from urllib.parse import urlparse
 
-from .vision import Word, decode_frame
+from .vision import Word, read_game_words
 
 
 class EventProfileError(RuntimeError):
@@ -263,7 +263,7 @@ def match_entries(profile: EventProfile, words: Sequence[Word], *, screen: str,
 def inspect_entries(profile: EventProfile, png: bytes, vision, *, screen: str,
                     at: datetime | None = None) -> tuple[EntryMatch, ...]:
     """Classify banner text with StartupVision's local OCR; no emulator or network."""
-    return match_entries(profile, vision.read(decode_frame(png)), screen=screen, at=at)
+    return match_entries(profile, read_game_words(png, vision), screen=screen, at=at)
 
 
 def match_route_check(profile: EventProfile, check_id: str, words: Sequence[Word]) -> bool:

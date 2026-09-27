@@ -68,6 +68,27 @@ def test_uncertain_or_conflicting_rank_readings_remain_unknown():
     assert parse_relationship_rank_up([banner(), word("3", y=540, confidence=.7)]).rank is None
 
 
+def test_1440p_rank_crop_preserves_detail_missing_from_canonical_frame():
+    native = np.zeros((1440, 2560, 3), np.uint8)
+    native[1024:1134:2, 1216:1344] = 255
+    png = cv2.imencode('.png', native)[1].tobytes()
+    canonical = cv2.resize(native, (1280, 720), interpolation=cv2.INTER_AREA)
+    seen = []
+
+    def read(crop):
+        seen.append(crop)
+        return [word('3', x=80, y=80)]
+
+    result = read_relationship_rank_up(canonical, SimpleNamespace(read=read),
+                                       words=[banner()], png=png)
+    assert result.rank == 3
+    expected = cv2.resize(native[1024:1134, 1216:1344], (192, 165),
+                          interpolation=cv2.INTER_CUBIC)
+    assert np.array_equal(seen[0], expected)
+    assert not np.array_equal(seen[0], cv2.resize(canonical[512:567, 608:672], (192, 165),
+                                                interpolation=cv2.INTER_CUBIC))
+
+
 def test_no_rank_is_inferred_from_an_unrelated_counter_or_stat_delta():
     result = parse_relationship_rank_up([banner(), word("79", x=200, y=60), word("ATK +8")])
     assert result.rank is None

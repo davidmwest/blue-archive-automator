@@ -528,6 +528,8 @@ class RestartTests(unittest.TestCase):
 
     def test_delayed_transport_preflight_skips_stale_tap_and_uses_recaptured_target(self):
         transport = AdbDevice(self.config())
+        # Captures come from FakeDevice in this transport freshness test.
+        transport._frame_size = self.device.size
         self.device.tap = transport.tap
         preflight_calls = 0
 
@@ -542,6 +544,7 @@ class RestartTests(unittest.TestCase):
             return b""
 
         with patch.object(transport, "_check_shared_server", side_effect=preflight), \
+                patch.object(transport, "current_display_size", return_value=self.device.size), \
                 patch.object(transport, "_execute", side_effect=execute):
             result = self.run_task([
                 Observation("title", target=(640, 600)),
@@ -562,11 +565,22 @@ class RestartTests(unittest.TestCase):
         self.assertEqual(len(list(result.run_dir.glob("*.png"))), TRACE_LIMIT + 1)
 
     def test_wrong_display_prevents_force_stop_or_launch(self):
-        self.device.size = (1920, 1080)
+        self.device.size = (1920, 1200)
         with self.assertRaisesRegex(RestartError, "1280×720"):
             self.run_task([Observation("home")])
         self.assertNotIn("force_stop", self.device.calls)
         self.assertNotIn("launch", self.device.calls)
+
+    def test_1440p_display_restarts_with_canonical_recognition_targets(self):
+        self.device.size = (2560, 1440)
+        result = self.run_task([Observation("title", target=(640, 600)), Observation("home")])
+        self.assertEqual(result.status, "success")
+        # Native scaling belongs to AdbDevice; runners keep canonical targets.
+        self.assertEqual(self.device.taps, [("tap", 640, 600)])
+        geometry = next(record for record in self.journal(result.run_dir)
+                        if record['event'] == 'display_validated')
+        self.assertEqual(geometry['native_size'], [2560, 1440])
+        self.assertEqual(geometry['recognition_size'], [1280, 720])
 
     def test_capture_failure_is_controlled_and_releases_lock(self):
         selected = self.config()

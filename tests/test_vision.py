@@ -24,7 +24,9 @@ def test_ocr_disables_native_telemetry_before_import_and_session_creation(monkey
     original_import = builtins.__import__
     engine = object()
 
-    def create_engine(**_kwargs):
+    def create_engine(**kwargs):
+        assert kwargs['params']['Global.max_side_len'] == 3840
+        assert kwargs['params']['Det.limit_type'] == 'min'
         events.append("session")
         return engine
 
@@ -205,7 +207,7 @@ def test_malformed_screenshot_raises_vision_error(image):
         decode_frame(image)
 
 
-@pytest.mark.parametrize("dimensions", [(1920, 1080), (720, 1280), (1280, 719)])
+@pytest.mark.parametrize("dimensions", [(1920, 1200), (720, 1280), (1280, 719), (640, 360), (4096, 2304)])
 def test_wrong_resolution_screenshot_is_rejected(dimensions):
     with pytest.raises(VisionError, match="1280×720"):
         decode_frame(png(*dimensions))

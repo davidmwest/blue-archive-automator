@@ -10,6 +10,7 @@ import time
 from uuid import uuid4
 
 from .actions import record_action
+from .display import is_supported_size
 from .loot_receipts import inspect_receipt
 from .lesson_planner import LessonLocation, LessonRoom, choose_lesson
 from .lesson_vision import LessonScreen, LessonVision
@@ -300,7 +301,7 @@ class LessonsRunner:
                         read=lambda fresh: read_relationship_rank_up(
                             decode_frame(fresh.capture.png),
                             self.startup if hasattr(self.startup, 'read') else None,
-                            words=fresh.screen.words)
+                            words=fresh.screen.words, png=fresh.capture.png)
                         if fresh.screen.kind == 'relationship_rank_up' else None,
                         clock=self.clock, sleep=self.sleep)
                 except ValueError as exc:
@@ -452,8 +453,8 @@ class LessonsRunner:
             with InstanceLock(self.config):
                 self.device.connect()
                 self.device.verify_package()
-                if self.device.display_size() != (1280, 720):
-                    self.fail('Lessons requires the fixed 1280×720 display')
+                if not is_supported_size(self.device.display_size()):
+                    self.fail('Lessons requires a 16:9 landscape display from 1280×720 to 3840×2160')
                 initial = self.overview()
                 self.initial_tickets = self.expected_tickets = self.tickets(initial)
                 limit = min(self.initial_tickets, self.config.lessons_max_tickets or self.initial_tickets)

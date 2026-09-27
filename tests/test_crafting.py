@@ -333,6 +333,22 @@ def test_lock_and_wrong_resolution_block_input(harness):
     assert not h.device.taps
 
 
+def test_unsupported_display_blocks_crafting_before_navigation(harness):
+    harness.device.size = (1920, 1200)
+    with pytest.raises(TaskError, match='16:9'):
+        harness.runner.run()
+    assert not harness.device.taps
+
+
+def test_1440p_crafting_observes_running_slots_and_returns_home(harness):
+    h = harness
+    h.device.size = (2560, 1440)
+    h.screens[:] = [listing('running', 'running', 'running')] * 4 + [CraftScreen('home')]
+    assert h.runner.run().status == 'success'
+    assert h.device.taps == [(1237, 24)]
+    assert len(read_state(h.config)['slots']) == 3
+
+
 def test_state_is_scoped_to_instance_and_survives_reloading(harness):
     h = harness
     h.runner.observe_slots(h.frame(listing('running','empty','running')))

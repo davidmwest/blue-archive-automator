@@ -8,7 +8,7 @@ from .home_badges import badges
 from .locking import InstanceLock
 from .shop_runtime import ShopRunner
 from .shop_vision import classify_shop, text_in
-from .vision import classify, decode_frame
+from .vision import classify, decode_frame, read_game_words
 
 
 @dataclass(frozen=True)
@@ -73,7 +73,7 @@ class FreePackVision:
         if billing:
             return FreePackScreen("unknown")
         frame = decode_frame(png)
-        words = self.startup.read(frame)
+        words = read_game_words(png, self.startup)
         home = classify(words, self.startup.matches(frame)).state == "home"
         return classify_free_pack(frame, words, home=home)
 

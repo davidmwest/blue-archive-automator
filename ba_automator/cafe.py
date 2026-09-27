@@ -229,7 +229,7 @@ class CafeRunner:
         self.last_frame = self.journal.screenshot(png)
         if self.device.foreground_package() != self.config.package:
             self.fail("Blue Archive left the foreground during Cafe; no further input was sent")
-        words = self.vision.words(frame) if ocr else []
+        words = self.vision.words(png) if ocr else []
         return captured, png, frame, words
 
     def tap(self, capture, target, detail):
@@ -260,7 +260,7 @@ class CafeRunner:
             # The new floor can appear before its visitor list arrives. The
             # same exact notice handled during navigation also needs handling
             # here, without treating other overlays as permission to tap.
-            notice = self.vision.visitor_notice(cap[2], self.vision.words(cap[2]))
+            notice = self.vision.visitor_notice(cap[2], self.vision.words(cap[1]))
             now = self.clock()
             if notice is not None and now >= notice_retry_at:
                 if notice_attempts >= NAVIGATION_ATTEMPTS:
@@ -355,14 +355,14 @@ class CafeRunner:
                 if destination == "cafe":
                     state = "cafe"
                 else:
-                    words = self.vision.words(cap[2])
+                    words = self.vision.words(cap[1])
                     floor = floor_from_switch(words)
                     state = f"cafe_{floor}" if floor else "unknown"
                     cap = (*cap[:3], words)
             else:
                 state = self.startup.analyze(cap[1]).state
                 if state == "unknown":
-                    notice = self.vision.visitor_notice(cap[2], self.vision.words(cap[2]))
+                    notice = self.vision.visitor_notice(cap[2], self.vision.words(cap[1]))
                     if notice is not None:
                         state = "visitor_notice"
             now = self.clock()
@@ -543,7 +543,7 @@ class CafeRunner:
                     capture=lambda: self.capture(ocr=True),
                     read=lambda fresh: read_relationship_rank_up(
                         fresh[2], self.startup if hasattr(self.startup, 'read') else None,
-                        words=fresh[3], student=student),
+                        words=fresh[3], student=student, png=fresh[1]),
                     clock=self.clock, sleep=self.sleep)
             except ValueError as exc:
                 self.fail(str(exc))

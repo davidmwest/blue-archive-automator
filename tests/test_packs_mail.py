@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 import cv2
+import numpy as np
 import pytest
 from ba_automator.config import Config, ConfigError
 from ba_automator.mail import MailRunner
@@ -14,7 +15,7 @@ from ba_automator.runtime import Capture, TaskError
 from ba_automator.shop_runtime import ShopFrame
 from ba_automator.shop_vision import ShopScreen, ShopVision, classify_shop
 from ba_automator.tasks import task_plan
-from ba_automator.vision import StartupVision
+from ba_automator.vision import StartupVision, Word
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 
@@ -54,6 +55,45 @@ def test_missing_product_or_price_prevents_play_checkout(vision):
     frame=cv2.imread(str(FIXTURES/'packs-payment-current.png'));words=vision.startup.read(frame)
     for excluded in ('$2.99','2-Week AP Pack','Blue Archive','1-tap buy'):
         assert classify_shop(frame,[w for w in words if w.text!=excluded],billing=True).kind=='billing_attention'
+
+
+@pytest.mark.parametrize('name', ['current', 'product-receipt', 'post-activation-mail'])
+def test_1440p_game_shop_and_mail_use_canonical_recognition(vision, name):
+    frame = cv2.imread(str(FIXTURES / f'packs-{name}.png'))
+    enlarged = cv2.resize(frame, (2560, 1440), interpolation=cv2.INTER_NEAREST)
+    native = cv2.imencode('.png', enlarged)[1].tobytes()
+    words = vision.startup.read(frame)
+
+    def read(image):
+        # Isolate coordinate mapping from OCR segmentation changes on synthetic
+        # enlarged pixels; the game OCR boundary must still see all native data.
+        np.testing.assert_array_equal(image, enlarged)
+        return [Word(w.text, w.confidence, tuple(value*2 for value in w.box)) for w in words]
+
+    reader = SimpleNamespace(read=read, matches=vision.startup.matches)
+    assert ShopVision(reader).analyze(native) == classify_shop(frame, words)
+
+
+def test_native_receipt_heading_handles_ocr_accent_without_relaxing_store_status(vision):
+    def enlarged(name):
+        image = cv2.imread(str(FIXTURES / f'packs-{name}.png'))
+        return cv2.imencode('.png', cv2.resize(image, (2560, 1440), interpolation=cv2.INTER_NEAREST))[1].tobytes()
+
+    receipt = vision.analyze(enlarged('product-receipt'))
+    assert receipt.kind == 'receipt'
+    assert receipt.items == ({'name': 'Pyroxenes', 'quantity': 176},)
+    # Native OCR detects a decorative icon as text in the status area. That is
+    # insufficient evidence for paid availability, so it must remain unknown.
+    store = vision.analyze(enlarged('current'))
+    assert store.cards['ap']['state'] == 'unknown'
+
+
+def test_larger_portrait_checkout_is_not_normalized_into_an_authorized_purchase(vision):
+    frame = cv2.imread(str(FIXTURES / 'packs-payment-current.png'))
+    native = cv2.imencode('.png', cv2.resize(frame, (1440, 2560)))[1].tobytes()
+    screen = vision.analyze(native, billing=True)
+    assert screen.kind == 'billing_attention'
+    assert screen.size == (1440, 2560) and screen.target is None
 
 @pytest.fixture
 def config(tmp_path):

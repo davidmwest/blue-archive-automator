@@ -15,6 +15,7 @@ import numpy as np
 from .assault_policy import DAMAGE_TYPES, TeamMember
 from .crafting_vision import bright, cyan
 from .shop_vision import has, text_in
+from .vision import native_game_region
 
 COLUMNS = (574, 685, 796, 907, 1018, 1129)
 VIEWPORT = (566, 240, 1238, 518)
@@ -101,7 +102,7 @@ def _digit(words, cell, maximum):
     return value if 1 <= value <= maximum else None
 
 
-def read_assistant_metadata(frame, startup, bounds=None):
+def read_assistant_metadata(frame, startup, bounds=None, *, native_frame=None):
     """Read tightly cropped level/star digits in one local OCR batch."""
     bounds = _card_bounds(frame)[0] if bounds is None else tuple(bounds)
     if not bounds:
@@ -112,7 +113,9 @@ def read_assistant_metadata(frame, startup, bounds=None):
         for part, region in enumerate(((x+38, y+12, x+57, y+32),
                                        (x+16, y+72, x+25, y+86))):
             x1, y1, x2, y2 = region
-            crop = cv2.resize(frame[y1:y2, x1:x2], None, fx=5, fy=5)
+            source = (native_game_region(native_frame, region) if native_frame is not None
+                      else frame[y1:y2, x1:x2])
+            crop = cv2.resize(source, ((x2-x1)*5, (y2-y1)*5))
             offset = index * 360 + part * 180 + 45
             strip[offset:offset+crop.shape[0], 70:70+crop.shape[1]] = crop
         star = cv2.cvtColor(frame[y+70:y+86, x+12:x+29], cv2.COLOR_BGR2HSV)
@@ -159,7 +162,7 @@ def _selected(frame, x, y):
                   & (hsv[:, :, 1] > 170) & (hsv[:, :, 2] > 220)).mean()) > .25
 
 
-def read_assistant_page(frame, words, *, startup=None, metadata=()):
+def read_assistant_page(frame, words, *, startup=None, metadata=(), native_frame=None):
     if (frame.shape[:2] != (720, 1280)
             or not has(words, "quick formation", (470, 62, 810, 120))
             or not bright(frame, (400, 70, 485, 108))
@@ -174,7 +177,8 @@ def read_assistant_page(frame, words, *, startup=None, metadata=()):
             or not ((striker[:, :, 0] >= 170) & (striker[:, :, 1] > 140)).mean() > .8):
         return AssistantPage()
     full, clipped = _card_bounds(frame)
-    metadata = metadata or (read_assistant_metadata(frame, startup, full) if startup else ())
+    metadata = metadata or (read_assistant_metadata(frame, startup, full, native_frame=native_frame)
+                            if startup else ())
     by_bounds = {item.bounds: item for item in metadata}
     cards, incomplete, unavailable = [], [], []
     for bounds in full:
@@ -277,7 +281,7 @@ def verify_retained_assistant(frame, card, slot):
                  if _assistant_marker(frame, 103 + 90*index, 570, slot=True)] == [slot])
 
 
-def verify_owned_quick(frame, words, *, startup=None):
+def verify_owned_quick(frame, words, *, startup=None, native_frame=None):
     """Require six occupied Quick Formation slots without borrowed badges."""
     if (frame.shape[:2] != (720, 1280)
             or not has(words, "quick formation", (470, 62, 810, 120))
@@ -288,8 +292,10 @@ def verify_owned_quick(frame, words, *, startup=None):
     if startup is not None and any(not re.fullmatch(r"Lv\.?\s*\d{1,3}", level, re.I) for level in levels):
         strip = np.full((600, 250, 3), 255, np.uint8)
         for slot in range(6):
-            strip[slot*100:slot*100+84, 20:196] = cv2.resize(
-                frame[561:582, 33+90*slot:77+90*slot], None, fx=4, fy=4)
+            bounds = (33+90*slot, 561, 77+90*slot, 582)
+            source = (native_game_region(native_frame, bounds) if native_frame is not None
+                      else frame[bounds[1]:bounds[3], bounds[0]:bounds[2]])
+            strip[slot*100:slot*100+84, 20:196] = cv2.resize(source, (176, 84))
         observations = startup.read(strip)
         levels = [text_in(observations, (0, slot*100, 250, (slot+1)*100)).strip() for slot in range(6)]
     for slot, level in enumerate(levels):

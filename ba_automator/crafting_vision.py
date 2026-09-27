@@ -6,7 +6,7 @@ import re
 import cv2
 import numpy as np
 
-from .vision import Word, decode_frame
+from .vision import decode_native_frame, native_game_region, read_game_words, Word, decode_frame
 
 
 @dataclass(frozen=True)
@@ -150,7 +150,8 @@ class CraftVision:
 
     def analyze(self, png):
         frame = decode_frame(png)
-        words = self.startup.read(frame)
+        words = read_game_words(png, self.startup)
+        native = decode_native_frame(png)
         sample = frame[198:296, 812:943]
         error = cv2.minMaxLoc(cv2.matchTemplate(sample, self.keystone, cv2.TM_SQDIFF_NORMED))[0]
         if error < .025:
@@ -159,7 +160,8 @@ class CraftVision:
             bounds = (812, 293, 937, 337)
             if not any(re.fullmatch(r'[\d,]+/[\d,]+', w.text.strip()) for w in within(words, bounds)):
                 x1, y1, x2, y2 = bounds
-                enlarged = cv2.resize(frame[y1:y2, x1:x2], None, fx=2, fy=2)
+                enlarged = cv2.resize(native_game_region(native, bounds),
+                                      ((x2 - x1) * 2, (y2 - y1) * 2))
                 for word in self.startup.read(enlarged):
                     if re.fullmatch(r'[\d,]+/[\d,]+', word.text.strip()):
                         box = tuple((n // 2) + (x1 if i % 2 == 0 else y1) for i, n in enumerate(word.box))

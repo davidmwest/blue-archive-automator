@@ -13,7 +13,7 @@ from .locking import InstanceLock
 from .loot_receipts import inspect_receipt
 from .shop_runtime import ShopRunner
 from .shop_vision import classify_shop, has
-from .vision import classify, decode_frame
+from .vision import classify, decode_frame, read_game_words
 
 
 @dataclass(frozen=True)
@@ -81,7 +81,7 @@ class AssaultRewardVision:
 
     def analyze(self, png, *, billing=False):
         frame = decode_frame(png)
-        words = self.startup.read(frame)
+        words = read_game_words(png, self.startup)
         home = not billing and classify(words, self.startup.matches(frame)).state == "home"
         return classify_rewards(frame, words, home=home)
 

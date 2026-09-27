@@ -10,6 +10,7 @@ from .assault_battle import AssaultBattleMixin, observed_team_fingerprint
 from .assault_policy import AssaultContext, DIFFICULTIES, next_difficulty, team_fingerprint
 from .assault_vision import AssaultVision
 from .club import game_day
+from .display import is_supported_size
 from .locking import InstanceLock
 from .loot_receipts import inspect_receipt
 from .shop_runtime import ShopRunner
@@ -162,6 +163,16 @@ class TotalAssaultRunner(AssaultAssistantMixin, AssaultBattleMixin, ShopRunner):
                 continue
             if kind != "receipt":
                 self.fail("Unexpected Total Assault reward screen")
+            # Sweep Complete appears during the animated per-ticket reveal,
+            # before Final rewards and Confirm exist. Only inspect the settled
+            # receipt; recording the animation would lose loot and expose no
+            # recognized dismissal target. A wait never sends Skip or replays
+            # the already confirmed sweep.
+            if (frame.screen.target is None
+                    or not frame.capture.is_fresh(self.clock())):
+                self.phase("Waiting for the final Total Assault reward screen")
+                frame = self.wait("receipt", timeout=90,
+                                  predicate=lambda screen: screen.target is not None)
             name = f"reward-{self.actions}-{index}.png"
             evidence = self.run_dir / name
             self.journal.save_image(name, frame.capture.png)
@@ -356,8 +367,8 @@ def run_total_assault(config, device, startup, **kwargs):
         try:
             device.connect()
             device.verify_package()
-            if device.display_size() != (1280, 720):
-                runner.fail("Total Assault requires the configured 1280×720 game display")
+            if not is_supported_size(device.display_size()):
+                runner.fail("Total Assault requires a 16:9 landscape game display from 1280×720 to 3840×2160")
             state = assault_state.read_state(config)
             if state["pending"] is not None or state["blocked_reason"]:
                 runner.fail(state["blocked_reason"] or "A previous Total Assault ticket action needs inspection")

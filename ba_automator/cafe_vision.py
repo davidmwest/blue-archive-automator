@@ -4,7 +4,7 @@ from importlib.resources import files
 import cv2
 import numpy as np
 
-from .vision import Word
+from .vision import Word, read_game_words
 
 
 def scene_point(x: int, y: int) -> bool:
@@ -110,6 +110,8 @@ class CafeVision:
         return found
 
     def words(self, frame) -> list[Word]:
+        if isinstance(frame, bytes):
+            return read_game_words(frame, self.startup)
         return self.startup.read(frame)
 
     def relationship_feedback(self, before, after, target):

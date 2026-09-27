@@ -7,6 +7,7 @@ import numpy as np
 
 from .invitations import parse_invitation_rows, choose_invitation
 from .runtime import FRAME_MAX_AGE
+from .vision import decode_native_frame, native_game_region
 
 
 def sort_direction(frame):
@@ -139,8 +140,8 @@ def read_rows(runner, screen):
                and (488 <= w.center[0] <= 704 or 745 <= w.center[0] <= 835)
                for w in screen[3]):
             continue
-        crop = screen[2][y+4:y+39, 486:527]
-        found = runner.startup.read(cv2.resize(crop, None, fx=4, fy=4))
+        crop = native_game_region(decode_native_frame(screen[1]), (486, y+4, 527, y+39))
+        found = runner.startup.read(cv2.resize(crop, (164, 140)))
         values = {int(w.text.strip()) if w.confidence >= .85
                   and re.fullmatch(r'[0-9]{1,3}', w.text.strip())
                   and 1 <= int(w.text.strip()) <= 100 else None for w in found}

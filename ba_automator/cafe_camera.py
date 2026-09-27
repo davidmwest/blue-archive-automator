@@ -10,6 +10,8 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
+from .vision import VisionError, decode_frame
+
 
 SCENE_BOUNDS = (140, 135, 1150, 575)
 MAX_FEATURES = 1800
@@ -22,8 +24,8 @@ def _scene_gray(frame: bytes | np.ndarray) -> np.ndarray | None:
         if not frame:
             return None
         try:
-            frame = cv2.imdecode(np.frombuffer(frame, dtype=np.uint8), cv2.IMREAD_COLOR)
-        except cv2.error:
+            frame = decode_frame(frame)
+        except VisionError:
             return None
     if (not isinstance(frame, np.ndarray) or frame.dtype != np.uint8
             or frame.shape[:2] != (720, 1280)):
@@ -137,7 +139,8 @@ def measure_camera_displacement(
 ) -> tuple[float, float] | None:
     """Return scene (dx, dy), or None when camera movement is not established.
 
-    Inputs are PNG bytes or uint8 grayscale/BGR/BGRA 1280×720 frames. HUD pixels
+    Inputs are supported 16:9 PNG captures or uint8 grayscale/BGR/BGRA 1280×720
+    frames. PNG captures are normalized to canonical coordinates. HUD pixels
     outside SCENE_BOUNDS never participate. Sparse, localized, unrelated, and
     competing motion estimates fail closed. In particular, None is not (0, 0).
 

@@ -67,7 +67,9 @@ most of the time, the controls are just **do everything** and **pause queue**. d
 
 tactical challenge gives each usable ticket its own 10-minute search window by default, adjustable in settings. it spends the first 37% setting a benchmark, then gradually relaxes toward the weakest quarter of teams it has seen. after ten minutes, it keeps searching and relaxes one observed score tier per unsuccessful refresh until an eligible opponent qualifies. the timer never consumes a ticket; the manual-play reserve stays available. [tactical settings →](docs/getting-started.md#tactical-challenge)
 
-the first profile is the global English game at **1280×720, 320 DPI**. use a dedicated BlueStacks instance and sign in manually once. Blue Archive and Azur Lane get different ADB endpoints; they can share a compatible host ADB server. [setup and commands →](docs/getting-started.md)
+use the global English game in a dedicated BlueStacks instance. **2560×1440 landscape, 640 DPI** is the recommended setup; exact 16:9 resolutions from 1280×720 through 3840×2160 are supported. screenshots and text OCR use the native pixels. templates and coordinates keep their 1280×720 reference, and taps scale to the actual screen. sharper text and receipts cost more rendering, OCR time, and storage. 1440p has live startup, red-dot, two-floor Cafe, and Total Assault sweep evidence; 1080p and 2160p have offline coverage only. [validation details →](docs/engineering.md#evidence-and-its-limits)
+
+sign in manually once. Blue Archive and Azur Lane get different ADB endpoints; they can share a compatible host ADB server. paid Google Play checkout still requires its separately validated 720×1280 portrait layout. [setup and commands →](docs/getting-started.md)
 
 ## why it's built this way
 

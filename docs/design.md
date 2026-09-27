@@ -2,7 +2,7 @@
 
 **Project:** Maid in Schale — Blue Archive Automator<br>
 **Status:** working design and implementation guide  
-**Last updated:** September 24, 2026
+**Last updated:** September 26, 2026
 
 This document sets the direction for the project. It separates the working MVP from the next steps so that new jobs share the same execution, recognition, configuration, and logging rules. [Architecture](architecture.md) describes the current code in more detail; [the roadmap](roadmap.md) records implementation progress. When those documents disagree about future direction, update this design before implementing the change.
 
@@ -23,9 +23,9 @@ The project also serves as an engineering portfolio: someone should be able to u
 
 ### Scope boundaries
 
-The initial supported game profile is the global English client at **1280×720, 320 DPI**, with both Cafe floors unlocked. The user signs in manually once; the program reuses that session. BlueStacks must already be running.
+The supported game profile is the global English client in **exact 16:9 landscape, from 1280×720 through 3840×2160**, with both Cafe floors unlocked. The recommended setup is **2560×1440, 640 DPI**. Templates, color checks, and event coordinates remain canonical 1280×720. Screenshots and text OCR retain native detail, including native extraction of text regions; recognized boxes map back to canonical coordinates, and the device adapter scales input. The user signs in manually once; the program reuses that session. BlueStacks must already be running.
 
-Arbitrary resolutions, automatic account switching, unattended external authentication, general-purpose gameplay, and a hosted remote-control service are outside the initial scope. Event farming, additional daily jobs, OS service installation, and emulator lifecycle management are later increments. Optional AI assistance may be considered later, but cannot become a dependency of the ordinary execution path.
+Arbitrary aspect ratios, automatic account switching, unattended external authentication, general-purpose gameplay, and a hosted remote-control service are outside the initial scope. Higher-resolution Google Play checkout is also outside the supported layout: payment input remains restricted to the observed 720×1280 portrait flow. Event farming, additional daily jobs, OS service installation, and emulator lifecycle management are later increments. Optional AI assistance may be considered later, but cannot become a dependency of the ordinary execution path.
 
 ## 2. System structure
 
@@ -171,6 +171,8 @@ The real dashboard remains bound to loopback, with Host/Origin validation and CS
 ## 7. Delivery and validation
 
 The current foundation is implemented: restart, a serial dashboard queue, Cafe, Lessons, scheduling, idle-close, important-action history, and event-profile recognition. A full two-floor Cafe visit, automatic free invitation, and relationship-focused Lessons visit passed on the development Mac. Current-star lookup passed separately; its complete boundary-rank reselection flow, deep invitation scrolling, and the configured-name path remain offline-tested. Actual school rank-up handling, live Windows operation, and simultaneous operation with ALAS still need live verification. Cross-platform offline tests are evidence about the software, not proof of those live behaviors.
+
+The initial task validation used 720p. At 1440p, startup, announcement dismissal, home verification, red-dot scanning, and five Total Assault sweeps have live evidence. Sweep receipt collection needed a bounded animation-wait fix and recovery before its loot and zero-ticket balance were verified. A separate two-floor Cafe scan and return home passed at 1440p and 20 FPS, with empty earnings and no new verified relationship increases. Other task flows still need live validation at 1440p; 1080p and 2160p have offline coverage only. Higher-resolution OCR does not extend the input freshness deadline. See [validation details](engineering.md#evidence-and-its-limits).
 
 | Next increment | Exit condition |
 | --- | --- |

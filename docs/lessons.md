@@ -1,6 +1,6 @@
 # Lessons
 
-Lessons is the third game task, following restart and Cafe. Its first version supports the global English client at 1280×720 and 320 DPI. This document defines its policy and verification contract; the validation section records the observed results and remaining limits.
+Lessons is the third game task, following restart and Cafe. It uses the global English client with the shared [display adapter](getting-started.md); its original live validation used 1280×720 and 320 DPI. Higher-resolution coverage is offline. This document defines its policy and verification contract; the validation section records the observed results and remaining limits.
 
 ## What a visit does
 

@@ -293,6 +293,43 @@ def test_dimmed_season_record_notice_has_no_confirmation():
     assert classify_assault((frame*.5).astype(np.uint8), words).target is None
 
 
+def test_live_rank_summary_is_an_outcome_notice_not_a_reward_claim(vision):
+    screen = classify_assault(*capture("rank-summary"))
+    assert screen.kind == "outcome" and screen.confirm_target == (640, 573)
+    assert screen.target == screen.confirm_target
+    assert not screen.items and screen.tickets is None
+    local = vision.analyze((FIXTURES / "assault-rank-summary.png").read_bytes())
+    assert local.kind == "outcome" and local.confirm_target == screen.confirm_target
+
+
+@pytest.mark.parametrize("missing", ["Rank Points earned.", "Rank Points",
+                                      "Total Season Points", "Confirm"])
+def test_incomplete_rank_summary_never_exposes_confirmation(missing):
+    frame, words = capture("rank-summary")
+    screen = classify_assault(frame, [word for word in words if word.text != missing])
+    assert screen.kind == "outcome"
+    assert screen.target is None and screen.confirm_target is None
+
+
+def test_rank_summary_heading_is_required_before_dismissing_a_modal():
+    frame, words = capture("rank-summary")
+    screen = classify_assault(frame, [word for word in words if word.text != "Total Assault Results"])
+    assert screen.kind == "unknown" and screen.target is None
+
+
+@pytest.mark.parametrize("hidden", ["body", "button", "dimmed"])
+def test_rank_summary_requires_bright_modal_and_enabled_confirmation(hidden):
+    frame, words = capture("rank-summary")
+    if hidden == "body":
+        frame[172:238, 363:416] = 100
+    elif hidden == "button":
+        frame[540:604, 530:755] = 100
+    else:
+        frame = (frame * .5).astype(np.uint8)
+    screen = classify_assault(frame, words)
+    assert screen.kind == "outcome" and screen.confirm_target is None
+
+
 def test_live_sweep_detail_exposes_max_only_with_verified_remaining_tickets(vision):
     screen = classify_assault(*capture("sweep-detail"))
     assert (screen.kind, screen.count, screen.tickets, screen.after_tickets) == ("detail", 1, 5, 4)

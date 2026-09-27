@@ -62,6 +62,18 @@ def classify_notice(frame, words):
         return AssaultScreen("sweep_confirm", tuple(words), difficulty=difficulty,
                              count=int(request[1]), tickets=projection[0], after_tickets=projection[1],
                              target=(765, 503), confirm_target=(765, 503))
+    if has(words, "total assault results", (460, 100, 825, 155)):
+        # A clear that does not set a personal best shows this rank summary
+        # instead of Best Season Record. It grants no items by itself.
+        active = (has(words, "rank points earned", (500, 175, 790, 231))
+                  and has(words, "rank points", (375, 400, 585, 446))
+                  and has(words, "total season points", (375, 452, 590, 494))
+                  and bright(frame, (363, 172, 416, 238))
+                  and has(words, "confirm", (550, 540, 729, 604))
+                  and cyan(frame, (548, 548, 735, 600)))
+        return AssaultScreen("outcome", tuple(words),
+                             target=(640, 573) if active else None,
+                             confirm_target=(640, 573) if active else None)
     if has(words, "best season record reached", (405, 135, 875, 194)):
         active = (has(words, "best rank points", (375, 367, 581, 414))
                   and has(words, "total season points", (375, 415, 586, 452))

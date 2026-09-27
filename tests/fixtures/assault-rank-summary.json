@@ -1,0 +1,62 @@
+[
+  {
+    "text": "Total Assault Results",
+    "confidence": 0.99991,
+    "box": [
+      482,
+      112,
+      797,
+      147
+    ]
+  },
+  {
+    "text": "Rank Points earned.",
+    "confidence": 0.99996,
+    "box": [
+      520,
+      188,
+      756,
+      220
+    ]
+  },
+  {
+    "text": "Rank Points",
+    "confidence": 0.99948,
+    "box": [
+      383,
+      408,
+      508,
+      437
+    ]
+  },
+  {
+    "text": "Total Season Points",
+    "confidence": 0.99953,
+    "box": [
+      383,
+      462,
+      579,
+      488
+    ]
+  },
+  {
+    "text": "NewSeasonRewardsAvailable",
+    "confidence": 0.99985,
+    "box": [
+      480,
+      489,
+      802,
+      519
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99854,
+    "box": [
+      573,
+      549,
+      707,
+      593
+    ]
+  }
+]

@@ -41,7 +41,9 @@ def row_words(name='Aris (Maid)', rank='26', y=222, control='Invite'):
 
 def screen(words=None, *, at=0, **kwargs):
     words = row_words() if words is None else words
-    return (at, b'fixture', frame(**kwargs), [word('Relationship Rank', 728, 152), *words])
+    image = frame(**kwargs)
+    png = cv2.imencode('.png', image)[1].tobytes()
+    return (at, png, image, [word('Relationship Rank', 728, 152), *words])
 
 
 def empty_search_screen(**kwargs):
@@ -193,6 +195,21 @@ def test_missing_rank_uses_enlarged_heart_crop_only():
     rows = picker.read_rows(runner, screen(row_words(rank=None)))
     assert rows[0]['rank'] == 26
     assert runner.startup.read.call_args.args[0].shape == (140, 164, 3)
+
+
+def test_1440p_missing_rank_reads_native_heart_detail():
+    runner = Runner()
+    runner.startup.read.return_value = [word('26', 82, 70)]
+    native = np.zeros((1440, 2560, 3), np.uint8)
+    native[452:522:2, 972:1054] = 255
+    png = cv2.imencode('.png', native)[1].tobytes()
+    canonical = cv2.resize(native, (1280, 720), interpolation=cv2.INTER_AREA)
+    rows = picker.read_rows(runner, (0, png, canonical, row_words(rank=None)))
+    assert rows[0]['rank'] == 26
+    expected = cv2.resize(native[452:522, 972:1054], (164, 140))
+    observed = runner.startup.read.call_args.args[0]
+    assert np.array_equal(observed, expected)
+    assert not np.array_equal(observed, cv2.resize(canonical[226:261, 486:527], (164, 140)))
 
 
 @pytest.mark.parametrize('found', [[word('26', 82, 70, .6)], [word('26x', 82, 70)],

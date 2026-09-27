@@ -15,7 +15,7 @@ from .assault_vision import LEVEL_BOUNDS, NAME_BOUNDS
 from .crafting_vision import bright, cyan, within
 from .shop_vision import has, text_in
 from .tactical_battles import Student
-from .vision import decode_frame
+from .vision import decode_frame, decode_native_frame, native_game_region
 
 
 def _name(words, bounds):
@@ -130,21 +130,27 @@ def read_editor(image, words):
     return FormationEditor('quick', role, empty, selected, top, descending)
 
 
-def read_roster_levels(image, startup):
+def read_roster_levels(image, startup, *, native_frame=None):
     """Cross-check two independently bounded level digit crops in one OCR batch."""
     strip = np.full((12 * 180, 300, 3), 255, np.uint8)
     for i, x in enumerate(COLUMNS):
         for part, (a, b, c, d, scale) in enumerate(((x+37, 212, x+66, 231, 4),
                                                   (x+38, 213, x+67, 232, 5))):
-            crop = cv2.resize(image[b:d, a:c], None, fx=scale, fy=scale)
+            source = (native_game_region(native_frame, (a, b, c, d)) if native_frame is not None
+                      else image[b:d, a:c])
+            crop = cv2.resize(source, ((c-a)*scale, (d-b)*scale))
             y = (i * 2 + part) * 180 + 45
             strip[y:y+crop.shape[0], 70:70+crop.shape[1]] = crop
-    words = startup.read(strip)
+    # This composite historically reached OCR at 1984×288 after its 2000px
+    # preprocessor limit. Keep that proven digit scale and bounded cost explicit
+    # now that full game screenshots may use the larger native OCR limit.
+    words = startup.read(cv2.resize(strip, (288, 1984)))
     levels = []
     for i in range(6):
         values = []
         for part in range(2):
-            found = [w for w in words if (i*2+part)*180 <= w.center[1] < (i*2+part+1)*180]
+            found = [w for w in words
+                     if (i*2+part)*180 <= w.center[1] * (2160 / 1984) < (i*2+part+1)*180]
             match = re.fullmatch(r'(\d{1,3})', found[0].text.strip()) if len(found) == 1 else None
             values.append(int(match[1]) if match and found[0].confidence >= .9 else None)
         levels.append(values[0] if values[0] == values[1] and values[0] else None)
@@ -265,7 +271,8 @@ class TacticalFormationMixin:
                 choice = None
                 for _ in range(3):
                     image = decode_frame(frame.capture.png)
-                    levels = read_roster_levels(image, self.vision.startup)
+                    levels = read_roster_levels(image, self.vision.startup,
+                                                native_frame=decode_native_frame(frame.capture.png))
                     choice = highest_available(image, frame.screen.words, editor, levels,
                         {student.student_id for student in expected if student is not None})
                     if frame.capture.deadline - self.clock() >= 1:

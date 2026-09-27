@@ -6,7 +6,7 @@ Status: the local dashboard dispatches restart, Cafe, Lessons, Club, reward coll
 
 ## Runtime
 
-The Python 3.11+ core controls one explicit ADB endpoint. The initial profile is global English Blue Archive (`com.nexon.bluearchive`) at 1280×720 landscape and 320 DPI, running in BlueStacks Air on Apple Silicon macOS. BlueStacks 5 on Windows is the portability target; its live smoke test remains outstanding. The emulator instance must already be running.
+The Python 3.11+ core controls one explicit ADB endpoint. The game profile is global English Blue Archive (`com.nexon.bluearchive`) in exact 16:9 landscape, from 1280×720 through 3840×2160. The recommended setup is 2560×1440 at 640 DPI; recognizers use a canonical 1280×720 coordinate space. Development uses BlueStacks Air on Apple Silicon macOS. BlueStacks 5 on Windows is the portability target; its live smoke test remains outstanding. The emulator instance must already be running.
 
 `restart` force-stops and launches Blue Archive, reuses its existing session, handles recognized startup states, and verifies a clear home screen. `tasks.py` owns the ordered plans. `daily` runs restart → Club → free pack → optional paid packs → mail → Cafe → Bounties → Scrimmages → optional Tactical Challenge battles → Tactical Challenge rewards → Lessons → optional Total Assault → Total Assault rewards → optional Spend AP → Tasks rewards. Bounties, Scrimmages, Tactical Challenge battles, and Lessons have individual daily-inclusion settings; Total Assault, paid packs, and automatic AP spending are off by default. After an isolated task failure, Daily attempts bounded recovery to home and continues independent steps. A stop request or failed recovery ends the plan; unresolved spending remains held for the affected task.
 
@@ -178,9 +178,11 @@ JSONL remains the machine-readable history format, supplemented by daily text lo
 
 ## Resource use and coexistence
 
-All coordinates refer to the 1280×720 ADB screenshot; host window size and Retina scaling do not change them. The runner rejects other pixel dimensions. Keep 320 DPI and the English layout consistent with the assets; pixel size is validated, density is a setup requirement.
+Templates, color checks, home-map positions, and event profiles use canonical 1280×720 pixels or coordinates. Text OCR reads the native 720p–2160p frame; targeted text regions are extracted from native pixels using canonical bounds. Recognized text boxes map back to canonical coordinates, so task rules retain one layout. Native ADB screenshots are also retained for the dashboard and evidence. The device adapter scales canonical taps and swipes to the native display. Host window size and Retina scaling do not change either coordinate space. Unsupported aspect ratios, orientations, and sizes are rejected rather than stretched.
 
-OCR uses CPU inference with two worker threads and one inter-operation thread; OpenCV uses two threads. Recognition is deterministic and local. Event research happens ahead of time and becomes reviewed JSON rules. Optional future AI assistance is not active in the runtime.
+Keep the English layout and effective UI density consistent with the assets: 320 DPI at 720p, 480 DPI at 1080p, 640 DPI at 1440p, or 960 DPI at 2160p. Density is a setup requirement. Change it only while the worker is idle. Google Play billing retains its separate, observed 720×1280 portrait guard; higher-resolution checkout is not validated and does not receive payment input.
+
+OCR uses CPU inference with two worker threads and one inter-operation thread; OpenCV uses two threads. Higher resolution increases OCR work as well as emulator rendering, screenshot transfer, and evidence storage. One observed 1440p home-screen OCR pass took about 1.8 seconds on the development Mac; this is a measurement of that screen, not a timing guarantee. Capture and recognition still share the existing five-second input deadline; a slow or stale observation never authorizes input. Recognition is deterministic and local. Event research happens ahead of time and becomes reviewed JSON rules. Optional future AI assistance is not active in the runtime.
 
 BlueStacks CPU/RAM allocation, FPS, and graphics settings remain the resource controls. The idle server does not run continuous game recognition. Resource presets still need measurements on both platforms.
 

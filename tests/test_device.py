@@ -4,6 +4,7 @@ from dataclasses import replace
 import errno
 from pathlib import Path
 import subprocess
+import struct
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -186,7 +187,8 @@ class DeviceTests(unittest.TestCase):
     def test_all_commands_address_configured_device_and_bounded_server(self):
         answers = [b"connected to 127.0.0.1:5695\n", b"device\n", b"package:/data/app/game/base.apk\n",
                    b"", b"com.nexon.bluearchive/.MainActivity\n", b"Status: ok\n",
-                   b"\x89PNG\r\n\x1a\n", b"",
+                   b"\x89PNG\r\n\x1a\n" + struct.pack(">I",13) + b"IHDR" + struct.pack(">II",1280,720),
+                   b"  Display: mDisplayId=0\n    init=1280x720 320dpi cur=1280x720 app=1280x720\n", b"",
                    b"mCurrentFocus=Window{123 u0 com.nexon.bluearchive/.MainActivity}\n",
                    b"Physical size: 1920x1080\nOverride size: 1280x720\n"]
         device = AdbDevice(config())
@@ -313,6 +315,9 @@ class DeviceTests(unittest.TestCase):
 
     def test_fresh_tap_reports_sent_and_preserves_explicit_target(self):
         device = AdbDevice(config())
+        device._frame_size = (1280, 720)
+        self.addCleanup(patch.stopall)
+        patch.object(device, "current_display_size", return_value=(1280, 720)).start()
         with patch.object(device, "_check_shared_server") as check, \
                 patch.object(device, "_execute", return_value=b"") as execute:
             self.assertTrue(device.tap(640, 600, deadline=5.0, monotonic=lambda: 1.0))
@@ -324,6 +329,9 @@ class DeviceTests(unittest.TestCase):
 
     def test_swipe_uses_validated_endpoints_duration_and_explicit_device(self):
         device = AdbDevice(config())
+        device._frame_size = (1280, 720)
+        self.addCleanup(patch.stopall)
+        patch.object(device, "current_display_size", return_value=(1280, 720)).start()
         with patch.object(device, "_check_shared_server") as check, \
                 patch.object(device, "_execute", return_value=b"") as execute:
             self.assertTrue(device.swipe((0, 0), (1279, 719), 100,

@@ -16,7 +16,10 @@ import numpy as np
 from .actions import record_action
 from .loot_icon_mask import isolate_compact_card
 from .runtime import Capture, TaskError
-from .vision import decode_frame
+from .vision import (
+    decode_frame, decode_native_frame, native_game_region, read_game_words,
+    read_native_game_words,
+)
 
 RECEIPT_TIMEOUT = 240
 REWARD_RECEIPT_TIMEOUT = 900
@@ -88,6 +91,23 @@ def read_crop(vision, image, scale=3):
     return vision.read(large)
 
 
+def read_game_crop(vision, native, box, scale=3):
+    """Read native text at the existing padded crop coordinate scale.
+
+    Crop before resizing so higher-resolution text survives into OCR. Keeping
+    the output dimensions fixed preserves badge locations and quantity checks.
+    """
+    left, top, right, bottom = box
+    crop = native_game_region(native, box)
+    if native.shape[:2] == (720, 1280):
+        return read_crop(vision, crop, scale)
+    large = cv2.resize(crop, ((right - left) * scale, (bottom - top) * scale))
+    large = cv2.copyMakeBorder(
+        large, 25, 25, 25, 25, cv2.BORDER_CONSTANT, value=(255, 255, 255)
+    )
+    return vision.read(large)
+
+
 def amount(words):
     values = set()
     for word in words:
@@ -127,10 +147,13 @@ def complete_name(name):
     )
 
 
-def reward_name(vision, image, box):
+def reward_name(vision, image, box, *, native=None):
     """Read the complete label in a full, already located reward card."""
     x, y, w, h = box
-    titles = read_crop(vision, image[y + 6:y + int(h * .24), x + 5:x + w - 5])
+    titles = read_game_crop(
+        vision, image if native is None else native,
+        (x + 5, y + 6, x + w - 5, y + int(h * .24)),
+    )
     if not titles or any(a.confidence < .85 for a in titles):
         return None
     # Separate words on one baseline can differ by a pixel in their top edge.
@@ -152,9 +175,12 @@ def reward_name(vision, image, box):
     return name if complete_name(name) else None
 
 
-def reward_quantity(vision, image, box, *, minimum_confidence=.65):
+def reward_quantity(vision, image, box, *, minimum_confidence=.65, native=None):
     x, y, w, h = box
-    words = read_crop(vision, image[y + h - 48:y + h - 9, x + 8:x + w - 8], 2)
+    words = read_game_crop(
+        vision, image if native is None else native,
+        (x + 8, y + h - 48, x + w - 8, y + h - 9), 2,
+    )
     return amount([word for word in words if word.confidence >= minimum_confidence])
 
 
@@ -246,20 +272,25 @@ def tooltip(image, words):
     return None
 
 
-def read_tooltip(image, vision):
+def read_tooltip(native, vision):
     # The cyan title divider can be OCR'd as an I joined to the item name.
     # Remove decoration only from the OCR input; retain the original image for
     # tooltip boundaries and the title/description separator.
-    cleaned = image.copy()
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    cleaned = native.copy()
+    hsv = cv2.cvtColor(native, cv2.COLOR_BGR2HSV)
     decoration = cv2.inRange(hsv, (75, 100, 180), (105, 255, 255))
     cleaned[decoration != 0] = (255, 255, 255)
-    return tooltip(image, vision.read(cleaned))
+    words = read_native_game_words(cleaned, vision)
+    image = native if native.shape[:2] == (720, 1280) else cv2.resize(
+        native, (1280, 720), interpolation=cv2.INTER_AREA,
+    )
+    return tooltip(image, words)
 
 
 def page(png, vision):
     image = decode_frame(png)
-    words = vision.read(image)
+    native = decode_native_frame(png)
+    words = read_native_game_words(native, vision)
     labels = {w.normalized.replace(" ", "") for w in words}
     if "fulllist" in labels and "okay" in labels:
         kind = "grid"
@@ -318,12 +349,11 @@ def page(png, vision):
         for x, y, w, h in full:
             x += 321
             y += 178
-            crop = image[y : y + h, x : x + w]
-            words = read_crop(vision, crop)
+            words = read_game_crop(vision, native, (x, y, x + w, y + h))
             qty = amount(words)
             if qty is None:
                 qty = amount(
-                    read_crop(vision, image[y + h - 27 : y + h, x + 6 : x + w - 2], 4)
+                    read_game_crop(vision, native, (x + 6, y + h - 27, x + w - 2, y + h), 4)
                 )
             cards.append(
                 Card(
@@ -365,11 +395,10 @@ def page(png, vision):
             if x < left or x + w > right:
                 clipped = True
                 continue
-            crop = image[y : y + h + 3, x : x + w]
-            qty = amount(read_crop(vision, crop))
+            qty = amount(read_game_crop(vision, native, (x, y, x + w, y + h + 3)))
             if qty is None:
                 qty = amount(
-                    read_crop(vision, image[row - 22 : row + 1, x + 5 : x + w - 2], 4)
+                    read_game_crop(vision, native, (x + 5, row - 22, x + w - 2, row + 1), 4)
                 )
             cards.append(
                 Card(
@@ -407,8 +436,8 @@ def page(png, vision):
             if rx <= 1 or rx + w >= viewport_width - 1:
                 clipped = True
                 continue
-            qty = reward_quantity(vision, image, (x, y, w, h))
-            name = reward_name(vision, image, (x, y, w, h))
+            qty = reward_quantity(vision, image, (x, y, w, h), native=native)
+            name = reward_name(vision, image, (x, y, w, h), native=native)
             cards.append(Card((x, y, w, h), qty, name, card_icon(image, (x, y, w, h), kind)))
         # A partial bright card at either edge must not be silently counted complete.
         partials = [(x, w) for x, y, w, h in rects
@@ -478,7 +507,7 @@ def same_grid_icon(a, b):
     return same_pixels(first[:, :, :3][visible], second[:, :, :3][visible])
 
 
-def same_grid_view(first, second, expected, vision):
+def same_grid_view(first, second, expected, vision, *, native=None):
     # The neutral tooltip-dismiss point (350,545) can leave a fading pulse.
     # Keep the title/close control, entire item viewport, and Okay button.
     for x, y, w, h in ((314, 114, 650, 64), (515, 490, 255, 85)):
@@ -495,7 +524,9 @@ def same_grid_view(first, second, expected, vision):
             continue
         # Never carry an old tier across a changed badge. Fresh local OCR must
         # read exactly the same label before its decorative outline is ignored.
-        if grid_tier(read_crop(vision, second[y:y+h, x:x+w])) != card.tier:
+        if grid_tier(read_game_crop(
+            vision, second if native is None else native, (x, y, x + w, y + h),
+        )) != card.tier:
             return False
         rx, ry = x - 321, y + h - 30 - 178
         old[ry:ry+30, rx:rx+40] = new[ry:ry+30, rx:rx+40] = 0
@@ -566,7 +597,7 @@ def same_receipt_view(before, after, expected, *, vision=None):
     if expected is None:
         return False
     if expected.kind == "grid":
-        return same_grid_view(first, second, expected, vision)
+        return same_grid_view(first, second, expected, vision, native=decode_native_frame(after))
     panels = {
         # Keep the complete Final card row and Confirm button. The decorative
         # label column contains the neutral tooltip-dismiss click pulse, which
@@ -608,6 +639,7 @@ def same_receipt_view(before, after, expected, *, vision=None):
         for card in expected.cards
         if complete_name(card.name) and card.quantity is not None
     }
+    native_second = None
     for box in old_boxes:
         x, y, w, h = box
         card = named.get(box)
@@ -632,10 +664,14 @@ def same_receipt_view(before, after, expected, *, vision=None):
                 # Unknown/partial cards retain the strict whole-card pixel guard.
                 if vision is None or field is None:
                     return False
+                if native_second is None:
+                    native_second = decode_native_frame(after)
                 if field == "name":
-                    if reward_name(vision, second, box) != card.name:
+                    if reward_name(vision, second, box, native=native_second) != card.name:
                         return False
-                elif reward_quantity(vision, second, box, minimum_confidence=.85) != card.quantity:
+                elif reward_quantity(
+                    vision, second, box, minimum_confidence=.85, native=native_second,
+                ) != card.quantity:
                     return False
     if not old_boxes:
         return False
@@ -650,11 +686,11 @@ def same_receipt_view(before, after, expected, *, vision=None):
     if vision is None or min(np.count_nonzero(t[0]) for t in (old_title, new_title)) < 2000:
         return False
     headings = [sorted(
-        (word for word in vision.read(image)
+        (word for word in read_game_words(png, vision)
          if 340 <= word.box[0] < word.box[2] <= 940
          and 105 <= word.box[1] < word.box[3] <= 210),
         key=lambda word: word.box[0],
-    ) for image in (first, second)]
+    ) for png in (before, after)]
     for words in headings:
         if (not words or any(w.confidence < .95 for w in words)
                 or "".join(w.normalized.replace(" ", "") for w in words) != "rewardacquired"):
@@ -983,14 +1019,14 @@ class ReceiptReader:
             cap = self.capture()
             image = decode_frame(cap.png)
             if has_tooltip(image):
-                return cap, read_tooltip(image, self.vision), "tooltip"
+                return cap, read_tooltip(decode_native_frame(cap.png), self.vision), "tooltip"
             if attempt < 11:
                 self.r.sleep(.25)
         p = self.read(cap)
         fresh = self.capture()
         image = decode_frame(fresh.png)
         if has_tooltip(image):
-            return fresh, read_tooltip(image, self.vision), "tooltip"
+            return fresh, read_tooltip(decode_native_frame(fresh.png), self.vision), "tooltip"
         # A retry, if needed, must revalidate the parsed capture normally. A
         # changed/unknown screen is never accepted as the old receipt here.
         return cap, None, p.kind

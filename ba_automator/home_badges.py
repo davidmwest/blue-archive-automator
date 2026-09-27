@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 import cv2
-from .vision import classify, decode_frame
+from .vision import classify, decode_frame, read_game_words
 from .crafting_vision import has, number
 
 # Keep the fixed hitbox and badge separate: the dot is not itself a button.
@@ -65,10 +65,12 @@ class BadgeVision:
     def analyze(self, png, *, billing=False):
         from .ap_vision import classify_ap
 
-        frame = decode_frame(png)
-        if billing or frame.shape[:2] != (720, 1280):
+        if billing:
             return BadgeScreen("unknown")
-        words = self.startup.read(frame)
+        frame = decode_frame(png)
+        if frame.shape[:2] != (720, 1280):
+            return BadgeScreen("unknown")
+        words = read_game_words(png, self.startup)
         home = classify(words, self.startup.matches(frame)).state == "home"
         if classify_ap(frame, words).kind == "campaign":
             found = tuple(

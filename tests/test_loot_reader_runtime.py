@@ -123,6 +123,7 @@ def harness(tmp_path, monkeypatch):
     ]
     monkeypatch.setattr(lr, "page", page)
     monkeypatch.setattr(lr, "decode_frame", json.loads)
+    monkeypatch.setattr(lr, "decode_native_frame", json.loads)
     monkeypatch.setattr(lr, "has_tooltip", lambda image: bool(image["tip"]))
     monkeypatch.setattr(lr, "read_tooltip", lambda image, vision: image["tip"])
     monkeypatch.setattr(lr, "reward_layout_stable", lambda before, after: before == after)

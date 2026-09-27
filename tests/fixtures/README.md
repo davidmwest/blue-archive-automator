@@ -264,6 +264,13 @@ Reached notice from that real clear. Only the modal is retained; account rank
 and personal point totals inside it are masked in both pixels and OCR. Its
 Confirm acknowledges a record, not a reward claim.
 
+`assault-rank-summary.png/json` records the September 27 UTC post-clear
+Total Assault Results notice for a clear that did not set a new personal best.
+Only the modal is retained; account rank, earned points, season totals, and the
+entire background are masked. Its Confirm acknowledges the rank summary and
+does not claim items or authorize another ticket. Tests verify the observed
+control at (640, 573), missing/dimmed evidence, and bounded one-time dismissal.
+
 `assault-sweep-detail.png/json` is the post-clear Hardcore Room Info panel with
 one sweep selected, five tickets, the 5→4 projection, and an enabled Max button.
 Only Room Info and event dates are retained; the surrounding account and rank

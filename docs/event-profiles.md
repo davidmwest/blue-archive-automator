@@ -24,7 +24,7 @@ Availability records the playable cutoff of September 29, 2026 at 01:59 UTC and 
 | `route_checks` | Guarded optional notices and exactly one destination check; each has a `region` and nonempty `required_ocr` |
 | `sources` | Optional HTTPS research links |
 
-Coordinates use `[x1, y1, x2, y2]` regions with exclusive right/bottom edges. Tap points use `[x, y]`. All must fit 1280×720. OCR phrases ignore case and punctuation, require complete words, and must occur inside the configured region with confidence at least 0.65. All entry keywords and all `required_ocr` phrases must match. When a route check supplies `any_ocr`, at least one of those phrases must also match.
+Coordinates use `[x1, y1, x2, y2]` regions with exclusive right/bottom edges. Tap points use `[x, y]`. All must fit the canonical **1280×720** coordinate space, regardless of the emulator's native resolution. Templates and color checks use this reference; text OCR reads native pixels and maps its boxes back to canonical coordinates. Targeted text regions use native crops. The device adapter scales input back to the display, so profiles do not need a separate 1440p coordinate set. OCR phrases ignore case and punctuation, require complete words, and must occur inside the configured region with confidence at least 0.65. All entry keywords and all `required_ocr` phrases must match. When a route check supplies `any_ocr`, at least one of those phrases must also match.
 
 Optional-notice `dismiss_control` values are limited to `confirm` and `recognized_close`. These describe the expected control; they do not approve an arbitrary Confirm/X button or provide an executable click instruction. A future runner must recognize the guarded notice and independently validate the control on a fresh frame.
 

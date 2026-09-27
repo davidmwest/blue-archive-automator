@@ -1,13 +1,14 @@
 """English pack checkout and mailbox recognition, using local OCR only."""
 from dataclasses import dataclass, field
 import re
+import unicodedata
 
 import cv2
 import numpy as np
 
 from .crafting_vision import bright, cyan, yellow, has as _has, within, number
 from .packs_state import PACKS
-from .vision import VisionError, classify
+from .vision import read_game_words, VisionError, classify, decode_frame
 from .home_badges import badges
 
 
@@ -96,7 +97,10 @@ def classify_shop(frame, words, *, home=False, billing=False):
     ap = number(words, (495, 0, 615, 48), r'(\d+)/(\d+)')
     if ap:
         balances['ap'] = ap[0]
-    if (any(w.normalized.replace(' ', '') == 'rewardacquired' for w in within(words, (300, 120, 980, 210)))
+    # The animated heading can add an accent to an otherwise correctly read A.
+    # Normalize only this receipt label, never product names, prices or status.
+    if (any(re.sub(r'[^a-z]', '', unicodedata.normalize('NFKD', w.text).lower()) == 'rewardacquired'
+            for w in within(words, (300, 120, 980, 210)))
             and has(words, 'touch to continue', (380, 590, 900, 665))
             and yellow(frame, (375, 134, 901, 182))):
         return ShopScreen('receipt', (640, 631), items=receipt_items(words), balances=balances)
@@ -171,10 +175,14 @@ class ShopVision:
         self.startup = startup
 
     def analyze(self, png, *, billing=False):
-        frame = cv2.imdecode(np.frombuffer(png, np.uint8), cv2.IMREAD_COLOR)
-        if frame is None:
-            raise VisionError('Invalid shop screenshot')
-        words = self.startup.read(frame)
+        if billing:
+            # Checkout uses native portrait coordinates and its own strict size guard.
+            frame = cv2.imdecode(np.frombuffer(png, np.uint8), cv2.IMREAD_COLOR)
+            if frame is None:
+                raise VisionError('Invalid shop screenshot')
+        else:
+            frame = decode_frame(png)
+        words = self.startup.read(frame) if billing else read_game_words(png, self.startup)
         home = (not billing and frame.shape[:2] == (720, 1280)
                 and classify(words, self.startup.matches(frame)).state == 'home')
         return classify_shop(frame, words, home=home, billing=billing)

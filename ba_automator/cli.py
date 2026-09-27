@@ -11,6 +11,7 @@ import sys
 
 from .adb import AdbDevice
 from .config import Config
+from .display import CANONICAL_SIZE, is_supported_size
 from .daily_log import append_event, close_daily_logging, configure_daily_logging
 from .locking import InstanceLock
 from .tasks import TASKS, task_plan
@@ -236,9 +237,9 @@ def main(argv=None) -> int:
             device.connect()
             device.verify_package()
             size = device.display_size()
-            if size != (1280, 720):
+            if not is_supported_size(size):
                 raise RuntimeError(
-                    f"Set the selected instance to 1280×720; Android reports {size}"
+                    f"Use a 16:9 landscape display from 1280×720 to 3840×2160; Android reports {size}"
                 )
             if args.command == "probe":
                 print(
@@ -247,6 +248,7 @@ def main(argv=None) -> int:
                             "serial": config.serial,
                             "package": config.package,
                             "display": size,
+                            "recognition_display": CANONICAL_SIZE,
                             "foreground": device.foreground_package(),
                         },
                         indent=2,

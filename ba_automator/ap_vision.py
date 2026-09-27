@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 import re
 import cv2
-from .vision import decode_frame, Word
+from .vision import decode_native_frame, native_game_region, read_game_words, decode_frame, Word
 from .crafting_vision import within, number, bright, cyan
 from .shop_vision import has, text_in
 
@@ -403,7 +403,8 @@ class APVision:
 
     def analyze(self, png, *, billing=False):
         frame = decode_frame(png)
-        words = self.startup.read(frame)
+        words = read_game_words(png, self.startup)
+        native = decode_native_frame(png)
         if has(words, "mission info", (440, 80, 850, 130)) and not any(
             re.match(r"^[1-9]\d?-[123](?=\D|$)", w.text)
             for w in within(words, (130, 220, 620, 280))
@@ -412,7 +413,8 @@ class APVision:
             # matching enlarged reads of that index, not the adjacent name.
             reads = []
             for scale in (2, 3):
-                crop = cv2.resize(frame[220:271, 135:200], None, fx=scale, fy=scale)
+                crop = cv2.resize(native_game_region(native, (135, 220, 200, 271)),
+                                  (65 * scale, 51 * scale))
                 labels = [
                     w
                     for w in self.startup.read(crop)
@@ -439,7 +441,8 @@ class APVision:
                     for w in within(words, bounds)
                 ):
                     x1, y1, x2, y2 = bounds
-                    crop = cv2.resize(frame[y1:y2, x1:x2], None, fx=3, fy=3)
+                    crop = cv2.resize(native_game_region(native, bounds),
+                                      ((x2 - x1) * 3, (y2 - y1) * 3))
                     for word in self.startup.read(crop):
                         if re.fullmatch(r"[1-9]\d?-[123]", word.text):
                             box = tuple(

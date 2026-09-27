@@ -13,6 +13,7 @@ import time
 from typing import Callable
 
 from .config import Config
+from .display import GameDisplay
 
 LOGGER = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class AdbDevice:
     def __init__(self, config: Config):
         self.config = config
         self._client_protocol: int | None = None
+        self._frame_size: tuple[int, int] | None = None
 
     def _environment(self) -> dict[str, str]:
         environment = os.environ.copy()
@@ -150,10 +152,30 @@ class AdbDevice:
             )
 
     def screenshot(self) -> bytes:
+        # Clear the previous geometry even if capture fails. Input must be based
+        # on a successfully captured frame, never a guessed default resolution.
+        self._frame_size = None
         output = self._run("exec-out", "screencap", "-p", timeout=20)
-        if not output.startswith(b"\x89PNG\r\n\x1a\n"):
+        if (not output.startswith(b"\x89PNG\r\n\x1a\n") or len(output) < 24
+                or output[12:16] != b"IHDR"):
             raise DeviceError("ADB screenshot did not return PNG data")
+        self._frame_size = struct.unpack(">II", output[16:24])
         return output
+
+    def _input_display(self) -> GameDisplay:
+        if self._frame_size is None:
+            raise DeviceError("Capture a game screenshot before sending input")
+        try:
+            display = GameDisplay(*self._frame_size)
+        except ValueError as exc:
+            raise DeviceError(str(exc)) from exc
+        # wm size describes configured dimensions, not current rotation. Compare
+        # the live primary surface so a rotated or resized screen invalidates
+        # the decision instead of retargeting an old frame.
+        if self.current_display_size() != self._frame_size:
+            self._frame_size = None
+            raise DeviceError("Display size changed since capture; take a fresh screenshot before input")
+        return display
 
     def tap(
         self, x: int, y: int, *, deadline: float | None = None,
@@ -162,11 +184,14 @@ class AdbDevice:
         """Send a tap, or return False if its frame expired during server preflight."""
         if (type(x) is not int or type(y) is not int
                 or not 0 <= x < self.config.expected_width or not 0 <= y < self.config.expected_height):
-            raise DeviceError("Tap coordinates must be integers inside the fixed 1280×720 display")
+            raise DeviceError("Tap coordinates must be integers inside the canonical 1280×720 frame")
         self._check_shared_server()
         if deadline is not None and monotonic() > deadline:
             return False
-        self._execute(self._command("shell", "input", "tap", str(x), str(y)), timeout=10)
+        native = self._input_display().point(x, y)
+        if deadline is not None and monotonic() > deadline:
+            return False
+        self._execute(self._command("shell", "input", "tap", *(str(n) for n in native)), timeout=10)
         return True
 
     def foreground_package(self) -> str | None:
@@ -220,7 +245,11 @@ class AdbDevice:
         self._check_shared_server()
         if deadline is not None and monotonic() > deadline:
             return False
-        self._execute(self._command("shell", "input", "swipe", *(str(n) for n in (*start, *end)),
+        display = self._input_display()
+        native = (*display.point(*start), *display.point(*end))
+        if deadline is not None and monotonic() > deadline:
+            return False
+        self._execute(self._command("shell", "input", "swipe", *(str(n) for n in native),
                                     str(duration_ms)), timeout=10)
         return True
 
@@ -230,3 +259,16 @@ class AdbDevice:
         if not sizes:
             raise DeviceError("Cannot read the selected emulator's display size")
         return tuple(map(int, sizes[-1]))
+
+    def current_display_size(self) -> tuple[int, int]:
+        """Read the rotation-aware logical dimensions of Android's primary display."""
+        output = self._run("shell", "dumpsys", "window", "displays", timeout=10).decode(
+            "utf-8", errors="replace",
+        )
+        sizes = re.findall(
+            r"(?m)^\s*Display: mDisplayId=0\b[^\n]*\n"
+            r"[^\n]*\bcur=(\d+)x(\d+)\b", output,
+        )
+        if len(sizes) != 1:
+            raise DeviceError("Cannot read the selected emulator's current display geometry")
+        return tuple(map(int, sizes[0]))

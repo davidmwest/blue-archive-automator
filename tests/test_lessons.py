@@ -444,11 +444,19 @@ def test_cancellation_records_stopped_and_releases_instance_lock(harness, monkey
 
 def test_wrong_display_fails_before_navigation(harness):
     runner = harness.make(OrchestrationRunner)
-    harness.device.size = (1920, 1080)
+    harness.device.size = (1920, 1200)
     with pytest.raises(TaskError, match="1280"):
         runner.run()
     assert runner.survey_calls == 0
     assert not runner.selected
+
+
+def test_1440p_display_runs_lessons_with_the_same_ticket_budget(harness):
+    runner = harness.make(OrchestrationRunner, lessons_max_tickets=2)
+    harness.device.size = (2560, 1440)
+    assert runner.run().status == "success"
+    assert runner.confirmed == 2 and runner.expected_tickets == 1
+    assert runner.home_calls == 1
 
 
 def prepare_execution(harness, monkeypatch, *, receipt=True, after_tickets=1,

@@ -1,6 +1,16 @@
 # setup and operation
 
-use Python 3.11 or newer and a running BlueStacks instance with ADB enabled. set it to **1280×720 landscape, 320 DPI**, install the global version of Blue Archive, and sign in once with the game language set to English. the automator reuses that login. Cafe currently expects both floors to be unlocked.
+use Python 3.11 or newer and a running BlueStacks instance with ADB enabled. start with **2560×1440 landscape, 640 DPI**, install the global version of Blue Archive, and sign in once with the game language set to English. the automator reuses that login. Cafe currently expects both floors to be unlocked.
+
+exact 16:9 landscape resolutions from **1280×720 through 3840×2160** are supported. keep the same effective UI density: 320 DPI at 720p, 480 DPI at 1080p, 640 DPI at 1440p, or 960 DPI at 2160p. pause the queue and let its active job finish before changing the emulator's resolution or density. unsupported dimensions stop the task instead of stretching the interface.
+
+screenshots, receipts, and text OCR use the emulator's native pixels. templates and color checks use a 1280×720 reference; text boxes map back to those coordinates, and targeted text crops retain native detail. taps and swipes scale to the native screen, so existing event profiles keep their coordinates. higher resolution costs more OCR time, rendering, transfer, and storage. the input freshness deadline stays unchanged.
+
+set the frame rate in BlueStacks to suit your machine; the automator leaves it alone. the development setup uses 20 FPS. transitions wait for recognized screens, rather than counting rendered frames.
+
+1440p startup, red-dot scanning, and five Total Assault sweeps have live evidence, with receipt collection recovered after an animation-wait fix. a separate two-floor Cafe scan and return home passed at 1440p and 20 FPS. 1080p and 2160p have offline coverage only; earlier task validation used 720p. [validation details →](engineering.md#evidence-and-its-limits)
+
+paid Google Play checkout is a separate layout: only the observed **720×1280 portrait** checkout is supported. a checkout at another resolution stops for review before payment input. the automator does not change resolution to complete a purchase.
 
 for a dashboard preview without an emulator, use the [read-only demo](../README.md#have-a-look).
 

@@ -13,7 +13,7 @@ import re
 import cv2
 import numpy as np
 
-from .vision import Word
+from .vision import Word, decode_native_frame, native_game_region
 
 
 @dataclass(frozen=True)
@@ -105,15 +105,16 @@ def parse_relationship_rank_up(words, *, rank_words=(), student=None):
     return RelationshipIncrease(student=student, rank=_unique_rank(rank_candidates), stats=_stats(words))
 
 
-def read_relationship_rank_up(frame, reader=None, *, words=(), student=None):
+def read_relationship_rank_up(frame, reader=None, *, words=(), student=None, png=None):
     """OCR the small heart separately; whole-screen OCR often omits its digit."""
     words = tuple(words)
     if not is_relationship_rank_up(words):
         return None
     rank_words = ()
     if reader is not None:
-        crop = cv2.resize(frame[512:567, 608:672], None, fx=3, fy=3,
-                          interpolation=cv2.INTER_CUBIC)
+        crop = (native_game_region(decode_native_frame(png), (608, 512, 672, 567))
+                if png is not None else frame[512:567, 608:672])
+        crop = cv2.resize(crop, (192, 165), interpolation=cv2.INTER_CUBIC)
         rank_words = tuple(reader.read(crop))
     return parse_relationship_rank_up(words, rank_words=rank_words, student=student)
 

@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from .actions import record_action
 from .config import Config
+from .display import CANONICAL_SIZE, is_supported_size
 from .locking import InstanceLock
 from .runtime import Capture, FRAME_MAX_AGE, HOME_STABLE_SECONDS, TRACE_LIMIT
 from .runtime import Journal, RunResult, TaskError
@@ -284,8 +285,11 @@ def run_restart(
             device.connect()
             device.verify_package()
             size = device.display_size()
-            if size != (config.expected_width, config.expected_height):
-                fail(f"Expected a 1280×720 game display; selected instance reports {size[0]}×{size[1]}")
+            if not is_supported_size(size):
+                fail("Expected a 16:9 landscape game display from 1280×720 to 3840×2160; "
+                     f"selected instance reports {size[0]}×{size[1]}")
+            journal.record("display_validated", native_size=list(size),
+                           recognition_size=list(CANONICAL_SIZE))
             for attempt in range(MAX_STARTUP_RECOVERIES + 1):
                 try:
                     result = reach_home()

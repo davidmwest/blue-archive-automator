@@ -5,11 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from importlib.resources import files
 import json
+import math
 import os
 import re
 
 import cv2
 import numpy as np
+
+from .display import CANONICAL_SIZE, GameDisplay
 
 
 class VisionError(RuntimeError):
@@ -41,7 +44,8 @@ class Observation:
     detector: str = "known"
 
 
-def decode_frame(png: bytes) -> np.ndarray:
+def decode_native_frame(png: bytes) -> np.ndarray:
+    """Decode a supported game screenshot without discarding its text detail."""
     if not png:
         raise VisionError("Screenshot is empty")
     try:
@@ -50,10 +54,84 @@ def decode_frame(png: bytes) -> np.ndarray:
         raise VisionError("Screenshot is not a decodable image") from exc
     if image is None:
         raise VisionError("Screenshot is not a decodable image")
-    if image.shape[:2] != (720, 1280):
-        height, width = image.shape[:2]
-        raise VisionError(f"Expected 1280×720 landscape; screenshot is {width}×{height}")
+    height, width = image.shape[:2]
+    try:
+        GameDisplay(width, height)
+    except ValueError as exc:
+        raise VisionError(str(exc)) from exc
     return image
+
+
+def decode_frame(png: bytes) -> np.ndarray:
+    """Return canonical pixels for existing color and template recognition."""
+    image = decode_native_frame(png)
+    if (image.shape[1], image.shape[0]) != CANONICAL_SIZE:
+        image = cv2.resize(image, CANONICAL_SIZE, interpolation=cv2.INTER_AREA)
+    return image
+
+
+def _region_bounds(native_image: np.ndarray, box: tuple[int, int, int, int]):
+    height, width = native_image.shape[:2]
+    try:
+        GameDisplay(width, height)
+    except ValueError as exc:
+        raise VisionError(str(exc)) from exc
+    left, top, right, bottom = box
+    if (any(isinstance(value, bool) or not isinstance(value, int) for value in box)
+            or not 0 <= left < right <= CANONICAL_SIZE[0]
+            or not 0 <= top < bottom <= CANONICAL_SIZE[1]):
+        raise VisionError("Game OCR region must lie inside the canonical 1280×720 frame")
+    scale = width / CANONICAL_SIZE[0]
+    return tuple(round(value * scale) for value in box)
+
+
+def native_game_region(native_image: np.ndarray, box: tuple[int, int, int, int]) -> np.ndarray:
+    """Crop canonical bounds directly from native pixels, without downsampling.
+
+    Callers building OCR strips can resize this crop to their existing strip
+    dimensions. At fractional display scales the boundary rounds to a pixel.
+    """
+    left, top, right, bottom = _region_bounds(native_image, box)
+    return native_image[top:bottom, left:right]
+
+
+def _canonical_words(words: list[Word], scale: float, *, native_origin=(0, 0),
+                     canonical_origin=(0, 0)) -> list[Word]:
+    if scale == 1 and native_origin == canonical_origin:
+        return words
+    nx, ny = native_origin
+    cx, cy = canonical_origin
+    return [Word(word.text, word.confidence, (
+        math.floor((word.box[0] + nx) / scale - cx),
+        math.floor((word.box[1] + ny) / scale - cy),
+        math.ceil((word.box[2] + nx) / scale - cx),
+        math.ceil((word.box[3] + ny) / scale - cy),
+    )) for word in words]
+
+
+def read_game_words(png: bytes, reader) -> list[Word]:
+    """OCR original screenshot pixels; return canonical game coordinates.
+
+    This explicit game boundary leaves ``reader.read`` suitable for arbitrary
+    local crops and composite OCR strips, which use their own pixel coordinates.
+    """
+    native = decode_native_frame(png)
+    return read_native_game_words(native, reader)
+
+
+def read_native_game_words(native: np.ndarray, reader) -> list[Word]:
+    """Read an already decoded native game frame in canonical coordinates."""
+    _region_bounds(native, (0, 0, *CANONICAL_SIZE))
+    return _canonical_words(reader.read(native), native.shape[1] / CANONICAL_SIZE[0])
+
+
+def read_game_region(png: bytes, reader, box: tuple[int, int, int, int]) -> list[Word]:
+    """Read native pixels from a canonical region; return region-local boxes."""
+    native = decode_native_frame(png)
+    left, top, right, bottom = _region_bounds(native, box)
+    scale = native.shape[1] / CANONICAL_SIZE[0]
+    return _canonical_words(reader.read(native[top:bottom, left:right]), scale,
+                            native_origin=(left, top), canonical_origin=box[:2])
 
 
 class StartupVision:
@@ -72,6 +150,10 @@ class StartupVision:
         cv2.setNumThreads(2)
         self.ocr = RapidOCR(params={
             "Global.log_level": "error",
+            # RapidOCR's default 2000px limit shrinks a 2560px screenshot before
+            # reading it. Game frames are already bounded to 3840×2160 here.
+            "Global.max_side_len": 3840,
+            "Det.limit_type": "min",
             "EngineConfig.onnxruntime.intra_op_num_threads": 2,
             "EngineConfig.onnxruntime.inter_op_num_threads": 1,
         })
@@ -128,7 +210,7 @@ class StartupVision:
 
     def analyze(self, png: bytes) -> Observation:
         frame = decode_frame(png)
-        words = self.read(frame)
+        words = read_game_words(png, self)
         observation = classify(words, self.matches(frame))
         # Specific startup handlers retain priority over this narrow visual fallback.
         if observation.state == "unknown":

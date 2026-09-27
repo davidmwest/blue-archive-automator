@@ -52,7 +52,7 @@ Natural AP regeneration can update the top balance while Mission Info still show
 
 A navigation tap can briefly obscure a Hard-area arrow with its blue highlight. If the arrow is missing, the runner takes at most two additional observations of the same area before stopping. A changed page or area still stops input; a recognized arrow must pass the usual freshness and foreground checks. This recovered the September 25 route from area 14 through area 5 to area 1, where the previous run had stopped during the highlight.
 
-Recognition is for the English Global client at 1280×720 and 320 DPI. All runtime decisions use local OCR, image checks, and deterministic policy. [Nexon’s Mission guide](https://forum.nexon.com/bluearchive-en/board_view?board=3222&thread=2720664) documents three-star sweep eligibility and daily Hard attempt limits; execution reads the current screen instead of assuming a fixed AP cost.
+Recognition uses canonical 1280×720 coordinates for the English Global client, with native-resolution OCR and scaled input at the [supported display sizes](getting-started.md). Spend AP's recorded live validation used 720p; higher-resolution coverage is offline. All runtime decisions use local OCR, image checks, and deterministic policy. [Nexon’s Mission guide](https://forum.nexon.com/bluearchive-en/board_view?board=3222&thread=2720664) documents three-star sweep eligibility and daily Hard attempt limits; execution reads the current screen instead of assuming a fixed AP cost.
 
 ## Validation
 

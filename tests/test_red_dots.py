@@ -125,6 +125,16 @@ def test_campaign_badges_cannot_authorize_raid_combat():
     assert "total_assault" not in PRIORITY
 
 
+def test_badge_scan_ignores_portrait_billing_before_game_geometry_or_ocr():
+    portrait = cv2.rotate(decode_frame(png("home-badges")), cv2.ROTATE_90_CLOCKWISE)
+    encoded = cv2.imencode(".png", portrait)[1].tobytes()
+    startup = SimpleNamespace(
+        read=lambda _: pytest.fail("Billing frame must not reach game OCR"),
+        matches=lambda _: pytest.fail("Billing frame must not reach game templates"),
+    )
+    assert BadgeVision(startup).analyze(encoded, billing=True) == BadgeScreen("unknown")
+
+
 def test_joined_reward_header_over_mail_is_recognized(startup):
     result = ShopVision(startup).analyze(png("mail-receipt"))
     assert result.kind == "receipt"

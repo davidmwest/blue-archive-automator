@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 
 from .lesson_planner import LessonStudent
-from .vision import Word, decode_frame
+from .vision import decode_native_frame, native_game_region, read_game_words, Word, decode_frame
 
 
 @dataclass(frozen=True)
@@ -159,7 +159,7 @@ class LessonVision:
         self._header_cache: dict[bytes, str | None] = {}
         self._ticket_cache: dict[bytes, tuple[int | None, int | None]] = {}
 
-    def _tickets(self, frame, words, bounds):
+    def _tickets(self, frame, words, bounds, *, native_frame=None):
         result = _ticket_count(words, bounds)
         if result[0] is not None:
             return result
@@ -174,12 +174,14 @@ class LessonVision:
         if len(observed) > 1:
             return None, None
         x1, y1, x2, y2 = bounds
-        crop = frame[y1:y2, x1:x2]
+        crop = (frame[y1:y2, x1:x2] if native_frame is None
+                else native_game_region(native_frame, bounds))
         key = crop.tobytes()
         if key not in self._ticket_cache:
             candidates = []
             for scale in (2, 3):
-                enlarged = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+                enlarged = cv2.resize(crop, ((x2 - x1) * scale, (y2 - y1) * scale),
+                                      interpolation=cv2.INTER_CUBIC)
                 cropped_words = self.startup.read(enlarged)
                 text = _text(cropped_words)
                 if (not cropped_words or any(word.confidence < .9 for word in cropped_words)
@@ -194,22 +196,26 @@ class LessonVision:
         result = self._ticket_cache[key]
         return result if not observed or result in observed else (None, None)
 
-    def _room_name(self, frame, x, y, fallback):
+    def _room_name(self, frame, x, y, fallback, *, native_frame=None):
         # Long/wrapped labels can lose a letter in full-screen OCR (Club/Cub).
         # The name crop excludes the circular level badge and room portraits.
         if len(fallback) < 16:
             return fallback
-        crop = frame[y + 4:y + 66, x + 80:x + 331]
+        bounds = (x + 80, y + 4, x + 331, y + 66)
+        crop = (frame[y + 4:y + 66, x + 80:x + 331] if native_frame is None
+                else native_game_region(native_frame, bounds))
         key = crop.tobytes()
         if key not in self._header_cache:
             # Text against a tight crop edge can make detection split overlapping
             # words, duplicating letters ("Hyakkiyako S Shopping"). A small plain
             # margin preserves complete lines without changing their contents.
-            padded = cv2.copyMakeBorder(crop, 8, 8, 8, 8, cv2.BORDER_CONSTANT,
+            padding = 8 if native_frame is None else round(8 * native_frame.shape[1] / 1280)
+            padded = cv2.copyMakeBorder(crop, padding, padding, padding, padding, cv2.BORDER_CONSTANT,
                                        value=(255, 255, 255))
             candidates = []
             for scale in (2, 3):
-                enlarged = cv2.resize(padded, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+                enlarged = cv2.resize(padded, ((251 + 16) * scale, (62 + 16) * scale),
+                                      interpolation=cv2.INTER_CUBIC)
                 words = self.startup.read(enlarged)
                 candidates.append(_text(words).strip() if words and all(word.confidence >= .85 for word in words) else None)
             normalized = [re.sub(r"[^a-z0-9]", "", candidate.lower()) if candidate else None
@@ -220,30 +226,35 @@ class LessonVision:
             self._header_cache[key] = value
         return self._header_cache[key] or fallback
 
-    def _bond(self, frame, left, top):
+    def _bond(self, frame, left, top, *, native_frame=None):
         # Isolate the small heart label; whole-grid OCR frequently drops its digits.
-        crop = frame[top + 29:top + 51, left + 36:left + 70]
+        def region(bounds):
+            x1, y1, x2, y2 = bounds
+            return (frame[y1:y2, x1:x2] if native_frame is None
+                    else native_game_region(native_frame, bounds))
+        crop = region((left + 36, top + 29, left + 70, top + 51))
         key = crop.tobytes()
         if key in self._bond_cache:
             return self._bond_cache[key]
-        def read_number(image, scale=5):
-            enlarged = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+        def read_number(image, size, scale=5):
+            enlarged = cv2.resize(image, (size[0] * scale, size[1] * scale),
+                                  interpolation=cv2.INTER_CUBIC)
             words = self.startup.read(enlarged)
             values = {int(word.text.strip()) for word in words
                       if re.fullmatch(r"\d{1,3}", word.text.strip()) and word.confidence >= .85}
             return next(iter(values)) if len(values) == 1 else None
 
-        result = read_number(crop)
+        result = read_number(crop, (34, 22))
         if result is None:
             # The wider crop sometimes joins adjacent hair to a single digit
             # (for example C4). This crop stays entirely on the heart label.
-            result = read_number(frame[top + 33:top + 54, left + 40:left + 67])
+            result = read_number(region((left + 40, top + 33, left + 67, top + 54)), (27, 21))
         if result is None:
             # A thin single digit can remain low confidence beside the heart's
             # outline. Keep the entire numeric label but trim the surrounding
             # artwork, and require agreement at two independent resize scales.
-            label = frame[top + 31:top + 53, left + 42:left + 65]
-            candidates = [read_number(label, scale) for scale in (3, 5)]
+            label = region((left + 42, top + 31, left + 65, top + 53))
+            candidates = [read_number(label, (23, 22), scale) for scale in (3, 5)]
             if candidates[0] is not None and candidates[0] == candidates[1]:
                 result = candidates[0]
         if result is not None and not 1 <= result <= 100:
@@ -253,7 +264,7 @@ class LessonVision:
         self._bond_cache[key] = result
         return result
 
-    def _students(self, frame, left, top, *, slots=4, step=72, allow_leading_blank=False):
+    def _students(self, frame, left, top, *, slots=4, step=72, allow_leading_blank=False, native_frame=None):
         students = []
         complete = True
         blank_seen = False
@@ -284,11 +295,11 @@ class LessonVision:
                 owned = True
             elif outside_heart < 10 and blue_border >= 80:
                 owned = False
-            bond = self._bond(frame, x, top) if owned is True else None
+            bond = self._bond(frame, x, top, native_frame=native_frame) if owned is True else None
             students.append(LessonStudent(str(slot), owned, bond))
         return tuple(students), complete
 
-    def _rooms(self, frame, words):
+    def _rooms(self, frame, words, *, native_frame=None):
         cards = []
         for index in range(9):
             row, column = divmod(index, 3)
@@ -306,8 +317,8 @@ class LessonVision:
             excluded = bool(re.search(r"rank\s*\d+\s*required|lesson\s*complete|completed", text))
             available = False if excluded else True if header_brightness > 180 else None
             if available is True and name:
-                name = self._room_name(frame, x, y, name)
-            students, complete = self._students(frame, x + 20, y + 78) if available is True else ((), True)
+                name = self._room_name(frame, x, y, name, native_frame=native_frame)
+            students, complete = self._students(frame, x + 20, y + 78, native_frame=native_frame) if available is True else ((), True)
             if available is True and students:
                 # Finished rooms keep a white title and bright heart labels, but
                 # every portrait's standard border is dimmed. Student artwork or
@@ -347,7 +358,8 @@ class LessonVision:
 
     def analyze(self, png: bytes) -> LessonScreen:
         frame = decode_frame(png)
-        words = tuple(self.startup.read(frame))
+        words = tuple(read_game_words(png, self.startup))
+        native_frame = decode_native_frame(png)
         # Modals take precedence over their dimmed underlying controls.
         if _has(words, "relationship rank up", (350, 580, 940, 660)):
             return LessonScreen("relationship_rank_up", dismiss_target=(1170, 650),
@@ -394,7 +406,7 @@ class LessonVision:
             # Portraits align to the right edge; there can be one to three. Detect
             # the actual leftmost occupied slot rather than assigning student names.
             students, complete = self._students(frame, 774, 156, slots=3, step=69,
-                                               allow_leading_blank=True)
+                                               allow_leading_blank=True, native_frame=native_frame)
             return LessonScreen("confirm", tickets=before, tickets_after=after,
                                 room_name=name, students=students,
                                 start_target=controls[0].center if len(controls) == 1 else None,
@@ -410,8 +422,8 @@ class LessonVision:
                     and float(frame[171, 245:445].mean()) < 215):
                 return LessonScreen("unknown", words=words, inspection_complete=False,
                                     detail="The room grid is still moving or has an unsupported layout")
-            tickets, capacity = self._tickets(frame, words, (530, 132, 765, 170))
-            cards = self._rooms(frame, words)
+            tickets, capacity = self._tickets(frame, words, (530, 132, 765, 170), native_frame=native_frame)
+            cards = self._rooms(frame, words, native_frame=native_frame)
             return LessonScreen("rooms", tickets=tickets, ticket_capacity=capacity,
                                 room_cards=cards, words=words,
                                 inspection_complete=bool(cards) and all(card.inspection_complete for card in cards),
@@ -420,7 +432,7 @@ class LessonVision:
         if (_has(words, "lesson", (85, 0, 230, 47))
                 and _has(words, "location select", (620, 76, 900, 134))
                 and _bright(frame, (1020, 91, 1060, 117))):
-            tickets, capacity = self._tickets(frame, words, (40, 75, 290, 125))
+            tickets, capacity = self._tickets(frame, words, (40, 75, 290, 125), native_frame=native_frame)
             return LessonScreen("overview", tickets=tickets, ticket_capacity=capacity,
                                 total_rank=_rank(_within(words, (875, 110, 1010, 133))),
                                 location_rows=self._overview(words), words=words)
@@ -429,7 +441,7 @@ class LessonVision:
                 and _has(words, "all locations", (1050, 625, 1270, 705))
                 and _has(words, "area rewards", (920, 166, 1080, 208))
                 and _bright(frame, (1005, 91, 1200, 99))):
-            tickets, capacity = self._tickets(frame, words, (40, 75, 290, 125))
+            tickets, capacity = self._tickets(frame, words, (40, 75, 290, 125), native_frame=native_frame)
             rank, name = _header_name(_within(words, (924, 87, 1235, 131)))
             progress = _within(words, (928, 130, 1245, 165))
             xp, needed = _ratio(progress)

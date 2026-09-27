@@ -65,6 +65,7 @@ class Config:
     lessons_enabled_in_daily: bool = True
     close_app_when_idle: bool = False
     auto_download: bool = True
+    # Recognition coordinates, not the native emulator resolution.
     expected_width: int = 1280
     expected_height: int = 720
 
@@ -180,7 +181,7 @@ class Config:
         object.__setattr__(self, "lessons_locations", locations)
         if (type(self.expected_width) is not int or self.expected_width != 1280
                 or type(self.expected_height) is not int or self.expected_height != 720):
-            raise ConfigError("The supported display is fixed at 1280×720")
+            raise ConfigError("Recognition coordinates are fixed at 1280×720; native display size is detected")
         for name in ("run_dir", "lock_dir", "state_dir"):
             value = getattr(self, name)
             if (not isinstance(value, (str, Path)) or not str(value).strip()

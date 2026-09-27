@@ -167,6 +167,22 @@ def test_png_gray_and_bgra_inputs_give_consistent_results():
     assert from_png == from_gray == from_bgra
 
 
+@pytest.mark.parametrize('size', [(2560, 1440), (3840, 2160)])
+def test_native_png_pan_displacement_stays_in_canonical_coordinates(size):
+    before = hud(room(7))
+    after = hud(translate(room(7), 48, -31))
+    native = [cv2.imencode('.png', cv2.resize(frame, size, interpolation=cv2.INTER_NEAREST))[1].tobytes()
+              for frame in (before, after)]
+    measured = measure_camera_displacement(*native)
+    assert measured is not None
+    assert np.allclose(measured, (48, -31), atol=2)
+
+
+def test_unsupported_aspect_ratio_png_is_unknown_not_stationary():
+    encoded = cv2.imencode('.png', cv2.resize(room(7), (1920, 1200)))[1].tobytes()
+    assert measure_camera_displacement(encoded, encoded) is None
+
+
 @pytest.mark.parametrize("bad", [b"", b"not a PNG", np.zeros((1080, 1920, 3), dtype=np.uint8),
                                  np.zeros((720, 1280, 3), dtype=np.float32),
                                  np.zeros((720, 1280, 2), dtype=np.uint8), None])
