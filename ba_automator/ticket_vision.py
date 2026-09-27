@@ -1,6 +1,7 @@
 """Local, fixed English recognition for Bounty and Scrimmage sweeps."""
 
 from dataclasses import dataclass, replace
+import math
 import re
 import cv2
 from .vision import decode_native_frame, native_game_region, read_game_words, Word, decode_frame
@@ -48,25 +49,28 @@ def reread_ticket_projection(native, reader, words):
     pieces = sorted(within(words, bounds), key=lambda word: word.box[0])
     # Do not replace a complete, contradictory projection or reinterpret
     # Scrimmage's adjacent AP counter. Native whole-frame OCR can also
-    # omit the arrow AND the final single digit; its surviving before-ticket
-    # value must still independently agree with both complete crop readings.
-    if (len(pieces) not in (1, 2) or any(word.confidence < .95 for word in pieces)
+    # omit the arrow, final digit, or entire projection. Every surviving digit
+    # must agree with both complete crop readings. An absent projection is not
+    # a zero balance: the crops must still independently prove both values.
+    if (len(pieces) not in (0, 1, 2)
+            or any(not math.isfinite(word.confidence) or word.confidence < .95 for word in pieces)
             or any(not re.fullmatch(r"\d+", word.text.strip()) for word in pieces)):
         return None
     partial = len(pieces) == 1
     if partial:
         if not 1030 <= pieces[0].center[0] <= 1060:
             return None
-    else:
+    elif pieces:
         if not 1030 <= pieces[0].center[0] < pieces[1].center[0] <= 1100:
             return None
     observed_digits = tuple(int(word.text) for word in pieces)
     expected = None
     confidence = []
-    # A second, tighter crop excludes the icon and speech-bubble edge, which
-    # otherwise degrade OCR of thin final digits at some resize factors.
-    for crop_bounds, scale in (((1010, 341, 1105, 392), 2),
-                               ((1026, 348, 1098, 380), 3)):
+    # Isolate the entire number/arrow row without the ticket icon or bubble
+    # border. A little vertical margin avoids clipping thin arrow/digit edges.
+    # Two scales must independently read the exact same complete projection.
+    for crop_bounds, scale in (((1025, 346, 1100, 381), 3),
+                               ((1025, 346, 1100, 381), 4)):
         crop = native_game_region(native, crop_bounds)
         width, height = crop_bounds[2] - crop_bounds[0], crop_bounds[3] - crop_bounds[1]
         enlarged = cv2.resize(crop, (width * scale, height * scale),
@@ -75,13 +79,14 @@ def reread_ticket_projection(native, reader, words):
                                     8 * scale, 8 * scale, cv2.BORDER_CONSTANT,
                                     value=(255, 255, 255))
         observed = reader.read(padded)
-        if len(observed) != 1 or observed[0].confidence < .95:
+        if (len(observed) != 1 or not math.isfinite(observed[0].confidence)
+                or observed[0].confidence < .95):
             return None
         match = re.fullmatch(r"(\d+)\s*→\s*(\d+)", observed[0].text.strip())
         if not match:
             return None
         projection = tuple(map(int, match.groups()))
-        if ((projection[:1] if partial else projection) != observed_digits
+        if (pieces and (projection[:1] if partial else projection) != observed_digits
                 or expected is not None and projection != expected):
             return None
         expected = projection
@@ -312,6 +317,7 @@ class TicketVision:
             has(words, "bounty", (80, 0, 310, 55))
             or (has(words, "scrimmage", (80, 0, 310, 55))
                 and len(ap_projection) == 1
+                and math.isfinite(ap_projection[0].confidence)
                 and ap_projection[0].confidence >= .95
                 and re.fullmatch(r"\d+\s*→\s*\d+", ap_projection[0].text.strip()))
         )
@@ -371,7 +377,8 @@ class TicketVision:
             enlarged = cv2.resize(crop, (width * scale, height * scale),
                                   interpolation=cv2.INTER_CUBIC)
             observed = self.startup.read(enlarged)
-            if (len(observed) != 1 or observed[0].confidence < .9
+            if (len(observed) != 1 or not math.isfinite(observed[0].confidence)
+                    or observed[0].confidence < .9
                     or not re.fullmatch(r"0\s*→\s*-", observed[0].text.strip())):
                 return screen
         return recovered

@@ -855,12 +855,13 @@ account information and the surrounding scene are masked. This fixture proves
 receipt recognition, not complete coverage of the reward list. The game-derived
 fixture remains outside the project's MIT grant.
 
-`task-rewards-receipt-merged-native.png` and its recorded full-frame OCR retain
-the September 27 native Tasks receipt after one successful Claim All. OCR
-merged a dim task title behind the gold banner into `REWARD ACQUIRED!k(s)`;
-an isolated native heading crop must instead read the exact high-confidence
-receipt title. The original gold pixels and exact Touch to Continue control
-remain required. Only the receipt recognition regions and reward cards remain;
-account details, balances, and the surrounding scene are masked. This saved
-frame tests receipt recognition, not permission to repeat Claim All. The
-game-derived fixture remains outside the project's MIT grant.
+`tickets-bounty-native-missing-projection.png` and
+`tickets-scrimmage-native-weak-projection.png`, with their recorded OCR, retain
+the September 27 Classroom H and Gehenna B sweep confirmations. Whole-frame
+Bounty OCR omitted all of `5→2`; the Scrimmage crop read `10→6` below the
+required confidence. Two complete native crop readings must independently
+agree on the projection and all surviving digits. Stage, stars, quantity,
+unchanged AP, and active controls remain separate checks. Tests reject partial,
+contradictory, and low-confidence counters. The fixtures mask the surrounding
+scene and retain only recognition regions; they authorize no additional sweep.
+Game-derived fixtures remain outside the project's MIT grant.

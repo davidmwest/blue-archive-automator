@@ -133,8 +133,12 @@ the full daily still needs its own successful result.
 
 a later Bounty screen omitted both the ticket arrow and its final digit;
 Scrimmage omitted the arrow between two readable digits. the ticket reader
-now uses two differently framed native crops to prove the complete change.
-both must agree at high confidence with each other and the surviving digits.
+now uses two scaled native crops to prove the complete change.
+both must agree at high confidence with each other and any surviving digits.
+a later retry omitted the entire Bounty projection; the same two complete
+reads are required when whole-frame OCR finds no digits. the crops exclude
+the ticket icon and preserve the full arrow row, so a weak read cannot become
+an assumed balance.
 Scrimmage's adjacent AP projection remains a separate required observation.
 complete contradictory readings still stop the task, and quantity arithmetic
 still has to match before any sweep input.

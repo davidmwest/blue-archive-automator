@@ -152,7 +152,7 @@ def test_native_bounty_recovers_only_arrow_with_two_agreeing_crops(vision, bount
 
     startup = Startup()
     screen = TicketVision(startup).analyze(png)
-    assert startup.crops == [(134, 222), (144, 264)]
+    assert startup.crops == [(153, 273), (204, 364)]
     assert (screen.kind, screen.task, screen.area, screen.stage) == (
         "detail", "bounties", "Desert Railroad", "H",
     )
@@ -365,6 +365,134 @@ def test_partial_projection_keeps_existing_evidence_guards(partial_ticket_projec
             return {}
 
     assert TicketVision(Startup()).analyze(png).kind == "unknown"
+
+
+@pytest.fixture(scope="module", params=[
+    ("bounty-native-missing-projection", "bounties", "Classroom", "H", 5, 2, 3),
+    ("scrimmage-native-weak-projection", "scrimmages", "Gehenna", "B", 10, 6, 4),
+])
+def retry_ticket_projection(request):
+    import json
+    from ba_automator.vision import Word
+
+    name, *expected = request.param
+    fixture = Path(__file__).parent / "fixtures" / f"tickets-{name}"
+    words = [Word(**word) for word in json.loads(fixture.with_suffix(".json").read_text())["words"]]
+    return fixture.with_suffix(".png").read_bytes(), words, expected
+
+
+def test_native_retry_projection_requires_two_readable_complete_crops(vision, retry_ticket_projection):
+    png, words, expected = retry_ticket_projection
+    assert classify_tickets(decode_frame(png), words).kind == "unknown"
+
+    class Startup:
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(word, box=tuple(value * 2 for value in word.box)) for word in words]
+            return vision.startup.read(image)
+
+        def matches(self, image):
+            return {}
+
+    screen = TicketVision(Startup()).analyze(png)
+    assert (screen.task, screen.area, screen.stage, screen.tickets,
+            screen.after_tickets, screen.count) == tuple(expected)
+    assert (screen.kind, screen.ap, screen.after_ap, screen.ap_cost,
+            screen.stars, screen.target) == ("detail", 584, 584, 0, 3, (937, 405))
+
+
+@pytest.mark.parametrize("fault", [
+    "wrong_count", "disagreement", "low_confidence", "missing_after",
+    "missing_before", "missing_arrow", "empty", "extra_text",
+    "contradictory_whole_projection", "right_hand_fragment", "wrong_ap",
+])
+def test_retry_projection_never_infers_hidden_or_conflicting_counters(retry_ticket_projection, fault):
+    from ba_automator.crafting_vision import within
+    from ba_automator.vision import Word
+
+    png, original, expected = retry_ticket_projection
+    task, _, _, before, after, _ = expected
+    pieces = within(original, (1010, 337, 1108, 384))
+    words = [word for word in original if word not in pieces]
+    if fault == "contradictory_whole_projection":
+        words.append(Word(f"{before}→{after + 1}", .99, (1030, 353, 1091, 374)))
+    elif fault == "right_hand_fragment":
+        words.append(Word(str(after), .99, (1076, 355, 1091, 372)))
+    elif fault == "wrong_ap":
+        words = [replace(word, text="585/220") if word.text == "584/220" else word
+                 for word in words]
+        if task == "bounties":
+            words = [word for word in words if word.text != "585/220"]
+
+    class Startup:
+        crop_reads = 0
+
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(word, box=tuple(value * 2 for value in word.box)) for word in words]
+            assert fault not in {"contradictory_whole_projection", "right_hand_fragment"}
+            self.crop_reads += 1
+            text = f"{before}→{after}"
+            confidence = .99
+            if fault == "wrong_count" or fault == "disagreement" and self.crop_reads == 2:
+                text = f"{before}→{after + 1}"
+            elif fault == "low_confidence" and self.crop_reads == 2:
+                confidence = .94
+            elif fault == "missing_after":
+                text = f"{before}→"
+            elif fault == "missing_before":
+                text = f"→{after}"
+            elif fault == "missing_arrow":
+                text = f"{before}{after}"
+            elif fault == "empty":
+                return []
+            elif fault == "extra_text":
+                return [Word(text, .99, (0, 0, 100, 30)), Word("1", .99, (0, 30, 30, 60))]
+            return [Word(text, confidence, (0, 0, 100, 30))]
+
+        def matches(self, image):
+            return {}
+
+    result = TicketVision(Startup()).analyze(png)
+    assert result.kind == "unknown" and result.target is None
+
+
+@pytest.mark.parametrize("confidence", [float("nan"), float("inf"), -float("inf")])
+@pytest.mark.parametrize("source", ["fragment", "first_crop", "second_crop", "ap_projection"])
+def test_ticket_projection_recovery_rejects_nonfinite_confidence(retry_ticket_projection, confidence, source):
+    from ba_automator.crafting_vision import within
+    from ba_automator.vision import Word
+
+    png, original, expected = retry_ticket_projection
+    task, _, _, before, after, _ = expected
+    if source == "ap_projection" and task != "scrimmages":
+        pytest.skip("Bounties have no AP projection")
+    pieces = within(original, (1010, 337, 1108, 384))
+    words = [word for word in original if word not in pieces]
+    if source == "fragment":
+        words.append(Word(str(before), confidence, (1030, 353, 1057, 374)))
+    elif source == "ap_projection":
+        ap = within(words, (855, 337, 1010, 384))
+        assert len(ap) == 1
+        words = [replace(word, confidence=confidence) if word in ap else word for word in words]
+
+    class Startup:
+        crop_reads = 0
+
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(word, box=tuple(value * 2 for value in word.box)) for word in words]
+            assert source not in {"fragment", "ap_projection"}, "invalid whole-frame proof must block crops"
+            self.crop_reads += 1
+            bad_read = 1 if source == "first_crop" else 2
+            return [Word(f"{before}→{after}", confidence if self.crop_reads == bad_read else .99,
+                         (0, 0, 100, 30))]
+
+        def matches(self, image):
+            return {}
+
+    result = TicketVision(Startup()).analyze(png)
+    assert result.kind == "unknown" and result.target is None
 
 
 def test_attendance_exact_calendar_and_negative_controls(vision):
@@ -948,6 +1076,9 @@ def test_real_exhausted_bounty_recovers_omitted_projection_dash(vision, bounty_z
     [[], []],
     [[("0→-", .99)], [("0→1", .99)]],
     [[("0→-", .99)], [("0→-", .89)]],
+    [[("0→-", float("nan"))], [("0→-", .99)]],
+    [[("0→-", .99)], [("0→-", float("inf"))]],
+    [[("0→-", .99)], [("0→-", -float("inf"))]],
     [[("0→", .99)], [("0→-", .99)]],
     [[("0→-", .99), ("1", .99)], [("0→-", .99)]],
 ])
@@ -1052,6 +1183,9 @@ def test_scrimmage_recovers_entire_missing_zero_label(vision, scrimmage_missing_
     [[], []],
     [[("0→-", .99)], [("0→1", .99)]],
     [[("0→-", .99)], [("0→-", .89)]],
+    [[("0→-", float("nan"))], [("0→-", .99)]],
+    [[("0→-", .99)], [("0→-", float("inf"))]],
+    [[("0→-", .99)], [("0→-", -float("inf"))]],
     [[("0→", .99)], [("0→-", .99)]],
     [[("0→-", .99), ("1", .99)], [("0→-", .99)]],
 ])
