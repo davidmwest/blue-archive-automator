@@ -89,6 +89,42 @@ def test_clock_rollback_cannot_replay_an_earlier_game_day(config):
     assert not daily_schedule.is_due(daily_schedule.read_state(config), NOW - timedelta(days=1))
 
 
+@pytest.mark.parametrize("status", ["success", "failed", "stopped"])
+def test_deferred_display_metadata_survives_without_replaying_daily(config, status):
+    state = {**occurrence(status), "deferred_tasks": [
+        {"task": "tactical_battles", "status": "deferred"},
+        {"task": "crafting", "status": "disabled"},
+    ]}
+    daily_schedule.write_state(config, state)
+    persisted = daily_schedule.read_state(config)
+    assert persisted == state
+    assert not daily_schedule.is_due(persisted, NOW + timedelta(minutes=6))
+    assert daily_schedule.is_due(persisted, NOW + timedelta(days=1))
+
+
+@pytest.mark.parametrize("deferred", [
+    None, {}, [None], [{"task": "daily", "status": "deferred"}],
+    [{"task": "unknown", "status": "deferred"}],
+    [{"task": "tactical_battles", "status": "success"}],
+    [{"task": "tactical_battles", "status": []}],
+    [{"task": "tactical_battles"}],
+    [{"task": "tactical_battles", "status": "deferred", "extra": True}],
+])
+def test_invalid_deferred_metadata_cannot_be_persisted(config, deferred):
+    state = {**occurrence("success"), "deferred_tasks": deferred}
+    with pytest.raises(daily_schedule.DailyScheduleError):
+        daily_schedule.write_state(config, state)
+
+
+@pytest.mark.parametrize("status", ["running", "skipped"])
+def test_only_finished_visits_can_record_deferred_steps(config, status):
+    state = {**occurrence(status), "deferred_tasks": [
+        {"task": "tactical_battles", "status": "deferred"},
+    ]}
+    with pytest.raises(daily_schedule.DailyScheduleError):
+        daily_schedule.write_state(config, state)
+
+
 def test_cancelled_queue_occurrence_may_be_skipped_without_a_start(config):
     state = {**occurrence("skipped"), "started_at": None}
     daily_schedule.write_state(config, state)

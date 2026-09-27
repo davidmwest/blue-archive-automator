@@ -99,7 +99,14 @@
     else if (queued) notes.push(status?.queue_paused ? "queued · waiting for resume" : "queued · runs in order");
     else if (schedule?.blocked_reason) notes.push(`needs a look: ${schedule.blocked_reason}`);
     else if (["failed", "stopped"].includes(schedule?.status)) notes.push(currentOccurrence ? "didn't finish. check the log, then queue daily to retry." : "last daily didn't finish");
-    else if (schedule?.status === "success") notes.push(currentOccurrence ? "done for this game day" : "last daily finished");
+    else if (schedule?.status === "success") {
+      notes.push(currentOccurrence ? "daily visit finished" : "last daily visit finished");
+      for (const entry of schedule.deferred_tasks || []) {
+        notes.push(entry.task === "tactical_battles" && entry.status === "deferred"
+          ? "at visit end: Tactical Challenge search saved for a later visit"
+          : `at visit end: ${taskName(entry.task)} ${entry.status}`);
+      }
+    }
     else if (schedule?.status === "skipped") notes.push(currentOccurrence ? "skipped for this game day" : "last scheduled daily was skipped");
     if (!enabled) notes.push("schedule off · queue daily for a single run");
     else if (next && next.getTime() <= Date.now()) {
@@ -357,7 +364,7 @@
       timestamp.textContent = shortTime(job.completed_at);
       if (dateValue(job.completed_at)) timestamp.dateTime = job.completed_at;
       const badge = document.createElement("span");
-      stateBadge(badge, job.state, ({ disabled: "Disabled", deferred: "Awaiting reset test", success: "Completed", failed: "Failed", stopped: "Stopped" }[job.state] || job.state));
+      stateBadge(badge, job.state, ({ disabled: "Disabled", deferred: "Awaiting reset test", success: job.task === "daily" ? "Visit finished" : "Completed", failed: "Failed", stopped: "Stopped" }[job.state] || job.state));
       item.append(title, timestamp, badge);
       historyList.append(item);
     });
@@ -411,7 +418,8 @@
       $("settings-lock-note").textContent = "demo settings are read only. there’s no device connected.";
     }
     const running = isRunning();
-    stateBadge($("state-badge"), status.state, ({ disabled: "Disabled", deferred: "Awaiting reset test", idle: "Ready", running: "Running", success: status.task === "restart" && !status.app_closed ? "Home reached" : "Completed", failed: "Needs attention", stopped: "Stopped" }[status.state] || status.state));
+    const successLabel = status.task === "daily" ? "Visit finished" : status.task === "restart" && !status.app_closed ? "Home reached" : "Completed";
+    stateBadge($("state-badge"), status.state, ({ disabled: "Disabled", deferred: "Awaiting reset test", idle: "Ready", running: "Running", success: successLabel, failed: "Needs attention", stopped: "Stopped" }[status.state] || status.state));
     $("run-phase").textContent = status.phase || "close the game, open it again, get to home. deal with the popups on the way.";
     $("current-task").textContent = running ? (status.current_job ? jobName(status.current_job) : taskName(status.task)) : "None running";
     $("device-serial").textContent = status.config?.serial || "—";

@@ -305,6 +305,7 @@ class DashboardController:
                   "reset_delay_minutes": delay, "catch_up": True,
                   "current_game_day": game_day(now),
                   "next_due_at": daily_schedule.next_due(now, delay).isoformat(),
+                  "deferred_tasks": [],
                   "blocked_reason": self._daily_schedule_error}
         try:
             saved = daily_schedule.read_state(self.config)
@@ -400,10 +401,12 @@ class DashboardController:
                 if state["run_id"] != job["id"]:
                     raise RuntimeError("Daily occurrence changed while the job was running")
                 state.update(status=self._state if self._state in {"success", "stopped"} else "failed",
-                             completed_at=self._wall_clock().isoformat())
+                             completed_at=self._wall_clock().isoformat(),
+                             deferred_tasks=(self._result or {}).get("deferred_tasks", []))
                 daily_schedule.write_state(self.config, state)
                 self._daily("daily_occurrence_finished", task="daily", run=job["id"],
-                            game_day=state["game_day"], status=state["status"])
+                            game_day=state["game_day"], status=state["status"],
+                            deferred_tasks=state["deferred_tasks"])
         except (RuntimeError, OSError) as exc:
             self._daily_schedule_error = str(exc)
             self._log(f"Could not save Daily completion; automatic retries remain held: {exc}", "error")
@@ -1100,6 +1103,8 @@ class DashboardController:
                     elif exit_code == 0 and self._result and self._result.get("status") in {"success", "deferred"}:
                         self._state = "success"
                         self._phase = TASK_LABELS[job["task"]]
+                        if job["task"] == "daily":
+                            self._phase = self._daily_completion_phase(summary)
                         if job["task"] == "tactical_battles":
                             # Reward collection follows battles and can be the
                             # last successful result even when scouting yielded.
@@ -1411,7 +1416,8 @@ class DashboardController:
                 clean_deferred = []
                 for entry in deferred:
                     if (not isinstance(entry, dict) or entry.get("task") not in tasks
-                            or not isinstance(entry.get("status"), str)):
+                            or not isinstance(entry.get("status"), str)
+                            or entry["status"] not in daily_schedule.DEFERRED_STATUSES):
                         raise ValueError("Invalid deferred task")
                     clean_deferred.append({"task": entry["task"], "status": entry["status"][:100]})
                 if ((value["status"] == "success" and (failures or value["aborted"]))
@@ -1423,6 +1429,18 @@ class DashboardController:
             except (ValueError, TypeError, OSError):
                 continue
         return None
+
+    @staticmethod
+    def _daily_completion_phase(summary: dict | None) -> str:
+        # A completed visit can leave scheduled work, including AP, for later.
+        phase = "Daily visit finished"
+        for entry in (summary or {}).get("deferred_tasks", []):
+            if entry == {"task": "tactical_battles", "status": "deferred"}:
+                phase += "; Tactical Challenge search saved"
+            else:
+                task = "Tactical Challenge" if entry["task"] == "tactical_battles" else entry["task"].replace("_", " ")
+                phase += f"; {task} {entry['status']}"
+        return phase
 
     @staticmethod
     def _summary_failure_detail(summary: dict) -> str:

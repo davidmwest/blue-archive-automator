@@ -14,9 +14,12 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
+from .tasks import TASKS
+
 
 RESET_HOUR_UTC = 19
 STATUSES = frozenset({"running", "success", "failed", "stopped", "skipped"})
+DEFERRED_STATUSES = frozenset({"deferred", "disabled", "stopped", "interrupted"})
 
 
 class DailyScheduleError(RuntimeError):
@@ -54,6 +57,17 @@ def _validate(state: dict) -> dict:
         if (not isinstance(state, dict) or type(state.get("version")) is not int
                 or state["version"] != 1 or not empty_state().keys() <= state.keys()):
             raise ValueError("Unsupported or incomplete daily state")
+        # Optional display metadata keeps older occurrence records compatible.
+        # It never changes whether this game day's automatic run was consumed.
+        deferred = state.get("deferred_tasks", [])
+        if (not isinstance(deferred, list) or len(deferred) > len(TASKS)
+                or any(not isinstance(entry, dict) or set(entry) != {"task", "status"}
+                       or not isinstance(entry["task"], str) or entry["task"] not in TASKS - {"daily"}
+                       or entry["status"] not in DEFERRED_STATUSES
+                       for entry in deferred)):
+            raise ValueError("Invalid deferred task metadata")
+        if deferred and state["status"] in {None, "running", "skipped"}:
+            raise ValueError("Only a finished visit can record deferred tasks")
         if state["game_day"] is None:
             if any(state[key] is not None for key in ("status", "run_id", "started_at", "completed_at")):
                 raise ValueError("An empty occurrence cannot have an outcome")

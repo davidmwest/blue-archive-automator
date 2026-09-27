@@ -1624,7 +1624,10 @@ def test_scanner_does_not_replace_the_actual_job_result(controlled):
 
 
 @pytest.mark.parametrize("terminal", ["success", "partial_failure", "failed", "stopped"])
-def test_daily_summary_preserves_completed_work_and_identifies_failed_steps(config_path, terminal):
+@pytest.mark.parametrize("deferred_status", [None, "deferred", "disabled"])
+def test_daily_summary_preserves_completed_work_and_identifies_failed_steps(config_path, terminal, deferred_status):
+    deferred = [{"task": "tactical_battles", "status": deferred_status}] if deferred_status else []
+
     class SummaryOutput(FakeOutput):
         def __iter__(self):
             self.process.done.wait()
@@ -1640,7 +1643,7 @@ def test_daily_summary_preserves_completed_work_and_identifies_failed_steps(conf
             }]
             yield json.dumps({"type": "command_summary", "command": "daily", "status": terminal,
                               "completed_tasks": ["restart", "cafe", "scrimmages"],
-                              "failed_tasks": failures, "deferred_tasks": [],
+                              "failed_tasks": failures, "deferred_tasks": deferred,
                               "skipped_tasks": ["lessons"] if terminal in {"failed", "stopped"} else [],
                               "aborted": terminal in {"failed", "stopped"}}) + "\n"
 
@@ -1663,10 +1666,18 @@ def test_daily_summary_preserves_completed_work_and_identifies_failed_steps(conf
         assert status["state"] == expected
         assert status["result"]["status"] == terminal
         assert status["result"]["completed_tasks"] == ["restart", "cafe", "scrimmages"]
+        assert status["result"]["deferred_tasks"] == deferred
         assert status["result"]["actions"] is None  # A scanner's zero is not the day's total.
         assert status["schedule"]["cafe"]["last_success_at"] == now.isoformat()
         assert status["schedule"]["cafe"]["consecutive_failures"] == 0
         assert status["schedule"]["daily"]["status"] == expected
+        assert status["schedule"]["daily"]["deferred_tasks"] == deferred
+        if terminal == "success":
+            suffix = {None: "", "deferred": "; Tactical Challenge search saved",
+                      "disabled": "; Tactical Challenge disabled"}[deferred_status]
+            assert status["phase"] == "Daily visit finished" + suffix
+        elif terminal == "partial_failure":
+            assert status["phase"] == "Daily finished with failures; check failed jobs"
         if terminal in {"partial_failure", "failed"}:
             assert status["result"]["failed_tasks"][0]["task"] == "bounties"
             notice = status["failed_jobs"][0]["detail"]
@@ -1683,6 +1694,23 @@ def test_daily_summary_preserves_completed_work_and_identifies_failed_steps(conf
         assert len(factory.processes) == 1
     finally:
         controller.close()
+
+    # A saved continuation note is historical display metadata, not permission
+    # to replay the Daily or to convert a disabled step into a scheduled job.
+    with config_path.open("a", encoding="utf-8") as stream:
+        stream.write("\n[daily]\nschedule_enabled=true\n")
+    second = ProcessFactory()
+    restored = DashboardController(config_path, process_factory=second, wall_clock=lambda: now)
+    try:
+        with restored._condition:
+            restored._enqueue_scheduled()
+        saved = restored.status()["schedule"]["daily"]
+        assert saved["deferred_tasks"] == deferred
+        assert saved["status"] == expected
+        assert not restored.status()["queue"]
+        assert not second.processes
+    finally:
+        restored.close()
 
 
 @pytest.mark.parametrize("scan_completed,scan_status,held,stopped,expected", [
@@ -1755,7 +1783,7 @@ def test_partial_daily_badges_require_completed_scan_and_preserve_holds(
         controller.close()
 
 
-@pytest.mark.parametrize("bad_field", ["command", "completed_tasks", "failed_tasks", "status", "aborted", "evidence"])
+@pytest.mark.parametrize("bad_field", ["command", "completed_tasks", "failed_tasks", "deferred_tasks", "status", "aborted", "evidence"])
 def test_daily_summary_rejects_invalid_payload_or_external_evidence(tmp_path, bad_field):
     summary = {"type": "command_summary", "command": "daily", "status": "partial_failure",
                "completed_tasks": ["restart"], "failed_tasks": [{"task": "bounties", "error": "review",
@@ -1766,6 +1794,7 @@ def test_daily_summary_rejects_invalid_payload_or_external_evidence(tmp_path, ba
         summary["failed_tasks"][0]["run_dir"] = str(tmp_path.parent / "outside")
     else:
         summary[bad_field] = {"command": "restart", "completed_tasks": ["unknown"],
+                              "deferred_tasks": [{"task": "tactical_battles", "status": "success"}],
                               "failed_tasks": [], "status": "success", "aborted": "false"}[bad_field]
     assert DashboardController._parse_command_summary(json.dumps(summary), tmp_path) is None
 
