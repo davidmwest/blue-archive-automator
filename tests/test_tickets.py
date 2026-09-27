@@ -212,14 +212,24 @@ def test_bounty_arrow_recovery_never_overwrites_contradictions(bounty_missing_ar
         words = [word for word in words if word.text != "10"]
 
     class Startup:
+        crop_reads = 0
+
         def read(self, image):
-            assert image.shape[:2] == (1440, 2560), "contradiction must not trigger crop recovery"
-            return [replace(word, box=tuple(value * 2 for value in word.box)) for word in words]
+            if image.shape[:2] == (1440, 2560):
+                return [replace(word, box=tuple(value * 2 for value in word.box)) for word in words]
+            # A positioned right-hand digit is eligible for corroboration,
+            # but cannot establish either balance without a complete crop.
+            assert change == "missing_before_digit", "contradiction must not trigger crop recovery"
+            self.crop_reads += 1
+            return []
 
         def matches(self, image):
             return {}
 
-    assert TicketVision(Startup()).analyze(png).kind == "unknown"
+    startup = Startup()
+    screen = TicketVision(startup).analyze(png)
+    assert screen.kind == "unknown" and screen.target is None
+    assert startup.crop_reads == (1 if change == "missing_before_digit" else 0)
 
 
 @pytest.fixture(scope="module", params=[
@@ -338,7 +348,7 @@ def test_partial_ticket_projection_rejects_bad_crop_or_arithmetic(partial_ticket
     assert screen.kind == "unknown" and screen.target is None
 
 
-@pytest.mark.parametrize("fault", ["complete_contradiction", "wrong_side", "low_confidence", "no_heading"])
+@pytest.mark.parametrize("fault", ["complete_contradiction", "right_fragment_without_proof", "low_confidence", "no_heading"])
 def test_partial_projection_keeps_existing_evidence_guards(partial_ticket_projection, fault):
     from ba_automator.crafting_vision import within
     from ba_automator.vision import Word
@@ -348,7 +358,7 @@ def test_partial_projection_keeps_existing_evidence_guards(partial_ticket_projec
     words = [w for w in original if w not in pieces]
     if fault == "complete_contradiction":
         words.append(Word(f"{expected[3]}→0", .99, (1030, 353, 1090, 373)))
-    elif fault == "wrong_side":
+    elif fault == "right_fragment_without_proof":
         words.append(Word(str(expected[4]), .99, (1076, 355, 1091, 372)))
     elif fault == "low_confidence":
         words.extend(replace(w, confidence=.94) for w in pieces)
@@ -357,14 +367,22 @@ def test_partial_projection_keeps_existing_evidence_guards(partial_ticket_projec
         words = [w for w in words if w.normalized != "mission info"]
 
     class Startup:
+        crop_reads = 0
+
         def read(self, image):
-            assert image.shape[:2] == (1440, 2560), "contradictions must not trigger crop recovery"
-            return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            if image.shape[:2] == (1440, 2560):
+                return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            assert fault == "right_fragment_without_proof", "contradictions must not trigger crop recovery"
+            self.crop_reads += 1
+            return []
 
         def matches(self, image):
             return {}
 
-    assert TicketVision(Startup()).analyze(png).kind == "unknown"
+    startup = Startup()
+    screen = TicketVision(startup).analyze(png)
+    assert screen.kind == "unknown" and screen.target is None
+    assert startup.crop_reads == (1 if fault == "right_fragment_without_proof" else 0)
 
 
 @pytest.fixture(scope="module", params=[
