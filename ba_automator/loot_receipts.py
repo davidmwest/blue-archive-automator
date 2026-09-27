@@ -1034,6 +1034,21 @@ class ReceiptReader:
                 self.r.fail("Reward receipt did not settle after scrolling")
             p = self.read(cap)
             if p.kind != "reward" or not p.cards:
+                if p.kind in {"unknown", "reward"} and attempt < 3:
+                    # A passing sparkle can turn the otherwise exact heading
+                    # into e.g. "REWARD AČQUIRED" for one OCR capture. Observe
+                    # another settled frame instead of treating that reading as
+                    # identity or sending any input. A later exact parse must
+                    # still pass the unchanged post-OCR identity/freshness guard.
+                    suffix = f"scroll-waiting-{attempt + 1}"
+                    self.evidence_frame(cap, suffix)
+                    self.r.journal.record(
+                        "receipt_scroll_waiting", observed_kind=p.kind,
+                        card_count=len(p.cards), attempt=attempt + 1,
+                        frame=f"{self.evidence.stem}-{suffix}.png",
+                    )
+                    cap = self.capture()
+                    continue
                 self.evidence_frame(cap, "scroll-rejected")
                 self.r.journal.record(
                     "receipt_scroll_rejected", observed_kind=p.kind,

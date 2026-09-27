@@ -586,3 +586,15 @@ safe backout while providing no formation-entry target. The surrounding game,
 account profile/team, and banners are masked; the opponent name is replaced
 with a synthetic label. Paired JSON is fresh OCR of that sanitized image. This
 fixture tests recognition and conservative rejection, not a live retry.
+
+`loot-mail-heading-clear.png` and `loot-mail-heading-sparkle.png` preserve a
+September 26 mail receipt for three Tactical Challenge Coins. A passing star
+makes full-frame OCR read `REWARD AČQUIRED!` in the latter image even though
+the reward card remains unchanged. Only the reward heading, card viewport, and
+continuation hint remain; account balances and surrounding mailbox content are
+masked. Fresh OCR reproduces the exact-heading failure. Runtime regressions
+verify bounded read-only reobservation and retain the exact identity and
+freshness guards before input. A guarded live recovery also encountered the
+same unreadable heading, waited for a clean frame, logged all three coins, and
+closed the receipt. These game-derived fixtures remain outside the project's
+MIT grant.

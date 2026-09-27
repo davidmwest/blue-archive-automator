@@ -69,6 +69,23 @@ def test_free_pack_entrance_animation_needs_a_settled_initial_reference(vision):
     assert lr.same_receipt_view(after, after, settled, vision=vision)
 
 
+def test_mail_heading_sparkle_requires_another_exact_read(vision):
+    clear, sparkle = [(FIXTURES / f"loot-mail-heading-{suffix}.png").read_bytes()
+                      for suffix in ("clear", "sparkle")]
+    parsed = lr.page(clear, vision)
+    assert parsed.kind == "reward"
+    assert [(card.name, card.quantity) for card in parsed.cards] == [
+        ("Tactical Challenge Coin", 3)]
+    # A real passing particle adds a caron to the OCR output. The card does
+    # not move, but the heading is no longer exact input-authorizing evidence.
+    assert any(word.text == "REWARD AČQUIRED!"
+               for word in vision.read(decode_frame(sparkle)))
+    assert lr.page(sparkle, vision).kind == "unknown"
+    assert lr.reward_layout_stable(clear, sparkle)
+    assert not lr.same_receipt_view(clear, sparkle, parsed, vision=vision)
+    assert lr.same_receipt_view(clear, clear, parsed, vision=vision)
+
+
 def test_final_row_only_and_owned_is_never_quantity(vision):
     p = lr.page((FIXTURES / "loot-sweep.png").read_bytes(), vision)
     assert p.kind == "sweep" and len(p.cards) == 9 and not p.clipped

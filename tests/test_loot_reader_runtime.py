@@ -1026,7 +1026,7 @@ def test_reward_scroll_that_never_settles_stops_without_more_inputs(harness, mon
     assert (h.evidence.parent / "receipt-scroll-unsettled.png").is_file()
 
 
-@pytest.mark.parametrize("rejected", [lr.Page("unknown"), lr.Page("reward")])
+@pytest.mark.parametrize("rejected", [lr.Page("unknown"), lr.Page("reward"), lr.Page("sweep")])
 def test_rejected_scroll_read_saves_exact_capture_and_stops(harness, rejected):
     h = harness
     h.pages = [rejected]
@@ -1034,7 +1034,8 @@ def test_rejected_scroll_read_saves_exact_capture_and_stops(harness, rejected):
     with pytest.raises(TaskError, match="Receipt changed while scrolling rewards"):
         reader.pan(reader.capture(), "reward", True)
     assert h.inputs == [("swipe", (480, 367), (875, 367))]
-    assert h.page_reads == 1
+    attempts = 4 if rejected.kind in {"unknown", "reward"} else 1
+    assert h.page_reads == attempts
     saved = h.evidence.parent / "receipt-scroll-rejected.png"
     assert saved.read_bytes() == reader.observed[0]
     events = [json.loads(line) for line in
@@ -1044,6 +1045,47 @@ def test_rejected_scroll_read_saves_exact_capture_and_stops(harness, rejected):
     assert rejection[0]["observed_kind"] == rejected.kind
     assert rejection[0]["card_count"] == 0
     assert rejection[0]["frame"] == saved.name
+    waiting = [e for e in events if e["event"] == "receipt_scroll_waiting"]
+    assert len(waiting) == attempts - 1
+    assert all((h.evidence.parent / e["frame"]).is_file() for e in waiting)
+
+
+@pytest.mark.parametrize("transient", [lr.Page("unknown"), lr.Page("reward")])
+def test_reward_heading_flicker_reobserves_without_input(harness, monkeypatch, transient):
+    h = harness
+    h.pages = [lr.Page("reward", (card("Tactical Challenge Coin", 566, 3),))]
+    original_page = lr.page
+
+    def flickering(png, vision):
+        parsed = original_page(png, vision)
+        return transient if h.page_reads == 1 else parsed
+
+    monkeypatch.setattr(lr, "page", flickering)
+    reader = h.reader()
+    cap, parsed = reader.settled_reward_page(reader.capture())
+    assert h.page_reads == 2
+    assert parsed == h.pages[0]
+    assert reader.observed == (cap.png, parsed)
+    assert cap.is_fresh(h.runner.clock())
+    assert h.inputs == []
+
+
+def test_heading_flicker_recovery_still_requires_post_ocr_identity(harness, monkeypatch):
+    h = harness
+    h.pages = [lr.Page("reward", (card("Tactical Challenge Coin", 566, 3),))]
+    original_page = lr.page
+
+    def flickering(png, vision):
+        parsed = original_page(png, vision)
+        return lr.Page("unknown") if h.page_reads == 1 else parsed
+
+    monkeypatch.setattr(lr, "page", flickering)
+    monkeypatch.setattr(lr, "same_receipt_view", lambda *args, **kwargs: False)
+    reader = h.reader()
+    with pytest.raises(TaskError, match="did not remain stable through OCR"):
+        reader.settled_reward_page(reader.capture())
+    assert h.page_reads == 4
+    assert h.inputs == []
 
 
 def test_scroll_resuming_during_ocr_reobserves_before_using_new_target(harness, monkeypatch):
