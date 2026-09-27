@@ -84,8 +84,13 @@ the same visit completed two more lessons, reducing tickets to four, before
 the next confirmation split `4→3` into the adjacent words `4` and `→3`.
 the reader now accepts that complete expression only when all words are
 confident, aligned, nonoverlapping, and inside the cost bubble. the fourth
-Start input was never sent. the remaining four lessons and a full successful
-daily are still unverified.
+Start input was never sent. the recovery visit then completed all four remaining
+lessons and returned home at zero tickets in 1,278.6 seconds. each selection
+followed a fresh survey of all 94 rooms. across the two visits at 1440p and
+20 FPS, seven distinct rooms provided 17 owned-student opportunities; every
+lesson has a receipt, a one-ticket decrement, and a verified 100 school XP gain.
+this is recovered completion, not an uninterrupted seven-ticket run. a full
+successful daily remains unverified.
 
 Tactical Challenge exposed a performance problem: repeated crop reads left
 too little time to act on a fresh frame. a cache now reuses level readings only
@@ -171,8 +176,10 @@ conflicting quantity in the original crop remains unresolved.
 
 the 1440p migration passed live startup through the title screen and announcements to home, plus a red-dot scan. five Total Assault sweeps also completed. their receipt initially arrived while the game was still animating, before Final rewards and Confirm appeared. the collector now waits up to 90 seconds for that final control without replaying the sweep or weakening freshness checks. live recovery logged 500 Total Assault Coins and 50 Advanced Total Assault Coins, verified zero tickets, and returned home. this is recovered live evidence, not a claim that the original run completed uninterrupted. a separate 1440p run at 20 FPS completed measured scans of both Cafe floors and returned home in 468.2 seconds. earnings were empty, and no new relationship increases were verified. this checks navigation and camera coverage at that frame rate; it does not add live high-resolution gift, invitation, or rank-up evidence. 1080p and 2160p have offline coverage only.
 
-the earlier Cafe and completed Lessons validation below used 720p. the native
-daily recovery above verifies three completed lessons, not a full seven-ticket run.
+the earlier Cafe validation below used 720p. native Lessons recovery above
+verifies all seven starting tickets across an initial three-ticket visit and
+a four-ticket recovery visit; the [Lessons notes](lessons.md#validation-status)
+record the separate evidence and remaining school-rank validation limits.
 
 a documented live run on BlueStacks Air completed restart, measured scans of both unlocked Cafe floors, home verification, and idle closure in 425.5 seconds. it found empty earnings and verified zero new relationship increases. earlier calibration runs verified reward receipts and relationship hearts/rank-up feedback. another player's layout passed a separate camera-movement check. these are observed runs, not a benchmark or a guarantee of finding every obscured student.
 
