@@ -220,11 +220,25 @@ def reward_name(vision, image, box, *, native=None):
 
 def reward_quantity(vision, image, box, *, minimum_confidence=.65, native=None):
     x, y, w, h = box
-    words = read_game_crop(
-        vision, image if native is None else native,
-        (x + 8, y + h - 48, x + w - 8, y + h - 9), 2,
-    )
-    return amount([word for word in words if word.confidence >= minimum_confidence])
+    source = image if native is None else native
+    bounds = (x + 8, y + h - 48, x + w - 8, y + h - 9)
+    words = read_game_crop(vision, source, bounds, 2)
+    values = amount_values([word for word in words if word.confidence >= minimum_confidence])
+    if values:
+        # A contradictory initial crop cannot be overruled by another scale.
+        return next(iter(values)) if len(values) == 1 else None
+    # Some native tall cards' narrow x1 glyph disappears at the normal scale.
+    # Require two independent scales to read one complete, agreeing label.
+    fallback = []
+    for scale in (4, 5):
+        words = read_game_crop(vision, source, bounds, scale)
+        if len(words) != 1 or not words[0].confidence >= max(.90, minimum_confidence):
+            return None
+        value = amount(words)
+        if value is None:
+            return None
+        fallback.append(value)
+    return fallback[0] if fallback[0] == fallback[1] else None
 
 
 def tooltip_boxes(image):

@@ -156,6 +156,10 @@ the post-sweep attempt count was not observed and remains unknown. Tasks also
 claimed successfully before a background label merged into its reward heading.
 that reader now reuses the isolated exact-heading check, retaining the yellow
 title and continue-control requirements. sanitized captures cover both cases.
+single-item quantities on tall reward cards can also disappear at the usual
+crop scale. two larger crops must independently read the same explicit `x1`
+(or other quantity) at high confidence before the fallback accepts it. any
+conflicting quantity in the original crop remains unresolved.
 
 ## evidence and its limits
 

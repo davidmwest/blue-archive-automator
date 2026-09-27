@@ -108,6 +108,40 @@ def test_explicit_integer_thousands_receipt_quantity(label, expected):
     assert lr.amount([Word(label, .99, (0, 0, 80, 20))]) == expected
 
 
+def test_native_tasks_tall_card_quantities_include_single_items(vision):
+    png = (FIXTURES / "task-rewards-receipt-merged-native.png").read_bytes()
+    parsed = lr.page(png, vision)
+    assert parsed.kind == "reward"
+    assert parsed.leading_clipped and not parsed.trailing_clipped
+    assert [card.quantity for card in parsed.cards] == [1, 3, 1, 1, 1, 1]
+    assert parsed.cards[0].name == "Keystone"
+
+
+@pytest.mark.parametrize("labels,expected", [
+    ([[], [("x1", .99)], [("x1", .98)]], 1),
+    ([[], [("x1", .99)], [("x2", .99)]], None),
+    ([[], [("x1", .89)]], None),
+    ([[], [("1", .99)]], None),
+    ([[], [("Owned: 1", .99)]], None),
+    ([[], [("x1", .99), ("x1", .99)]], None),
+    ([[], []], None),
+    ([[("x1", .99), ("x2", .99)]], None),
+    ([[("x3", .99)]], 3),
+])
+def test_tall_card_quantity_fallback_requires_agreement(monkeypatch, labels, expected):
+    crops = iter([[Word(text, confidence, (0, 0, 80, 20))
+                   for text, confidence in words] for words in labels])
+    monkeypatch.setattr(lr, "read_game_crop", lambda *args: next(crops))
+    assert lr.reward_quantity(None, None, (203, 255, 147, 221)) == expected
+    assert next(crops, None) is None
+
+
+def test_tall_card_quantity_fallback_preserves_stricter_confidence(monkeypatch):
+    crops = iter([[], [Word("x1", .96, (0, 0, 80, 20))]])
+    monkeypatch.setattr(lr, "read_game_crop", lambda *args: next(crops))
+    assert lr.reward_quantity(None, None, (203, 255, 147, 221), minimum_confidence=.98) is None
+
+
 def test_native_amulet_artwork_quantity_has_two_exact_corner_reads(vision):
     from ba_automator.vision import decode_native_frame
 
