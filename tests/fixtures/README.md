@@ -772,6 +772,18 @@ on the complete, confident `x1` label. Everything outside that card is masked.
 This tests earned quantity recognition, not item-name inference or inventory
 totals. The game-derived fixture remains outside the project's MIT grant.
 
+`tickets-bounty-native-missing-final-digit.png` and
+`tickets-scrimmage-native-missing-arrow.png`, with recorded native OCR sidecars,
+retain September 27 native 2560×1440 quantity selectors. Classroom H shows four
+sweeps and `5→1` tickets, but whole-frame OCR only retains the first `5`.
+Gehenna B shows two sweeps with an intact `574→574` AP projection and separate
+`10` and `8` ticket digits. A wide native crop and a tighter enlarged crop must
+both read the complete ticket projection confidently, agree with every surviving
+ticket digit, and pass the original quantity and independent AP arithmetic.
+Currency balances are masked; AP remains to exercise the header equality guard.
+These saved selector frames prove recognition only, not any completed sweep.
+The game-derived fixtures remain outside the project's MIT grant.
+
 `loot-sweep-task-fading-native-{visible,fading,clear}.png` preserves the native
 1440p heading/control and Final-row pixels from the September 27 Hard 1-2
 one-sweep receipt (`spend_ap-20260927T201412-34498b04`, receipt 0122). All pixels

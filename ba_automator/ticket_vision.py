@@ -42,22 +42,34 @@ def ticket_counter(words, bounds):
     return tuple(map(int, match.groups())) if match else None
 
 
-def reread_bounty_projection(native, reader, words):
-    """Recover an omitted arrow only when both native crop reads prove it."""
-    bounds = (855, 337, 1108, 384)
+def reread_ticket_projection(native, reader, words):
+    """Recover an incomplete projection only from agreeing native crop reads."""
+    bounds = (1010, 337, 1108, 384)
     pieces = sorted(within(words, bounds), key=lambda word: word.box[0])
-    # Do not replace a complete, contradictory projection, guess omitted
-    # digits, or reinterpret Scrimmage's adjacent AP/ticket counters.
-    if (len(pieces) != 2 or any(word.confidence < .95 for word in pieces)
-            or any(not re.fullmatch(r"\d+", word.text.strip()) for word in pieces)
-            or not 1030 <= pieces[0].center[0] < pieces[1].center[0] <= 1100):
+    # Do not replace a complete, contradictory projection or reinterpret
+    # Scrimmage's adjacent AP counter. Native whole-frame OCR can also
+    # omit the arrow AND the final single digit; its surviving before-ticket
+    # value must still independently agree with both complete crop readings.
+    if (len(pieces) not in (1, 2) or any(word.confidence < .95 for word in pieces)
+            or any(not re.fullmatch(r"\d+", word.text.strip()) for word in pieces)):
         return None
-    expected = tuple(int(word.text) for word in pieces)
-    crop_bounds = (1010, 341, 1105, 392)
-    crop = native_game_region(native, crop_bounds)
+    partial = len(pieces) == 1
+    if partial:
+        if not 1030 <= pieces[0].center[0] <= 1060:
+            return None
+    else:
+        if not 1030 <= pieces[0].center[0] < pieces[1].center[0] <= 1100:
+            return None
+    observed_digits = tuple(int(word.text) for word in pieces)
+    expected = None
     confidence = []
-    for scale in (2, 3):
-        enlarged = cv2.resize(crop, (95 * scale, 51 * scale),
+    # A second, tighter crop excludes the icon and speech-bubble edge, which
+    # otherwise degrade OCR of thin final digits at some resize factors.
+    for crop_bounds, scale in (((1010, 341, 1105, 392), 2),
+                               ((1026, 348, 1098, 380), 3)):
+        crop = native_game_region(native, crop_bounds)
+        width, height = crop_bounds[2] - crop_bounds[0], crop_bounds[3] - crop_bounds[1]
+        enlarged = cv2.resize(crop, (width * scale, height * scale),
                               interpolation=cv2.INTER_CUBIC)
         padded = cv2.copyMakeBorder(enlarged, 8 * scale, 8 * scale,
                                     8 * scale, 8 * scale, cv2.BORDER_CONSTANT,
@@ -66,8 +78,13 @@ def reread_bounty_projection(native, reader, words):
         if len(observed) != 1 or observed[0].confidence < .95:
             return None
         match = re.fullmatch(r"(\d+)\s*→\s*(\d+)", observed[0].text.strip())
-        if not match or tuple(map(int, match.groups())) != expected:
+        if not match:
             return None
+        projection = tuple(map(int, match.groups()))
+        if ((projection[:1] if partial else projection) != observed_digits
+                or expected is not None and projection != expected):
+            return None
+        expected = projection
         confidence.append(observed[0].confidence)
     return Word(f"{expected[0]}→{expected[1]}", min(confidence), crop_bounds)
 
@@ -290,15 +307,23 @@ class TicketVision:
         home = {"home_left", "home_right"} <= self.startup.matches(frame).keys()
         screen = classify_tickets(frame, words, home=home)
         count = number(words, (904, 277, 970, 330))
+        ap_projection = within(words, (855, 337, 1010, 384))
+        ticket_projection_recoverable = (
+            has(words, "bounty", (80, 0, 310, 55))
+            or (has(words, "scrimmage", (80, 0, 310, 55))
+                and len(ap_projection) == 1
+                and ap_projection[0].confidence >= .95
+                and re.fullmatch(r"\d+\s*→\s*\d+", ap_projection[0].text.strip()))
+        )
         if (screen.kind == "unknown" and count and count[0] > 0
-                and has(words, "bounty", (80, 0, 310, 55))
+                and ticket_projection_recoverable
                 and has(words, "mission info", (440, 110, 850, 170))
                 and has(words, "sweep", (850, 200, 1010, 262))):
-            projection = reread_bounty_projection(
+            projection = reread_ticket_projection(
                 decode_native_frame(png), self.startup, words,
             )
             if projection is not None:
-                pieces = within(words, (855, 337, 1108, 384))
+                pieces = within(words, (1010, 337, 1108, 384))
                 repaired = [word for word in words if word not in pieces]
                 screen = classify_tickets(frame, [*repaired, projection], home=home)
         if screen.kind != "unknown" or count != (0,):

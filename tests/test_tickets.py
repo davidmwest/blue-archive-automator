@@ -152,7 +152,7 @@ def test_native_bounty_recovers_only_arrow_with_two_agreeing_crops(vision, bount
 
     startup = Startup()
     screen = TicketVision(startup).analyze(png)
-    assert startup.crops == [(134, 222), (201, 333)]
+    assert startup.crops == [(134, 222), (144, 264)]
     assert (screen.kind, screen.task, screen.area, screen.stage) == (
         "detail", "bounties", "Desert Railroad", "H",
     )
@@ -192,7 +192,7 @@ def test_bounty_arrow_recovery_rejects_missing_or_disagreeing_evidence(bounty_mi
     assert TicketVision(Startup()).analyze(png).kind == "unknown"
 
 
-@pytest.mark.parametrize("change", ["contradictory_projection", "no_heading", "scrimmage", "missing_digit"])
+@pytest.mark.parametrize("change", ["contradictory_projection", "no_heading", "scrimmage", "missing_before_digit"])
 def test_bounty_arrow_recovery_never_overwrites_contradictions(bounty_missing_arrow, change):
     from ba_automator.crafting_vision import within
     from ba_automator.vision import Word
@@ -209,12 +209,157 @@ def test_bounty_arrow_recovery_never_overwrites_contradictions(bounty_missing_ar
         words = [replace(word, text="Scrimmage") if word.normalized == "bounty" else word
                  for word in words]
     else:
-        words = [word for word in words if word.text != "6"]
+        words = [word for word in words if word.text != "10"]
 
     class Startup:
         def read(self, image):
             assert image.shape[:2] == (1440, 2560), "contradiction must not trigger crop recovery"
             return [replace(word, box=tuple(value * 2 for value in word.box)) for word in words]
+
+        def matches(self, image):
+            return {}
+
+    assert TicketVision(Startup()).analyze(png).kind == "unknown"
+
+
+@pytest.fixture(scope="module", params=[
+    ("bounty-native-missing-final-digit", "bounties", "Classroom", "H", 5, 1, 4),
+    ("scrimmage-native-missing-arrow", "scrimmages", "Gehenna", "B", 10, 8, 2),
+])
+def partial_ticket_projection(request):
+    import json
+    from ba_automator.vision import Word
+
+    name, *expected = request.param
+    fixture = Path(__file__).parent / "fixtures" / f"tickets-{name}"
+    words = [Word(**w) for w in json.loads(fixture.with_suffix(".json").read_text())["words"]]
+    return fixture.with_suffix(".png").read_bytes(), words, expected
+
+
+def test_native_partial_ticket_projection_has_two_complete_crop_proofs(vision, partial_ticket_projection):
+    png, words, expected = partial_ticket_projection
+    assert classify_tickets(decode_frame(png), words).kind == "unknown"
+
+    class Startup:
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            return vision.startup.read(image)
+
+        def matches(self, image):
+            return {}
+
+    screen = TicketVision(Startup()).analyze(png)
+    assert (screen.task, screen.area, screen.stage, screen.tickets,
+            screen.after_tickets, screen.count) == tuple(expected)
+    assert (screen.kind, screen.ap, screen.after_ap, screen.ap_cost,
+            screen.stars, screen.target) == ("detail", 574, 574, 0, 3, (937, 405))
+
+
+@pytest.mark.parametrize("quantity", range(1, 6))
+def test_partial_projection_accepts_only_matching_quantity_through_final_ticket(partial_ticket_projection, quantity):
+    from ba_automator.crafting_vision import within
+    from ba_automator.vision import Word
+
+    png, original, expected = partial_ticket_projection
+    before = expected[3]
+    after = before - quantity
+    pieces = within(original, (1010, 337, 1108, 384))
+    counts = within(original, (904, 277, 970, 330))
+    words = [replace(w, text=str(quantity)) if w in counts else w
+             for w in original if w not in pieces]
+    words.append(Word(str(before), .99, (1030, 353, 1057, 374)))
+
+    class Startup:
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            return [Word(f"{before}→{after}", .99, (0, 0, 100, 30))]
+
+        def matches(self, image):
+            return {}
+
+    screen = TicketVision(Startup()).analyze(png)
+    assert (screen.kind, screen.tickets, screen.after_tickets, screen.count,
+            screen.ap, screen.after_ap, screen.ap_cost, screen.target) == (
+        "detail", before, after, quantity, 574, 574, 0, (937, 405),
+    )
+    # A complete but contradictory native reading is never repaired to fit
+    # quantity, including the final 5→0 sweep of the Bounty ticket allocation.
+    words[-1] = replace(words[-1], text=f"{before}→{after + 1}")
+    assert TicketVision(Startup()).analyze(png).kind == "unknown"
+
+
+@pytest.mark.parametrize("fault", [
+    "wrong_before", "wrong_count", "disagreement", "low_confidence", "no_arrow",
+    "missing", "multiple_words", "wrong_ap",
+])
+def test_partial_ticket_projection_rejects_bad_crop_or_arithmetic(partial_ticket_projection, fault):
+    from ba_automator.vision import Word
+
+    png, original, expected = partial_ticket_projection
+    _, _, _, before, after, _ = expected
+    words = original
+    if fault == "wrong_ap":
+        # Even agreeing ticket crops cannot replace the independent AP/header
+        # equality guard or manufacture an AP balance for Bounties.
+        words = [replace(w, text="575/220") if w.text == "574/220" else w for w in words]
+        if expected[0] == "bounties":
+            words = [w for w in words if w.text != "575/220"]
+
+    class Startup:
+        crop_reads = 0
+
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            self.crop_reads += 1
+            observed = f"{before}→{after}"
+            confidence = .99
+            if fault == "wrong_before":
+                observed = f"{before + 1}→{after + 1}"
+            elif fault == "wrong_count":
+                observed = f"{before}→{after - 1}"
+            elif fault == "disagreement" and self.crop_reads == 2:
+                observed = f"{before}→{after - 1}"
+            elif fault == "low_confidence" and self.crop_reads == 2:
+                confidence = .94
+            elif fault == "no_arrow":
+                observed = f"{before} {after}"
+            elif fault == "missing":
+                return []
+            result = [Word(observed, confidence, (0, 0, 100, 30))]
+            return result * 2 if fault == "multiple_words" else result
+
+        def matches(self, image):
+            return {}
+
+    screen = TicketVision(Startup()).analyze(png)
+    assert screen.kind == "unknown" and screen.target is None
+
+
+@pytest.mark.parametrize("fault", ["complete_contradiction", "wrong_side", "low_confidence", "no_heading"])
+def test_partial_projection_keeps_existing_evidence_guards(partial_ticket_projection, fault):
+    from ba_automator.crafting_vision import within
+    from ba_automator.vision import Word
+
+    png, original, expected = partial_ticket_projection
+    pieces = within(original, (1010, 337, 1108, 384))
+    words = [w for w in original if w not in pieces]
+    if fault == "complete_contradiction":
+        words.append(Word(f"{expected[3]}→0", .99, (1030, 353, 1090, 373)))
+    elif fault == "wrong_side":
+        words.append(Word(str(expected[4]), .99, (1076, 355, 1091, 372)))
+    elif fault == "low_confidence":
+        words.extend(replace(w, confidence=.94) for w in pieces)
+    else:
+        words.extend(pieces)
+        words = [w for w in words if w.normalized != "mission info"]
+
+    class Startup:
+        def read(self, image):
+            assert image.shape[:2] == (1440, 2560), "contradictions must not trigger crop recovery"
+            return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
 
         def matches(self, image):
             return {}

@@ -115,6 +115,22 @@ device commands or other live state came from those test cases. sanitized
 captures cover the recognition fixes in regression tests; full evidence and
 the repair audit stay local.
 
+the next 1440p recovery visit completed both Cafe floors in 539.9 seconds,
+collected 229 AP and 207,081 credits, verified three relationship increases,
+and returned home. one settled rank-up showed rank 8 and ATK +78 without a
+written student name; that identity remains unknown in the receipt. Quick
+Craft also completed its zero-keystone path, preserving the preset and
+returning home without a craft or purchase. these are completed task checks;
+the full daily still needs its own successful result.
+
+a later Bounty screen omitted both the ticket arrow and its final digit;
+Scrimmage omitted the arrow between two readable digits. the ticket reader
+now uses two differently framed native crops to prove the complete change.
+both must agree at high confidence with each other and the surviving digits.
+Scrimmage's adjacent AP projection remains a separate required observation.
+complete contradictory readings still stop the task, and quantity arithmetic
+still has to match before any sweep input.
+
 ## evidence and its limits
 
 [camera tests](../tests/test_cafe_camera.py) exercise arbitrary generated layouts, moving sprites, occlusion, repeated patterns, perspective changes, and misleading fixed backgrounds. [scan tests](../tests/test_cafe_scan.py) check that unknown movement cannot certify an edge or silently skip an intermediate view. screenshot fixtures exercise actual OCR and template recognition; device and server tests cover stale input, protocol mismatches, locks, and serialized jobs.

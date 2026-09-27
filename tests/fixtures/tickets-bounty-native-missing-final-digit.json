@@ -1,0 +1,254 @@
+{
+  "words": [
+    {
+      "text": "Bounty",
+      "confidence": 0.99999,
+      "box": [
+        103,
+        8,
+        206,
+        43
+      ]
+    },
+    {
+      "text": "574/220",
+      "confidence": 1.0,
+      "box": [
+        507,
+        9,
+        588,
+        37
+      ]
+    },
+    {
+      "text": "Mission Info",
+      "confidence": 0.99991,
+      "box": [
+        546,
+        121,
+        733,
+        157
+      ]
+    },
+    {
+      "text": "Clear Unit",
+      "confidence": 0.99946,
+      "box": [
+        176,
+        128,
+        283,
+        153
+      ]
+    },
+    {
+      "text": "Rec.",
+      "confidence": 0.99481,
+      "box": [
+        654,
+        187,
+        706,
+        213
+      ]
+    },
+    {
+      "text": "08 Besieged Classroom H",
+      "confidence": 0.98644,
+      "box": [
+        139,
+        194,
+        549,
+        236
+      ]
+    },
+    {
+      "text": "Lv.70",
+      "confidence": 0.99978,
+      "box": [
+        647,
+        211,
+        709,
+        238
+      ]
+    },
+    {
+      "text": "Sweep",
+      "confidence": 0.99992,
+      "box": [
+        899,
+        218,
+        970,
+        248
+      ]
+    },
+    {
+      "text": "Enemy/Syn.",
+      "confidence": 0.99968,
+      "box": [
+        177,
+        257,
+        292,
+        286
+      ]
+    },
+    {
+      "text": "Min",
+      "confidence": 0.99988,
+      "box": [
+        765,
+        286,
+        811,
+        313
+      ]
+    },
+    {
+      "text": "4",
+      "confidence": 0.99898,
+      "box": [
+        923,
+        286,
+        951,
+        315
+      ]
+    },
+    {
+      "text": "Max",
+      "confidence": 0.99947,
+      "box": [
+        1055,
+        286,
+        1109,
+        314
+      ]
+    },
+    {
+      "text": "Mission Objectives (\u2606)",
+      "confidence": 0.99756,
+      "box": [
+        320,
+        311,
+        544,
+        340
+      ]
+    },
+    {
+      "text": "Clear",
+      "confidence": 0.99998,
+      "box": [
+        182,
+        354,
+        240,
+        379
+      ]
+    },
+    {
+      "text": "5",
+      "confidence": 0.99998,
+      "box": [
+        1039,
+        355,
+        1054,
+        372
+      ]
+    },
+    {
+      "text": "All students survive",
+      "confidence": 0.99995,
+      "box": [
+        182,
+        389,
+        376,
+        412
+      ]
+    },
+    {
+      "text": "Start Sweep",
+      "confidence": 0.9999,
+      "box": [
+        850,
+        388,
+        1019,
+        426
+      ]
+    },
+    {
+      "text": "Clear within 150 second(s)",
+      "confidence": 0.99975,
+      "box": [
+        181,
+        420,
+        440,
+        447
+      ]
+    },
+    {
+      "text": "Expected Rewards",
+      "confidence": 0.99994,
+      "box": [
+        341,
+        471,
+        525,
+        497
+      ]
+    },
+    {
+      "text": "5",
+      "confidence": 0.99998,
+      "box": [
+        1056,
+        478,
+        1071,
+        496
+      ]
+    },
+    {
+      "text": "4",
+      "confidence": 1.0,
+      "box": [
+        1092,
+        479,
+        1107,
+        496
+      ]
+    },
+    {
+      "text": "Start Mission",
+      "confidence": 0.99996,
+      "box": [
+        823,
+        518,
+        1046,
+        557
+      ]
+    },
+    {
+      "text": "77",
+      "confidence": 0.66574,
+      "box": [
+        645,
+        520,
+        689,
+        562
+      ]
+    },
+    {
+      "text": "X8",
+      "confidence": 0.88217,
+      "box": [
+        186,
+        562,
+        208,
+        578
+      ]
+    },
+    {
+      "text": "Besieged ClassroomJ",
+      "confidence": 0.99873,
+      "box": [
+        769,
+        642,
+        1013,
+        673
+      ]
+    }
+  ]
+}
