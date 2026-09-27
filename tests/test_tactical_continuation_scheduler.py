@@ -339,5 +339,6 @@ def test_other_job_completion_labels_do_not_use_tactical_summary(controlled, mon
     eventually(lambda: len(factory.processes) == 1)
     factory.processes[0].finish()
     eventually(lambda: controller.status()["state"] == "success")
-    assert controller.status()["phase"] == TASK_LABELS[task]
+    expected = "Daily visit finished" if task == "daily" else TASK_LABELS[task]
+    assert controller.status()["phase"] == expected
     assert not summaries
