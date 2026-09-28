@@ -256,8 +256,15 @@ respectively; both receipts have usable portrait thumbnails without inferred nam
 a subsequent uninterrupted Cafe visit completed both floors in 518.2 seconds
 and verified a fresh receipt for 14,791 credits and 16 AP, including complete loot
 identification. the heading tolerance therefore has both real-frame regression
-coverage and a successful live collection. the remaining daily steps are still
-being checked.
+coverage and a successful live collection. the Daily run completed its other
+14 tasks but stopped AP spending on an unread Hard 7-1 detail. OCR had ordered
+the mission-attempt row by slightly different text baselines, placing the AP
+number after the remaining-attempt count. that row now reads left to right;
+AP, cost, attempt, star, and floor checks are unchanged. a sanitized native
+regression covers the screen. the live recovery verified the Hard 7-1 sweep
+and its receipt, then continued to Hard 6-3. this verifies recovery past
+the failed screen, not completion of the AP visit or an uninterrupted successful
+Daily run.
 
 Lessons' relationship policy subsequently completed the three remaining tickets
 from one 94-room, 12-school survey. it visited one Shanhaijing room and two Abydos
