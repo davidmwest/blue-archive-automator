@@ -398,12 +398,16 @@
       const title = document.createElement("strong");
       title.textContent = `${taskName(failure.task)} · ${shortTime(failure.time)}`;
       const detail = document.createElement("p"); detail.textContent = failure.detail;
+      const trace = document.createElement("a");
+      trace.href = `/api/runs/${encodeURIComponent(failure.id)}`;
+      trace.target = "_blank"; trace.rel = "noopener";
+      trace.textContent = "view screenshot trace";
       const dismiss = document.createElement("button");
       dismiss.type = "button"; dismiss.className = "button secondary small";
       dismiss.textContent = "dismiss notice";
       dismiss.disabled = !connected || pending > 0 || isDemo();
       dismiss.addEventListener("click", () => void post("/api/dismiss-failure", { id: failure.id }, "notice dismissed. retry settings haven’t changed."));
-      row.append(title, detail, dismiss); list.append(row);
+      row.append(title, detail, trace, dismiss); list.append(row);
     });
     $("failed-jobs-list").replaceChildren(list);
   }

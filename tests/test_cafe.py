@@ -501,6 +501,17 @@ def test_rankup_waits_for_delayed_heart_and_stats(cafe, monkeypatch):
     assert cafe.device.taps == [(640, 630)]
 
 
+def test_relationship_animation_can_precede_readable_rankup(cafe, monkeypatch):
+    cafe.vision.is_cafe = lambda image: False
+    monkeypatch.setattr(cafe.runner, "wait_cafe", lambda **kwargs: cafe.capture())
+    cafe.script([word("sparkle", 640, 300)], [word("sparkle", 640, 300)],
+                [word("Relationship rank up!", 640, 622), word("9", 640, 540),
+                 word("ATK +20", 640, 681)])
+    assert cafe.runner.clear_relationship_popup()
+    assert cafe.device.taps == [(640, 630)]
+    assert action_records(cafe.config)[-1]["rank"] == 9
+
+
 def test_stale_rankup_followed_by_other_screen_sends_no_dismissal(cafe, monkeypatch):
     cafe.vision.is_cafe = lambda image: False
     cafe.script([word("Relationship rank up!", 640, 600)], [word("Confirm", 640, 505)])

@@ -17,6 +17,7 @@ from collections import deque
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from html import escape
 from importlib.resources import files
 import ipaddress
 import json
@@ -1591,6 +1592,54 @@ class DashboardController:
                 raise ApiError(404, "No frame is available for the current job")
             return frame.read_bytes()
 
+    def _trace_root(self, job_id: str) -> Path:
+        if not re.fullmatch(r"[a-f0-9]{32}", job_id):
+            raise ApiError(404, "Screenshot trace unavailable")
+        root = self.config.run_dir / f"dashboard-{job_id}" / "runs"
+        if root.is_symlink() or not root.is_dir() or not root.resolve().is_relative_to(self.config.run_dir.resolve()):
+            raise ApiError(404, "Screenshot trace unavailable")
+        return root
+
+    def trace_image(self, job_id: str, run_name: str, filename: str) -> bytes:
+        root = self._trace_root(job_id)
+        run = root / run_name
+        path = run / filename
+        if (not run_name.startswith(RUN_PREFIXES) or run.is_symlink() or not run.is_dir()
+                or path.is_symlink() or not path.is_file()
+                or not path.resolve().is_relative_to(root.resolve())):
+            raise ApiError(404, "Screenshot trace unavailable")
+        return path.read_bytes()
+
+    def trace_page(self, job_id: str) -> bytes:
+        root = self._trace_root(job_id)
+        sections = []
+        for run in sorted(root.iterdir()):
+            if not run.name.startswith(RUN_PREFIXES) or run.is_symlink() or not run.is_dir():
+                continue
+            frames = sorted((p.name for p in run.iterdir() if re.fullmatch(r"trace-\d+\.png", p.name)
+                             and p.is_file() and not p.is_symlink()),
+                            key=lambda name: int(name[6:-4]))
+            if not frames:
+                continue
+            # Show the start and end even for long surveys; links remain local
+            # and the original image files are not copied or exposed by path.
+            selected = frames if len(frames) <= 105 else frames[:5] + frames[-100:]
+            tiles = "".join(
+                f'<figure><a href="/api/runs/{job_id}/{escape(run.name)}/{name}">'
+                f'<img loading="lazy" src="/api/runs/{job_id}/{escape(run.name)}/{name}" alt="{name}"></a>'
+                f'<figcaption>{name}</figcaption></figure>' for name in selected)
+            omitted = f"<p>{len(frames)-len(selected)} middle frames omitted from this gallery.</p>" if len(selected) < len(frames) else ""
+            sections.append(f"<section><h2>{escape(run.name)}</h2>{omitted}<div class='grid'>{tiles}</div></section>")
+        if not sections:
+            raise ApiError(404, "No saved screenshot trace for this job")
+        page = ("<!doctype html><html lang='en'><meta charset='utf-8'><title>Job screenshot trace</title>"
+                "<style>body{font:16px system-ui;background:#eef3fa;color:#18304d;margin:2rem}"
+                "section{margin:2rem 0}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}"
+                "figure{margin:0;background:white;padding:.5rem;border-radius:8px}img{width:100%}figcaption{padding:.4rem}</style>"
+                f"<h1>Screenshot trace · {job_id}</h1><p>Saved frames for this job, in order. Click any frame for full size.</p>"
+                + "".join(sections) + "</html>")
+        return page.encode("utf-8")
+
     def _popup_entries(self) -> dict[str, dict]:
         """Upsert journal evidence from the last 100 jobs owned by this server session."""
         entries = {}
@@ -1869,6 +1918,14 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     if parse_qs(target.query).keys() - {"v"}:
                         raise ApiError(400, "Frame requests accept only a version parameter")
                     self._send(200, controller.frame_bytes(), "image/png")
+                elif match := re.fullmatch(r"/api/runs/([a-f0-9]{32})", target.path):
+                    if target.query:
+                        raise ApiError(400, "Trace requests do not accept query parameters")
+                    self._send(200, controller.trace_page(match[1]), "text/html; charset=utf-8")
+                elif match := re.fullmatch(r"/api/runs/([a-f0-9]{32})/([A-Za-z0-9_-]+)/((?:trace-\d+|home)\.png)", target.path):
+                    if target.query:
+                        raise ApiError(400, "Trace requests do not accept query parameters")
+                    self._send(200, controller.trace_image(*match.groups()), "image/png")
                 elif target.path == "/api/map":
                     resource = files("ba_automator").joinpath("assets", "home_map.json")
                     self._json(200, json.loads(resource.read_text(encoding="utf-8"))

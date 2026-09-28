@@ -90,7 +90,11 @@ def reread_hard_projection(native, vision):
         words = sorted(vision.read(padded), key=lambda w: w.box[0])
         text = " ".join(w.text.strip() for w in words)
         match = re.fullmatch(HARD_PROJECTION, text)
-        if not match or any(w.confidence < .95 for w in words):
+        # At 1440p the first read of a correct small AP digit can land just
+        # below .95. Keep the independent, higher-confidence enlarged read
+        # and exact agreement as the guard against changing a spend amount.
+        minimum = .90 if scale == 1 else .95
+        if not match or any(w.confidence < minimum for w in words):
             return None
         reads.append((match.groups(), min(w.confidence for w in words)))
     if reads[0][0] != reads[1][0]:

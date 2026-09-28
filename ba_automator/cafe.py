@@ -530,9 +530,9 @@ class CafeRunner:
                     return False
         self.fail("Cafe camera coverage could not be verified after twelve drags")
 
-    def clear_relationship_popup(self, *, student=None, student_evidence=None):
+    def clear_relationship_popup(self, *, student=None, student_evidence=None, _initial=None):
         """Dismiss recognized feedback and return whether a rank increase was seen."""
-        cap = self.capture(ocr=True)
+        cap = _initial if _initial is not None else self.capture(ocr=True)
         if self.vision.is_cafe(cap[2]):
             return False
         text = text_of(cap[3])
@@ -577,8 +577,20 @@ class CafeRunner:
                 self.tap(cap, button, "Dismiss relationship rank confirmation")
                 self.wait_cafe()
                 return "rank up" in text or "increased" in text
-        self.wait_cafe(timeout=8)
-        return False
+        # The heart animation may obscure both the room and the rank-up text
+        # for several seconds. Wait for either verified room pixels or the
+        # delayed celebration, then handle that celebration before panning.
+        deadline = self.clock() + 20
+        while self.clock() < deadline:
+            self.sleep(.6)
+            cap = self.capture(ocr=True)
+            if self.vision.is_cafe(cap[2]):
+                return False
+            if is_relationship_rank_up(cap[3]):
+                return self.clear_relationship_popup(student=student,
+                                                     student_evidence=student_evidence,
+                                                     _initial=cap)
+        self.fail("Cafe interaction remained obstructed; open this job's screenshot trace")
 
     def pet_visible(self):
         misses = 0

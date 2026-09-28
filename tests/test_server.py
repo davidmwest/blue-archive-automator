@@ -438,6 +438,30 @@ def test_dashboard_serves_branded_page_and_only_the_explicit_mascot_asset(http_s
     assert request("GET", "/maid-arisu.png/../config/local.toml")[0] == 404
 
 
+def test_failed_job_trace_gallery_serves_saved_frames_only(http_server, tmp_path):
+    request, controller, _, _ = http_server
+    job_id = "a" * 32
+    run = controller.config.run_dir / f"dashboard-{job_id}" / "runs" / "cafe-20260928T095011-test"
+    run.mkdir(parents=True)
+    png = b"\x89PNG\r\n\x1a\ntrace"
+    (run / "trace-0001.png").write_bytes(png)
+    (run / "trace-0002.png").write_bytes(png)
+    (run / "trace-10.png").write_bytes(png)
+    (run / "journal.jsonl").write_text("private", encoding="utf-8")
+    code, page = request("GET", f"/api/runs/{job_id}")
+    assert code == 200
+    assert b"trace-0001.png" in page and b"trace-0002.png" in page
+    assert page.index(b"trace-0002.png") < page.index(b"trace-10.png")
+    assert request("GET", f"/api/runs/{job_id}/{run.name}/trace-0001.png") == (200, png)
+    assert request("GET", f"/api/runs/{job_id}/{run.name}/journal.jsonl")[0] == 404
+    assert request("GET", f"/api/runs/{job_id}?path=journal.jsonl")[0] == 400
+    secret = tmp_path / "secret.png"
+    secret.write_bytes(b"secret")
+    (run / "trace-0003.png").symlink_to(secret)
+    assert request("GET", f"/api/runs/{job_id}/{run.name}/trace-0003.png")[0] == 404
+    assert b"trace-0003.png" not in request("GET", f"/api/runs/{job_id}")[1]
+
+
 def test_daily_log_is_full_plain_text_with_a_local_dated_filename(http_server):
     from collections import deque
     from ba_automator.daily_log import today

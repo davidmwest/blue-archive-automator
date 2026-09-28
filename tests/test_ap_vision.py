@@ -267,3 +267,21 @@ def test_hard_projection_crop_never_infers_or_corrects_a_number(change):
             return [Word(text, confidence, (25, 25, 250, 55))]
 
     assert reread_hard_projection(np.zeros((1440, 2560, 3), dtype='uint8'), CropVision()) is None
+
+
+def test_hard_projection_accepts_agreeing_1440p_reads_with_one_marginal_confidence():
+    import numpy as np
+    from ba_automator.ap_vision import reread_hard_projection
+    from ba_automator.vision import Word
+
+    class CropVision:
+        calls = 0
+
+        def read(self, image):
+            self.calls += 1
+            confidence = .946 if self.calls == 1 else .999
+            return [Word('101→81', confidence, (25, 25, 135, 55)),
+                    Word('Remaining: 1/3', .999, (140, 25, 250, 55))]
+
+    result = reread_hard_projection(np.zeros((1440, 2560, 3), dtype='uint8'), CropVision())
+    assert result is not None and result.text == '101→81 Remaining: 1/3'
