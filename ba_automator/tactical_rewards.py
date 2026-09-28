@@ -28,8 +28,12 @@ def classify_tactical(frame, words, *, home=False):
     receipt = classify_shop(frame, words)
     if receipt.kind == "receipt":
         return TacticalScreen("receipt", receipt.target, items=receipt.items)
+    # This is one horizontal row. Tiny baseline differences must not move
+    # the count before its label (observed after a 1440p battle).
+    ticket_words = sorted(within(words, (45, 470, 290, 512)), key=lambda word: word.box[0])
     tickets = re.fullmatch(
-        r"Tickets Owned\s*(\d+)\s*/\s*(\d+)", text_in(words, (45, 470, 290, 512))
+        r"Tickets Owned\s*(\d+)\s*/\s*(\d+)",
+        " ".join(word.text for word in ticket_words),
     )
     if (
         any(

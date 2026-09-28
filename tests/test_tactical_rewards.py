@@ -227,3 +227,14 @@ def test_reward_job_is_in_daily_and_never_includes_battle_stub(runner):
     assert "tactical_rewards" in task_plan("daily", runner.config)
     assert "tactical_battles" not in task_plan("tactical_rewards", runner.config)
     assert "tactical_battles" in task_plan("daily", runner.config)
+
+
+def test_ticket_row_reads_left_to_right_despite_baseline_offset(startup):
+    from ba_automator.vision import Word
+    frame = decode_frame(png("time-ready"))
+    words = [word for word in startup.read(frame)
+             if not (45 <= word.center[0] <= 290 and 470 <= word.center[1] <= 512)]
+    words.extend((Word("Tickets Owned", .99994, (85, 479, 209, 499)),
+                  Word("1/5", .99995, (212, 478, 245, 500))))
+    result = classify_tactical(frame, words)
+    assert result.kind == "tactical" and result.tickets == 1
