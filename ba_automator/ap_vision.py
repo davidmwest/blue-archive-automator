@@ -63,6 +63,13 @@ def ap_value(words):
     return result[0] if result else None
 
 
+def hard_attempt_text(words):
+    """Read the mission attempt row horizontally despite OCR baseline jitter."""
+    return " ".join(w.text for w in sorted(
+        within(words, (840, 490, 1125, 547)), key=lambda w: w.box[0]
+    ))
+
+
 def projected_ap(words):
     matches = []
     for w in within(words, (965, 338, 1115, 382)):
@@ -175,7 +182,7 @@ def classify_ap(frame, words, *, home=False):
         # Sweep previews show attempts AFTER the selected batch. The mission
         # button retains the current daily allowance; reconcile both counters.
         actual = re.search(
-            r"Remaining:\s*(\d+)/3$", text_in(words, (840, 490, 1125, 547))
+            r"Remaining:\s*(\d+)/3$", hard_attempt_text(words)
         )
         if stage_match and count and parsed and actual:
             before, after, projected_remaining = map(int, parsed.groups())
@@ -441,7 +448,7 @@ class APVision:
             has(words, "mission info", (440, 80, 850, 130))
             and bright(frame, (420, 92, 495, 122))
             and has(words, "sweep", (850, 235, 1010, 290))
-            and re.search(r"Remaining:\s*\d/3$", text_in(words, (840, 490, 1125, 547)))
+            and re.search(r"Remaining:\s*\d/3$", hard_attempt_text(words))
             and not re.fullmatch(HARD_PROJECTION, text_in(words, HARD_PROJECTION_BOUNDS))
         ):
             # Native OCR can overlap "102" and "2→82", duplicating a digit.

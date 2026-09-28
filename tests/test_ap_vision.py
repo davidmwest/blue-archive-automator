@@ -285,3 +285,11 @@ def test_hard_projection_accepts_agreeing_1440p_reads_with_one_marginal_confiden
 
     result = reread_hard_projection(np.zeros((1440, 2560, 3), dtype='uint8'), CropVision())
     assert result is not None and result.text == '101→81 Remaining: 1/3'
+
+
+def test_native_hard_attempt_row_baseline_jitter(vision):
+    result = vision.analyze((FIXTURES / 'ap-hard-attempt-baseline.png').read_bytes())
+    assert result.kind == 'detail'
+    assert (result.stage, result.ap, result.count, result.cost) == ('7-1', 199, 1, 20)
+    assert (result.after, result.remaining, result.stars) == (179, 3, 3)
+    assert result.target == (937, 437)
