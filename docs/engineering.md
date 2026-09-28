@@ -34,7 +34,7 @@ the runner uses slow drags and overlapping views, checking the final partial vie
 
 Lessons separates observation, selection, and execution. the [planner](../ba_automator/lesson_planner.py) receives school ranks, XP, available rooms, ownership, and relationship ranks as data. the default maximizes owned-student opportunities per ticket; an alternate policy balances the lowest school rank and XP. relationship ranks break ties, and stable identities resolve equal scores. missing evidence stays unknown instead of becoming zero.
 
-the runner cycles through every unlocked school and checks that the observed ranks add up to the game's Total Area Rank. it repeats the survey before each ticket, including changes to relationship ranks and completed rooms. this takes longer than selecting a batch from one screenshot, but gives every decision a current, inspectable basis. a school allowlist and ticket budget make the scope explicit.
+the runner cycles through every unlocked school and checks that the observed ranks add up to the game's Total Area Rank. the relationship policy uses each school's All Locations shortcut once, selects the best room set for the ticket budget, and groups visits by school to reduce travel. it verifies the selected room and cost before each Start and updates school progress from the receipt. the school-rank policy still repeats the survey before each ticket because each rank and XP gain can change its next choice. a school allowlist and ticket budget make the scope explicit.
 
 at 1440p, one live survey of 94 rooms took 4 minutes 47 seconds, before returning to the chosen room or verifying its receipt. seven surveys at that pace cannot fit the old fixed 30-minute task limit. the runner now sets its total allowance once, after reading the initial ticket count: `min(90 minutes, max(30 minutes, 2 minutes + 8 minutes × authorized tickets))`. authorized tickets are the smaller of the observed count and `max_tickets`; a configured zero still means all available tickets. seven tickets receive 58 minutes, while zero through three retain 30 minutes. this allows time for the observed work; it does not guarantee completion on a slower machine.
 
@@ -223,6 +223,18 @@ only when ADB confirms that no swipe was sent. movement is measured against the
 fresh frame that authorized the successful swipe; unknown movement still cannot
 certify a camera edge.
 
+Lesson Report waits inspect its fixed title panel instead of the animated scene
+behind it. thin relationship digits may use a third resize scale when one of the
+first two reads is absent; two confident readings must agree, and a conflicting
+reading remains unknown. room-preview verification still checks every observed
+student against the survey before spending a ticket.
+
+native Cafe receipts tolerate tiny heading sparkle changes only with the exact
+high-confidence heading text and at least 97.5% overlap of its yellow lettering.
+card and quantity checks remain unchanged. Tactical's single-line ticket label
+is read left to right so a one-pixel OCR baseline offset cannot reverse the count
+and label after a battle.
+
 Total Assault's explicitly recognized season-calculation screen closes the battle
 visit successfully. reward checks can still open both reward tabs while preserving
 the observed closed-season state. an unread ticket count during an active season
@@ -232,6 +244,26 @@ relationship cards show a thumbnail cropped from the saved celebration, with a
 link to the original screenshot. the game supplies no name on that screen; a
 missing name is therefore not an incomplete receipt. unknown ranks and stat
 changes are still called out. no portrait classifier or AI is involved.
+
+the September 28 live retry verified the delayed free-package navigation, mail
+receipt collection, both remaining Scrimmage sweeps, and a Tactical Challenge win.
+the Tactical search then saved its next-ticket progress and yielded to the daily
+queue as designed. its later loss was recorded before a ticket-label OCR failure;
+a subsequent visit verified one ticket remaining and preserved that manual reserve.
+Cafe's full retry completed both floor scans and returned home in 554.6 seconds.
+it captured relationship ranks 7 and 11, with ATK +8 and Healing +70 / ATK +4
+respectively; both receipts have usable portrait thumbnails without inferred names.
+a subsequent uninterrupted Cafe visit completed both floors in 518.2 seconds
+and verified a fresh receipt for 14,791 credits and 16 AP, including complete loot
+identification. the heading tolerance therefore has both real-frame regression
+coverage and a successful live collection. the remaining daily steps are still
+being checked.
+
+Lessons' relationship policy subsequently completed the three remaining tickets
+from one 94-room, 12-school survey. it visited one Shanhaijing room and two Abydos
+rooms, verified each receipt and ticket decrement, and returned home at zero tickets
+in 569.1 seconds. the second Abydos room used the first room's observed XP update.
+the complete priority list and visit order are retained in the journal.
 
 ## evidence and its limits
 

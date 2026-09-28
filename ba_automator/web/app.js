@@ -240,7 +240,7 @@
     fields.cafe_invite_student.disabled = unavailable || !fields.cafe_invite_enabled.checked;
     $("lessons-strategy-description").textContent = fields.lessons_strategy.value === "school_rank"
       ? "lowest rank first, then lowest XP. recheck after each ticket. pick the room with the most students; higher owned relationships break ties."
-      : "check every location first. use tickets on rooms with the most owned students; higher relationships break ties.";
+      : "check every location once. pick rooms with the most owned students; higher relationships break ties. group visits by school to save time.";
     const packEnabled = ["monthly", "half_monthly", "ap"].some((key) => status?.config?.[`packs_${key}_enabled`]);
     $("daily-plan").textContent = `daily does restart → club → free pack → ${packEnabled ? "packs → " : ""}mail → café${status?.config?.bounties_enabled_in_daily === false ? "" : " → bounties"}${status?.config?.scrimmages_enabled_in_daily === false ? "" : " → scrimmages"}${status?.config?.tactical_battles_enabled_in_daily === false ? "" : " → tactical battles"} → tactical rewards${status?.config?.lessons_enabled_in_daily === false ? "" : " → lessons"}${status?.config?.total_assault_enabled_in_daily ? " → total assault" : ""} → raid rewards${status?.config?.ap_schedule_enabled ? " → spend AP" : ""} → collect tasks. home and campaign red dots queue their collection jobs when a run finishes.`;
     $("total-assault-schedule-status").textContent = !status?.config ? "loading raid schedule…"

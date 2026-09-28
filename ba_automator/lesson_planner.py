@@ -1,8 +1,10 @@
 """Pure decisions over observed Lessons screens; no device or account access.
 
-The runner must inspect every unlocked location and room before the first call,
-then supply a fresh snapshot after each confirmed ticket. This planner deliberately
-does not predict rank-ups, invent ownership, or assume a completed room can repeat.
+The runner must inspect every unlocked location and room before the first call.
+Relationship visits can select a room set from one snapshot, marking each selected
+room unavailable; school-rank visits supply fresh progress after each ticket.
+This planner deliberately does not predict rank-ups, invent ownership, or assume
+a completed room can repeat.
 """
 
 from __future__ import annotations

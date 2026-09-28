@@ -1,4 +1,4 @@
-"""Survey all schools, choose one verified lesson, and reconcile its ticket receipt."""
+"""Survey schools, plan verified lessons, and reconcile each ticket receipt."""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
@@ -300,7 +300,7 @@ class LessonsRunner:
         (self.run_dir / f'survey-{self.survey_number:02d}.json').write_text(json.dumps(snapshot, indent=2), encoding='utf-8')
         self.journal.record('lesson_survey', schools=len(locations), rooms=len(rooms),
                             total_rank=total, tickets=self.expected_tickets)
-        self.phase(f'Compared {len(rooms)} rooms across {len(locations)} schools; choosing one ticket')
+        self.phase(f'Compared {len(rooms)} rooms across {len(locations)} schools; planning Lessons')
         return locations, rooms
 
     def navigate(self, location_id):
@@ -316,6 +316,43 @@ class LessonsRunner:
             index = (index + (1 if right else -1)) % len(self.order)
             frame = self.next_school(frame, right=right, expected=self.order[index])
         return frame
+
+    def relationship_plan(self, locations, rooms, limit):
+        """Choose the best room set once; group visits to avoid school revisits."""
+        remaining = list(rooms)
+        decisions = []
+        for _ in range(limit):
+            decision = choose_lesson(locations, remaining, strategy='relationship',
+                                     allowed_location_ids=tuple(identity(n) for n in self.config.lessons_locations))
+            if decision.status == 'blocked':
+                self.fail(decision.reason)
+            if decision.status == 'complete':
+                break
+            decisions.append(decision)
+            remaining = [replace(room, available=False)
+                         if (room.location_id, room.id) == (decision.room.location_id, decision.room.id)
+                         else room for room in remaining]
+        priority = [(d.location.id, d.room.id) for d in decisions]
+        visits = []
+        current = self.current_school
+        while decisions:
+            # School arrows form a verified ring. Group every selected room in
+            # the nearest remaining school; priority determines the room set,
+            # not the execution order. Unknown navigation order keeps priority.
+            if current in self.order and all(d.location.id in self.order for d in decisions):
+                def distance(d):
+                    delta = abs(self.order.index(d.location.id) - self.order.index(current))
+                    return min(delta, len(self.order) - delta)
+                school = min(decisions, key=distance).location.id
+            else:
+                school = decisions[0].location.id
+            visits.extend(d for d in decisions if d.location.id == school)
+            decisions = [d for d in decisions if d.location.id != school]
+            current = school
+        self.journal.record('lesson_visit_plan', priority=priority,
+                            visits=[(d.location.id, d.room.id) for d in visits])
+        self.phase(f'Planned {len(visits)} Lessons from one complete survey; grouping visits by school')
+        return visits
 
     def dismiss_celebration(self, frame):
         self.celebrations += 1
@@ -461,6 +498,7 @@ class LessonsRunner:
                       evidence=str(self.run_dir / f'lesson-{self.confirmed:02d}-receipt.png'))
         self.journal.record('lesson_confirmed', location=location.name, room=room.name,
                             tickets_before=before, tickets_after=after_count)
+        return new_location
 
     def return_home(self):
         overview = self.overview()
@@ -494,8 +532,7 @@ class LessonsRunner:
                 self.check_budget()
                 self.initial_tickets = self.expected_tickets = self.tickets(initial)
                 limit = min(self.initial_tickets, self.config.lessons_max_tickets or self.initial_tickets)
-                # A fresh full survey is required for every ticket. Size the
-                # total budget once from the verified, authorized starting
+                # Size the total budget once from the verified, authorized starting
                 # count; later observations never extend the original deadline.
                 self.timeout_seconds = min(LESSONS_MAX_TIMEOUT, max(
                     LESSONS_TIMEOUT, LESSONS_OVERHEAD_SECONDS + LESSONS_SECONDS_PER_TICKET * limit))
@@ -506,17 +543,32 @@ class LessonsRunner:
                                     per_ticket_seconds=LESSONS_SECONDS_PER_TICKET,
                                     overhead_seconds=LESSONS_OVERHEAD_SECONDS)
                 reason = 'No Lesson tickets available.' if not limit else 'Configured ticket limit reached.'
-                for _ in range(limit):
+                plan = []
+                progress = {}
+                if limit and self.config.lessons_strategy == 'relationship':
                     locations, rooms = self.survey()
-                    decision = choose_lesson(locations, rooms, strategy=self.config.lessons_strategy,
-                                             allowed_location_ids=tuple(identity(n) for n in self.config.lessons_locations))
+                    plan = self.relationship_plan(locations, rooms, limit)
+                    progress = {location.id: location for location in locations}
+                for _ in range(limit):
+                    if self.config.lessons_strategy == 'relationship':
+                        if not plan:
+                            reason = 'All planned rooms completed; leaving tickets unused when no eligible room remains.'
+                            break
+                        decision = plan.pop(0)
+                        decision = replace(decision, location=progress[decision.location.id])
+                    else:
+                        locations, rooms = self.survey()
+                        decision = choose_lesson(locations, rooms, strategy=self.config.lessons_strategy,
+                                                 allowed_location_ids=tuple(identity(n) for n in self.config.lessons_locations))
                     self.journal.record('lesson_decision', **asdict(decision))
                     if decision.status == 'blocked':
                         self.fail(decision.reason)
                     if decision.status == 'complete':
                         reason = decision.reason
                         break
-                    self.execute(decision)
+                    updated = self.execute(decision)
+                    if updated is not None:
+                        progress[updated.id] = updated
                     if self.expected_tickets == 0:
                         reason = 'All available Lesson tickets used.'
                         break

@@ -101,7 +101,7 @@ Both selection paths require an exact-name normal invitation confirmation and a 
 
 ## Lessons routine
 
-Lessons begins at verified home, reads the ticket counter, and cycles through unlocked locations. It records rank and XP, inspects available room cards and ownership/relationship indicators, and checks that the surveyed ranks add up to the game's Total Area Rank. A configured location allowlist limits eligible rooms; unknown names or incomplete coverage stop the run. The runner repeats the survey before each ticket instead of assuming previous rank, room, or student observations remain valid.
+Lessons begins at verified home, reads the ticket counter, and cycles through unlocked locations. It records rank and XP, inspects available room cards and ownership/relationship indicators, and checks that the surveyed ranks add up to the game's Total Area Rank. A configured location allowlist limits eligible rooms; unknown names or incomplete coverage stop the run. The relationship policy selects its room set from one complete survey and groups visits by school. Each Start still verifies the room, students, and cost, and each receipt updates observed school progress. The school-rank policy repeats the survey before each ticket to compare the latest rank and XP.
 
 The pure planner defaults to the most owned students, then the highest sum of their relationship ranks. The alternate school-rank strategy chooses the lowest rank and fractional XP progress, then the most total students and highest owned relationship-rank sum. Stable identity resolves equal scores. It excludes completed rooms and distinguishes missing evidence from zero. If every eligible school is capped, the school-rank strategy falls back to relationship selection.
 

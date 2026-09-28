@@ -8,7 +8,7 @@ Lessons is the third game task, following restart and Cafe. It uses the global E
 2. Read available tickets and inspect every unlocked location in the configured scope (all locations by default). Record location identity, rank and XP when needed, and the available rooms with their visible students.
 3. Compare eligible rooms according to the configured policy. Keep observations separate from the pure planner so selection can be tested without the game.
 4. Reopen and verify the selected room. Confirm one lesson using one existing ticket.
-5. Verify the result and the reduced ticket count, record the evidence, and refresh the relevant observations before planning the next lesson.
+5. Verify the result and reduced ticket count, record the evidence, and continue the plan. The school-rank policy refreshes its survey before choosing again.
 6. Finish when the ticket budget is spent or no eligible useful room remains, then return to a verified home screen.
 
 The routine does not buy lesson tickets. A room that has already completed its lesson is excluded. Unknown or incomplete school coverage stops spending; an early page with a good room does not establish the best room in the configured scope.
@@ -20,6 +20,8 @@ The objective is to maximize **owned-student relationship opportunities** with t
 1. Most owned students.
 2. Highest sum of those owned students' visible relationship ranks.
 3. A stable location/room identity tie-break so repeated observations yield the same choice.
+
+Survey each school once using its **All Locations** room grid, then select the best room set for the available ticket budget. Visit selected rooms grouped by school, choosing the nearest remaining school in the verified arrow-navigation order. Travel order does not change which rooms were selected. Before every Start, recheck the room, students, and one-ticket cost. After each receipt, use the observed school rank and XP for subsequent visits to that school; do not predict progress or repeat the full survey. The journal saves both the priority list and the actual visit order. A new invocation starts with a new survey.
 
 Unowned students do not count toward relationship gains. A room with three students and two owned students loses to a room with three owned students. Relationship ranks only break a tie in owned-student count; a single high-rank student does not outrank two owned students.
 
@@ -46,7 +48,7 @@ The runner recognizes controls and values from fresh screenshots with local imag
 
 The location survey is bounded and checks for repeated pages and duplicate locations. An unknown screen, inconsistent ticket count, incomplete survey, ambiguous room confirmation, or exhausted timeout stops the run with evidence. A frame used for input must still be fresh after recognition and persistence, and Blue Archive must remain the foreground package.
 
-The total time allowance is set once from the initial verified ticket count, limited by `max_tickets`: two minutes plus eight minutes per authorized ticket, with a 30-minute minimum and a 90-minute ceiling. Seven tickets receive 58 minutes. Time is measured from the original run start, including setup; later observations cannot extend it. An invalid initial count cannot increase the allowance, and ticket inconsistencies still stop spending. The separate 2,500-input limit remains in force. These bounds allow for a fresh survey before every ticket; they do not guarantee completion on every machine.
+The total time allowance is set once from the initial verified ticket count, limited by `max_tickets`: two minutes plus eight minutes per authorized ticket, with a 30-minute minimum and a 90-minute ceiling. Seven tickets receive 58 minutes. Time is measured from the original run start, including setup; later observations cannot extend it. An invalid initial count cannot increase the allowance, and ticket inconsistencies still stop spending. The separate 2,500-input limit remains in force. These bounds accommodate the school-rank policy's repeated surveys; relationship visits normally finish much earlier.
 
 Every lesson has a before/after record with the location, room, selected policy, score, tickets before/after, and any readable reward or rank change. A confirmation tap records an attempt. A verified lesson records completion. Relationship increases are recorded only when the result screen supports them; school XP or a ticket decrement alone does not prove a relationship reward.
 
@@ -105,6 +107,8 @@ After the September 26 daily reset, a device preflight rejected an expired frame
 On September 27, a 1440p survey checked all 94 rooms across 12 schools in 4 minutes 47 seconds and selected a room with three owned students. The run stopped before spending because the native confirmation border and partial ticket-arrow OCR did not pass verification. Saved-screen regressions now cover those readings without weakening room, ownership, cost, or freshness checks. Fake-clock tests cover seven fresh surveys beyond the old fixed 30-minute allowance, configured ticket limits, and the global time and input ceilings.
 
 The subsequent 1440p visits at 20 FPS verified all seven starting tickets across two runs. The first completed three lessons, reducing tickets from seven to four, then stopped before sending the fourth Start input because OCR split its cost into `4` and `→3`. After that reading was fixed, the uninterrupted recovery visit completed the remaining four lessons, verified zero tickets, and returned home in 1,278.6 seconds. Every selection followed a fresh 94-room survey across all 12 schools; every lesson has a matching receipt, an observed one-ticket decrement, and a 100 XP school gain. The seven distinct rooms provided 17 owned-student opportunities. A relationship celebration also recorded rank 10 and ATK +23 without a written student name; its identity remains unknown. This verifies recovered seven-ticket completion, not one uninterrupted seven-ticket run. The final local run is `lessons-20260927T220306-57cbe0ef`.
+
+On September 28, the relationship policy's single-survey plan passed live at 1440p and 20 FPS. It inspected 94 rooms across 12 schools once, selected three rooms, then completed Rikkagaku in Shanhaijing followed by Abydos Library and Abydos Playing Field in one Abydos visit. All three receipts and ticket decrements were verified, including updated XP between the two Abydos rooms, before returning home at zero tickets. The complete Lessons visit took 569.1 seconds; the survey event arrived at 291.9 seconds. The journal records one `lesson_survey`, one `lesson_visit_plan`, and three `lesson_confirmed` events. This verifies the three remaining tickets, not an uninterrupted seven-ticket batch. The local run is `lessons-20260928T232309-1a276f73`.
 
 All live spending used the relationship policy. The school-rank policy is covered by observed-data and multi-ticket rank/XP tests, including switching schools after each ticket, but a real school rank-up popup remains unverified as described above. Live Windows execution and broader account/layout coverage remain future checks.
 

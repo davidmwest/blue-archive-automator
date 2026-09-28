@@ -401,15 +401,18 @@ class OrchestrationRunner(LessonsRunner):
         return tuple(self.locations), tuple(self.rooms)
 
     def execute(self, decision):
-        # If run() batches choices from the first survey, this assertion fails
-        # before the second ticket instead of accepting a stale queue of choices.
-        assert self.survey_calls == len(self.selected) + 1
+        if self.config.lessons_strategy == "school_rank":
+            assert self.survey_calls == len(self.selected) + 1
+        else:
+            assert self.survey_calls == 1
+        assert decision.location == next(x for x in self.locations if x.id == decision.location.id)
         self.selected.append((decision.location.id, decision.room.id))
         self.rooms = [replace(room, available=False) if room == decision.room else room for room in self.rooms]
         self.locations = [replace(location, xp=location.xp + 100)
                           if location.id == decision.location.id else location for location in self.locations]
         self.expected_tickets -= 1
         self.confirmed += 1
+        return next(x for x in self.locations if x.id == decision.location.id)
 
     def return_home(self):
         self.home_calls += 1
@@ -429,7 +432,7 @@ def test_zero_tickets_returns_home_without_survey_or_spend(harness):
 def test_configured_budget_limits_spend_and_preserves_unused_tickets(harness):
     runner = harness.make(OrchestrationRunner, lessons_max_tickets=2)
     assert runner.run().status == "success"
-    assert len(runner.selected) == runner.survey_calls == 2
+    assert len(runner.selected) == 2 and runner.survey_calls == 1
     assert runner.expected_tickets == 1
     assert harness.records[-1]["tickets_after"] == 1
 
@@ -536,7 +539,7 @@ class TimedOrchestrationRunner(OrchestrationRunner):
     def execute(self, decision):
         self.sleep(self.execution_seconds)
         self.check_budget()
-        super().execute(decision)
+        return super().execute(decision)
 
     def return_home(self):
         self.sleep(15)
@@ -546,7 +549,7 @@ class TimedOrchestrationRunner(OrchestrationRunner):
 
 def test_seven_native_pace_lessons_keep_fresh_surveys_beyond_old_total_limit(harness):
     harness.device.size = (2560, 1440)
-    runner = harness.make(TimedOrchestrationRunner)
+    runner = harness.make(TimedOrchestrationRunner, lessons_strategy="school_rank")
     result = runner.run()
     assert result.status == "success"
     assert result.duration > lessons_module.LESSONS_TIMEOUT
@@ -560,7 +563,7 @@ def test_seven_native_pace_lessons_keep_fresh_surveys_beyond_old_total_limit(har
 
 
 def test_time_allowance_respects_user_ticket_limit_instead_of_available_count(harness):
-    runner = harness.make(TimedOrchestrationRunner, lessons_max_tickets=2)
+    runner = harness.make(TimedOrchestrationRunner, lessons_max_tickets=2, lessons_strategy="school_rank")
     assert runner.run().status == "success"
     assert runner.confirmed == runner.survey_calls == 2
     assert runner.expected_tickets == 5
@@ -615,7 +618,7 @@ def test_later_increased_ticket_count_does_not_extend_initial_budget(harness, mo
 
 
 def test_scaled_deadline_stays_anchored_to_run_start_and_never_resets_per_ticket(harness):
-    runner = harness.make(TimedOrchestrationRunner)
+    runner = harness.make(TimedOrchestrationRunner, lessons_strategy="school_rank")
     runner.setup_seconds = 1000
     with pytest.raises(TaskError, match="58-minute limit"):
         runner.run()
@@ -625,8 +628,9 @@ def test_scaled_deadline_stays_anchored_to_run_start_and_never_resets_per_ticket
 
 
 def test_large_ticket_count_still_stops_at_explicit_ninety_minute_ceiling(harness):
-    runner = harness.make(TimedOrchestrationRunner)
+    runner = harness.make(TimedOrchestrationRunner, lessons_strategy="school_rank")
     runner.starting_tickets = 99
+    runner.locations = [replace(x, xp_to_next=100000) for x in runner.locations]
     runner.survey_seconds = 480
     runner.execution_seconds = 120
     with pytest.raises(TaskError, match="90-minute limit"):
@@ -1134,3 +1138,32 @@ def test_runtime_timeout_is_bounded(harness):
     with pytest.raises(TaskError, match="30-minute"):
         runner.capture()
     assert not harness.device.taps
+
+
+def test_relationship_batch_uses_one_survey_and_updates_same_school_progress(harness):
+    runner = harness.make(OrchestrationRunner)
+    runner.order = ["a", "b"]
+    runner.current_school = "a"
+    assert runner.run().status == "success"
+    assert runner.survey_calls == 1
+    assert runner.selected == [("a", "1"), ("a", "0"), ("b", "0")]
+    assert runner.expected_tickets == 0
+    plan = next(x for x in journal(runner) if x["event"] == "lesson_visit_plan")
+    assert plan["priority"] == [["b", "0"], ["a", "1"], ["a", "0"]]
+
+
+def test_relationship_batch_selects_best_set_before_reordering(harness):
+    runner = harness.make(OrchestrationRunner, lessons_max_tickets=1)
+    runner.order = ["a", "b"]
+    runner.current_school = "a"
+    runner.run()
+    assert runner.selected == [("b", "0")]
+    assert runner.survey_calls == 1
+
+
+def test_relationship_native_pace_has_only_one_survey(harness):
+    runner = harness.make(TimedOrchestrationRunner)
+    result = runner.run()
+    assert runner.confirmed == 7 and runner.expected_tickets == 0
+    assert runner.survey_calls == 1
+    assert result.duration == 20 + 287 + 7 * 75 + 15
