@@ -839,7 +839,18 @@ def same_receipt_view(before, after, expected, *, vision=None):
         bounds = [(min(w.box[0] for w in words), min(w.box[1] for w in words),
                    max(w.box[2] for w in words), max(w.box[3] for w in words))
                   for words in headings]
-        return all(abs(a - b) <= 3 for a, b in zip(*bounds))
+        if all(abs(a - b) <= 3 for a, b in zip(*bounds)):
+            return True
+        # Sparkles change OCR's slanted bounding rectangle even when the title
+        # stays put. Require both exact, confident phrases AND near-identical
+        # yellow lettering in screen coordinates. Card identities above remain
+        # independently verified; this tolerance applies only to the heading.
+        if any(decode_native_frame(png).shape[:2] == (720, 1280)
+               for png in (before, after)):
+            return False
+        intersection = np.count_nonzero(old_title[0] & new_title[0])
+        union = np.count_nonzero(old_title[0] | new_title[0])
+        return union > 0 and intersection / union >= .975
 
     # At native resolution, local title OCR is enough to prove the exact same
     # heading. Avoid two full-screen OCR passes consuming the input deadline.

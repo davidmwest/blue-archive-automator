@@ -315,8 +315,13 @@ class LessonVision:
             # artwork, and require agreement at two independent resize scales.
             label = region((left + 42, top + 31, left + 65, top + 53))
             candidates = [read_number(label, (23, 22), scale) for scale in (3, 5)]
-            if candidates[0] is not None and candidates[0] == candidates[1]:
-                result = candidates[0]
+            if None in candidates and any(value is not None for value in candidates):
+                # Thin digits can disappear at one scale. A third reading may
+                # supply agreement, but must never override a conflicting read.
+                candidates.append(read_number(label, (23, 22), 7))
+            confident = [value for value in candidates if value is not None]
+            if len(confident) >= 2 and len(set(confident)) == 1:
+                result = confident[0]
         if result is not None and not 1 <= result <= 100:
             result = None
         if len(self._bond_cache) >= 256:

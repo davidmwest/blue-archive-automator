@@ -601,3 +601,16 @@ def test_confirmation_allows_right_aligned_portraits_but_rejects_internal_gaps()
 def test_dimmed_underlying_controls_cannot_be_a_recognized_active_screen(name):
     frame, _, vision = replay(name)
     assert analyze(vision, (frame.astype(float) * .45).astype(np.uint8)).kind == "unknown"
+
+
+@pytest.mark.parametrize("third,expected", [("7", 7), ("8", None), ("", None)])
+def test_thin_bond_uses_third_scale_only_with_agreement(third, expected):
+    frame, ocr, vision = replay("shiratori-single-bond")
+    crop = frame[441:463, 608:631]
+    for scale, text in ((3, ""), (5, "7"), (7, third)):
+        enlarged = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+        ocr.crops[enlarged.tobytes()] = [
+            {"text": text, "confidence": .99, "box": [0, 0, 30, 30]}
+        ] if text else []
+    student = analyze(vision, frame).room_cards[4].students[1]
+    assert student.owned is True and student.bond == expected

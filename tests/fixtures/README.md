@@ -898,3 +898,13 @@ AP, stage, zero quantity, and no-input exhaustion guards remain independent.
 Unrelated account balances are masked. This fixture proves the already-spent
 balance, not permission to repeat the sweep. The game-derived fixture remains
 outside the project's MIT grant.
+
+### Cafe reward heading animation (September 28, 2026)
+
+`loot-cafe-title-read.png` and `loot-cafe-title-refresh.png` retain only the
+1440p reward heading and card row. The account HUD and surrounding Cafe are
+masked. Both show the same 14,791 credits and 16 AP, while a passing sparkle
+changes OCR's bounding rectangle for the slanted title. Tests require the exact
+confident heading and fixed lettering as well as unchanged card identities;
+a moved heading or altered quantity is rejected. These game-derived fixtures
+remain outside the project's MIT grant.

@@ -608,3 +608,20 @@ def test_isolated_heading_requires_exact_confident_phrase(text, confidence):
 
     png = (FIXTURES / 'loot-free-pack-native-sparkle.png').read_bytes()
     assert not lr.reward_heading_words(png, UnreadableHeading(), words=[])
+
+
+def test_cafe_heading_sparkles_keep_exact_text_and_fixed_lettering(vision):
+    before, after = [(FIXTURES / f'loot-cafe-title-{label}.png').read_bytes()
+                     for label in ('read', 'refresh')]
+    parsed = lr.page(before, vision)
+    assert [(c.name, c.quantity) for c in parsed.cards] == [
+        ('Credit Points', 14791), ('AP', 16)]
+    assert lr.same_receipt_view(before, after, parsed, vision=vision)
+    # Neither a translated heading nor altered reward amounts may authorize input.
+    native = cv2.imdecode(np.frombuffer(after, np.uint8), cv2.IMREAD_COLOR)
+    moved = native.copy()
+    moved[206:426, 670:1890] = np.roll(moved[206:426, 670:1890], 40, axis=1)
+    assert not lr.same_receipt_view(before, lr.encode(moved), parsed, vision=vision)
+    changed = native.copy()
+    changed[865:925, 1310:1540] = 0
+    assert not lr.same_receipt_view(before, lr.encode(changed), parsed, vision=vision)
