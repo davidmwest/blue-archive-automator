@@ -108,11 +108,21 @@ def test_foreground_loss_blocks_capture_before_recognition_or_input(harness):
     assert harness.device.taps == []
 
 
-def test_tap_refuses_expired_frame(harness):
+def test_tap_refreshes_expired_frame_before_input(harness):
     runner = harness.make()
     frame = harness.frame(map_screen())
     harness.clock.sleep(5.01)
-    with pytest.raises(TaskError, match="expired before input"):
+    harness.screens[:] = [map_screen()]
+    runner.tap(frame, (10, 20), "test")
+    assert harness.device.taps == [(10, 20)]
+
+
+def test_expired_frame_with_changed_ticket_count_never_sends_input(harness):
+    runner = harness.make()
+    frame = harness.frame(map_screen(tickets=2))
+    harness.clock.sleep(5.01)
+    harness.screens[:] = [map_screen(tickets=1)]
+    with pytest.raises(TaskError, match="screen changed"):
         runner.tap(frame, (10, 20), "test")
     assert harness.device.taps == []
 

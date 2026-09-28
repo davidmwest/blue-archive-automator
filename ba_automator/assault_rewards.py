@@ -24,6 +24,7 @@ class AssaultRewardScreen:
     claimable: bool | None = None
     tickets: int | None = None
     items: tuple = ()
+    season_closed: bool = False
 
 
 TABS = {"rank": (240, 240), "points": (240, 308)}
@@ -69,7 +70,7 @@ def classify_rewards(frame, words, *, home=False):
         return AssaultRewardScreen("unknown")
     base = classify_assault(frame, words, home=home)
     if base.kind == "menu" and has(words, "rewards", (1090, 620, 1260, 685)):
-        return AssaultRewardScreen("menu", (1180, 655), tickets=base.tickets)
+        return AssaultRewardScreen("menu", (1180, 655), tickets=base.tickets, season_closed=base.season_closed)
     if base.kind in {"home", "campaign"}:
         return AssaultRewardScreen(base.kind, base.target)
     return AssaultRewardScreen("unknown")
@@ -106,7 +107,7 @@ class AssaultRewardsRunner(ShopRunner):
 
     def collect(self, menu):
         initial_tickets = menu.screen.tickets
-        if initial_tickets is None:
+        if initial_tickets is None and not menu.screen.season_closed:
             self.fail("Total Assault reward visit could not read the ticket balance")
         self.tap(menu, menu.screen.target, "Open Total Assault rewards")
         frame = self.wait({"rank_info", "rewards"})
@@ -149,7 +150,8 @@ class AssaultRewardsRunner(ShopRunner):
             claimed.append(tab)
         self.tap(frame, (1166, 107), "Close Total Assault Info")
         final = self.wait("menu")
-        if final.screen.tickets != initial_tickets:
+        if (final.screen.tickets != initial_tickets
+                or final.screen.season_closed != menu.screen.season_closed):
             self.fail("Total Assault ticket balance changed during reward collection")
         self.journal.record("rewards_checked", claimed=claimed, tickets_before=initial_tickets,
                             tickets_after=final.screen.tickets)

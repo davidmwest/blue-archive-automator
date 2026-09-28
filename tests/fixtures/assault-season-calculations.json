@@ -1,0 +1,42 @@
+[
+  {
+    "text": "Total Assault",
+    "confidence": 0.99902,
+    "box": [
+      104,
+      9,
+      283,
+      39
+    ]
+  },
+  {
+    "text": "Season calculations in progress.",
+    "confidence": 0.99996,
+    "box": [
+      767,
+      441,
+      1149,
+      476
+    ]
+  },
+  {
+    "text": "09/28 11:59 - 09/29 07:59",
+    "confidence": 0.9843,
+    "box": [
+      834,
+      479,
+      1082,
+      510
+    ]
+  },
+  {
+    "text": "Rewards",
+    "confidence": 0.99998,
+    "box": [
+      1127,
+      642,
+      1236,
+      670
+    ]
+  }
+]

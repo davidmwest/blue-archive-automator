@@ -367,3 +367,20 @@ def test_failed_return_home_cannot_publish_badge_requests(config):
         assert not (r.run_dir / "requests.json").exists()
     finally:
         r.journal.close()
+
+
+def test_free_pack_allows_delayed_store_transition_before_selecting_packs(config):
+    r = runner(FreePackRunner, config)
+    home = FreePackScreen('home', (1015, 35), red_dot=True)
+    store = FreePackScreen('store', (900, 178))
+    empty = FreePackScreen('free_empty', (1009, 113))
+    screens = iter([home, home, home, home, home, store, empty, empty])
+    r.wait = lambda *a, **k: frame(config, next(screens))
+    taps = []
+    r.tap = lambda f, t, d: taps.append(t)
+    r.home = lambda: None
+    try:
+        assert r.run().status == 'success'
+        assert taps[-2:] == [(900, 178), (1009, 113)]
+    finally:
+        r.journal.close()

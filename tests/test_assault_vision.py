@@ -601,3 +601,12 @@ def test_corroborated_zero_only_changes_ticket_observation():
     result = AssaultVision(crop_reader(("0→-",)))._exhausted_budget(
         (FIXTURES / "assault-zero-detail-native.png").read_bytes(), before)
     assert result == replace(before, tickets=0)
+
+
+def test_season_calculations_are_an_observed_closed_menu():
+    frame, words = capture('season-calculations')
+    result = classify_assault(frame, words)
+    assert result.kind == 'menu' and result.season_closed and result.tickets is None
+    # The status text cannot authorize navigation without the active header.
+    frame[5:32, 320:390] = 0
+    assert not classify_assault(frame, words).season_closed

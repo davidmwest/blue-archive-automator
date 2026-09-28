@@ -1759,3 +1759,14 @@ def test_identical_pixels_cannot_override_refresh_context_guards(runner, change)
     with pytest.raises(RuntimeError, match="refresh was sent.*timer reset"):
         runner.refresh(initial)
     assert len(runner.inputs) == 1
+
+
+def test_duplicate_visible_identity_refreshes_instead_of_crashing(runner):
+    duplicate = frame(rank=100, all_ahead=True, opponents=tuple(
+        Candidate(Opponent('same', 70 + i, 75)) for i in range(3)))
+    valid = frame(rank=100, opponents=tuple(
+        Candidate(Opponent(str(i), 70 + i, 75)) for i in range(3)))
+    calls = timed_refresh(runner, valid)
+    current, choices = runner.scout(duplicate)
+    assert calls and current is valid and choices
+    assert any(args[0] == 'opponent_identity_ambiguous' for args, kwargs in runner.events)

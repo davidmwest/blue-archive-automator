@@ -786,6 +786,14 @@
         const grid = document.createElement("div"); grid.className = "loot-relationship-grid";
         relationships.forEach((gain) => {
           const card = document.createElement("article"); card.className = "loot-relationship";
+          if (/^\/api\/loot\/[a-f0-9]{32}\/portrait$/.test(gain.portrait_url || "")) {
+            const link = document.createElement("a"); link.href = gain.receipt_url;
+            link.target = "_blank"; link.rel = "noopener"; link.className = "relationship-portrait";
+            const portrait = document.createElement("img"); portrait.src = gain.portrait_url;
+            portrait.alt = gain.student || "Student from the relationship rank-up screen";
+            portrait.width = 160; portrait.height = 130; portrait.loading = "lazy";
+            link.append(portrait); card.append(link);
+          }
           const title = document.createElement("div"); title.className = "loot-relationship-heading";
           const student = document.createElement("strong"); student.textContent = gain.student || "relationship increased";
           const rank = document.createElement("span"); rank.className = "loot-relationship-rank";
@@ -807,10 +815,9 @@
             stats.append(name, value);
           });
           if (stats.childElementCount) card.append(stats);
-          if (!gain.student || !gain.rank || !gain.stats?.length || gain.incomplete) {
+          if (!gain.rank || !gain.stats?.length || gain.incomplete) {
             const note = document.createElement("p"); note.className = "loot-relationship-note";
             const missing = [];
-            if (!gain.student) missing.push("student not identified");
             if (!gain.rank) missing.push("new level unread");
             if (!gain.stats?.length) missing.push("stat changes unread");
             note.textContent = missing.length ? `${missing.join(" · ")}. known details are saved.` : "some details need a look. known changes are saved.";

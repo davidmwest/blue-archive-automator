@@ -42,7 +42,7 @@ def test_portrait_and_rank_alone_do_not_invent_student_name():
     result = parse_relationship_rank_up(fixture_words())
     assert result.student is None
     assert result.rank == 3
-    assert result.fields()["unread_fields"] == ["student"]
+    assert result.fields()["unread_fields"] == []
 
 
 def test_rank_is_read_from_enlarged_isolated_heart_when_full_ocr_omits_it():
@@ -189,3 +189,13 @@ def test_celebration_identity_ignores_small_particle_but_not_student_or_rank():
     different_rank = original.copy()
     different_rank[522:555, 618:663] = 255
     assert not same_relationship_screen(original, different_rank)
+
+
+def test_portrait_thumbnail_preserves_native_character_region():
+    from ba_automator.relationship import portrait_thumbnail
+    import numpy as np
+    image = np.zeros((1440, 2560, 3), dtype=np.uint8)
+    image[120:1160, 640:1920] = (30, 80, 140)
+    result = cv2.imdecode(np.frombuffer(portrait_thumbnail(cv2.imencode('.png', image)[1].tobytes()), np.uint8), cv2.IMREAD_COLOR)
+    assert result.shape == (260, 320, 3)
+    assert np.all(result == (30, 80, 140))

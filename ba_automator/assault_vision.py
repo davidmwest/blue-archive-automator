@@ -48,6 +48,7 @@ class AssaultScreen:
     credit_fee: int | None = None
     assistant_level: int | None = None
     assistant_stars: int | None = None
+    season_closed: bool = False
 
 
 def _difficulty(text):
@@ -183,6 +184,11 @@ def classify_assault(frame, words, *, home=False, stars=()):
     receipt = classify_shop(frame, words)
     if receipt.kind == "receipt":
         return AssaultScreen("receipt", words, target=receipt.target, items=receipt.items)
+    if (has(words, "total assault", (80, 0, 350, 55))
+            and has(words, "season calculations in progress", (700, 410, 1230, 490))
+            and has(words, "rewards", (1090, 620, 1260, 685))
+            and bright(frame, (320, 5, 390, 32))):
+        return AssaultScreen("menu", words, season_closed=True)
     if home:
         return AssaultScreen("home", words)
     if (has(words, "campaign", (80, 0, 350, 50)) and bright(frame, (320, 5, 390, 32))

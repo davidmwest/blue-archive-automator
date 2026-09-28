@@ -1577,6 +1577,15 @@ class DashboardController:
             if path is None: raise ApiError(404, "Receipt unavailable")
             return path.read_bytes()
 
+    def relationship_portrait(self, identifier) -> bytes:
+        from .relationship import portrait_thumbnail
+        with self._condition:
+            gains = self.loot().get("relationships", [])
+            if not any(gain["id"] == identifier for gain in gains):
+                raise ApiError(404, "Relationship portrait unavailable")
+            png = self.loot_image(identifier)
+        return portrait_thumbnail(png)
+
     def loot_icon(self, identifier) -> bytes:
         path = loot.icon_path(self.config, identifier)
         if path is None: raise ApiError(404, "Item icon unavailable")
@@ -1938,6 +1947,8 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     self._json(200, controller.loot())
                 elif match := re.fullmatch(r"/api/loot/([a-f0-9]{32})/receipt", target.path):
                     self._send(200, controller.loot_image(match[1]), "image/png")
+                elif match := re.fullmatch(r"/api/loot/([a-f0-9]{32})/portrait", target.path):
+                    self._send(200, controller.relationship_portrait(match[1]), "image/png")
                 elif target.path == "/api/actions":
                     self._json(200, controller.actions())
                 elif match := re.fullmatch(r"/api/popups/([a-f0-9]{32})/(before|after)", target.path):

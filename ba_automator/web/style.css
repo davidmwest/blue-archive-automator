@@ -164,3 +164,6 @@
 .loot-relationship-intro>h3{margin-bottom:0;min-width:0}
 .arisu-heart{display:block;width:80px;height:80px;object-fit:contain;pointer-events:none}
 @media(max-width:650px){.loot-relationship-intro{gap:10px}.arisu-heart{width:60px;height:60px}}
+
+.loot-relationship .relationship-portrait { display:block; margin:0 0 12px; }
+.relationship-portrait img { display:block; width:160px; height:130px; object-fit:contain; border-radius:10px; }

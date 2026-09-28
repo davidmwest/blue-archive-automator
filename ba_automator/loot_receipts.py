@@ -823,14 +823,11 @@ def same_receipt_view(before, after, expected, *, vision=None):
         return True
     # A large star can pass directly over the heading while all cards remain
     # unchanged. Verify the same complete heading in the same position. Keep
-    # full-frame OCR first; a generous isolated crop can resolve native OCR's
+    # native OCR focused on the title first; a generous isolated crop resolves
     # overlapping sparkle without clipping the slanted title's corners.
     # Only words inside the heading region are evidence; background labels are
     # never accepted. The caller still enforces the fresh capture's deadline.
     if vision is None or min(np.count_nonzero(t[0]) for t in (old_title, new_title)) < 2000:
-        return False
-    headings = [reward_heading_words(png, vision) for png in (before, after)]
-    if not all(headings):
         return False
     # OCR may merge the two words, including their intervening whitespace,
     # when a star crosses their shared edge.
@@ -844,6 +841,14 @@ def same_receipt_view(before, after, expected, *, vision=None):
                   for words in headings]
         return all(abs(a - b) <= 3 for a, b in zip(*bounds))
 
+    # At native resolution, local title OCR is enough to prove the exact same
+    # heading. Avoid two full-screen OCR passes consuming the input deadline.
+    if all(decode_native_frame(png).shape[:2] != (720, 1280) for png in (before, after)):
+        if same_heading_bounds([
+            reward_heading_words(png, vision, isolated=True) for png in (before, after)
+        ]):
+            return True
+    headings = [reward_heading_words(png, vision) for png in (before, after)]
     if same_heading_bounds(headings):
         return True
     if all(decode_native_frame(png).shape[:2] == (720, 1280) for png in (before, after)):

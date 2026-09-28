@@ -321,10 +321,9 @@ class TicketVision:
         ticket_projection_recoverable = (
             has(words, "bounty", (80, 0, 310, 55))
             or (has(words, "scrimmage", (80, 0, 310, 55))
-                and len(ap_projection) == 1
-                and math.isfinite(ap_projection[0].confidence)
-                and ap_projection[0].confidence >= .95
-                and re.fullmatch(r"\d+\s*→\s*\d+", ap_projection[0].text.strip()))
+                and ap_projection
+                and all(math.isfinite(w.confidence) and w.confidence >= .95 for w in ap_projection)
+                and re.fullmatch(r"\d+\s*→\s*\d+", " ".join(w.text.strip() for w in sorted(ap_projection, key=lambda w: w.box[0]))))
         )
         if (screen.kind == "unknown" and count and count[0] > 0
                 and ticket_projection_recoverable

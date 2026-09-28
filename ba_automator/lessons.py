@@ -104,7 +104,14 @@ class LessonsRunner:
         original = frame.screen
         for attempt in range(MAX_STALE_INPUT_RETRIES + 1):
             if not frame.capture.is_fresh(self.clock()):
-                self.fail('Lessons frame expired before input; no tap was sent')
+                if attempt == MAX_STALE_INPUT_RETRIES or original.kind not in {'home', 'overview', 'map', 'rooms', 'confirm', 'receipt'}:
+                    self.fail('Lessons frame expired before input; no tap was sent')
+                fresh = self.wait(original.kind)
+                if replace(fresh.screen, words=(), detail='') != replace(original, words=(), detail=''):
+                    self.fail('Lessons screen changed while refreshing an unsent input; no tap was sent')
+                frame = fresh
+                self.journal.record('lesson_unsent_input_refreshed', attempt=attempt + 1,
+                                    detail=detail, frame=self.last_frame)
             if self.device.foreground_package() != self.config.package:
                 self.fail('Blue Archive left the foreground before Lesson input; no tap was sent')
             self.journal.record('intent', operation='tap', task='lessons', detail=detail,

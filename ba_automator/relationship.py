@@ -36,7 +36,7 @@ class RelationshipIncrease:
             "rank": self.rank,
             "stats": [asdict(stat) for stat in self.stats],
             "unread_fields": [name for name, value in
-                              (("student", self.student), ("rank", self.rank),
+                              (("rank", self.rank),
                                ("stats", self.stats)) if not value],
         }
 
@@ -169,3 +169,14 @@ def record_relationship_increase(config, result, *, evidence, run_dir, task,
     return record_action(config, "relationship_rank_increased", result.detail(), task=task,
                          evidence=str(evidence), run_dir=str(run_dir),
                          **result.fields(), **context)
+
+
+def portrait_thumbnail(png):
+    """Show the observed celebration portrait without guessing an identity."""
+    native = decode_native_frame(png)
+    crop = native_game_region(native, (320, 60, 960, 580))
+    thumbnail = cv2.resize(crop, (320, 260), interpolation=cv2.INTER_AREA)
+    ok, encoded = cv2.imencode(".png", thumbnail)
+    if not ok:
+        raise ValueError("Could not encode relationship portrait")
+    return encoded.tobytes()

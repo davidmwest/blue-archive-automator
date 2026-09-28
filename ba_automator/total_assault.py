@@ -328,6 +328,10 @@ class TotalAssaultRunner(AssaultAssistantMixin, AssaultBattleMixin, ShopRunner):
         frame = self.stage_menu()
         completed = set()
         for _ in DIFFICULTIES:
+            if frame.screen.season_closed:
+                self.important("total_assault_season_closed",
+                               "Total Assault season calculations are in progress; no battles available")
+                break
             if frame.screen.tickets == 0:
                 self.important("total_assault_no_tickets",
                                "No Total Assault tickets remain; waiting for the next game day",

@@ -973,3 +973,15 @@ def test_icon_ranking_ignores_tampering_and_caches_each_file(config, monkeypatch
     assert data["groups"][0]["items"][0]["icon_url"] == f"/api/loot/icons/{full}"
     assert data["items"] == [{"name": "Credits", "quantity": 40}]
     assert sorted(reads) == sorted([f"{full}.png", f"{forged}.png", f"{malformed}.png"])
+
+
+def test_legacy_missing_student_is_presented_as_portrait_not_failed_recognition(config):
+    config.run_dir.mkdir(parents=True)
+    image = config.run_dir / 'rank-up.png'
+    image.write_bytes(b'portrait evidence')
+    event = record_action(config, 'relationship_rank_increased', 'rank-up',
+                          rank=9, stats=[{'name': 'ATK', 'delta': 92}],
+                          unread_fields=['student'], recognition='partial', evidence=str(image))
+    gain = loot.snapshot(config)['relationships'][0]
+    assert not gain['incomplete']
+    assert gain['portrait_url'] == f"/api/loot/{event['id']}/portrait"

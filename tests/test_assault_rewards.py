@@ -325,3 +325,10 @@ def test_run_navigates_only_to_reward_menu(runner):
     assert runner.run() == "complete"
     assert navigations == [("home", "campaign", (1200, 641)), ("campaign", "menu", (906, 456))]
     assert collected == [destination]
+
+
+def test_rewards_remain_accessible_during_season_calculations():
+    fixture = FIXTURES / 'assault-season-calculations'
+    words = [Word(**w) for w in json.loads(fixture.with_suffix('.json').read_text())]
+    screen = classify_rewards(decode_frame(fixture.with_suffix('.png').read_bytes()), words)
+    assert screen == AssaultRewardScreen('menu', (1180, 655), season_closed=True)

@@ -329,6 +329,10 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
                         eligible = eligible_opponents((p.choice for p in observed), rank)
                     except TacticalPlanningError:
                         eligible = ()
+                if len({p.opponent_id for p in eligible}) != len(eligible):
+                    self.journal.record("opponent_identity_ambiguous",
+                                        detail="Duplicate identities in one list; refreshing without choosing")
+                    eligible = ()
                 history = state.battle_history(state.read_state(self.config))
                 eligible = tuple(p for p in eligible if p.opponent_id not in history.attempts)
                 if refreshed or not self.search_state.initial_observed:

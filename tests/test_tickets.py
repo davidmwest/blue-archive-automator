@@ -1527,3 +1527,23 @@ def test_native_scrimmage_exhaustion_retains_independent_balance_guards(
 
     result = TicketVision(Startup()).analyze(png)
     assert result.kind == "unknown" and result.target is None
+
+
+def test_split_native_ap_projection_still_recovers_verified_ticket_digits(vision):
+    import json
+    from ba_automator.vision import Word
+    fixture = Path(__file__).parent / 'fixtures/tickets-scrimmage-split-ap'
+    words = [Word(**w) for w in json.loads(fixture.with_suffix('.json').read_text())]
+
+    class Startup:
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            return vision.startup.read(image)
+
+        def matches(self, image):
+            return {}
+
+    result = TicketVision(Startup()).analyze(fixture.with_suffix('.png').read_bytes())
+    assert (result.kind, result.task, result.area, result.stage) == ('detail', 'scrimmages', 'Gehenna', 'B')
+    assert (result.ap, result.after_ap, result.tickets, result.after_tickets, result.count) == (482, 482, 10, 6, 4)

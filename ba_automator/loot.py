@@ -380,6 +380,9 @@ def _relationship(event, config):
             )
         if any(stat[field] is not None for field in ("before", "after", "delta")):
             stats.append(stat)
+    unread = event.get("unread_fields", [])
+    if not isinstance(unread, list):
+        unread = ["unknown"]
     path = receipt_path(config, event)
     if not (student or rank or stats or path):
         return None
@@ -391,10 +394,11 @@ def _relationship(event, config):
         "rank": rank,
         "stats": stats,
         "incomplete": (
-            not student or rank is None or not stats
-            or event.get("recognition") == "partial"
+            rank is None or not stats
+            or any(field != "student" for field in unread)
         ),
         "receipt_url": f'/api/loot/{event["id"]}/receipt' if path else None,
+        "portrait_url": f'/api/loot/{event["id"]}/portrait' if path else None,
     }
 
 

@@ -203,6 +203,31 @@ Daily is scheduled for September 28 at 19:01 UTC (12:01 PDT); check-ins and reso
 schedules remain enabled. this validates recovery and serial handoff on the
 development Mac, not unattended operation across every future screen or season.
 
+## September 28 daily recovery
+
+several independent failures needed different fixes. the shop could finish opening
+just after the navigation retry budget expired, so its bounded wait now covers that
+transition. native Scrimmage OCR could split the AP projection across two words;
+only an exact, high-confidence numeric arrow expression permits the existing
+independent ticket-crop verification. expired Lessons inputs are recaptured and
+compared before sending a tap, without replaying a sent action.
+
+reward receipts keep their card, quantity, and input-freshness checks. native
+heading revalidation tries a focused crop before expensive whole-screen OCR,
+so the animation check can finish inside the input deadline. duplicate Tactical
+opponent identities cause another observation rather than an uncaught planning
+exception. neither change relaxes resource limits or same-day opponent exclusions.
+
+Total Assault's explicitly recognized season-calculation screen closes the battle
+visit successfully. reward checks can still open both reward tabs while preserving
+the observed closed-season state. an unread ticket count during an active season
+continues to block spending.
+
+relationship cards show a thumbnail cropped from the saved celebration, with a
+link to the original screenshot. the game supplies no name on that screen; a
+missing name is therefore not an incomplete receipt. unknown ranks and stat
+changes are still called out. no portrait classifier or AI is involved.
+
 ## evidence and its limits
 
 [camera tests](../tests/test_cafe_camera.py) exercise arbitrary generated layouts, moving sprites, occlusion, repeated patterns, perspective changes, and misleading fixed backgrounds. [scan tests](../tests/test_cafe_scan.py) check that unknown movement cannot certify an edge or silently skip an intermediate view. screenshot fixtures exercise actual OCR and template recognition; device and server tests cover stale input, protocol mismatches, locks, and serialized jobs.

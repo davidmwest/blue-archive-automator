@@ -763,3 +763,15 @@ def test_max_sweep_never_persists_or_spends_until_exact_projection_is_verified(r
         runner.sweep_remaining(initial)
     assert taps == [initial.screen.sweep_max_target]
     assert assault_state.read_state(runner.config) == before
+
+
+def test_closed_season_returns_home_without_using_tickets(runner):
+    menu = frame('menu', season_closed=True)
+    runner.stage_menu = lambda: menu
+    runner.survey = lambda _: pytest.fail('No difficulty survey during season calculations')
+    actions = []
+    runner.tap = lambda *args: actions.append(args)
+    runner.home = lambda: actions.append('home')
+    runner.finish = lambda: 'complete'
+    assert runner.run() == 'complete'
+    assert len(actions) == 2 and actions[-1] == 'home'

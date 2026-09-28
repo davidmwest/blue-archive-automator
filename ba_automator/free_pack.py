@@ -136,7 +136,7 @@ class FreePackRunner(ShopRunner):
             if not frame.screen.red_dot:
                 self.phase("No Buy Pyroxene notification; free package skipped")
                 return self.finish()
-        for _ in range(4):
+        for _ in range(8):
             frame = self.wait({"home", "store", "free_available", "free_empty"})
             if frame.screen.kind in {"free_available", "free_empty"}:
                 break
@@ -145,7 +145,7 @@ class FreePackRunner(ShopRunner):
                 frame.screen.target,
                 "Open Buy Pyroxene" if frame.screen.kind == "home" else "Select Packs",
             )
-            self.sleep(2)
+            self.sleep(8 if frame.screen.kind == "home" else 2)
         frame = self.wait({"free_available", "free_empty"})
         if frame.screen.kind == "free_empty":
             self.tap(

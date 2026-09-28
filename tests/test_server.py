@@ -1924,3 +1924,20 @@ def test_loot_icon_removed_before_read_returns_not_found(controlled, monkeypatch
     with pytest.raises(ApiError) as exc:
         controller.loot_icon('a' * 64)
     assert exc.value.status == 404
+
+
+def test_relationship_portrait_http_only_serves_observed_rankups(http_server):
+    from ba_automator.actions import record_action
+    request, controller, factory, _ = http_server
+    root = controller.config.run_dir
+    root.mkdir(parents=True, exist_ok=True)
+    path = root / 'rank-up.png'
+    cv2.imwrite(str(path), np.full((720, 1280, 3), 120, np.uint8))
+    gain = record_action(controller.config, 'relationship_rank_increased', 'rank-up',
+                         rank=9, stats=[{'name': 'ATK', 'delta': 92}], evidence=str(path))
+    status, png = request('GET', f'/api/loot/{gain["id"]}/portrait')
+    assert status == 200
+    assert cv2.imdecode(np.frombuffer(png, np.uint8), cv2.IMREAD_COLOR).shape == (260, 320, 3)
+    assert request('GET', '/api/loot/' + 'f' * 32 + '/portrait')[0] == 404
+    assert request('GET', '/api/loot/../../private.png/portrait')[0] == 404
+    assert not factory.processes
