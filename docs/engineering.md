@@ -89,8 +89,7 @@ lessons and returned home at zero tickets in 1,278.6 seconds. each selection
 followed a fresh survey of all 94 rooms. across the two visits at 1440p and
 20 FPS, seven distinct rooms provided 17 owned-student opportunities; every
 lesson has a receipt, a one-ticket decrement, and a verified 100 school XP gain.
-this is recovered completion, not an uninterrupted seven-ticket run. a full
-successful daily remains unverified.
+this is recovered completion, not an uninterrupted seven-ticket run.
 
 Tactical Challenge exposed a performance problem: repeated crop reads left
 too little time to act on a fresh frame. a cache now reuses level readings only
@@ -133,8 +132,8 @@ collected 229 AP and 207,081 credits, verified three relationship increases,
 and returned home. one settled rank-up showed rank 8 and ATK +78 without a
 written student name; that identity remains unknown in the receipt. Quick
 Craft also completed its zero-keystone path, preserving the preset and
-returning home without a craft or purchase. these are completed task checks;
-the full daily still needs its own successful result.
+returning home without a craft or purchase. these are individual task checks;
+the later full-Daily verification is recorded below.
 
 a later Bounty screen omitted both the ticket arrow and its final digit;
 Scrimmage omitted the arrow between two readable digits. the ticket reader
@@ -179,6 +178,30 @@ Full List scrolling could move a card by half a canonical pixel, changing its
 detected height by one pixel. ordered multi-card overlap now permits that exact
 alignment difference while preserving quantity, tier, column, and artwork
 checks. this tolerance does not apply to the identity check before a tap.
+
+the final September 27 Daily ran from 16:39:57 to 17:10:40 PDT at 1440p and
+20 FPS. it finished successfully with 14 completed steps, no failed or skipped
+steps, and one deferred Tactical Challenge continuation. Cafe completed both
+floors; Bounties, Scrimmages, Lessons, and Total Assault confirmed their already
+exhausted tickets without spending again. Tactical Challenge completed a battle,
+verified the loss and four-to-three ticket change, then saved its next search.
+the new portrait-alignment fallback was not exercised in that battle and remains
+covered by saved-screen tests only.
+
+Spend AP resumed the previous visit's saved cursor and verified five sweeps,
+reducing AP from 492 to 392 with a floor of 100, before returning home and yielding.
+one receipt kept ten named items but could not establish page overlap; its loot
+record stayed incomplete while independent resource verification allowed Daily
+to continue. Tasks collected a Keystone and the final notification scan returned
+home. this successful Daily visit does not turn the earlier interrupted ticket
+spends into uninterrupted validation or imply that all remaining AP was spent.
+
+the daemon persisted the successful game-day occurrence, dispatched queued
+Crafting, and automatically queued AP and Tactical continuations. the resolved
+failure notices were then acknowledged without deleting their history. the next
+Daily is scheduled for September 28 at 19:01 UTC (12:01 PDT); check-ins and resource
+schedules remain enabled. this validates recovery and serial handoff on the
+development Mac, not unattended operation across every future screen or season.
 
 ## evidence and its limits
 
