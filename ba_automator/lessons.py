@@ -48,6 +48,7 @@ class LessonFrame:
 
 
 class LessonsRunner:
+    task = "lessons"
     def __init__(self, config, device, vision, *, lesson_vision=None,
                  monotonic=time.monotonic, sleep=time.sleep):
         self.config, self.device, self.startup = config, device, vision

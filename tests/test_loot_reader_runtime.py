@@ -1360,3 +1360,35 @@ def test_extended_receipt_budget_remains_bounded(harness, limit):
     with pytest.raises(TaskError, match="bounded limit"):
         reader.capture()
     assert h.inputs == [] and h.captures == (1 if limit in {"reward_time", "grid_time"} else 0)
+
+
+@pytest.mark.parametrize("moving_title", [False, True])
+def test_lesson_notice_wait_ignores_background_but_requires_quiet_title(
+    harness, monkeypatch, moving_title
+):
+    import cv2
+    import numpy as np
+    h = harness
+    h.runner.task = "lessons"
+    monkeypatch.setattr(lr, "decode_frame", decode_frame)
+    monkeypatch.setattr(lr, "TASK_NOTICE_TIMEOUT", 2)
+    monkeypatch.setattr(lr, "task_notice_visible", lambda image: False)
+    monkeypatch.setattr(lr, "sweep_notice_shadow", lambda image: False)
+
+    def screenshot():
+        h.captures += 1
+        image = np.full((720, 1280, 3), 255, np.uint8)
+        # The old sweep-heading crop includes these animated background pixels.
+        image[70:112, 420:930] = h.captures % 255
+        if moving_title:
+            image[125:150, 530:750] = h.captures % 255
+        return cv2.imencode(".png", image)[1].tobytes()
+
+    h.runner.device.screenshot = screenshot
+    if moving_title:
+        with pytest.raises(TaskError, match="Task progress notice did not clear"):
+            h.reader().capture(wait_for_stable_heading=True)
+    else:
+        h.reader().capture(wait_for_stable_heading=True)
+        assert h.now < 2
+    assert not h.inputs

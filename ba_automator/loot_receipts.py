@@ -1047,7 +1047,13 @@ class ReceiptReader:
                 # A departing banner can fade below its color threshold while
                 # still covering heading pixels. Require a quiet interval after
                 # it leaves; this grants no input or receipt identity on its own.
-                heading = task_notice_heading(image)
+                # Lesson Report is a narrower, lower panel. The sweep-title
+                # crop includes its animated background and never settles.
+                # This is only a wait signal; OCR and input identity checks
+                # still verify the actual receipt before any tap.
+                heading = (image[115:169, 440:840].tobytes()
+                           if getattr(r, "task", None) == "lessons"
+                           else task_notice_heading(image))
                 if heading != clear_heading:
                     clear_heading, clear_since = heading, at
                 elif at - clear_since >= TASK_NOTICE_QUIET_TIME:
