@@ -459,11 +459,17 @@ class CafeRunner:
         self.wait_cafe()
 
     def pan(self, vector):
-        cap = self.wait_cafe()
-        self.journal.record("intent", operation="pan", start=list(vector[0]), end=list(vector[1]))
-        if not self.device.swipe(*vector, duration_ms=1800,
+        for attempt in range(3):
+            cap = self.wait_cafe()
+            self.journal.record("intent", operation="pan", start=list(vector[0]), end=list(vector[1]))
+            if self.device.swipe(*vector, duration_ms=1800,
                                  deadline=cap[0] + FRAME_MAX_AGE, monotonic=self.clock):
-            self.fail("Cafe view expired before camera movement")
+                break
+            # False guarantees that no input was sent. Re-observe the Cafe;
+            # never extend the deadline or replay a successfully sent swipe.
+            self.journal.record("camera_unsent_input_refreshed", attempt=attempt + 1)
+        else:
+            self.fail("Cafe view expired before camera movement after three fresh observations")
         self.sleep(.5)
         displacement = None
         diagnostics = {}

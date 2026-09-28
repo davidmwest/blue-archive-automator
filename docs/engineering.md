@@ -218,6 +218,11 @@ so the animation check can finish inside the input deadline. duplicate Tactical
 opponent identities cause another observation rather than an uncaught planning
 exception. neither change relaxes resource limits or same-day opponent exclusions.
 
+Cafe camera input also recaptures an expired observation, at most three times,
+only when ADB confirms that no swipe was sent. movement is measured against the
+fresh frame that authorized the successful swipe; unknown movement still cannot
+certify a camera edge.
+
 Total Assault's explicitly recognized season-calculation screen closes the battle
 visit successfully. reward checks can still open both reward tabs while preserving
 the observed closed-season state. an unread ticket count during an active season

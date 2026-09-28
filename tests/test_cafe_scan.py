@@ -165,3 +165,35 @@ def test_sweep_does_not_report_completion_without_right_boundary(monkeypatch):
     with pytest.raises(RuntimeError, match="width exceeded"):
         runner.sweep()
     assert actions == []
+
+
+@pytest.mark.parametrize("succeeds", [True, False])
+def test_pan_recaptures_expired_unsent_input_with_bounded_retries(monkeypatch, succeeds):
+    runner = CafeRunner.__new__(CafeRunner)
+    runner.clock = lambda: 0
+    runner.sleep = lambda seconds: None
+    runner.last_frame = "after.png"
+    runner.journal = SimpleNamespace(record=lambda *a, **kw: None)
+    runner.fail = lambda message: (_ for _ in ()).throw(RuntimeError(message))
+    observations = iter([(0, b"", "stale", []), (10, b"", "fresh", []),
+                         (20, b"", "after", [])])
+    runner.wait_cafe = lambda: next(observations)
+    deadlines = []
+    def swipe(*args, **kwargs):
+        deadlines.append(kwargs["deadline"])
+        return succeeds and len(deadlines) == 2
+    runner.device = SimpleNamespace(swipe=swipe)
+    comparisons = []
+    def measure(before, after, **kwargs):
+        comparisons.append((before, after))
+        return (-100, 0)
+    monkeypatch.setattr(cafe_module, "measure_camera_displacement", measure)
+    if succeeds:
+        assert runner.pan(PAN_LEFT) == (-100, 0)
+        assert comparisons == [("fresh", "after")]
+        assert deadlines == [cafe_module.FRAME_MAX_AGE, 10 + cafe_module.FRAME_MAX_AGE]
+    else:
+        with pytest.raises(RuntimeError, match="three fresh observations"):
+            runner.pan(PAN_LEFT)
+        assert len(deadlines) == 3
+        assert comparisons == []
