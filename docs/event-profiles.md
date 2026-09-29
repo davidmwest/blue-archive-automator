@@ -4,6 +4,8 @@ Event behavior is researched ahead of time and saved as local JSON. Runtime reco
 
 The version-1 loader and read-only recognition helpers are implemented. **There is no event navigation job, event farming task, or event CLI command yet.** A matching profile returns evidence and a candidate target; it does not send game input.
 
+The proposed farming runner, AP allocation, and Aquatic Showdown rerun policy are described in [Event farming](event-farming.md). Its version-2 contract is a proposal; the loader below still accepts version 1 only.
+
 ## Current profile
 
 [`config/events/lore-pursuit.json`](../config/events/lore-pursuit.json) describes Special Mission: Lore Pursuit on global English at 1280×720. During live inspection, Campaign's upper-left entry near `(100,162)` opened a spoiler notice, then a play guide, then the Lore Pursuit event page with Quest/Challenge controls. The home entry is near `(1193,207)`.

@@ -83,6 +83,8 @@ sign in manually once. Blue Archive and Azur Lane get different ADB endpoints; t
 
 ## what's next
 
+The [event farming proposal](docs/event-farming.md) covers the current Aquatic Showdown rerun and a reusable, deterministic runner for future events. Stage farming shares the AP budget; shops and minigames use reviewed seasonal profiles. This is a design, not an implemented job.
+
 Final Restriction Release, the mode with Fury of Set, has a [design proposal](docs/final-restriction-release.md): seasonal progress, a saved ten-student team, and one floor attempt at a time so AP and cafe work can keep moving. it's a plan, not an implemented job yet.
 
 capture an actual school rank-up, repeat Cafe visits after cooldown, and validate invitation selection across deeper lists and capped students. AP spending now has its own floor and rotation policy. crafting refill checks and event farming follow one verified routine at a time.

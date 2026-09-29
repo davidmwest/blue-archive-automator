@@ -230,3 +230,7 @@ The [Final Restriction Release design](final-restriction-release.md) proposes se
 ## Joint Firing Drill proposal
 
 The [Joint Firing Drill design](joint-firing-drill.md) proposes three compatible teams, practice qualification before a paid entry, recovery across its timed rounds, and eligible daily sweeps. Daily inspection would run independently of badges, with ticket spending explicitly enabled. This is design only. Walkthroughs resolve the daily flow as one three-round clear followed by two sweeps; client recognition and the active season still need live validation.
+
+## Event farming proposal
+
+The [event farming design](event-farming.md) separates a shared runner from reviewed seasonal profiles and reusable mechanic adapters. It covers the September 2026 Aquatic Showdown rerun, shared AP allocation, shops, Treasure Hunt, reward-only windows, and how future events are onboarded without runtime AI. Farming remains proposed; the existing event module provides recognition only.
