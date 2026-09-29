@@ -14,9 +14,11 @@ The official [Joint Firing Drill guide](https://forum.nexon.com/bluearchive-en/b
 
 The official [March 12 patch notes](https://forum.nexon.com/bluearchive-en/board_view?board=3217&thread=2519898) describe a ticket-funded entry containing three rounds, a one-hour entry deadline, four selectable stages, and permission to repeat a stage. Interrupted entries can resume within their deadline; expiry or quitting settles partial progress. Sweeps cost tickets and award coins and credits according to the day's best score.
 
-**Unresolved wording:** both sources describe sweep availability with “only available once.” They do not clearly establish whether this means one initial clear, one sweep operation, or another restriction. Capture the current sweep UI, quantity limits, confirmation, and post-sweep state before implementing a remaining-ticket loop. The proposed behavior is to sweep all eligible tickets above the reserve, subject to the observed rules. Never assume a second full entry is wanted when sweeping is unavailable.
+**Sweep wording resolved:** [Game8's walkthrough](https://game8.jp/blue-archive/653326) explains that one clear each day unlocks sweeping. [Global players describe the exact daily sequence](https://www.reddit.com/r/BlueArchive/comments/1s3ulbf/daily_questions_megathread_march_26_2026/): clear three rounds with the first ticket, then sweep the other two runs. The official English wording does not mean a one-ticket sweep limit. With three starting tickets and no reserve, the intended plan is **one three-round entry → two swept entries**. Repeat the qualifying clear on each new game day.
 
-These references establish a baseline, not the current season's rules. Inspect the live season, stages, restrictions, fees, practice behavior, and screens before enabling spending.
+The walkthrough also confirms that a borrowed copy may be used in another team after using the owned copy. Keep those identities separate. The [fan wiki's assistant reference](https://bluearchive.fandom.com/wiki/Circle) describes distinct variants as separate units, no mock borrowing fee, and expected real borrowing fees of 40,000 credits for friends/club or 50,000 otherwise. Verify the displayed fee before confirming; the price reference is not spending authorization.
+
+Use walkthroughs and fan wikis to resolve unclear rule translations before implementation. Distinguish JP season examples from Global: a guide's current team or schedule is not proof of the account's active season. Remaining live work is recognition calibration—button layouts, quantity selection, confirmation, and receipt handling—not rediscovery of these established daily rules.
 
 ## Scope and defaults
 
@@ -34,9 +36,9 @@ Start with three player-prepared formations. Allow an explicitly enabled, preval
 
 ## Plan all three teams together
 
-Treat the entry as one allocation problem. Read each formation's student identities, roles, slot order, and starting skills. Detect overlap between owned students across successful-round teams before practice. Keep borrowed and owned copies distinguishable; cross-round duplicate and assistant rules need their own live fixtures rather than a blanket name-based ban.
+Treat the entry as one allocation problem. Read each formation's student identities, roles, slot order, and starting skills. Detect overlap between owned students across successful-round teams before practice. Identify a student by variant and ownership/lender, not character name alone. An owned copy and borrowed copy may occupy different round teams; the same variant cannot be duplicated within one formation. Add fixtures for those distinctions.
 
-The first implementation preserves player-prepared teams and reports missing or conflicting slots. Do not fill them indiscriminately with the highest-level students. Different drills can require healing, crowd control, hit counts, or other mechanics that raw level and damage type do not capture.
+The first implementation preserves player-prepared teams and reports missing or conflicting slots. Do not fill them indiscriminately with the highest-level students. Different drills can require healing, crowd control, hit counts, or other mechanics that raw level and damage type do not capture. For example, the [JFD 13 walkthrough](https://bluearchive.gg/joint-firing-drill-13-breakthrough-guide/) describes a season where damage-over-time triggers receive a large bonus and Midori needs Momoi to activate her poison. Encode such dependencies in the matching season profile; do not generalize that team to other seasons.
 
 A later deterministic planner can use versioned local JSON profiles. A profile identifies the season, drill type, terrain, armor, special rules, acceptable stage tuple, three ordered teams, required roles, allowed substitutions, and any supported skill sequence. Validate against a strict schema. Unsupported rules or an uncertain season match hold combat and provide setup guidance. Profile files contain data, not arbitrary executable code.
 
@@ -99,10 +101,10 @@ Proposed modules are `joint_firing_drill.py` for orchestration, `drill_vision.py
 
 ## Rollout and acceptance criteria
 
-1. **Inspect:** capture sanitized fixtures for entry/preparation screens, stages, ticket counts, all relevant formations, and sweep controls. Verify current mechanics, including the ambiguous sweep limit and assistant behavior.
+1. **Inspect:** capture sanitized fixtures for entry/preparation screens, stages, ticket counts, all relevant formations, and sweep controls. Calibrate the researched clear-once/sweep-twice flow, assistant identity distinctions, and fee recognition against the current client.
 2. **Practice:** prove three compatible prepared teams without tickets. Test mismatched profiles, duplicate students, animation delays, losses, budget exhaustion, pause/resume, and 1440p at 20 FPS.
 3. **One entry:** with authorization to spend, validate one ticket decrement, three confirmed rounds, used-student tracking, final score, complete receipt, and return home. Exercise interruption recovery offline before the live entry.
-4. **Sweeps and scheduling:** validate supported quantities and remaining-ticket behavior, reserves, manual clears, daily reset, downtime catch-up, and queue deduplication. Show that AP and Cafe work are not starved during practice.
+4. **Sweeps and scheduling:** validate the two remaining daily sweeps, supported quantity controls, reserves, manual clears, daily reset, downtime catch-up, and queue deduplication. Show that AP and Cafe work are not starved during practice.
 5. **Optional expansion:** assistants, reviewed substitutions, and mechanic-specific skill scripts follow separately. Each needs new evidence and tests.
 
 Regression tests must cover crashes before/after each spending confirmation, contradictory ticket observations, expired entries, partial settlement, missing receipts, changed assistants, and season rollover with pending state. No test may treat a mock as a paid clear or a ticket decrement alone as proof of loot.

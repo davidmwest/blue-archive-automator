@@ -229,4 +229,4 @@ The [Final Restriction Release design](final-restriction-release.md) proposes se
 
 ## Joint Firing Drill proposal
 
-The [Joint Firing Drill design](joint-firing-drill.md) proposes three compatible teams, practice qualification before a paid entry, recovery across its timed rounds, and eligible daily sweeps. Daily inspection would run independently of badges, with ticket spending explicitly enabled. This is design only; current sweep limits and season mechanics require live verification.
+The [Joint Firing Drill design](joint-firing-drill.md) proposes three compatible teams, practice qualification before a paid entry, recovery across its timed rounds, and eligible daily sweeps. Daily inspection would run independently of badges, with ticket spending explicitly enabled. This is design only. Walkthroughs resolve the daily flow as one three-round clear followed by two sweeps; client recognition and the active season still need live validation.
