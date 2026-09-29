@@ -907,3 +907,22 @@ def test_all_students_capped_closes_list_without_spending_invite(cafe, monkeypat
     assert cafe.runner.invite() is False
     assert cafe.device.taps == [(883, 652), (837, 95)]
     assert action_records(cafe.config)[-1]['action'] == 'invitation_skipped'
+
+
+@pytest.mark.parametrize("available", [{1, 2}, {2}, {1}, set()])
+def test_automatic_invitations_check_each_floor_independently(cafe, monkeypatch, available):
+    prepare_two_floor_run(cafe, monkeypatch)
+    cafe.runner.config = replace(cafe.runner.config, cafe_invite_student="")
+    events = []
+    monkeypatch.setattr(cafe.runner, "sweep", lambda: events.append(("scan", cafe.runner.floor)))
+    def invite():
+        events.append(("invite", cafe.runner.floor))
+        return cafe.runner.floor in available
+    monkeypatch.setattr(cafe.runner, "invite", invite)
+    assert cafe.runner.run().status == "success"
+    expected = [("scan", 1), ("scan", 2)]
+    for floor in (2, 1):
+        expected.append(("invite", floor))
+        if floor in available:
+            expected.append(("scan", floor))
+    assert events == expected

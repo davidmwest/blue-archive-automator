@@ -19,7 +19,7 @@ The routine:
 3. Scans for student attention markers and relationship feedback before optional invitations.
 4. Pans through overlapping views, measuring scene movement and checking camera boundaries while allowing transient bubbles and animations to settle.
 5. Visits both unlocked floors, requiring an unambiguous English switch label before and after each floor change. Unsupported or unrecognized floor layouts stop the routine.
-6. Checks the configured optional free invitation after both required scans. One successful invitation ends the invitation check and triggers another scan for the new arrival.
+6. Checks optional free invitations after both required scans. Automatic selection checks each floor independently and rescans after each successful invitation. A configured named recipient ends the invitation check after one success, avoiding a second invitation for the same student.
 7. Returns to a verified home screen and records the visit result.
 
 A visit has a 15-minute limit. Dialog waits, student attempts per view, and invitation-list scanning are bounded. An unexpected screen or expired frame stops input and leaves diagnostics.

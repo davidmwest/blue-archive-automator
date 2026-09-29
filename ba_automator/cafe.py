@@ -829,7 +829,8 @@ class CafeRunner:
                         self.move_to_floor(floor)
                         if self.invite():
                             self.sweep()  # Include the newly invited student.
-                            break  # One configured student needs only one invitation.
+                            if self.config.cafe_invite_student.strip():
+                                break  # A named recipient needs only one invitation.
                 self.phase("Returning to home")
                 self.tap(self.wait_cafe(), (1237, 24), "Return to home after Cafe")
                 end = self.clock() + 30
