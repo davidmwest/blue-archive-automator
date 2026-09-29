@@ -116,7 +116,7 @@ class AssaultAssistantMixin:
                 if unchanged >= 3:
                     self.fail('Assistant scrolling stalled; the ticket intent is held')
                 previous_scroll = frame.screen.scrollbar
-                self.swipe(frame, (1050, 418), (1050, 378), 'Locate the retained assistant offering')
+                self.swipe(frame, (1015, 458), (1015, 378), 'Locate the retained assistant offering')
                 frame = self.wait_assistant()
         if selected is None or replace(selected.member, slot=expected.slot) != expected:
             self.fail('The exact mock-tested assistant cannot be verified; the ticket intent is held')
@@ -183,7 +183,7 @@ class AssaultAssistantMixin:
             if unchanged >= 3:
                 self.fail('Assistant scrolling stalled before the top; no selection was made')
             previous_scroll = frame.screen.scrollbar
-            self.swipe(frame, (1050, 278), (1050, 358), 'Find the beginning of the assistant list')
+            self.swipe(frame, (1015, 278), (1015, 358), 'Find the beginning of the assistant list')
             frame = self.wait_assistant()
         self.fail('Could not reach the beginning of the assistant list')
 
@@ -220,9 +220,10 @@ class AssaultAssistantMixin:
             if unchanged >= 3:
                 self.fail('Assistant scrolling stalled before the bottom; no optimal candidate was established')
             previous_scroll = page.scrollbar
-            # Slow, overlapping drags keep each 171px card fully exposed in the
-            # 278px viewport during the scan. A clipped card is never a candidate.
-            self.swipe(frame, (1050, 418), (1050, 378), 'Inspect more assistant strikers')
+            # An 80px drag in the gutter avoids selecting a card at low FPS,
+            # while keeping each 171px card exposed in the 278px viewport.
+            # A clipped card is never a candidate.
+            self.swipe(frame, (1015, 458), (1015, 378), 'Inspect more assistant strikers')
             frame = self.wait_assistant()
         else:
             self.fail('Assistant survey reached its limit before the bottom')
@@ -246,7 +247,7 @@ class AssaultAssistantMixin:
             if unchanged >= 3:
                 self.fail('Assistant scrolling stalled while locating the selected offering; no replacement was selected')
             previous_scroll = frame.screen.scrollbar
-            self.swipe(frame, (1050, 418), (1050, 378), 'Locate the selected assistant offering')
+            self.swipe(frame, (1015, 458), (1015, 378), 'Locate the selected assistant offering')
             frame = self.wait_assistant()
         self.fail('The selected assistant offering changed; no replacement was selected')
 

@@ -184,6 +184,18 @@ class DrillVision:
                                                w.box[2]+590, w.box[3]+300)) for w in local]
             words = tuple(w for w in words if not (590 <= w.center[0] <= 654
                                                    and 300 <= w.center[1] <= 336)) + tuple(extra)
+            # Portrait art can defeat the whole-badge template. Read the
+            # opaque rarity digit twice before accepting a fee confirmation.
+            rarity = []
+            for crop in ((589, 372, 610, 393), (593, 375, 606, 390)):
+                digits = read_game_region(png, self.startup, crop)
+                rarity.append(digits[0].text if len(digits) == 1
+                              and digits[0].confidence >= .95 else None)
+            if (not text_in(words, (588, 369, 615, 397)).strip()
+                    and rarity[0] in {'1', '2', '3', '4', '5'} and rarity[0] == rarity[1]):
+                words = tuple(w for w in words if not (588 <= w.center[0] <= 615
+                                                       and 369 <= w.center[1] <= 397))
+                words += (Word(rarity[0], .95, (593, 375, 606, 390)),)
             screen = classify_drill(frame, words, home=home)
         if screen.kind == 'formation' and not any(w.normalized == 'empty' for w in words):
             screen = replace(screen, team=read_formation(frame, words, startup=self.startup,

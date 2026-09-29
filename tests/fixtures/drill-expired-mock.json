@@ -1,0 +1,202 @@
+[
+  {
+    "text": "Joint Firing Drill",
+    "confidence": 0.98311,
+    "box": [
+      100,
+      7,
+      315,
+      44
+    ]
+  },
+  {
+    "text": "Assistant Settings",
+    "confidence": 0.99973,
+    "box": [
+      86,
+      89,
+      266,
+      117
+    ]
+  },
+  {
+    "text": "Drill End",
+    "confidence": 0.99947,
+    "box": [
+      576,
+      114,
+      705,
+      149
+    ]
+  },
+  {
+    "text": "Drill Exam",
+    "confidence": 0.9627,
+    "box": [
+      1020,
+      162,
+      1118,
+      183
+    ]
+  },
+  {
+    "text": "Mock Battle",
+    "confidence": 0.99996,
+    "box": [
+      414,
+      187,
+      541,
+      212
+    ]
+  },
+  {
+    "text": "31,199 Points",
+    "confidence": 0.99562,
+    "box": [
+      520,
+      226,
+      760,
+      271
+    ]
+  },
+  {
+    "text": "Drill Open",
+    "confidence": 0.99954,
+    "box": [
+      72,
+      234,
+      169,
+      257
+    ]
+  },
+  {
+    "text": "3/6",
+    "confidence": 0.99922,
+    "box": [
+      208,
+      232,
+      249,
+      260
+    ]
+  },
+  {
+    "text": "Breakthrough",
+    "confidence": 0.99997,
+    "box": [
+      1035,
+      276,
+      1185,
+      305
+    ]
+  },
+  {
+    "text": "Drill",
+    "confidence": 0.97112,
+    "box": [
+      1087,
+      298,
+      1135,
+      325
+    ]
+  },
+  {
+    "text": "1st Formation ",
+    "confidence": 0.9827,
+    "box": [
+      414,
+      338,
+      534,
+      357
+    ]
+  },
+  {
+    "text": "31,199 Points",
+    "confidence": 0.99997,
+    "box": [
+      563,
+      335,
+      705,
+      360
+    ]
+  },
+  {
+    "text": "Info",
+    "confidence": 0.99987,
+    "box": [
+      1084,
+      350,
+      1140,
+      380
+    ]
+  },
+  {
+    "text": "Shooting Drill",
+    "confidence": 0.99945,
+    "box": [
+      90,
+      370,
+      235,
+      399
+    ]
+  },
+  {
+    "text": "Failed to get score",
+    "confidence": 0.99055,
+    "box": [
+      562,
+      382,
+      763,
+      413
+    ]
+  },
+  {
+    "text": "2nd Formation ",
+    "confidence": 0.99386,
+    "box": [
+      412,
+      387,
+      534,
+      407
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.9998,
+    "box": [
+      131,
+      424,
+      201,
+      452
+    ]
+  },
+  {
+    "text": "Failed to get score",
+    "confidence": 0.98977,
+    "box": [
+      562,
+      430,
+      763,
+      462
+    ]
+  },
+  {
+    "text": "3rd Formation ",
+    "confidence": 0.98585,
+    "box": [
+      410,
+      435,
+      534,
+      456
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99998,
+    "box": [
+      577,
+      509,
+      703,
+      545
+    ]
+  }
+]

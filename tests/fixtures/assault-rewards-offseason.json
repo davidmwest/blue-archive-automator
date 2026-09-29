@@ -1,0 +1,62 @@
+[
+  {
+    "text": "Total Assault",
+    "confidence": 0.99958,
+    "box": [
+      103,
+      8,
+      292,
+      40
+    ]
+  },
+  {
+    "text": "MockTotal",
+    "confidence": 0.99979,
+    "box": [
+      48,
+      225,
+      146,
+      246
+    ]
+  },
+  {
+    "text": "Assault",
+    "confidence": 0.99979,
+    "box": [
+      62,
+      244,
+      132,
+      265
+    ]
+  },
+  {
+    "text": "Kivotos is at peace.",
+    "confidence": 0.99985,
+    "box": [
+      851,
+      442,
+      1068,
+      475
+    ]
+  },
+  {
+    "text": "Season starts on 10/19 19:00",
+    "confidence": 0.9989,
+    "box": [
+      816,
+      481,
+      1099,
+      508
+    ]
+  },
+  {
+    "text": "Rewards",
+    "confidence": 0.99998,
+    "box": [
+      1126,
+      641,
+      1237,
+      671
+    ]
+  }
+]

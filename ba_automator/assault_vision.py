@@ -185,7 +185,10 @@ def classify_assault(frame, words, *, home=False, stars=()):
     if receipt.kind == "receipt":
         return AssaultScreen("receipt", words, target=receipt.target, items=receipt.items)
     if (has(words, "total assault", (80, 0, 350, 55))
-            and has(words, "season calculations in progress", (700, 410, 1230, 490))
+            and (has(words, "season calculations in progress", (700, 410, 1230, 490))
+                 or (has(words, "kivotos is at peace", (700, 410, 1230, 490))
+                     and re.fullmatch(r"Season starts on \d{2}/\d{2} \d{2}:\d{2}",
+                                      text_in(words, (700, 475, 1230, 525)).strip())))
             and has(words, "rewards", (1090, 620, 1260, 685))
             and bright(frame, (320, 5, 390, 32))):
         return AssaultScreen("menu", words, season_closed=True)

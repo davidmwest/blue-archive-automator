@@ -348,3 +348,27 @@ def test_native_grid_fixtures_exclude_background(bounty_scroll):
         image = cv2.imdecode(np.frombuffer(png, np.uint8), cv2.IMREAD_COLOR)
         image[228:1208, 628:1928] = 0
         assert not np.any(image)
+
+
+@pytest.fixture(scope='module')
+def event_scroll():
+    vision = StartupVision()
+    pngs = [(FIXTURES / f'loot-event-grid-scroll-{side}.png').read_bytes()
+            for side in ('before', 'after')]
+    return pngs, [lr.page(png, vision) for png in pngs]
+
+
+def test_event_grid_antialiasing_keeps_six_overlapping_blueprints_once(event_scroll):
+    pngs, (before, after) = event_scroll
+    assert before.kind == after.kind == 'grid'
+    assert [c.quantity for c in before.cards[-6:]] == [54, 59, 58, 50, 63, 45]
+    assert lr.scrolled_grid_overlap(before.cards, after.cards) == 6
+    assert len(before.cards + after.cards[6:]) == 18
+    assert not lr.same_receipt_view(*pngs, before)
+    # Similar blueprints, a changed quantity and reordered cards are not overlap.
+    for index, replacement in ((0, replace(after.cards[0], quantity=55)),
+                               (1, replace(after.cards[1], icon=after.cards[2].icon))):
+        changed = list(after.cards)
+        changed[index] = replacement
+        assert lr.scrolled_grid_overlap(before.cards, tuple(changed)) == 0
+    assert lr.scrolled_grid_overlap(before.cards, after.cards[1:2] + after.cards[:1] + after.cards[2:]) == 0

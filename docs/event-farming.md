@@ -212,3 +212,11 @@ could not prove overlap between two Full List pages. It saved both screenshots
 and the partially identified drops for review. The sweep result and final AP
 balance were verified, the pending transaction cleared, and the job returned
 home successfully. Incomplete itemization does not authorize repeating a sweep.
+
+The saved Full List pages now pass an overlap regression. Fractional scrolling
+changed the blueprints' antialiasing enough to exceed the original pixel tolerance.
+The comparison allows that measured variation while still requiring matching
+quantities, card dimensions, rarity, column alignment, and multiple ordered cards.
+Changed quantities, substituted artwork, and reordered cards remain rejected.
+This is saved-screen validation; the original partial receipt remains partial,
+and no sweep was repeated to reconstruct missing item names.

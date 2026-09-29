@@ -115,3 +115,16 @@ All live spending used the relationship policy. The school-rank policy is covere
 ## Mechanics references
 
 Nexon's [Lessons guide](https://forum.nexon.com/bluearchiveTW/board_view?allBoard=1&board=3354&thread=2482450) explains ownership indicators, location progression, and daily lesson availability. The [May 26, 2026 update notes](https://forum.nexon.com/bluearchive-en/board_view?board=3217&thread=3443143) describe the lesson location EXP display control. These references inform recognition; the current game screen determines whether a room or ticket is available.
+
+A September 29 Trinity survey exposed another thin relationship-rank 1 at native
+1440p. A padded crop now requires two agreeing high-confidence reads; conflicting
+readings remain unknown. The sanitized native grid, matching confirmation popup, and conflicting-read
+regression cover this fallback without relaxing ticket or ownership checks.
+
+Live recovery on September 29 used all seven available tickets across two visits.
+The first visit completed six lessons, then held the final ticket when Central
+Library's confirmation popup did not match its surveyed rank-1 student. After
+the popup crop correction, the second visit surveyed all 94 rooms, verified that
+same room and confirmation, used the final ticket, observed the balance fall
+from one to zero, and returned home. The final run is
+`lessons-20260929T230909-99fe7c2c`; no ticket was spent on an unverified preview.

@@ -304,6 +304,7 @@ class LessonVision:
                       if re.fullmatch(r"\d{1,3}", word.text.strip()) and word.confidence >= .85}
             return next(iter(values)) if len(values) == 1 else None
 
+        conflicting = False
         result = read_number(crop, (34, 22))
         if result is None:
             # The wider crop sometimes joins adjacent hair to a single digit
@@ -320,8 +321,16 @@ class LessonVision:
                 # supply agreement, but must never override a conflicting read.
                 candidates.append(read_number(label, (23, 22), 7))
             confident = [value for value in candidates if value is not None]
+            conflicting = len(set(confident)) > 1
             if len(confident) >= 2 and len(set(confident)) == 1:
                 result = confident[0]
+        if result is None and not conflicting:
+            # Rank 1 has a narrow glyph: the earlier crop includes its heart
+            # outline. Keep a little more padding and require two agreeing reads.
+            label = region((left + 40, top + 27, left + 70, top + 56))
+            values = [read_number(label, (30, 29), scale) for scale in (3, 5)]
+            if values[0] is not None and values[0] == values[1]:
+                result = values[0]
         if result is not None and not 1 <= result <= 100:
             result = None
         if len(self._bond_cache) >= 256:

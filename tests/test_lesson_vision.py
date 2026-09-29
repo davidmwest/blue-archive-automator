@@ -614,3 +614,31 @@ def test_thin_bond_uses_third_scale_only_with_agreement(third, expected):
         ] if text else []
     student = analyze(vision, frame).room_cards[4].students[1]
     assert student.owned is True and student.bond == expected
+
+
+def test_native_trinity_single_digit_rank_keeps_owned_students_eligible():
+    from ba_automator.vision import StartupVision, decode_frame, decode_native_frame
+    png = (FIXTURES / "lesson-trinity-rank-one-native.png").read_bytes()
+    vision = LessonVision(StartupVision())
+    assert vision._bond(decode_frame(png), 838, 259,
+                        native_frame=decode_native_frame(png)) == 1
+
+
+def test_padded_bond_fallback_does_not_override_conflicting_reads():
+    frame, ocr, vision = replay("shiratori-single-bond")
+    for crop, readings in ((frame[441:463, 608:631], ("1", "2")),
+                           (frame[437:466, 606:636], ("1", "1"))):
+        for scale, text in zip((3, 5), readings):
+            enlarged = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+            ocr.crops[enlarged.tobytes()] = [
+                {"text": text, "confidence": .99, "box": [0, 0, 30, 30]}
+            ]
+    assert analyze(vision, frame).room_cards[4].students[1].bond is None
+
+
+def test_native_trinity_confirmation_preserves_rank_one_profile():
+    from ba_automator.vision import StartupVision
+    png = (FIXTURES / "lesson-trinity-rank-one-confirm-native.png").read_bytes()
+    screen = LessonVision(StartupVision()).analyze(png)
+    assert screen.kind == "confirm" and screen.inspection_complete
+    assert [(s.owned, s.bond) for s in screen.students] == [(True, 1), (True, 23), (False, None)]

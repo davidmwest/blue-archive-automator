@@ -142,3 +142,40 @@ The current runner uses three **prepared in-game formations**, validates distinc
 Intent is persisted before spending. Round results, receipt evidence, and ticket balances reconcile interrupted entries and sweeps. Uncertain confirmations are held rather than replayed. Pending entries also block unrelated restart/idle-close behavior. Sanitized screen fixtures and regression tests cover recognition and spending recovery.
 
 The following design elements remain future work: automatic roster construction and seasonal profiles; automatic replacement teams after losses; custom skill scripts; other drill types and closed-season recognition; one-mock-per-visit scheduling; and deadline-aware admission/partial settlement. Practices currently run together in one bounded visit. A prepared team that cannot qualify stops this mode with a setup error. A real-round failure holds the active entry for review. These limitations must not be presented as a fully autonomous seasonal team optimizer.
+
+### Assistant identity after practice
+
+A September 29 daily visit won its first practice, but a redundant ownership
+inspection discarded the already verified assistant lender. Its team fingerprint
+then differed from the prepared plan, so the runner stopped before paid entry.
+Practice now retains the exact team verified immediately before opening the
+formation. It checks the visible six students again before and after starting-skill
+inspection; any change still stops mobilization. Tests cover retaining the lender
+in the winning proof and rejecting changed students before recording an attempt.
+
+An interrupted free practice can expire and show its partial summary immediately
+on entering Drill. The runner now saves and acknowledges that explicitly recognized
+mock summary, then returns to the lobby. It refuses this recovery if a paid entry
+or sweep is unresolved. The September 29 recovery exercised this path live; the
+fixture and runner tests also cover the pending-transaction refusal.
+
+Assistant scans use overlapping 80-pixel drags in the gap between cards. A short
+drag through a card at 20 FPS selected a different student during paid-entry
+restoration; the exact-lender guard stopped before mobilization or the assistant
+fee. Moving the gesture off the cards preserves that guard while avoiding the
+accidental selection. A failed restoration keeps the existing ticket intent;
+recovery must resume that entry instead of purchasing another.
+
+The native-resolution assistant fee screen also exercises close-up OCR for the
+rarity digit. Two high-confidence crops must agree when full-screen OCR and the
+portrait-dependent badge template miss it. A conflicting existing read is retained
+and rejected; exact fee, assistant level, rarity, badge, and credit icon checks
+still gate payment. Regression coverage includes disagreement and low confidence.
+
+The September 29 post-reset recovery also completed live: all three practices
+qualified, the retained paid entry won all three rounds for 65,224 points, and
+the remaining two tickets were swept. Reward receipts were itemized, the final
+ticket balance reached zero, pending transaction state cleared, and the runner
+returned home. The exact assistant fee was confirmed once while resuming the
+saved entry. The revised scrolling gesture has regression coverage but was not
+needed in this successful retry because the retained offering was already visible.

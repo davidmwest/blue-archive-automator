@@ -50,7 +50,7 @@ def startup():
     return StartupVision()
 
 
-@pytest.mark.parametrize("name", ["menu", "panel", "rank", "points"])
+@pytest.mark.parametrize("name", ["menu", "panel", "rank", "points", "offseason"])
 def test_live_fixtures_survive_local_ocr(startup, name):
     assert AssaultRewardVision(startup).analyze(png(name)) == classify_rewards(*observed(name))
 
@@ -332,3 +332,13 @@ def test_rewards_remain_accessible_during_season_calculations():
     words = [Word(**w) for w in json.loads(fixture.with_suffix('.json').read_text())]
     screen = classify_rewards(decode_frame(fixture.with_suffix('.png').read_bytes()), words)
     assert screen == AssaultRewardScreen('menu', (1180, 655), season_closed=True)
+
+
+def test_offseason_menu_allows_rewards_without_inventing_tickets():
+    image, words = observed("offseason")
+    result = classify_rewards(image, words)
+    assert result.kind == "menu" and result.season_closed
+    assert result.tickets is None and result.target == (1180, 655)
+    for missing in ("kivotos is at peace", "season starts on"):
+        filtered = [w for w in words if missing not in w.normalized]
+        assert classify_rewards(image, filtered).kind != "menu"

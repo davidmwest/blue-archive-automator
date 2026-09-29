@@ -94,3 +94,12 @@ the following is the September 25, 2026 staging checkpoint. this is staged live 
 | Adjacent Tactical Challenge receipt recovery | This visit collected **22,560 credits** from Time Reward. The previously claimed daily receipt was then confirmed as **18 Pyroxenes and 70 Tactical Challenge Coins**, logged, and returned home. Daily receipt inspection needed recovery after a freshness timeout; the resulting fix has regression coverage. This is not evidence of a Total Assault clear or sweep. |
 
 the [fixture provenance notes](../tests/fixtures/README.md) describe which screenshots are captured, cropped, or synthetic. the fixtures use game imagery and have the [game-asset license exclusion](../THIRD_PARTY_NOTICES.md), separate from the original code's MIT license.
+
+On September 29, the off-season menu showed “Kivotos is at peace” and a next-season
+start time instead of the calculation notice. Recognition now accepts that observed
+combination with the Total Assault header and Rewards control. A live reward visit
+claimed rank rewards, read all five item types (800 Pyroxenes, 425 Total Assault
+Coins, 200 Advanced Total Assault Coins, and two trophies), verified the claim was
+disabled, checked points rewards, and returned home without a raid entry.
+A separate live Total Assault visit then recognized the same closed season,
+returned home, and completed without attempting an entry.

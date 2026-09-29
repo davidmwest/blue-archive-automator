@@ -70,10 +70,21 @@ class DrillRunner(AssaultAssistantMixin, ShopRunner):
             frame = self.wait({'menu', 'receipt', 'mock_settlement', 'settlement'}, timeout=90)
         return frame
 
-    def practice_round(self, formation, stage, context):
+    def practice_round(self, formation, stage, context, *, verified_team=None):
         """Persist intent before mobilizing; qualify only the observed setup."""
-        formation, team = self.observe_team(formation)
+        if verified_team is None:
+            formation, team = self.observe_team(formation)
+        else:
+            # open_unit has just verified every owned slot and the exact lender.
+            # Formation portraits omit provenance; re-reading them as owned
+            # discards the assistant binding and invalidates a successful mock.
+            team = verified_team
+            visible = tuple(replace(m, assistant=False, assistant_id=None) for m in team)
+            if formation.screen.team != visible:
+                self.fail('Drill formation changed after its ownership verification')
         formation, skills = self.starting_skills(formation)
+        if formation.screen.team != tuple(replace(m, assistant=False, assistant_id=None) for m in team):
+            self.fail('Drill formation changed while verifying starting skills')
         key = fingerprint(team, stage, skills)
         drill_state.begin_practice(self.config, context, key)
         self.journal.record('drill_practice', fingerprint=key, stage=stage,
@@ -141,7 +152,7 @@ class DrillRunner(AssaultAssistantMixin, ShopRunner):
         return formation, team
 
     def menu(self):
-        frame = self.wait({'home', 'campaign', 'lobby', 'menu', 'sweep', 'sweep_empty'})
+        frame = self.wait({'home', 'campaign', 'lobby', 'menu', 'sweep', 'sweep_empty', 'mock_settlement'})
         if frame.screen.kind in ('sweep', 'sweep_empty'):
             self.tap(frame, (1087, 196), 'Close the Drill sweep panel')
             frame = self.wait('menu')
@@ -149,7 +160,14 @@ class DrillRunner(AssaultAssistantMixin, ShopRunner):
             frame = self.navigate('home', 'campaign', (1200, 641))
         if frame.screen.kind == 'campaign':
             self.tap(frame, frame.screen.target, 'Open Joint Firing Drill')
-            frame = self.wait('lobby')
+            frame = self.wait({'lobby', 'mock_settlement'})
+        if frame.screen.kind == 'mock_settlement':
+            if drill_state.read_state(self.config)['pending'] is not None:
+                self.fail('A pending paid Drill transaction must be reconciled before dismissing practice')
+            self.journal.save_image('expired-mock-settlement.png', frame.capture.png)
+            self.tap(frame, frame.screen.target, 'Acknowledge the expired free Drill practice room')
+            self.important('drill_mock_expired', 'Closed an expired free Drill practice room; no ticket was spent')
+            frame = self.wait({'lobby', 'menu'})
         if frame.screen.kind == 'lobby':
             self.tap(frame, frame.screen.target, 'Inspect the open drill')
             frame = self.wait('menu')
@@ -266,7 +284,7 @@ class DrillRunner(AssaultAssistantMixin, ShopRunner):
         keys = []
         for index, (team, stage) in enumerate(zip(teams, stages)):
             formation = self.open_unit(menu, index, stage, team)
-            menu, observed, key, ok = self.practice_round(formation, stage, context)
+            menu, observed, key, ok = self.practice_round(formation, stage, context, verified_team=team)
             if observed != team or not ok:
                 self.fail(f'Drill unit {index + 1} did not qualify; improve its formation or lower its stage')
             keys.append(key)

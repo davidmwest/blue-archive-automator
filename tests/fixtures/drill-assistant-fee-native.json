@@ -1,0 +1,252 @@
+[
+  {
+    "text": "Using an Assistant",
+    "confidence": 0.99942,
+    "box": [
+      492,
+      143,
+      793,
+      186
+    ]
+  },
+  {
+    "text": "Unit 1",
+    "confidence": 0.97652,
+    "box": [
+      28,
+      172,
+      108,
+      204
+    ]
+  },
+  {
+    "text": "Quick Formation",
+    "confidence": 0.99587,
+    "box": [
+      1147,
+      216,
+      1257,
+      233
+    ]
+  },
+  {
+    "text": "Would you like to borrow an assistant?",
+    "confidence": 0.98862,
+    "box": [
+      406,
+      236,
+      873,
+      273
+    ]
+  },
+  {
+    "text": "Unit 2",
+    "confidence": 0.97249,
+    "box": [
+      27,
+      251,
+      108,
+      282
+    ]
+  },
+  {
+    "text": "Starting Skill",
+    "confidence": 0.99345,
+    "box": [
+      1142,
+      313,
+      1259,
+      338
+    ]
+  },
+  {
+    "text": "Unit3",
+    "confidence": 0.99574,
+    "box": [
+      27,
+      330,
+      108,
+      361
+    ]
+  },
+  {
+    "text": "Unit 4",
+    "confidence": 0.98175,
+    "box": [
+      27,
+      409,
+      109,
+      439
+    ]
+  },
+  {
+    "text": "40,000",
+    "confidence": 0.99998,
+    "box": [
+      609,
+      411,
+      692,
+      440
+    ]
+  },
+  {
+    "text": "Unit Info",
+    "confidence": 0.98756,
+    "box": [
+      1160,
+      414,
+      1243,
+      437
+    ]
+  },
+  {
+    "text": "BXX",
+    "confidence": 0.69583,
+    "box": [
+      950,
+      447,
+      978,
+      486
+    ]
+  },
+  {
+    "text": "BACK",
+    "confidence": 0.99997,
+    "box": [
+      246,
+      495,
+      290,
+      515
+    ]
+  },
+  {
+    "text": "Cancel",
+    "confidence": 0.99998,
+    "box": [
+      464,
+      492,
+      563,
+      526
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99996,
+    "box": [
+      708,
+      491,
+      828,
+      526
+    ]
+  },
+  {
+    "text": "INT",
+    "confidence": 0.83445,
+    "box": [
+      940,
+      495,
+      967,
+      516
+    ]
+  },
+  {
+    "text": "Presets",
+    "confidence": 0.99997,
+    "box": [
+      1166,
+      516,
+      1237,
+      538
+    ]
+  },
+  {
+    "text": "Hina (Dr",
+    "confidence": 0.98902,
+    "box": [
+      265,
+      529,
+      341,
+      556
+    ]
+  },
+  {
+    "text": "Marina",
+    "confidence": 0.99983,
+    "box": [
+      959,
+      532,
+      1026,
+      553
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.99941,
+    "box": [
+      209,
+      547,
+      256,
+      567
+    ]
+  },
+  {
+    "text": "STRIKER",
+    "confidence": 0.9998,
+    "box": [
+      29,
+      558,
+      150,
+      582
+    ]
+  },
+  {
+    "text": "Mobilize",
+    "confidence": 0.99999,
+    "box": [
+      1114,
+      641,
+      1240,
+      674
+    ]
+  },
+  {
+    "text": "Hare",
+    "confidence": 0.99939,
+    "box": [
+      498,
+      664,
+      546,
+      685
+    ]
+  },
+  {
+    "text": "Utaha",
+    "confidence": 0.9986,
+    "box": [
+      842,
+      663,
+      900,
+      685
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.99965,
+    "box": [
+      411,
+      678,
+      458,
+      698
+    ]
+  },
+  {
+    "text": "Lv.76",
+    "confidence": 0.998,
+    "box": [
+      760,
+      677,
+      808,
+      699
+    ]
+  }
+]

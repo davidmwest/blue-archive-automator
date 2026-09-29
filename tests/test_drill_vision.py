@@ -44,6 +44,12 @@ def test_mock_settlement_is_not_a_paid_receipt():
     assert screen.mock and screen.score == 57122
 
 
+def test_expired_partial_mock_is_not_a_paid_receipt():
+    screen = classify_drill(*capture('expired-mock'))
+    assert screen.kind == 'mock_settlement' and screen.mock
+    assert screen.score == 31199 and screen.target == (640, 524)
+
+
 def test_entry_confirmation_requires_exact_one_ticket_delta():
     frame, words = capture('entry-confirm')
     screen = classify_drill(frame, words)
@@ -92,3 +98,27 @@ def test_empty_sweep_panel_can_be_closed_but_not_spent():
     screen = classify_drill(*capture('sweep-empty'))
     assert screen.kind == 'sweep_empty' and screen.count == 0
     assert screen.target == (1087, 196)
+
+
+def test_native_assistant_fee_reads_rarity_without_portrait_template():
+    from ba_automator.drill_vision import DrillVision
+    from ba_automator.vision import StartupVision
+    screen = DrillVision(StartupVision()).analyze(
+        (FIXTURES / 'drill-assistant-fee-native.png').read_bytes())
+    assert (screen.credit_fee, screen.assistant_level, screen.assistant_stars) == (40000, 90, 5)
+    assert screen.confirm_target == (768, 510)
+
+
+@pytest.mark.parametrize('second,confidence', [('3', .99), ('5', .80)])
+def test_assistant_rarity_fallback_rejects_disagreement_or_low_confidence(monkeypatch, second, confidence):
+    import ba_automator.drill_vision as vision
+    from types import SimpleNamespace
+    frame, words = capture('assistant-fee-native')
+    monkeypatch.setattr(vision, 'read_game_words', lambda *a: words)
+    reads = iter([[Word('Lv.90', .99, (3, 3, 58, 36))],
+                  [Word('5', .99, (0, 0, 21, 21))],
+                  [Word(second, confidence, (0, 0, 13, 15))]])
+    monkeypatch.setattr(vision, 'read_game_region', lambda *a: next(reads))
+    screen = vision.DrillVision(SimpleNamespace(matches=lambda f: {})).analyze(
+        (FIXTURES / 'drill-assistant-fee-native.png').read_bytes())
+    assert screen.confirm_target is None

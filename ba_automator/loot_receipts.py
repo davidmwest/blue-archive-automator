@@ -945,9 +945,10 @@ def same_scrolled_grid_card(a, b):
     softened = [cv2.GaussianBlur(image[:, :, :3], (5, 5), 1).astype(np.float32)
                 for image in (first, second)]
     delta = np.abs(softened[0] - softened[1])[visible]
-    # These bounds cover the saved subpixel scroll (mean <= 1.41, MSE <= 7.62,
-    # max <= 25), not similar artwork, a changed badge, or another item variant.
-    return (float(delta.mean()) <= 1.6 and float(np.mean(delta * delta)) <= 10
+    # Saved Bounty and event grids differ by subpixel antialiasing (event:
+    # mean <= 1.94, MSE <= 13.72, max <= 28). Quantity, column, contour,
+    # names and multiple ordered overlapping cards must still agree.
+    return (float(delta.mean()) <= 2.0 and float(np.mean(delta * delta)) <= 15
             and float(delta.max()) <= 32)
 
 

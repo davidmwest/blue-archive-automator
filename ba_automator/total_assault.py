@@ -330,7 +330,7 @@ class TotalAssaultRunner(AssaultAssistantMixin, AssaultBattleMixin, ShopRunner):
         for _ in DIFFICULTIES:
             if frame.screen.season_closed:
                 self.important("total_assault_season_closed",
-                               "Total Assault season calculations are in progress; no battles available")
+                               "Total Assault season is closed; no battles available")
                 break
             if frame.screen.tickets == 0:
                 self.important("total_assault_no_tickets",

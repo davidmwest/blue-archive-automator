@@ -908,3 +908,33 @@ changes OCR's bounding rectangle for the slanted title. Tests require the exact
 confident heading and fixed lettering as well as unchanged card identities;
 a moved heading or altered quantity is rejected. These game-derived fixtures
 remain outside the project's MIT grant.
+
+### September 29 daily-job regressions
+
+- `assault-rewards-offseason.png/json` preserve the native 1440p closed-season
+  status, next-season time, Total Assault heading, and Rewards control. Account
+  balances and identifying account/rank areas are masked.
+- `lesson-trinity-rank-one-native.png` captures the Trinity room grid whose thin
+  relationship-rank 1 was missed by the earlier crops. Account balances are masked.
+- `loot-event-grid-scroll-before.png` and `loot-event-grid-scroll-after.png` retain
+  only the Full List panel from the 43-sweep event receipt. They exercise fractional
+  scroll antialiasing and six overlapping blueprint cards; everything outside the
+  panel is masked. These fixtures establish page matching, not complete itemization
+  of the historical receipt.
+
+These game-derived images remain outside the project's MIT grant.
+
+`lesson-trinity-rank-one-confirm-native.png` is the September 29 confirmation
+popup for the same Central Library room. Its top currency strip is masked. It
+checks that the grid and confirmation both preserve the owned rank-1 student.
+
+`drill-expired-mock.png/json` capture the expired free practice room after the
+failed September 29 daily visit. The top currency strip is masked. Its partial
+score and two unfinished formations remain a mock settlement, never paid reward
+evidence. This game-derived image also remains outside the project's MIT grant.
+
+`drill-assistant-fee-native.png/json` preserve the September 29 assistant fee
+modal at native 1440p with the top account balances masked. The portrait background
+breaks the full star-badge template, exercising two agreeing close-up rarity
+reads before confirming the exact qualified assistant and 40,000-credit fee.
+This game-derived image remains outside the project's MIT grant.
