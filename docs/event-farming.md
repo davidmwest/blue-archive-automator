@@ -105,13 +105,33 @@ Each visit handles one bounded sweep or exchange batch, returns to a verified sa
 This mechanic needs its own implementation, not a list of blind taps. [Joe's solver](https://ba.joexyz.online/inventory-management) demonstrates placement-based reasoning and warns that its probability estimates are not guarantees. Our runtime must work locally and must not call that website to decide moves.
 
 1. Recognize event, round, board dimensions, revealed cells, currency, and available treasures. Load the matching reviewed round definition.
-2. Enumerate placements consistent with observed cells, permitted orientations, and non-overlap. Use bounded deterministic enumeration, or reproducible seeded sampling if the state space exceeds a limit. Do not call the resulting estimate an optimal solution.
-3. Favor completing a positively identified desired treasure. Otherwise choose a cell by expected progress toward selected rewards per currency spent, with stable tie-breaking. One cell per transaction; then reread the board.
+2. Enumerate placements consistent with observed cells, permitted orientations, and non-overlap. Use bounded deterministic enumeration; if the budget is exceeded, stop without a move rather than score a biased partial enumeration.
+3. Choose the unopened cell intersecting the most distinct feasible placements of still-desired treasures, as specified below. One cell per transaction; then reread the board.
 4. Maintain a separate board-spend limit and stop if geometry, cell evidence, or remaining currency is uncertain. Partial board observations never justify a reset.
 5. Refresh only when the client allows it **and** all selected targets for this round are verified complete or explicitly skipped by the selected preset. Show the skipped rewards in the action log. Persist reset intent and verify the new round before another cell.
 6. Stop at the selected round/goal limit. A six-round preset must not accidentally advance into repeating rounds.
 
 For the three-round preset, encode the reviewed guide's chosen treasures rather than “refresh after the first prize.” Confirm the round reward table and target funding in the client before enabling that preset. If those rules cannot be established, stage farming and shops can ship with Treasure Hunt marked manual; the runner must not keep farming unlimited minigame currency.
+
+### Implemented greedy policy
+
+`ba_automator/treasure_policy.py` implements the pure planner. It is not yet wired to live board recognition or resource spending. Live inspection found round 1 with zero treasure currency, and no cleared event quests; no treasure click has been live-tested.
+
+For every treasure, enumerate its rectangular placements within the board. Only permit rotations when the reviewed profile says they are allowed. Reject placements covering a confirmed empty cell or another treasure's revealed cell, or missing one of this treasure's revealed cells. Then enumerate non-overlapping full-board arrangements and retain only placements that occur in at least one legal arrangement. Unwanted and already completed treasures still constrain the available space.
+
+For each unopened cell `c`, compute:
+
+```
+coverage(c) = number of distinct supported placements of desired treasures containing c
+completion(c) = number of those placements whose only unopened cell is c
+next cell = highest coverage, then highest completion, then row/column order
+```
+
+A placement counts once even if many arrangements of the other treasures support it. All clicks have the same currency cost, so coverage per click also maximizes coverage per unit of currency under this heuristic. This score is not a calibrated hit probability or a globally optimal spending strategy. It intentionally favors cells that test many hiding places at once, including overlapping possibilities for larger prizes. Confirmed hits constrain future placements naturally; we do not blindly open adjacent cells.
+
+After one paid reveal, wait for the stable board, identify the revealed cell, reconcile currency, and rerun the planner. Never batch the resulting coordinates. If all selected treasures are fully revealed, the planner returns no move; the separate round controller verifies rewards before deciding whether to refresh. Reaching round 3 is not completing round 3: finish its selected rewards before releasing the AP priority hold.
+
+Unreadable cells remain unknown, never empty. Contradictory observations or enumeration beyond the configured node budget produce `BoardUncertain`, with no proposed click. The caller must save evidence and request review/re-observe; it must not fall back to random spending. Round identity, currency checks, intent journaling, reward recognition, and reset authorization remain the executor's responsibility.
 
 ## Shops, receipts, and crash recovery
 
