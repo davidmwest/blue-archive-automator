@@ -6,6 +6,7 @@ from .config import Config
 
 
 TASK_LABELS = {
+    "clear_event": "Event quest clear finished; queue paused",
     "joint_firing_drill": "Joint Firing Drill checked",
     "total_assault": "Total Assault complete",
     "assault_rewards": "Total Assault rank and points rewards checked",
@@ -28,11 +29,13 @@ TASK_LABELS = {
     "daily": "Daily tasks complete",
 }
 TASKS = frozenset(TASK_LABELS)
-RUN_PREFIXES = ("joint_firing_drill-", "total_assault-", "assault_rewards-", "tactical_rewards-", "tactical_battles-", "red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
+RUN_PREFIXES = ("clear_event-","joint_firing_drill-", "total_assault-", "assault_rewards-", "tactical_rewards-", "tactical_battles-", "red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
 
 
 def _task_plan(command: str, config: Config) -> tuple[str, ...]:
     """Producer jobs collect mail after their game actions."""
+    if command == "clear_event":
+        return ("restart", "clear_event")
     if command == "daily":
         from .packs_state import enabled
         plan = ("restart", "club", "free_pack", *(("packs",) if enabled(config) else ()), "mail", "cafe")
@@ -90,6 +93,8 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
 def task_plan(command: str, config: Config) -> tuple[str, ...]:
     """Check badges once after successful game work, before closing an idle app."""
     plan = _task_plan(command, config)
+    if command == "clear_event":
+        return plan
     if command == 'daily':
         from .drill_state import DrillStateError, read_state
         try:

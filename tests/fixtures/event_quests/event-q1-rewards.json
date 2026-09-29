@@ -1,0 +1,322 @@
+[
+  {
+    "text": "Battle Complete",
+    "box": [
+      41,
+      0,
+      473,
+      89
+    ],
+    "confidence": 0.99385
+  },
+  {
+    "text": "Nanami",
+    "box": [
+      643,
+      28,
+      739,
+      56
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "01:08",
+    "box": [
+      1176,
+      27,
+      1243,
+      60
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "AFlowerBlooms",
+    "box": [
+      491,
+      89,
+      651,
+      124
+    ],
+    "confidence": 0.98787
+  },
+  {
+    "text": "Among the Hundred",
+    "box": [
+      536,
+      102,
+      768,
+      150
+    ],
+    "confidence": 0.94088
+  },
+  {
+    "text": "Fair and",
+    "box": [
+      521,
+      139,
+      586,
+      159
+    ],
+    "confidence": 0.99867
+  },
+  {
+    "text": "Tip",
+    "box": [
+      352,
+      172,
+      393,
+      194
+    ],
+    "confidence": 0.99967
+  },
+  {
+    "text": "The max bonus earned on a stage is maintained after clearing.",
+    "box": [
+      396,
+      169,
+      883,
+      197
+    ],
+    "confidence": 0.99718
+  },
+  {
+    "text": "Best-Record!",
+    "box": [
+      333,
+      212,
+      465,
+      242
+    ],
+    "confidence": 0.95845
+  },
+  {
+    "text": "Best-Record!",
+    "box": [
+      577,
+      212,
+      708,
+      242
+    ],
+    "confidence": 0.97838
+  },
+  {
+    "text": "Best-Record!",
+    "box": [
+      819,
+      212,
+      951,
+      242
+    ],
+    "confidence": 0.96195
+  },
+  {
+    "text": "Wooden Yukari Doll",
+    "box": [
+      294,
+      324,
+      504,
+      350
+    ],
+    "confidence": 0.99709
+  },
+  {
+    "text": "Wooden Nagusa Doll",
+    "box": [
+      540,
+      326,
+      745,
+      352
+    ],
+    "confidence": 0.99612
+  },
+  {
+    "text": "Wooden Kikyou Doll",
+    "box": [
+      781,
+      326,
+      988,
+      352
+    ],
+    "confidence": 0.99919
+  },
+  {
+    "text": "Rewards Earned",
+    "box": [
+      330,
+      357,
+      470,
+      381
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Rewards Earned",
+    "box": [
+      573,
+      357,
+      712,
+      381
+    ],
+    "confidence": 0.99993
+  },
+  {
+    "text": "Rewards Earned",
+    "box": [
+      815,
+      357,
+      955,
+      381
+    ],
+    "confidence": 0.99993
+  },
+  {
+    "text": "8(+7)",
+    "box": [
+      369,
+      384,
+      430,
+      418
+    ],
+    "confidence": 0.99982
+  },
+  {
+    "text": "5(+3)",
+    "box": [
+      611,
+      384,
+      672,
+      418
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "5(+3)",
+    "box": [
+      854,
+      384,
+      914,
+      418
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "Final Rewards Earned",
+    "box": [
+      297,
+      418,
+      495,
+      444
+    ],
+    "confidence": 0.99979
+  },
+  {
+    "text": "Final Rewards Earned",
+    "box": [
+      540,
+      418,
+      739,
+      444
+    ],
+    "confidence": 0.99989
+  },
+  {
+    "text": "Final Rewards Earned",
+    "box": [
+      783,
+      418,
+      982,
+      444
+    ],
+    "confidence": 0.99989
+  },
+  {
+    "text": "15",
+    "box": [
+      383,
+      450,
+      418,
+      478
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "8",
+    "box": [
+      632,
+      452,
+      653,
+      476
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "8",
+    "box": [
+      875,
+      452,
+      895,
+      476
+    ],
+    "confidence": 0.99999
+  },
+  {
+    "text": "Reward Details",
+    "box": [
+      350,
+      497,
+      480,
+      520
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Q",
+    "box": [
+      552,
+      499,
+      570,
+      517
+    ],
+    "confidence": 0.99824
+  },
+  {
+    "text": "Reward Details",
+    "box": [
+      592,
+      497,
+      722,
+      520
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Reward Details",
+    "box": [
+      835,
+      497,
+      965,
+      520
+    ],
+    "confidence": 0.97603
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      44,
+      575,
+      124,
+      599
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      579,
+      650,
+      705,
+      687
+    ],
+    "confidence": 0.99997
+  }
+]

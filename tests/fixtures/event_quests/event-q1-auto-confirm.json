@@ -1,0 +1,382 @@
+[
+  {
+    "text": "Formation 0",
+    "box": [
+      103,
+      9,
+      281,
+      38
+    ],
+    "confidence": 0.94255
+  },
+  {
+    "text": "220/220",
+    "box": [
+      506,
+      9,
+      587,
+      36
+    ],
+    "confidence": 1.0
+  },
+  {
+    "text": "Unit 1",
+    "box": [
+      27,
+      171,
+      110,
+      206
+    ],
+    "confidence": 0.99825
+  },
+  {
+    "text": "Quick Formation",
+    "box": [
+      1145,
+      214,
+      1258,
+      234
+    ],
+    "confidence": 0.99949
+  },
+  {
+    "text": "Unit 2",
+    "box": [
+      25,
+      251,
+      109,
+      283
+    ],
+    "confidence": 0.99742
+  },
+  {
+    "text": "Starting Skill",
+    "box": [
+      1141,
+      312,
+      1260,
+      338
+    ],
+    "confidence": 0.99434
+  },
+  {
+    "text": "Unit 3",
+    "box": [
+      26,
+      330,
+      109,
+      361
+    ],
+    "confidence": 0.96633
+  },
+  {
+    "text": "Unit 4",
+    "box": [
+      24,
+      409,
+      108,
+      440
+    ],
+    "confidence": 0.99887
+  },
+  {
+    "text": "Unit Info",
+    "box": [
+      1159,
+      414,
+      1243,
+      437
+    ],
+    "confidence": 0.99886
+  },
+  {
+    "text": "BACK",
+    "box": [
+      245,
+      494,
+      290,
+      516
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "BACK",
+    "box": [
+      469,
+      495,
+      514,
+      516
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "FRONT",
+    "box": [
+      688,
+      495,
+      743,
+      516
+    ],
+    "confidence": 0.9998
+  },
+  {
+    "text": "FRONT",
+    "box": [
+      908,
+      493,
+      968,
+      517
+    ],
+    "confidence": 0.9998
+  },
+  {
+    "text": "Renge",
+    "box": [
+      288,
+      520,
+      352,
+      548
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Kikyou",
+    "box": [
+      510,
+      529,
+      579,
+      559
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Izuna",
+    "box": [
+      740,
+      521,
+      794,
+      543
+    ],
+    "confidence": 0.99942
+  },
+  {
+    "text": "4",
+    "box": [
+      889,
+      525,
+      912,
+      547
+    ],
+    "confidence": 0.99972
+  },
+  {
+    "text": "Tsubaki",
+    "box": [
+      956,
+      530,
+      1029,
+      555
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Presets",
+    "box": [
+      1166,
+      516,
+      1238,
+      539
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Lv.66",
+    "box": [
+      208,
+      547,
+      257,
+      568
+    ],
+    "confidence": 0.99985
+  },
+  {
+    "text": "(Swimsuit)",
+    "box": [
+      273,
+      541,
+      368,
+      567
+    ],
+    "confidence": 0.99972
+  },
+  {
+    "text": "Lv.66",
+    "box": [
+      431,
+      547,
+      480,
+      568
+    ],
+    "confidence": 0.9998
+  },
+  {
+    "text": "Lv.80",
+    "box": [
+      656,
+      547,
+      704,
+      568
+    ],
+    "confidence": 0.99987
+  },
+  {
+    "text": "(Swimsuit)",
+    "box": [
+      721,
+      541,
+      817,
+      567
+    ],
+    "confidence": 0.99993
+  },
+  {
+    "text": "Lv.80",
+    "box": [
+      880,
+      547,
+      929,
+      568
+    ],
+    "confidence": 0.99989
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      27,
+      557,
+      151,
+      583
+    ],
+    "confidence": 0.99962
+  },
+  {
+    "text": "Event Formation Effect ON",
+    "box": [
+      36,
+      627,
+      205,
+      644
+    ],
+    "confidence": 0.98635
+  },
+  {
+    "text": "Mobilize",
+    "box": [
+      1112,
+      640,
+      1240,
+      673
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "85%",
+    "box": [
+      23,
+      676,
+      59,
+      694
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "60%",
+    "box": [
+      69,
+      676,
+      103,
+      694
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "45%",
+    "box": [
+      115,
+      678,
+      148,
+      693
+    ],
+    "confidence": 0.99977
+  },
+  {
+    "text": "Lv.60",
+    "box": [
+      411,
+      678,
+      459,
+      699
+    ],
+    "confidence": 0.99969
+  },
+  {
+    "text": "\u767d",
+    "box": [
+      420,
+      654,
+      447,
+      680
+    ],
+    "confidence": 0.72177
+  },
+  {
+    "text": "(Swimsuit)",
+    "box": [
+      473,
+      672,
+      569,
+      698
+    ],
+    "confidence": 0.99105
+  },
+  {
+    "text": "Mimori",
+    "box": [
+      487,
+      652,
+      557,
+      676
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Lv.69",
+    "box": [
+      760,
+      678,
+      808,
+      699
+    ],
+    "confidence": 0.99984
+  },
+  {
+    "text": "Shizuko",
+    "box": [
+      835,
+      663,
+      907,
+      687
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "+",
+    "box": [
+      928,
+      672,
+      958,
+      702
+    ],
+    "confidence": 0.99362
+  }
+]

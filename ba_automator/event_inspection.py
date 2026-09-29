@@ -54,38 +54,50 @@ class EventVision:
         return classify_event(frame, words) or self.fallback.analyze(png, billing=billing)
 
 
+def enter_event(runner, startup):
+    """Verify the unique playable event before returning its quest page."""
+    for entrance_attempt in range(3):
+        runner.wait('home')
+        # The Campaign carousel contains concurrent and expired events. Use
+        # the home banner and verify the unique destination before proceeding.
+        end = runner.clock() + 45
+        while True:
+            at = runner.clock()
+            png = runner.device.screenshot()
+            words = startup.read(decode_frame(png)[475:585, 20:295])
+            banner = ''.join(w.normalized for w in words if w.confidence >= .9).replace(' ', '')
+            if 'amongthehundred' in banner and runner.clock() - at < 1.5:
+                break
+            if runner.clock() >= end:
+                runner.fail('Aquatic Showdown home banner was not verified; event AP remains reserved')
+            runner.sleep(.2)
+        if runner.device.foreground_package() != runner.config.package:
+            runner.fail('Foreground changed during event entrance inspection')
+        runner.journal.record('intent', operation='tap', detail='Open event home banner', target=(150, 535))
+        if not runner.device.tap(150, 535, deadline=at + 2, monotonic=runner.clock):
+            runner.fail('Event banner input expired')
+        runner.actions += 1
+        frame = runner.wait({'event_page', 'other_event'})
+        if frame.screen.kind == 'event_page':
+            from .event_state import observe
+            from .event_priority import available_event
+            profile = available_event(runner.wall_clock())
+            if profile is None:
+                runner.fail('Event is outside its playable dates')
+            observe(runner.config, profile)
+            break
+        runner.tap(frame, (1237, 24), 'Leave concurrent event without spending')
+    else:
+        runner.fail('Event banner changed during entry; no resources spent')
+    return frame
+
+
 def inspect_event(runner, startup):
     """Caller holds the instance lock. No AP, currency, or reward inputs exist."""
     previous = runner.vision
     runner.vision = EventVision(startup, previous)
     try:
-        for entrance_attempt in range(3):
-            runner.wait('home')
-            # The Campaign carousel contains concurrent and expired events. Use
-            # the home banner and verify the unique destination before proceeding.
-            end = runner.clock() + 45
-            while True:
-                at = runner.clock()
-                png = runner.device.screenshot()
-                words = startup.read(decode_frame(png)[475:585, 20:295])
-                banner = ''.join(w.normalized for w in words if w.confidence >= .9).replace(' ', '')
-                if 'amongthehundred' in banner and runner.clock() - at < 1.5:
-                    break
-                if runner.clock() >= end:
-                    runner.fail('Aquatic Showdown home banner was not verified; event AP remains reserved')
-                runner.sleep(.2)
-            if runner.device.foreground_package() != runner.config.package:
-                runner.fail('Foreground changed during event entrance inspection')
-            runner.journal.record('intent', operation='tap', detail='Open event home banner', target=(150, 535))
-            if not runner.device.tap(150, 535, deadline=at + 2, monotonic=runner.clock):
-                runner.fail('Event banner input expired')
-            runner.actions += 1
-            frame = runner.wait({'event_page', 'other_event'})
-            if frame.screen.kind == 'event_page':
-                break
-            runner.tap(frame, (1237, 24), 'Leave concurrent event without spending')
-        else:
-            runner.fail('Event banner changed during entry; no resources spent')
+        frame = enter_event(runner, startup)
         runner.tap(frame, (937, 110), 'Inspect event quests')
         frame = runner.wait('event_page')
         # Verify the top quest independently before opening its unpaid details.

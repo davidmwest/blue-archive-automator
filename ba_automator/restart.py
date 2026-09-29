@@ -282,6 +282,8 @@ def run_restart(
         journal.record("started", task="restart", serial=config.serial, package=config.package)
         with InstanceLock(config):
             ensure_restart_safe(config)
+            from .event_state import ensure_safe as ensure_event_safe
+            ensure_event_safe(config)
             device.connect()
             device.verify_package()
             size = device.display_size()

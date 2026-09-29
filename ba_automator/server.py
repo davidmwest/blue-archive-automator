@@ -825,7 +825,56 @@ class DashboardController:
                       if cafe["retry_paused"] else "Cafe retry is due in 15 minutes when scheduling is enabled", "error")
         self._save_schedule()
 
+    def event_status(self):
+        from .event_priority import available_event
+        from .event_state import read_state
+        profile = available_event(self._wall_clock())
+        if profile is None:
+            return None
+        try:
+            state = read_state(self.config)
+        except (RuntimeError, OSError) as exc:
+            return {'title': profile['title'], 'detected': False, 'prompt': False,
+                    'summary': str(exc), 'pending': True}
+        detected = state['event_id'] == profile['id'] and state['detected']
+        return {'title': profile['title'], 'detected': detected,
+                'prompt': detected and not state['declined'] and not state['pending'],
+                'summary': state['summary'] if detected else None,
+                'pending': bool(state['pending'])}
+
+    def event_choice(self, clear):
+        from .event_state import read_state, write_state
+        if type(clear) is not bool:
+            raise ApiError(400, 'Choose yes or no for the event clear')
+        with self._condition:
+            status = self.event_status()
+            if not status or not status['detected'] or status['pending']:
+                raise ApiError(409, 'A playable event must be detected with no unresolved battle')
+            if self._current or self._capturing:
+                raise ApiError(409, 'Wait for the current job to finish before clearing the event')
+            if self._shutdown:
+                raise ApiError(409, 'The server is shutting down')
+            if any(job['task'] == 'clear_event' for job in self._queue):
+                raise ApiError(409, 'Event clear is already queued')
+            if clear and len(self._queue) >= 100:
+                raise ApiError(409, 'The queue already contains 100 jobs')
+            with InstanceLock(self.config):
+                state = read_state(self.config)
+                state['declined'] = True
+                write_state(self.config,state)
+            if not clear:
+                return {'ok': True}
+            job = {'id': uuid4().hex, 'task': 'clear_event', 'created_at': _timestamp()}
+            self._queue.insert(0, job)
+            self._queued(job)
+            self._persist_queue_pause(False)
+            self._paused = False
+            self._condition.notify_all()
+            return {'job': dict(job)}
+
     def enqueue(self, task: str) -> dict:
+        if task == "clear_event":
+            return self.event_choice(True)["job"]
         if not isinstance(task, str) or task not in TASKS:
             raise ApiError(400, "Task must be one of the supported queue jobs")
         with self._condition:
@@ -1078,7 +1127,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info", child=True)
-                            marker = next((prefix for prefix in ("joint_firing_drill:", "total_assault:", "assault_rewards:", "tactical_rewards:", "tactical_battles:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("clear_event:", "joint_firing_drill:", "total_assault:", "assault_rewards:", "tactical_rewards:", "tactical_battles:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -1185,12 +1234,15 @@ class DashboardController:
                                 packs_state.write_state(selected, pack_state)
                         except (RuntimeError, OSError) as exc:
                             self._log(f'Could not save pack failure hold: {exc}', 'error')
+                    if job["task"] == "clear_event":
+                        self._persist_queue_pause(True)
+                        self._paused = True
                     scanned = False
-                    if self._state == "success" or (
+                    if job["task"] != "clear_event" and (self._state == "success" or (
                         self._state == "failed" and summary
                         and summary["status"] == "partial_failure"
                         and "red_dots" in summary["completed_tasks"]
-                    ):
+                    )):
                         # An isolated Daily failure does not discard a verified
                         # final scan. Batch deduplication still prevents retries.
                         scanned = self._enqueue_badges(output, run_root)
@@ -1531,6 +1583,7 @@ class DashboardController:
                     "run_available_pending": self._run_available_pending,
                     "run_available_active": self._run_available_active,
                     "failed_jobs": list(reversed(self._failures)),
+                    "event": self.event_status(),
                     "app_closed": self._app_closed,
                     "schedule": {"checkin": self._checkin_status(), "daily": self._daily_status(), "ap": self._ap_status(), "packs": self._packs_status(), "crafting": self._crafting_status(), "cafe": {**self._schedule["cafe"],
                                           "enabled": getattr(self.config, "cafe_schedule_enabled", False)}}}
@@ -1998,7 +2051,7 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     raise ApiError(400, "Mutation requests do not accept query parameters")
                 body = self._body()
                 expected = {"/api/run": {"task"}, "/api/cancel": {"id"}, "/api/pause": set(),
-                            "/api/run-available": set(),
+                            "/api/run-available": set(), "/api/event-choice": {"clear"},
                             "/api/dismiss-failure": {"id"}, "/api/clear-loot": set(),
                             "/api/resume": set(), "/api/stop": set(), "/api/capture": set(),
                             "/api/settings": SETTINGS}
@@ -2009,6 +2062,8 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                 result = {"ok": True}
                 if target.path == "/api/run":
                     result = {"job": controller.enqueue(body.get("task"))}
+                elif target.path == "/api/event-choice":
+                    result = controller.event_choice(body.get("clear"))
                 elif target.path == "/api/run-available":
                     result = controller.run_available()
                 elif target.path == "/api/cancel":

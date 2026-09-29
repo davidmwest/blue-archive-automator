@@ -435,6 +435,10 @@
     renderActivity();
     renderFrame();
     renderControls();
+    $("event-card").hidden = !status.event?.prompt;
+    $("event-name").textContent = status.event?.title || "";
+    $("event-yes").disabled = running || pending > 0 || !connected || isDemo();
+    $("event-no").disabled = running || pending > 0 || !connected || isDemo();
   }
 
   async function readResponse(response) {
@@ -941,6 +945,8 @@
   $("run-crafting").addEventListener("click", () => void post("/api/run", { task: "crafting" }, "crafting’s in the queue."));
   $("run-bounties").addEventListener("click", () => void post("/api/run", { task: "bounties" }, "bounties are in the queue."));
   $("run-scrimmages").addEventListener("click", () => void post("/api/run", { task: "scrimmages" }, "scrimmages are in the queue."));
+  $("event-yes").addEventListener("click", () => void post("/api/event-choice", {clear: true}, "clearing the event, then pausing. everything else stays queued."));
+  $("event-no").addEventListener("click", () => void post("/api/event-choice", {clear: false}, "okay, leaving the event alone."));
   $("run-lessons").addEventListener("click", () => void post("/api/run", { task: "lessons" }, "lessons are in the queue."));
   $("stop-run").addEventListener("click", () => void post("/api/stop", {}, "stopping this task and pausing the queue. everything waiting stays there."));
   $("pause-queue").addEventListener("click", () => {

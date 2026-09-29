@@ -51,7 +51,7 @@ on Windows: `py -3.11 -m ba_automator.demo`. open [localhost:8766](http://127.0.
 | dashboard | one serial queue, do everything / pause controls, tucked-away manual tasks, settings, screenshots, and persistent important-action history |
 | spend AP | configurable AP floor, highest-cleared commissions, and a persistent Hard-stage round robin with its own planning page |
 | scheduling | regular red-dot/AP check-ins, optional daily routine after Global reset with saved occurrence state, hourly AP checks, daily pack checks, Cafe visits and per-slot crafting deadlines, optional game closure between visits |
-| event profiles | reviewed JSON and recognition helpers; navigation and farming are still to come |
+| events | verified seasonal navigation, opt-in quest clearing with Auto Formation, and optional event-first AP routing; see the validation limits below |
 
 restart, a complete two-floor Cafe visit, a free invitation, and the relationship-focused Lessons routine have passed live on the development Mac. seven lesson tickets were tested with verified receipts; the final run reached zero tickets, returned home, and closed the game. offline tests run on macOS, Windows, and Ubuntu. actual school rank-up popups, live Windows operation, and running beside ALAS still need verification. a completed scan and a verified relationship increase are different results; the logs keep them separate.
 
@@ -83,7 +83,7 @@ sign in manually once. Blue Archive and Azur Lane get different ADB endpoints; t
 
 ## what's next
 
-The [event farming proposal](docs/event-farming.md) covers the current Aquatic Showdown rerun and a reusable, deterministic runner for future events. Stage farming shares the AP budget; shops and minigames use reviewed seasonal profiles. This is a design, not an implemented job.
+The [event farming design](docs/event-farming.md) now includes the Aquatic Showdown quest-clear job. After the event is detected, **yes, clear it** uses default Auto Formation for each uncleared quest, stops below three stars or at the AP floor/end, then pauses the queue. Event farming has a separate, off-by-default priority setting on the Spend AP page: when enabled, it reserves AP for the event before Hard/commission farming. Quest clearing has live evidence; the sweep adapter still needs live validation. Treasure execution and event shops remain future work.
 
 Final Restriction Release, the mode with Fury of Set, has a [design proposal](docs/final-restriction-release.md): seasonal progress, a saved ten-student team, and one floor attempt at a time so AP and cafe work can keep moving. it's a plan, not an implemented job yet.
 

@@ -1,0 +1,362 @@
+[
+  {
+    "text": "Battle Complete",
+    "box": [
+      44,
+      0,
+      472,
+      85
+    ],
+    "confidence": 0.99196
+  },
+  {
+    "text": "Nanami",
+    "box": [
+      642,
+      28,
+      739,
+      55
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Time",
+    "box": [
+      1083,
+      28,
+      1140,
+      56
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "01:08",
+    "box": [
+      1177,
+      29,
+      1241,
+      58
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "REWARD ACQUIRED!",
+    "box": [
+      363,
+      124,
+      912,
+      191
+    ],
+    "confidence": 0.97423
+  },
+  {
+    "text": "eActivity",
+    "box": [
+      96,
+      254,
+      174,
+      284
+    ],
+    "confidence": 0.99848
+  },
+  {
+    "text": "Wooden Yukari",
+    "box": [
+      219,
+      258,
+      337,
+      278
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "Wooden Nagusa",
+    "box": [
+      374,
+      258,
+      503,
+      281
+    ],
+    "confidence": 0.99912
+  },
+  {
+    "text": "Wooden Kikyou",
+    "box": [
+      537,
+      256,
+      663,
+      282
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Wooden Yukari",
+    "box": [
+      703,
+      259,
+      823,
+      279
+    ],
+    "confidence": 0.99991
+  },
+  {
+    "text": "Wooden Nagusa",
+    "box": [
+      859,
+      256,
+      989,
+      282
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "Wooden Kikyou",
+    "box": [
+      1024,
+      256,
+      1149,
+      282
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "eport",
+    "box": [
+      99,
+      278,
+      145,
+      303
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "Doll",
+    "box": [
+      258,
+      276,
+      299,
+      301
+    ],
+    "confidence": 0.99982
+  },
+  {
+    "text": "Doll",
+    "box": [
+      419,
+      276,
+      460,
+      301
+    ],
+    "confidence": 0.9997
+  },
+  {
+    "text": "Doll",
+    "box": [
+      581,
+      276,
+      622,
+      301
+    ],
+    "confidence": 0.99977
+  },
+  {
+    "text": "Doll",
+    "box": [
+      743,
+      276,
+      784,
+      301
+    ],
+    "confidence": 0.99979
+  },
+  {
+    "text": "Doll",
+    "box": [
+      905,
+      276,
+      946,
+      301
+    ],
+    "confidence": 0.99976
+  },
+  {
+    "text": "Doll",
+    "box": [
+      1068,
+      276,
+      1109,
+      301
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "20 day(s)",
+    "box": [
+      231,
+      313,
+      323,
+      343
+    ],
+    "confidence": 0.97048
+  },
+  {
+    "text": "20 day(s)",
+    "box": [
+      393,
+      315,
+      486,
+      342
+    ],
+    "confidence": 0.97452
+  },
+  {
+    "text": "20 day(s)",
+    "box": [
+      556,
+      315,
+      647,
+      342
+    ],
+    "confidence": 0.98532
+  },
+  {
+    "text": "Bonus",
+    "box": [
+      717,
+      314,
+      785,
+      341
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "Bonus",
+    "box": [
+      880,
+      315,
+      945,
+      339
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Bonus",
+    "box": [
+      1041,
+      314,
+      1110,
+      341
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "x8",
+    "box": [
+      260,
+      434,
+      293,
+      459
+    ],
+    "confidence": 0.99404
+  },
+  {
+    "text": "x5",
+    "box": [
+      421,
+      432,
+      456,
+      460
+    ],
+    "confidence": 0.99949
+  },
+  {
+    "text": "x5",
+    "box": [
+      585,
+      434,
+      617,
+      459
+    ],
+    "confidence": 0.99973
+  },
+  {
+    "text": "x7",
+    "box": [
+      747,
+      434,
+      779,
+      459
+    ],
+    "confidence": 0.9979
+  },
+  {
+    "text": "x3",
+    "box": [
+      909,
+      434,
+      940,
+      459
+    ],
+    "confidence": 0.99792
+  },
+  {
+    "text": "x3",
+    "box": [
+      1071,
+      434,
+      1102,
+      459
+    ],
+    "confidence": 0.99814
+  },
+  {
+    "text": "STRIKER",
+    "box": [
+      43,
+      575,
+      125,
+      599
+    ],
+    "confidence": 0.99993
+  },
+  {
+    "text": "SPECIAL",
+    "box": [
+      469,
+      575,
+      548,
+      599
+    ],
+    "confidence": 0.99969
+  },
+  {
+    "text": "Lv.66",
+    "box": [
+      57,
+      610,
+      96,
+      628
+    ],
+    "confidence": 0.99338
+  },
+  {
+    "text": "Go to Lobby",
+    "box": [
+      413,
+      638,
+      601,
+      680
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Confirm",
+    "box": [
+      706,
+      638,
+      836,
+      674
+    ],
+    "confidence": 0.99992
+  }
+]

@@ -1,6 +1,6 @@
 # Event farming
 
-**Status:** implementation in progress. The greedy treasure policy, optional AP reservation, and read-only event inspection are implemented. Event sweeping and treasure spending are not implemented yet.
+**Status:** quest clearing, seasonal navigation, and optional event-first AP routing are implemented. Quest clears have live evidence; the event sweep adapter has offline coverage and still needs live validation. The greedy treasure planner exists, but treasure spending and event shops are not implemented.
 **Researched:** September 29, 2026 · global English
 
 farm what we actually want, collect it, then get back to the daily stuff. a new banner shouldn't require a new automator.
@@ -19,9 +19,9 @@ The [rerun farming guide](https://www.reddit.com/r/BlueArchive/comments/1wt161e/
 - Prioritize available pyroxene and eligma exchanges. Offer Izuna elephs, activity reports, artifacts, and furniture as individually editable targets. Show limited furniture explicitly; do not silently buy duplicates.
 - Default Treasure Hunt goal: the valuable rewards through round 3, stopping once the selected exchange targets are funded. Offer a six-round preset and manual targets. Never enter repeating rounds by default.
 - Preserve the existing **100 AP floor** and the user's automatic-spending switch. No AP purchases, attempt resets, recruitment, or other resource purchases are implied.
-- Story unlocks, initial three-star clears, and bonus-setting teams are manual setup in the first release. Explain missing prerequisites and the observed bonus coverage; do not claim farming is ready when it isn't.
+- Story unlocks remain manual. Initial quest clears can be explicitly requested from the dashboard and use the game's default Auto Formation each time. Specialized bonus-team optimization remains future work.
 
-The profile will have its own season ID, `aquatic-showdown-global-2026-rerun`. Original-run shop and reward tables must not be copied without comparison. Stage costs, yields, shop stock, board geometry, and bonus values remain **unverified in this client** until captured. This document does not install a runnable profile or authorize guessed coordinates.
+The reviewed asset uses season ID `aquatic-showdown-global-2026-rerun`. Original-run shop and reward tables must not be copied without comparison. Navigation, early quest costs and results, and the treasure entrance have live evidence. Later stage costs, shop stock, and treasure spending still require observation; no guessed coordinates authorize a spend.
 
 ## One runner, small event profiles
 
@@ -165,7 +165,7 @@ A familiar event should mostly require new data and fixtures. A new minigame sho
 
 ## Implementation and acceptance
 
-Ship in increments: registry and read-only inspection; shared AP planning and sweeps; shops/free claims; Treasure Hunt. Enable only live-verified capabilities in the released profile. This design has not yet been tested against the new event in the emulator.
+Ship in increments: registry and read-only inspection; shared AP planning and sweeps; shops/free claims; Treasure Hunt. Enable only live-verified capabilities in the released profile. The implementation and live evidence below cover only the delivered subset of this larger design.
 
 Required tests cover overlapping playable/reward windows, original versus rerun state, missing/rotating banners, locked stages, bonus rounding, partial budgets, expired profiles, shop stock and duplicate receipts. Add interruption tests before/after every spend, board refresh recovery, manual interference, queue fairness, and 720p/1440p OCR fixtures. Invalid or unsupported profiles must fail before input.
 
@@ -175,6 +175,14 @@ Completion means the configured goals progress without crossing the AP floor or 
 
 The Campaign carousel can open a concurrent event whose play period has ended but whose reward shop remains available. Inspection uses the home banner, then verifies the Aquatic Showdown subtitle (or the title plus Sun-Kissed Beach quest), Quest tab, and Treasure Hunt entrance before proceeding. Expired event screens are regression fixtures and must not match. No resource-spending inputs exist in the inspector.
 
-The optional `[ap].event_priority` setting reserves AP while this event is playable, regardless of the ordinary farming strategy. It is off by default. Until the spending adapter is ready, enabling it holds normal AP farming and reports setup status; it must not be presented as working event farming. Reservation expires at the profile's playable end time. The inspector checks Quest 1 stars and the treasure round, not the entire stage unlock list.
+The optional `[ap].event_priority` setting reserves AP while this event is playable, regardless of the ordinary farming strategy. It is off by default. When enabled, the AP runner checks the treasure round before ordinary farming. Through round 3 it selects the first available three-star quest in the reviewed order 9 → 5 → 1 and projects a sweep down to the shared AP floor. A missing clear or uncertain screen holds normal farming; it never silently falls through. Normal farming resumes only after observing a round above 3, when the event expires, or when the setting is disabled. The adapter is implemented but event sweeps have not yet passed live validation. It does not spend treasure currency or advance rounds.
 
 Live validation on 2026-09-29 completed an eight-input inspection and returned home: Quest 1 had zero stars and Treasure Hunt was on round 1; AP remained 220/220. The home banner can also rotate into recruitment. The inspector recognizes that wrong destination, returns home, and retries at most three entries. This verifies navigation and prerequisite inspection only, not event farming or treasure spending.
+
+### One-time quest clearing
+
+A successful event inspection exposes the dashboard's yes/no prompt. Yes runs `restart → clear_event` before other queued work. The clear visits quests 1–12, skips verified three-star clears, uses Quick Formation → Auto for every new battle, and enables battle Auto when needed. It records the formation, result, itemized reward receipt, and post-battle stars. A result below three stars, insufficient AP above the configured floor, or the end of the quest list stops the job. Unknown results fail without replaying the battle.
+
+After success or failure, dispatch pauses and the existing queue stays intact. No red-dot follow-up or treasure input runs afterward. No dismisses the prompt for this season without touching the device. First-clear consent is separate from enabling automatic event farming. The local state records a pending battle before Mobilize, so an interruption cannot silently spend AP again.
+
+Tests cover actual sanitized 1440p screens, quest-number/row matching, per-quest Auto Formation, stopping below three stars, pending-intent guards, event-priority holds, queue preservation, and pause-after-clear behavior. Live validation on September 29 verified Quests 1 and 2 at three stars with rewards recorded. Further results are recorded in the local task journal; event sweeps and treasure execution must not be inferred from those battle clears.

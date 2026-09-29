@@ -83,7 +83,7 @@ def read_state(config):
         if pending is not None:
             if (
                 not isinstance(pending, dict)
-                or pending.get("strategy") not in ("elephs", "reports", "credits")
+                or pending.get("strategy") not in ("elephs", "reports", "credits", "event")
                 or not isinstance(pending.get("stage"), str)
                 or any(
                     type(pending.get(k)) is not int or pending[k] < 0

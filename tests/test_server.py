@@ -1941,3 +1941,42 @@ def test_relationship_portrait_http_only_serves_observed_rankups(http_server):
     assert request('GET', '/api/loot/' + 'f' * 32 + '/portrait')[0] == 404
     assert request('GET', '/api/loot/../../private.png/portrait')[0] == 404
     assert not factory.processes
+
+
+@pytest.mark.parametrize('exit_code', [0, 1])
+def test_clear_event_runs_alone_then_pauses_existing_queue(controlled, exit_code):
+    from ba_automator import event_state
+    from ba_automator.event_priority import available_event
+    controller, factory = controlled
+    controller.pause()
+    controller._wall_clock = lambda: datetime(2026, 9, 30, tzinfo=timezone.utc)
+    event_state.observe(controller.config, available_event(controller._wall_clock()))
+    controller.pause()
+    pending = controller.enqueue('mail')
+    assert controller.event_status()['prompt']
+    chosen = controller.event_choice(True)['job']
+    eventually(lambda: len(factory.processes) == 1)
+    assert controller.status()['current_job']['id'] == chosen['id']
+    factory.processes[0].finish(exit_code)
+    eventually(lambda: controller.status()['current_job'] is None)
+    status = controller.status()
+    assert status['queue_paused']
+    assert [j['id'] for j in status['queue']] == [pending['id']]
+    assert len(factory.processes) == 1
+    assert not controller.event_status()['prompt']
+
+
+def test_declining_event_spends_nothing_and_corrupt_state_does_not_break_dashboard(controlled):
+    from ba_automator import event_state
+    from ba_automator.event_priority import available_event
+    controller, factory = controlled
+    controller.pause()
+    controller._wall_clock = lambda: datetime(2026, 9, 30, tzinfo=timezone.utc)
+    event_state.observe(controller.config, available_event(controller._wall_clock()))
+    assert controller.event_choice(False) == {'ok': True}
+    assert not factory.processes and not controller.event_status()['prompt']
+    event_state.state_path(controller.config).write_text('{broken')
+    status = controller.status()
+    assert status['event']['pending'] and not status['event']['prompt']
+    with pytest.raises(ApiError):
+        controller.event_choice(True)
