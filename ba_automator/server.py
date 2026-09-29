@@ -837,19 +837,21 @@ class DashboardController:
             return {'title': profile['title'], 'detected': False, 'prompt': False,
                     'summary': str(exc), 'pending': True}
         detected = state['event_id'] == profile['id'] and state['detected']
+        declined = state['event_id'] == profile['id'] and state['declined']
         return {'title': profile['title'], 'detected': detected,
-                'prompt': detected and not state['declined'] and not state['pending'],
+                'prompt': not declined and not state['pending'],
                 'summary': state['summary'] if detected else None,
                 'pending': bool(state['pending'])}
 
     def event_choice(self, clear):
         from .event_state import read_state, write_state
+        from .event_priority import available_event
         if type(clear) is not bool:
             raise ApiError(400, 'Choose yes or no for the event clear')
         with self._condition:
             status = self.event_status()
-            if not status or not status['detected'] or status['pending']:
-                raise ApiError(409, 'A playable event must be detected with no unresolved battle')
+            if not status or status['pending']:
+                raise ApiError(409, 'A supported event must be playable with no unresolved battle')
             if self._current or self._capturing:
                 raise ApiError(409, 'Wait for the current job to finish before clearing the event')
             if self._shutdown:
@@ -860,6 +862,13 @@ class DashboardController:
                 raise ApiError(409, 'The queue already contains 100 jobs')
             with InstanceLock(self.config):
                 state = read_state(self.config)
+                if state['pending']:
+                    raise ApiError(409, 'An event battle has an unresolved result')
+                profile = available_event(self._wall_clock())
+                if profile is None:
+                    raise ApiError(409, 'The event play period has ended')
+                if state['event_id'] != profile['id']:
+                    state.update(event_id=profile['id'], detected=False, clears={}, summary=None)
                 state['declined'] = True
                 write_state(self.config,state)
             if not clear:

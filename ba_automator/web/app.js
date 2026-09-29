@@ -436,6 +436,7 @@
     renderFrame();
     renderControls();
     $("event-card").hidden = !status.event?.prompt;
+    $("event-kicker").textContent = status.event?.detected ? "EVENT DETECTED" : "EVENT AVAILABLE";
     $("event-name").textContent = status.event?.title || "";
     $("event-yes").disabled = running || pending > 0 || !connected || isDemo();
     $("event-no").disabled = running || pending > 0 || !connected || isDemo();

@@ -181,7 +181,7 @@ Live validation on 2026-09-29 completed an eight-input inspection and returned h
 
 ### One-time quest clearing
 
-A successful event inspection exposes the dashboard's yes/no prompt. Yes runs `restart → clear_event` before other queued work. The clear visits quests 1–12, skips verified three-star clears, uses Quick Formation → Auto for every new battle, and enables battle Auto when needed. It records the formation, result, itemized reward receipt, and post-battle stars. A result below three stars, insufficient AP above the configured floor, or the end of the quest list stops the job. Unknown results fail without replaying the battle.
+A reviewed profile in its playable date window exposes the dashboard's yes/no prompt, even when event farming is disabled. It says “event available” until in-game inspection verifies the event identity. Yes runs `restart → clear_event` before other queued work. The clear visits quests 1–12, skips verified three-star clears, uses Quick Formation → Auto for every new battle, and enables battle Auto when needed. It records the formation, result, itemized reward receipt, and post-battle stars. A result below three stars, insufficient AP above the configured floor, or the end of the quest list stops the job. Unknown results fail without replaying the battle.
 
 After success or failure, dispatch pauses and the existing queue stays intact. No red-dot follow-up or treasure input runs afterward. No dismisses the prompt for this season without touching the device. First-clear consent is separate from enabling automatic event farming. The local state records a pending battle before Mobilize, so an interruption cannot silently spend AP again.
 

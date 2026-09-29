@@ -1980,3 +1980,16 @@ def test_declining_event_spends_nothing_and_corrupt_state_does_not_break_dashboa
     assert status['event']['pending'] and not status['event']['prompt']
     with pytest.raises(ApiError):
         controller.event_choice(True)
+
+
+def test_event_prompt_does_not_require_farming_to_be_enabled(controlled):
+    controller, factory = controlled
+    controller.pause()
+    controller._wall_clock = lambda: datetime(2026, 9, 30, tzinfo=timezone.utc)
+    assert not controller.config.ap_event_priority
+    status = controller.event_status()
+    assert status['prompt'] and not status['detected']
+    assert controller.event_choice(False) == {'ok': True}
+    assert not controller.event_status()['prompt']
+    assert not controller.event_status()['detected']
+    assert not factory.processes

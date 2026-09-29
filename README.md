@@ -83,7 +83,7 @@ sign in manually once. Blue Archive and Azur Lane get different ADB endpoints; t
 
 ## what's next
 
-The [event farming design](docs/event-farming.md) now includes the Aquatic Showdown quest-clear job. After the event is detected, **yes, clear it** uses default Auto Formation for each uncleared quest, stops below three stars or at the AP floor/end, then pauses the queue. Event farming has a separate, off-by-default priority setting on the Spend AP page: when enabled, it reserves AP for the event before Hard/commission farming. Quest clearing has live evidence; the sweep adapter still needs live validation. Treasure execution and event shops remain future work.
+The [event farming design](docs/event-farming.md) now includes the Aquatic Showdown quest-clear job. While the reviewed event is playable, **yes, clear it** uses default Auto Formation for each uncleared quest, stops below three stars or at the AP floor/end, then pauses the queue. Event farming has a separate, off-by-default priority setting on the Spend AP page: when enabled, it reserves AP for the event before Hard/commission farming. Quest clearing has live evidence; the sweep adapter still needs live validation. Treasure execution and event shops remain future work.
 
 Final Restriction Release, the mode with Fury of Set, has a [design proposal](docs/final-restriction-release.md): seasonal progress, a saved ten-student team, and one floor attempt at a time so AP and cafe work can keep moving. it's a plan, not an implemented job yet.
 
