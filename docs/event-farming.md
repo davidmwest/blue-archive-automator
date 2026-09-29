@@ -1,6 +1,6 @@
 # Event farming
 
-**Status:** quest clearing, seasonal navigation, and optional event-first AP routing are implemented. Quest clears have live evidence; the event sweep adapter has offline coverage and still needs live validation. The greedy treasure planner exists, but treasure spending and event shops are not implemented.
+**Status:** quest clearing, seasonal navigation, and optional event-first AP routing are implemented. Quest clears and event sweeps have live evidence at 1440p. The greedy treasure planner exists, but treasure spending and event shops are not implemented.
 **Researched:** September 29, 2026 · global English
 
 farm what we actually want, collect it, then get back to the daily stuff. a new banner shouldn't require a new automator.
@@ -175,7 +175,7 @@ Completion means the configured goals progress without crossing the AP floor or 
 
 The Campaign carousel can open a concurrent event whose play period has ended but whose reward shop remains available. Inspection uses the home banner, then verifies the Aquatic Showdown subtitle (or the title plus Sun-Kissed Beach quest), Quest tab, and Treasure Hunt entrance before proceeding. Expired event screens are regression fixtures and must not match. No resource-spending inputs exist in the inspector.
 
-The optional `[ap].event_priority` setting reserves AP while this event is playable, regardless of the ordinary farming strategy. It is off by default. When enabled, the AP runner checks the treasure round before ordinary farming. Through round 3 it selects the first available three-star quest in the reviewed order 9 → 5 → 1 and projects a sweep down to the shared AP floor. A missing clear or uncertain screen holds normal farming; it never silently falls through. Normal farming resumes only after observing a round above 3, when the event expires, or when the setting is disabled. The adapter is implemented but event sweeps have not yet passed live validation. It does not spend treasure currency or advance rounds.
+The optional `[ap].event_priority` setting reserves AP while this event is playable, regardless of the ordinary farming strategy. It is off by default. When enabled, the AP runner checks the treasure round before ordinary farming. Through round 3 it selects the first available three-star quest in the reviewed order 9 → 5 → 1 and projects a sweep down to the shared AP floor. A missing clear or uncertain screen holds normal farming; it never silently falls through. Normal farming resumes only after observing a round above 3, when the event expires, or when the setting is disabled. The adapter has live sweep evidence on Quest 5. It does not spend treasure currency or advance rounds.
 
 Live validation on 2026-09-29 completed an eight-input inspection and returned home: Quest 1 had zero stars and Treasure Hunt was on round 1; AP remained 220/220. The home banner can also rotate into recruitment. The inspector recognizes that wrong destination, returns home, and retries at most three entries. This verifies navigation and prerequisite inspection only, not event farming or treasure spending.
 
@@ -185,6 +185,30 @@ A reviewed profile in its playable date window exposes the dashboard's yes/no pr
 
 After success or failure, dispatch pauses and the existing queue stays intact. No red-dot follow-up or treasure input runs afterward. No dismisses the prompt for this season without touching the device. First-clear consent is separate from enabling automatic event farming. The local state records a pending battle before Mobilize, so an interruption cannot silently spend AP again.
 
-Tests cover actual sanitized 1440p screens, quest-number/row matching, per-quest Auto Formation, stopping below three stars, pending-intent guards, event-priority holds, queue preservation, and pause-after-clear behavior. Live validation on September 29 verified Quests 1–8 at three stars using Auto Formation. Quest 9 finished in 2:11 with two stars: every student survived, but the 120-second objective was missed. Clearing stopped there, returned home, and left dispatch paused with 115 AP. All nine reward receipts were recorded. Event sweeps and treasure execution remain unverified live.
+Tests cover actual sanitized 1440p screens, quest-number/row matching, per-quest Auto Formation, stopping below three stars, pending-intent guards, event-priority holds, queue preservation, and pause-after-clear behavior. Live validation on September 29 verified Quests 1–8 at three stars using Auto Formation. Quest 9 finished in 2:11 with two stars: every student survived, but the 120-second objective was missed. Clearing stopped there, returned home, and left dispatch paused with 115 AP. All nine reward receipts were recorded. The subsequent event sweep validation is recorded below; treasure execution remains unverified live.
 
 Quest 9 also exposed a receipt input whose screenshot expired during the ADB preflight. No input had been sent. The reader now makes at most three attempts, each requiring fresh validation of the same receipt; changed screens still stop the job. The interrupted receipt was recovered and its stars verified without replaying the battle. Post-battle star screenshots are now saved alongside reward evidence.
+
+### Event sweep recognition and live validation
+
+On September 29, the full-screen OCR omitted the small sweep quantity at 1440p:
+it rejected `1` at low confidence and missed `49` entirely. This first produced a
+misleading insufficient-AP summary, then caused quantity adjustment to time out.
+An unreadable cost now waits for the same identified three-star event stage,
+instead of treating it as insufficient AP or falling through to normal farming.
+Missing quantities are reread from a native-resolution crop at two scales; both
+reads must agree with high confidence. The projected AP and final confirmation
+remain independent checks before any spend.
+
+The live retry skipped two-star Quest 9 and swept three-star Quest 5 **43 times**
+at **15 AP each**, spending **645 AP** and taking the balance from **758 to 113**.
+The configured **100 AP floor** was preserved. The game displayed the matching
+sweep result and event-currency rewards. No Hard-stage sweep or AP purchase was
+part of this visit. Sanitized 1440p fixtures cover the missing `1` and `49` reads,
+and regression tests preserve the event reservation when cost recognition fails.
+
+This visit also exposed a separate receipt-pagination limitation: the loot reader
+could not prove overlap between two Full List pages. It saved both screenshots
+and the partially identified drops for review. The sweep result and final AP
+balance were verified, the pending transaction cleared, and the job returned
+home successfully. Incomplete itemization does not authorize repeating a sweep.

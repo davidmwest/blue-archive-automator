@@ -1,0 +1,332 @@
+[
+  {
+    "text": "758/220",
+    "confidence": 0.99999,
+    "box": [
+      507,
+      9,
+      588,
+      37
+    ]
+  },
+  {
+    "text": "Students",
+    "confidence": 0.99297,
+    "box": [
+      264,
+      102,
+      339,
+      114
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.89576,
+    "box": [
+      738,
+      99,
+      796,
+      115
+    ]
+  },
+  {
+    "text": "Ouest",
+    "confidence": 0.96081,
+    "box": [
+      914,
+      99,
+      977,
+      115
+    ]
+  },
+  {
+    "text": "Challenge",
+    "confidence": 0.99883,
+    "box": [
+      1065,
+      95,
+      1174,
+      119
+    ]
+  },
+  {
+    "text": "Mission Info",
+    "confidence": 0.99989,
+    "box": [
+      546,
+      121,
+      733,
+      156
+    ]
+  },
+  {
+    "text": "Rec.",
+    "confidence": 0.9841,
+    "box": [
+      657,
+      188,
+      702,
+      212
+    ]
+  },
+  {
+    "text": "05|Stillwater Shore",
+    "confidence": 0.97678,
+    "box": [
+      139,
+      194,
+      453,
+      234
+    ]
+  },
+  {
+    "text": "Lv.45",
+    "confidence": 0.9998,
+    "box": [
+      647,
+      210,
+      709,
+      238
+    ]
+  },
+  {
+    "text": "Sweep",
+    "confidence": 0.99994,
+    "box": [
+      900,
+      219,
+      969,
+      247
+    ]
+  },
+  {
+    "text": "Enemy/Syn.",
+    "confidence": 0.99969,
+    "box": [
+      177,
+      257,
+      292,
+      286
+    ]
+  },
+  {
+    "text": "Challenges",
+    "confidence": 0.99998,
+    "box": [
+      344,
+      260,
+      453,
+      286
+    ]
+  },
+  {
+    "text": "Min",
+    "confidence": 0.9999,
+    "box": [
+      764,
+      286,
+      811,
+      314
+    ]
+  },
+  {
+    "text": "Max",
+    "confidence": 0.99958,
+    "box": [
+      1055,
+      286,
+      1109,
+      314
+    ]
+  },
+  {
+    "text": "Mission Objectives (\u2606)",
+    "confidence": 0.99872,
+    "box": [
+      320,
+      312,
+      545,
+      341
+    ]
+  },
+  {
+    "text": "Clear",
+    "confidence": 0.99998,
+    "box": [
+      182,
+      354,
+      240,
+      379
+    ]
+  },
+  {
+    "text": "758\u219223",
+    "confidence": 0.9999,
+    "box": [
+      1007,
+      351,
+      1092,
+      374
+    ]
+  },
+  {
+    "text": "Clear within 120 second(s)",
+    "confidence": 0.99101,
+    "box": [
+      181,
+      386,
+      439,
+      414
+    ]
+  },
+  {
+    "text": "Start Sweep",
+    "confidence": 0.99968,
+    "box": [
+      850,
+      388,
+      1019,
+      425
+    ]
+  },
+  {
+    "text": "All students survive",
+    "confidence": 0.99995,
+    "box": [
+      181,
+      422,
+      375,
+      445
+    ]
+  },
+  {
+    "text": "Expected Rewards",
+    "confidence": 0.9999,
+    "box": [
+      341,
+      471,
+      526,
+      497
+    ]
+  },
+  {
+    "text": "758\u2192743",
+    "confidence": 0.99989,
+    "box": [
+      1013,
+      478,
+      1109,
+      500
+    ]
+  },
+  {
+    "text": "Rare",
+    "confidence": 0.99994,
+    "box": [
+      427,
+      510,
+      473,
+      535
+    ]
+  },
+  {
+    "text": "Bonus",
+    "confidence": 0.99993,
+    "box": [
+      564,
+      510,
+      621,
+      534
+    ]
+  },
+  {
+    "text": "Bonus",
+    "confidence": 0.99994,
+    "box": [
+      634,
+      510,
+      692,
+      534
+    ]
+  },
+  {
+    "text": "B",
+    "confidence": 0.9998,
+    "box": [
+      706,
+      511,
+      723,
+      534
+    ]
+  },
+  {
+    "text": "Start Mission",
+    "confidence": 0.99044,
+    "box": [
+      823,
+      519,
+      1047,
+      559
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.71558,
+    "box": [
+      211,
+      564,
+      227,
+      580
+    ]
+  },
+  {
+    "text": "10",
+    "confidence": 0.9997,
+    "box": [
+      538,
+      563,
+      557,
+      577
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.72597,
+    "box": [
+      560,
+      563,
+      578,
+      581
+    ]
+  },
+  {
+    "text": "x13",
+    "confidence": 0.97796,
+    "box": [
+      592,
+      558,
+      630,
+      580
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.80868,
+    "box": [
+      630,
+      563,
+      649,
+      581
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.85371,
+    "box": [
+      699,
+      563,
+      719,
+      582
+    ]
+  }
+]

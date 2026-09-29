@@ -124,3 +124,32 @@ def test_empty_pending_intent_is_corrupt_not_permission_to_spend(tmp_path):
     event_state.write_state(c, state)
     with pytest.raises(RuntimeError, match='Invalid event state'):
         event_state.ensure_safe(c)
+
+
+@pytest.mark.parametrize('quantity,after', [(1,743),(49,23)])
+def test_sweep_quantity_crop_recovers_real_missed_digits(quantity, after, monkeypatch):
+    from ba_automator.event_vision import QuestVision
+    from ba_automator.vision import StartupVision
+    frame, words = load(f'event-sweep-{quantity}')
+    assert classify_quest(frame, words).cost is None
+    monkeypatch.setattr('ba_automator.event_vision.read_game_words', lambda *args: words)
+    png = (FIXTURES/f'event-sweep-{quantity}.png').read_bytes()
+    screen = QuestVision(StartupVision(), None).analyze(png)
+    assert (screen.stage, screen.stars, screen.count, screen.cost, screen.after) == (
+        '5', 3, quantity, 15, after)
+    assert screen.target == (937,405)
+
+
+@pytest.mark.parametrize('reads', [
+    [[], []],
+    [[Word('49',.94,(0,0,20,20))]],
+    [[Word('49',1,(0,0,20,20))], [Word('48',1,(0,0,20,20))]],
+    [[Word('4g',1,(0,0,20,20))]],
+])
+def test_sweep_quantity_crop_rejects_uncertain_reads(reads):
+    from ba_automator.event_vision import reread_sweep_count
+    from ba_automator.vision import decode_native_frame
+    png = (FIXTURES/'event-sweep-49.png').read_bytes()
+    results = iter(reads)
+    assert reread_sweep_count(decode_native_frame(png),
+                             SimpleNamespace(read=lambda crop: next(results))) is None

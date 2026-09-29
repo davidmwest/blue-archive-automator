@@ -1,10 +1,11 @@
 """Event quest details and battle setup; all coordinates are canonical."""
 import re
+import cv2
 from dataclasses import dataclass
 from .ap_vision import APScreen, ap_value, mission_stars, projected_ap
 from .crafting_vision import bright, cyan, yellow, number, within
 from .shop_vision import has, text_in
-from .vision import decode_frame, read_game_words
+from .vision import decode_frame, decode_native_frame, native_game_region, read_game_words, Word
 from .event_inspection import classify_event
 from .assault_battle_vision import auto_state
 
@@ -76,6 +77,25 @@ def classify_quest(frame, words):
     return None
 
 
+SWEEP_COUNT_BOUNDS = (904, 277, 970, 330)
+
+
+def reread_sweep_count(native, vision):
+    """Read the small quantity in isolation, requiring two agreeing reads."""
+    crop = native_game_region(native, SWEEP_COUNT_BOUNDS)
+    reads = []
+    for scale in (2, 3):
+        enlarged = cv2.resize(crop, (66 * scale, 53 * scale))
+        words = vision.read(enlarged)
+        if (len(words) != 1 or words[0].confidence < .95
+                or not re.fullmatch(r'[1-9]\d{0,2}', words[0].text.strip())):
+            return None
+        reads.append(words[0])
+    if reads[0].text != reads[1].text:
+        return None
+    return Word(reads[0].text, min(w.confidence for w in reads), SWEEP_COUNT_BOUNDS)
+
+
 class QuestVision:
     def __init__(self, startup, fallback):
         self.startup, self.fallback = startup, fallback
@@ -83,5 +103,12 @@ class QuestVision:
     def analyze(self,png,*,billing=False):
         frame = decode_frame(png)
         words = read_game_words(png,self.startup)
-        return (classify_quest(frame,words) or classify_event(frame,words)
+        screen = classify_quest(frame, words)
+        if screen and screen.kind == 'detail' and screen.stars == 3 and not screen.count:
+            count = reread_sweep_count(decode_native_frame(png), self.startup)
+            if count is not None:
+                previous = within(words, SWEEP_COUNT_BOUNDS)
+                words = [w for w in words if w not in previous] + [count]
+                screen = classify_quest(frame, words)
+        return (screen or classify_event(frame,words)
                 or self.fallback.analyze(png,billing=billing))

@@ -121,3 +121,31 @@ def test_event_farm_goal_and_verified_stage_selection(tmp_path, monkeypatch, rou
     assert (result is None) is (round_number > 3)
     if round_number <= 3 and expected_stage is None:
         assert 'Normal AP farming remains on hold' in result
+
+
+def test_unreadable_event_cost_retries_instead_of_reporting_low_ap(tmp_path, monkeypatch):
+    from ba_automator.event_quests import farm_event
+    from ba_automator.event_priority import available_event
+    c = config(tmp_path, ap_event_priority=True)
+    old_vision = object()
+    runner = SimpleNamespace(config=c, vision=old_vision, startup=None,
+                             tap=lambda *a: None)
+    calls = []
+    def wait(kind, **kwargs):
+        calls.append(kind)
+        if kind == 'event_board':
+            return SimpleNamespace(screen=SimpleNamespace(round=1))
+        if kind == 'detail':
+            predicate = kwargs['predicate']
+            assert not predicate(APScreen('detail', strategy='event', stage='5', stars=3, ap=758))
+            assert predicate(APScreen('detail', strategy='event', stage='5', stars=3, ap=758, cost=15))
+            assert not predicate(APScreen('detail', strategy='event', stage='9', stars=3, ap=758, cost=15))
+            raise TaskError('Unreadable event detail', tmp_path)
+    runner.wait = wait
+    monkeypatch.setattr('ba_automator.event_quests.enter_event', lambda *a: None)
+    monkeypatch.setattr('ba_automator.event_quests.quest_detail', lambda *a, **kw:
+        SimpleNamespace(screen=APScreen('detail', strategy='event', stage='5', stars=3, ap=758)))
+    profile = dict(available_event(datetime(2026,9,30,tzinfo=timezone.utc)), farm_order=[5])
+    with pytest.raises(TaskError, match='Unreadable'):
+        farm_event(runner, profile)
+    assert 'detail' in calls and runner.vision is old_vision

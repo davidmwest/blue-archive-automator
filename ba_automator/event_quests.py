@@ -223,7 +223,13 @@ def farm_event(runner, profile):
             if frame is None:
                 continue
             if frame.screen.stars == 3:
-                count = sweep_count(frame.screen.ap,runner.config.ap_floor,frame.screen.cost) if frame.screen.cost else 0
+                if frame.screen.ap is None or not frame.screen.cost:
+                    # Unreadable quantity/cost is not evidence that AP is low.
+                    # Keep the event reservation and retry this same detail.
+                    frame = runner.wait('detail', predicate=lambda s: (
+                        s.strategy == 'event' and str(s.stage) == str(stage)
+                        and s.stars == 3 and s.ap is not None and bool(s.cost)))
+                count = sweep_count(frame.screen.ap,runner.config.ap_floor,frame.screen.cost)
                 if count:
                     try:
                         frame = runner.sweep(frame,count)

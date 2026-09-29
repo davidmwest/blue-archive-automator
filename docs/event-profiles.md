@@ -2,9 +2,9 @@
 
 Event behavior is researched ahead of time and saved as local JSON. Runtime recognition uses configured text and local image matches. It makes no AI calls.
 
-The version-1 loader and read-only recognition helpers are implemented. **There is no event navigation job, event farming task, or event CLI command yet.** A matching profile returns evidence and a candidate target; it does not send game input.
+The version-1 loader and read-only recognition helpers are implemented. A matching version-1 profile returns evidence and a candidate target; it does not send game input. The seasonal Aquatic Showdown adapter separately implements navigation, quest clearing, and optional event-first AP farming; see [Event farming](event-farming.md) for its current validation status.
 
-The proposed farming runner, AP allocation, and Aquatic Showdown rerun policy are described in [Event farming](event-farming.md). Its version-2 contract is a proposal; the loader below still accepts version 1 only.
+The farming runner, AP allocation, and Aquatic Showdown rerun policy are described in [Event farming](event-farming.md). Its version-2 contract is a proposal; the loader below still accepts version 1 only.
 
 ## Current profile
 
