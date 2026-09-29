@@ -204,7 +204,7 @@ def test_settings_validate_before_write_and_preserve_device_and_paths(controlled
 
 
 @pytest.mark.parametrize("gate", ["running", "ready", "capturing"])
-def test_settings_remain_locked_during_active_or_ready_work(controlled, config_path, gate):
+def test_settings_save_during_active_or_ready_work(controlled, config_path, gate):
     controller, factory = controlled
     controller.pause()
     controller.enqueue("restart")
@@ -220,10 +220,9 @@ def test_settings_remain_locked_during_active_or_ready_work(controlled, config_p
             controller._capturing = True
             assert controller.status()["capturing"] is True
         try:
-            with pytest.raises(ApiError) as error:
-                controller.update_settings({"tactical_battles_search_minutes": 5})
-            assert error.value.status == 409
-            assert config_path.read_bytes() == original
+            controller.update_settings({"tactical_battles_search_minutes": 5})
+            assert controller.config.tactical_battles_search_minutes == 5
+            assert config_path.read_bytes() != original
         finally:
             controller._paused = True
             controller._capturing = False
@@ -251,9 +250,7 @@ def test_total_assault_settings_persist_and_reach_the_queued_snapshot(controlled
     controller.enqueue("total_assault")
     controller.resume()
     eventually(lambda: len(factory.processes) == 1)
-    with pytest.raises(ApiError) as error:
-        controller.update_settings({"total_assault_difficulty": "hard"})
-    assert error.value.status == 409
+    controller.update_settings({"total_assault_difficulty": "hard"})
     snapshot = Config.from_file(factory.processes[0].arguments[4])
     assert factory.processes[0].arguments[-1] == "total_assault"
     assert snapshot.total_assault_difficulty == "hardcore"
@@ -311,9 +308,7 @@ def test_tactical_battle_settings_persist_and_reach_the_queued_snapshot(controll
     assert schedule_path.read_bytes() == persisted_schedules
     controller.resume()
     eventually(lambda: len(factory.processes) == 1)
-    with pytest.raises(ApiError) as error:
-        controller.update_settings({"tactical_battles_preserve_tickets": 0})
-    assert error.value.status == 409
+    controller.update_settings({"tactical_battles_preserve_tickets": 0})
     snapshot = Config.from_file(factory.processes[0].arguments[4])
     assert factory.processes[0].arguments[-1] == "tactical_battles"
     assert snapshot.tactical_battles_preserve_tickets == 2
@@ -976,9 +971,7 @@ def test_lesson_settings_validate_persist_and_snapshot_before_dispatch(controlle
     controller.enqueue("lessons")
     controller.resume()
     eventually(lambda: len(factory.processes) == 1)
-    with pytest.raises(ApiError) as error:
-        controller.update_settings({"lessons_max_tickets": 1})
-    assert error.value.status == 409
+    controller.update_settings({"lessons_max_tickets": 1})
     snapshot = Config.from_file(factory.processes[0].arguments[4])
     assert snapshot.lessons_strategy == "school_rank"
     assert snapshot.lessons_max_tickets == 2
@@ -1993,3 +1986,36 @@ def test_event_prompt_does_not_require_farming_to_be_enabled(controlled):
     assert not controller.event_status()['prompt']
     assert not controller.event_status()['detected']
     assert not factory.processes
+
+
+def test_ap_dispatches_after_other_queued_work(controlled):
+    controller, factory = controlled
+    controller.pause()
+    controller.enqueue("spend_ap")
+    controller.enqueue("tasks")
+    controller.enqueue("mail")
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    assert factory.processes[0].arguments[-1] == "tasks"
+    factory.processes[0].finish()
+    eventually(lambda: len(factory.processes) == 2)
+    assert factory.processes[1].arguments[-1] == "mail"
+    factory.processes[1].finish()
+    eventually(lambda: len(factory.processes) == 3)
+    assert "spend_ap" in factory.processes[2].arguments
+
+
+def test_live_settings_reach_next_job_but_not_active_snapshot(controlled):
+    controller, factory = controlled
+    controller.pause()
+    controller.enqueue("restart")
+    controller.enqueue("tasks")
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    before = Config.from_file(factory.processes[0].arguments[4])
+    controller.update_settings({"packs_ap_enabled": True, "ap_event_priority": True})
+    assert Config.from_file(factory.processes[0].arguments[4]) == before
+    factory.processes[0].finish()
+    eventually(lambda: len(factory.processes) == 2)
+    after = Config.from_file(factory.processes[1].arguments[4])
+    assert after.packs_ap_enabled and after.ap_event_priority

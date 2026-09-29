@@ -232,10 +232,9 @@
       : status?.run_available_pending ? "finishing what's already queued, then checking what else is ready."
       : status?.run_available_active ? "getting through what's ready. everything runs one at a time."
       : "run the enabled jobs that are due, then check red dots and AP. your settings and AP floor still apply.";
-    const settingsLocked = active || Boolean(status?.capturing) || (queued && !paused);
-    $("settings-fields").disabled = unavailable || settingsLocked;
-    $("settings-lock-note").hidden = !settingsLocked;
-    $("save-settings").disabled = unavailable || settingsLocked || !settingsDirty;
+    $("settings-fields").disabled = unavailable;
+    $("settings-lock-note").hidden = false;
+    $("save-settings").disabled = unavailable || !settingsDirty;
     fields.checkin_interval_minutes.disabled = !fields.checkin_schedule_enabled.checked;
     fields.cafe_invite_student.disabled = unavailable || !fields.cafe_invite_enabled.checked;
     $("lessons-strategy-description").textContent = fields.lessons_strategy.value === "school_rank"

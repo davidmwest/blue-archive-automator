@@ -47,18 +47,17 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
         plan = (*plan, "total_assault") if config.total_assault_enabled_in_daily else plan
         plan = (*plan, "joint_firing_drill") if config.drill_enabled_in_daily else plan
         plan = (*plan, "assault_rewards")
-        plan = (*plan, "spend_ap") if config.ap_schedule_enabled else plan
         return (*plan, "tasks")
     if command == "cafe":
-        return ("restart", "club", "mail", "cafe", *(("spend_ap",) if config.ap_schedule_enabled else ()))
+        return ("restart", "club", "mail", "cafe")
     if command in {"club", "free_pack"}:
         return ("restart", command, "mail")
     if command == "red_dots":
         return ("restart",)
     if command == "packs":
-        return ("restart", "packs", "mail", *(("spend_ap",) if config.ap_schedule_enabled else ()))
+        return ("restart", "packs", "mail")
     if command == 'mail':
-        return ('restart', 'mail', *(("spend_ap",) if config.ap_schedule_enabled else ()))
+        return ('restart', 'mail')
     if command == "tactical_battles":
         from .tactical_state import TacticalStateError, read_state
 

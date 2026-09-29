@@ -212,7 +212,7 @@ def test_due_daily_and_crafting_reuse_opt_ins_and_cover_cafe_ap(controlled):
     assert [job["task"] for job in result["jobs"]] == ["daily", "crafting", "red_dots"]
     assert all(job.get("source") == "schedule" for job in result["jobs"][:2])
     plan = task_plan("daily", controller.config)
-    assert "spend_ap" in plan
+    assert "spend_ap" not in plan
     assert not {"packs", "lessons", "bounties", "scrimmages", "total_assault"} & set(plan)
     assert controller.config.ap_floor == 123
     eventually(lambda: len(factory.processes) == 1)

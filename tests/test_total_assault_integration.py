@@ -55,8 +55,8 @@ def test_total_assault_is_opt_in_daily_and_does_not_run_with_cafe(tmp_path):
     assert task_plan("assault_rewards", config) == ("restart", "assault_rewards", "red_dots")
     assert task_plan("total_assault", config) == ("restart", "total_assault", "assault_rewards", "red_dots")
     enabled = replace(config, total_assault_enabled_in_daily=True, ap_schedule_enabled=True)
-    assert task_plan("daily", enabled)[-6:] == (
-        "lessons", "total_assault", "assault_rewards", "spend_ap", "tasks", "red_dots",
+    assert task_plan("daily", enabled)[-5:] == (
+        "lessons", "total_assault", "assault_rewards", "tasks", "red_dots",
     )
     assert "total_assault" not in task_plan("cafe", enabled)
 

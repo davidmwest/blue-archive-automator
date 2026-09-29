@@ -1063,7 +1063,9 @@ class DashboardController:
                     self._condition.wait(timeout=15)
                 if self._shutdown:
                     return
-                job = self._queue.popleft()
+                # AP is leftover work: preserve FIFO among every other job.
+                job = next((item for item in self._queue if item["task"] != "spend_ap"), self._queue[0])
+                self._queue.remove(job)
                 if job["task"] == "daily" and not self._claim_daily(job):
                     continue
                 if job.get("source") == "checkin" and not self._claim_checkin(job):
@@ -1585,7 +1587,7 @@ class DashboardController:
                     "logs": list(self._logs), "has_frame": frame is not None,
                     "frame_version": version, "csrf_token": self.csrf_token,
                     "result": dict(self._result) if self._result else None,
-                    "queue": [dict(job) for job in self._queue],
+                    "queue": [dict(job) for job in sorted(self._queue, key=lambda item: item["task"] == "spend_ap")],
                     "current_job": dict(self._current) if self._current else None,
                     "history": list(self._history), "queue_paused": self._paused,
                     "capturing": self._capturing,
@@ -1837,8 +1839,6 @@ class DashboardController:
         if not changes or changes.keys() - SETTINGS:
             raise ApiError(400, "Only supported task settings may be updated")
         with self._condition:
-            if self._current or self._capturing or (self._queue and not self._paused):
-                raise ApiError(409, "Pause the queue and wait for the current job or capture before changing settings")
             try:
                 existing = Config.from_file(self.config_path)
                 updated = replace(existing, **changes)  # Validate before touching the file.

@@ -571,8 +571,8 @@ def test_jobs_share_queue_plans_and_only_scan_has_no_spend(runner):
     assert "spend_ap" not in task_plan("cafe", c)
     enabled = replace(c, ap_schedule_enabled=True)
     for task in ("cafe", "mail", "packs"):
-        assert task_plan(task, enabled)[-2:] == ("spend_ap", "red_dots")
-    assert task_plan("daily", enabled)[-3:] == ("spend_ap", "tasks", "red_dots")
+        assert "spend_ap" not in task_plan(task, enabled)
+    assert "spend_ap" not in task_plan("daily", enabled)
     assert task_plan("scan_ap", enabled) == ("restart", "scan_ap", "red_dots")
 
 

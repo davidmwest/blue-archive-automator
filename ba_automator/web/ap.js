@@ -8,12 +8,12 @@
   const error=text=>{$('ap-error').textContent=text;$('ap-error').hidden=false;};
   const busy=()=>pending||!status||status.demo;
   function controls(){
-    const locked=busy()||status?.current_job||status?.queue?.length;
+    const locked=busy();
     $('ap-fields').disabled=Boolean(locked);
     $('ap-save').disabled=Boolean(locked||!dirty);
     $('ap-run').disabled=Boolean(busy()||dirty);
     $('ap-scan').disabled=Boolean(busy());
-    $('ap-dirty').textContent=dirty?'not saved yet':locked?'settings wait until the queue is clear.':'settings saved.';
+    $('ap-dirty').textContent=dirty?'not saved yet':locked?'connecting…':'settings saved. changes apply to the next job.';
     $('ap-rotation-section').hidden=selectedStrategy()!=='elephs';
   }
   function changed(){dirty=true;controls();}

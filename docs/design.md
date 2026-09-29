@@ -32,7 +32,7 @@ Arbitrary aspect ratios, automatic account switching, unattended external authen
 ```mermaid
 flowchart TB
     User[Local browser dashboard] --> API[Loopback HTTP API]
-    API --> Queue[Scheduler and FIFO job queue]
+    API --> Queue[Scheduler and serial job queue]
     Queue --> Worker[One active task worker per instance]
     CLI[Manual CLI] --> Task[Task runner and task registry]
     Worker --> Task
@@ -52,7 +52,7 @@ flowchart TB
 | Boundary | Responsibility | Rule |
 | --- | --- | --- |
 | Dashboard/API | Present state, settings, queue controls, and evidence | Never perform game input directly |
-| Scheduler/queue | Decide when work is due and preserve its order | Scheduled and manual jobs use one FIFO queue |
+| Scheduler/queue | Decide when work is due and preserve its order | One serial queue; Spend AP runs last, other jobs keep FIFO order |
 | Task runner | Execute prerequisites, task steps, verification, and cancellation | A task declares success only after checking its postcondition |
 | Recognition | Convert a screenshot into a recognized state or target with evidence | An unknown screen is a valid outcome, not an invitation to guess |
 | Device adapter | Targeted ADB operations and device preflight | Every game command names the configured instance |
@@ -69,7 +69,7 @@ One automation worker controls one configured game instance at a time. An OS loc
 
 ### Jobs and tasks
 
-A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, Club attendance, the free daily pack, optional paid-pack checks, Mail, and Cafe, with optional Tactical Challenge battles followed by reward collection, and Bounties, Scrimmages, and Lessons included when their daily settings are enabled with opt-in Total Assault after Lessons and Spend AP appended when automatic spending is enabled. Tasks collection finishes the daily activities, checking its home red dot and claiming completed rewards after the activities that earn them.
+A **job** is one queued request, including its identity, effective configuration, source, timestamps, and result. A **task** is reusable game behavior such as restart, Cafe, or Lessons. A **plan** orders tasks; `daily` starts with restart, Club attendance, the free daily pack, optional paid-pack checks, Mail, and Cafe, with optional Tactical Challenge battles followed by reward collection, and Bounties, Scrimmages, and Lessons included when their daily settings are enabled with opt-in Total Assault after Lessons and AP spending scheduled separately when enabled. Tasks collection finishes the daily activities, checking its home red dot and claiming completed rewards after the activities that earn them.
 
 Total Assault rank and points collection is independent of optional raid combat. The `assault_rewards` task runs after raid combat and in Daily even when combat is disabled. The final notification scan checks both Home and Campaign using two matching red-dot observations, then returns home before publishing allowlisted queue requests. Campaign notifications can request reward collection, never ticket spending. Requests are deduplicated within the current busy queue batch; amber availability markers are not reward notifications.
 
@@ -98,7 +98,7 @@ stateDiagram-v2
     running --> stopped: cancellation completed
 ```
 
-Queue pause is separate from job state. Pause allows the active job to finish; Stop interrupts it and pauses further dispatch. Resume permits queued work again. The current dashboard rejects settings changes while any job is active or queued. Accepted changes apply to future work, and a running job keeps its configuration snapshot.
+Queue pause is separate from job state. Pause allows the active job to finish; Stop interrupts it and pauses further dispatch. Resume permits queued work again. Settings can be saved while work is active or queued. Changes apply at the next job dispatch; a running job keeps its configuration snapshot. Spend AP has the lowest dispatch priority and is never embedded in Cafe, Mail, Packs, or Daily plans. Their final home scan queues AP spending when appropriate, after other pending jobs.
 
 The Cafe schedule runs three hours and 15 seconds after a successful visit. Duplicate due visits are suppressed while equivalent work is active or queued. Failed visits retry after 15 minutes, then pause after three consecutive failures.
 
@@ -106,7 +106,7 @@ The optional Daily schedule uses the Global reset at 19:00 UTC plus a configurab
 
 An instance-scoped occurrence is persisted before Daily dispatch and finalized with its result. A completed, failed, stopped, or interrupted occurrence suppresses automatic replay for that game day. Failed or interrupted work needs review followed by an explicit manual Daily retry; cancellation of an automatically queued Daily records a skipped occurrence. A fresh game day permits new work. This controls scheduling, not exactly-once game actions or resumption of individual steps. Existing resource-intent holds remain authoritative. The dashboard exposes the latest result, any blocking reason, and the next due time. The local server and awake host are still required; no system service or wake timer is installed.
 
-Within Daily, a recognized task failure or resource hold is isolated to that step. The runner records it, uses the bounded restart task to verify home, then continues with later independent tasks, including Spend AP. It never retries the failed step or releases its resource hold. Device, lock, configuration, filesystem, unexpected errors, and unsuccessful recovery still stop the plan. A structured summary lists completed, failed, deferred, and skipped steps; partial completion remains a failed occurrence with its actual failures visible in the dashboard.
+Within Daily, a recognized task failure or resource hold is isolated to that step. The runner records it, uses the bounded restart task to verify home, then continues with later independent tasks, before the separate AP job. It never retries the failed step or releases its resource hold. Device, lock, configuration, filesystem, unexpected errors, and unsuccessful recovery still stop the plan. A structured summary lists completed, failed, deferred, and skipped steps; partial completion remains a failed occurrence with its actual failures visible in the dashboard.
 
 A successful Daily means its visit finished, not that every resource was exhausted. The saved occurrence retains deferred and disabled steps for the dashboard, including a Tactical Challenge search saved for later visits. These notes describe the end of that visit; subsequent work follows its own schedule and resource guards. Disabled steps have no promised continuation, and this display metadata never replays Daily.
 
