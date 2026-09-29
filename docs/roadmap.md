@@ -103,3 +103,7 @@ A dedicated Total Assault task adds target difficulty and mock-win margin settin
 ## Final Restriction Release — proposed
 
 [The design proposal](final-restriction-release.md) covers Fury of Set's seasonal floor progression, ten-student teams, earned rewards, and bounded combat continuations. Start with screen capture and reward-only inspection, then validate one low-floor Auto clear with a player-prepared formation. Tier progression, assistants, and scripted skills follow separately. No implementation or live validation is claimed; current entry costs, result recovery, and reward behavior still need observation.
+
+## Joint Firing Drill — proposed
+
+[The design proposal](joint-firing-drill.md) starts with inspection and three prepared teams, then free practice, one verified entry, and daily sweeps where supported. Assistants and deterministic team substitutions follow separately. No runner or live validation exists yet.

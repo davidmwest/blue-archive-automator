@@ -226,3 +226,7 @@ Total Assault has a configurable target difficulty, defaulting to Hardcore, and 
 ## Final Restriction Release proposal
 
 The [Final Restriction Release design](final-restriction-release.md) proposes seasonal progression for Fury of Set and future bosses. A short, badge-independent daily check would collect earned rewards and request eligible combat work. Opt-in climbing would use a verified ten-student formation, configured target, and persisted attempt limits, with one battle per queue visit so due AP, Cafe, and Crafting work can run between attempts. This is a proposal only; no Final Restriction Release runner or configuration keys exist yet.
+
+## Joint Firing Drill proposal
+
+The [Joint Firing Drill design](joint-firing-drill.md) proposes three compatible teams, practice qualification before a paid entry, recovery across its timed rounds, and eligible daily sweeps. Daily inspection would run independently of badges, with ticket spending explicitly enabled. This is design only; current sweep limits and season mechanics require live verification.

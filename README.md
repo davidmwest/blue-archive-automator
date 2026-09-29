@@ -92,3 +92,5 @@ the queue is currently in memory. schedule state and important actions survive a
 ## license
 
 original code, docs, and dashboard UI are [MIT licensed](LICENSE). use them, change them, build something with them. the Maid Arisu mascot is original fan artwork of a Blue Archive character; it, game recognition images, and test fixtures are outside that grant. [third-party notices](THIRD_PARTY_NOTICES.md) explain the boundary.
+
+Joint Firing Drill also has a [design proposal](docs/joint-firing-drill.md): practice with three compatible teams, clear once, then sweep what the game allows. implementation and live validation come next.
