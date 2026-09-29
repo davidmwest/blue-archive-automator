@@ -6,6 +6,7 @@ from .loot_receipts import REWARD_RECEIPT_TIMEOUT, inspect_receipt
 from .ap_policy import choose_hard, default_order, sweep_count, sweep_refill
 from .ap_state import read_state, write_state
 from .ap_vision import APVision
+from .event_priority import active_event, priority_summary
 from .locking import InstanceLock
 from .runtime import TaskError
 from .shop_runtime import ShopRunner
@@ -39,6 +40,7 @@ class APRunner(ShopRunner):
         super().__init__(
             config, device, startup, vision=vision or APVision(startup), **kwargs
         )
+        self.startup = startup
         self.allow_retry = allow_retry
         self.state = None
 
@@ -475,7 +477,16 @@ class APRunner(ShopRunner):
         frame = self.wait("home", predicate=lambda s: s.ap is not None)
         summary = "AP is already at or below the floor"
         continue_soon = False
-        if frame.screen.ap > self.config.ap_floor:
+        event = active_event(self.config, self.wall_clock())
+        if event:
+            # This reservation is evaluated before either ordinary AP strategy.
+            # Until the event executor can prove the goals complete, never spend
+            # the same AP on Hard missions/commissions as an error fallback.
+            from .event_inspection import inspect_event
+            observation = inspect_event(self, self.startup)
+            summary = priority_summary(event, observation)
+            self.important("event_ap_reserved", summary, event_id=event["id"])
+        elif frame.screen.ap > self.config.ap_floor:
             strategy = self.config.ap_strategy
             self.phase(
                 f"Checking {strategy} sweeps; keep at least {self.config.ap_floor} AP"

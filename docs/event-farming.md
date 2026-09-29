@@ -1,6 +1,6 @@
 # Event farming
 
-**Status:** design proposal; no event farming runner is implemented.  
+**Status:** implementation in progress. The greedy treasure policy, optional AP reservation, and read-only event inspection are implemented. Event sweeping and treasure spending are not implemented yet.
 **Researched:** September 29, 2026 · global English
 
 farm what we actually want, collect it, then get back to the daily stuff. a new banner shouldn't require a new automator.
@@ -170,3 +170,11 @@ Ship in increments: registry and read-only inspection; shared AP planning and sw
 Required tests cover overlapping playable/reward windows, original versus rerun state, missing/rotating banners, locked stages, bonus rounding, partial budgets, expired profiles, shop stock and duplicate receipts. Add interruption tests before/after every spend, board refresh recovery, manual interference, queue fairness, and 720p/1440p OCR fixtures. Invalid or unsupported profiles must fail before input.
 
 Completion means the configured goals progress without crossing the AP floor or budgets; each spend has durable evidence; retries cannot duplicate it; expired farming stops while eligible rewards remain collectible; and ordinary AP work resumes when the event no longer needs it. A later event using existing mechanics must be addable through a reviewed profile without rewriting the runner.
+
+### Event identity and inspection
+
+The Campaign carousel can open a concurrent event whose play period has ended but whose reward shop remains available. Inspection uses the home banner, then verifies the Aquatic Showdown subtitle (or the title plus Sun-Kissed Beach quest), Quest tab, and Treasure Hunt entrance before proceeding. Expired event screens are regression fixtures and must not match. No resource-spending inputs exist in the inspector.
+
+The optional `[ap].event_priority` setting reserves AP while this event is playable, regardless of the ordinary farming strategy. It is off by default. Until the spending adapter is ready, enabling it holds normal AP farming and reports setup status; it must not be presented as working event farming. Reservation expires at the profile's playable end time. The inspector checks Quest 1 stars and the treasure round, not the entire stage unlock list.
+
+Live validation on 2026-09-29 completed an eight-input inspection and returned home: Quest 1 had zero stars and Treasure Hunt was on round 1; AP remained 220/220. The home banner can also rotate into recruitment. The inspector recognizes that wrong destination, returns home, and retries at most three entries. This verifies navigation and prerequisite inspection only, not event farming or treasure spending.

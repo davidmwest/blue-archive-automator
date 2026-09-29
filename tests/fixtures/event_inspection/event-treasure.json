@@ -1,0 +1,132 @@
+[
+  {
+    "text": "Treasure Hunt",
+    "box": [
+      102,
+      7,
+      304,
+      41
+    ],
+    "confidence": 0.99996
+  },
+  {
+    "text": "All Rewards",
+    "box": [
+      90,
+      89,
+      213,
+      115
+    ],
+    "confidence": 0.99798
+  },
+  {
+    "text": "Current Round: Round 1",
+    "box": [
+      844,
+      139,
+      992,
+      156
+    ],
+    "confidence": 0.99108
+  },
+  {
+    "text": "Refresh",
+    "box": [
+      1129,
+      143,
+      1207,
+      166
+    ],
+    "confidence": 0.99981
+  },
+  {
+    "text": "Remaining Slots: 45/45",
+    "box": [
+      831,
+      159,
+      1005,
+      185
+    ],
+    "confidence": 0.99901
+  },
+  {
+    "text": "Treasure hunts are",
+    "box": [
+      386,
+      304,
+      572,
+      333
+    ],
+    "confidence": 0.96326
+  },
+  {
+    "text": "absolutely a youth activity!",
+    "box": [
+      384,
+      332,
+      642,
+      363
+    ],
+    "confidence": 0.99218
+  },
+  {
+    "text": "Let's hunt together!",
+    "box": [
+      386,
+      363,
+      582,
+      389
+    ],
+    "confidence": 0.9962
+  },
+  {
+    "text": "Supply List",
+    "box": [
+      253,
+      537,
+      370,
+      570
+    ],
+    "confidence": 0.99894
+  },
+  {
+    "text": "Open Slot x0",
+    "box": [
+      839,
+      598,
+      1001,
+      634
+    ],
+    "confidence": 0.99941
+  },
+  {
+    "text": "x2",
+    "box": [
+      202,
+      674,
+      234,
+      698
+    ],
+    "confidence": 0.99768
+  },
+  {
+    "text": "x5",
+    "box": [
+      341,
+      674,
+      373,
+      698
+    ],
+    "confidence": 0.99893
+  },
+  {
+    "text": "x2",
+    "box": [
+      478,
+      674,
+      510,
+      698
+    ],
+    "confidence": 0.99759
+  }
+]

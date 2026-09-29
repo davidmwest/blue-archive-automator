@@ -1,0 +1,262 @@
+[
+  {
+    "text": "Event",
+    "box": [
+      100,
+      7,
+      188,
+      41
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "Play Guide",
+    "box": [
+      89,
+      85,
+      203,
+      118
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "Students",
+    "box": [
+      258,
+      99,
+      342,
+      122
+    ],
+    "confidence": 0.98107
+  },
+  {
+    "text": "Specialized",
+    "box": [
+      260,
+      81,
+      363,
+      105
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Story",
+    "box": [
+      730,
+      92,
+      801,
+      129
+    ],
+    "confidence": 0.99992
+  },
+  {
+    "text": "Quest",
+    "box": [
+      908,
+      95,
+      983,
+      126
+    ],
+    "confidence": 0.99968
+  },
+  {
+    "text": "Challenge",
+    "box": [
+      1061,
+      92,
+      1178,
+      128
+    ],
+    "confidence": 0.99999
+  },
+  {
+    "text": "01",
+    "box": [
+      712,
+      172,
+      750,
+      203
+    ],
+    "confidence": 0.99994
+  },
+  {
+    "text": "Sun-Kissed Beach",
+    "box": [
+      778,
+      184,
+      990,
+      213
+    ],
+    "confidence": 0.98256
+  },
+  {
+    "text": "Enter",
+    "box": [
+      1092,
+      184,
+      1169,
+      215
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "02",
+    "box": [
+      712,
+      288,
+      751,
+      319
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Festival Resort Beach",
+    "box": [
+      778,
+      297,
+      1034,
+      327
+    ],
+    "confidence": 0.99986
+  },
+  {
+    "text": "03",
+    "box": [
+      712,
+      401,
+      751,
+      433
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Tranquil Tide Beach",
+    "box": [
+      778,
+      412,
+      1018,
+      444
+    ],
+    "confidence": 0.99993
+  },
+  {
+    "text": "AFlowerBlooms",
+    "box": [
+      145,
+      461,
+      343,
+      500
+    ],
+    "confidence": 0.9966
+  },
+  {
+    "text": "Among theHundred",
+    "box": [
+      197,
+      481,
+      483,
+      532
+    ],
+    "confidence": 0.96542
+  },
+  {
+    "text": "04",
+    "box": [
+      715,
+      517,
+      750,
+      545
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Dreamtide Beach",
+    "box": [
+      779,
+      528,
+      988,
+      555
+    ],
+    "confidence": 0.99745
+  },
+  {
+    "text": "Schedule: 09/28/2026 19:00-10/12/2026 18:59",
+    "box": [
+      133,
+      567,
+      534,
+      593
+    ],
+    "confidence": 0.96458
+  },
+  {
+    "text": "05",
+    "box": [
+      713,
+      629,
+      751,
+      660
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Stillwater Shore",
+    "box": [
+      777,
+      641,
+      972,
+      670
+    ],
+    "confidence": 0.99213
+  },
+  {
+    "text": "Story",
+    "box": [
+      125,
+      657,
+      185,
+      688
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "Shop",
+    "box": [
+      247,
+      657,
+      306,
+      690
+    ],
+    "confidence": 0.99987
+  },
+  {
+    "text": "Tasks",
+    "box": [
+      367,
+      658,
+      430,
+      686
+    ],
+    "confidence": 0.99971
+  },
+  {
+    "text": "Treasure",
+    "box": [
+      482,
+      652,
+      557,
+      673
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Hunt",
+    "box": [
+      493,
+      669,
+      544,
+      694
+    ],
+    "confidence": 0.9998
+  }
+]

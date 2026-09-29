@@ -1,0 +1,152 @@
+[
+  {
+    "text": "Event",
+    "box": [
+      101,
+      7,
+      188,
+      41
+    ],
+    "confidence": 0.99982
+  },
+  {
+    "text": "Play Guide",
+    "box": [
+      90,
+      87,
+      202,
+      117
+    ],
+    "confidence": 0.99993
+  },
+  {
+    "text": "Specialized",
+    "box": [
+      260,
+      81,
+      362,
+      105
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "\u0160tudents",
+    "box": [
+      260,
+      101,
+      341,
+      121
+    ],
+    "confidence": 0.94136
+  },
+  {
+    "text": "Quest",
+    "box": [
+      779,
+      96,
+      851,
+      124
+    ],
+    "confidence": 0.99989
+  },
+  {
+    "text": "Challenge",
+    "box": [
+      1016,
+      93,
+      1131,
+      126
+    ],
+    "confidence": 0.99998
+  },
+  {
+    "text": "Event Period concluded.",
+    "box": [
+      835,
+      354,
+      1054,
+      377
+    ],
+    "confidence": 0.99937
+  },
+  {
+    "text": "Special Mission",
+    "box": [
+      258,
+      441,
+      390,
+      467
+    ],
+    "confidence": 0.9975
+  },
+  {
+    "text": "Lore Pursuit",
+    "box": [
+      170,
+      477,
+      509,
+      524
+    ],
+    "confidence": 0.99324
+  },
+  {
+    "text": "Rewards Period: 09/28/2026 18:59 - 10/05/2026 18:59",
+    "box": [
+      117,
+      568,
+      548,
+      591
+    ],
+    "confidence": 0.9845
+  },
+  {
+    "text": "Event Points",
+    "box": [
+      712,
+      613,
+      848,
+      640
+    ],
+    "confidence": 0.9999
+  },
+  {
+    "text": "Rewards",
+    "box": [
+      1066,
+      629,
+      1180,
+      662
+    ],
+    "confidence": 0.99997
+  },
+  {
+    "text": "Shop",
+    "box": [
+      226,
+      657,
+      284,
+      689
+    ],
+    "confidence": 0.99988
+  },
+  {
+    "text": "Tasks",
+    "box": [
+      390,
+      659,
+      450,
+      684
+    ],
+    "confidence": 0.99995
+  },
+  {
+    "text": "15000/15000",
+    "box": [
+      811,
+      651,
+      919,
+      674
+    ],
+    "confidence": 0.99999
+  }
+]

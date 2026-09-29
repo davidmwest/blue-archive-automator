@@ -68,7 +68,7 @@ CRAFTING_SETTINGS = {"crafting_schedule_enabled": "schedule_enabled"}
 PACKS_SETTINGS = {f'packs_{key}_{suffix}': f'{key}_{suffix}'
                   for key in packs_state.PACKS for suffix in ('enabled', 'max_cents')}
 AP_SETTINGS = {f'ap_{key}': key for key in
-               ('schedule_enabled', 'floor', 'strategy', 'hard_default_order', 'hard_order')}
+               ('schedule_enabled', 'event_priority', 'floor', 'strategy', 'hard_default_order', 'hard_order')}
 TOTAL_ASSAULT_SETTINGS = {f"total_assault_{key}": key
                           for key in ("difficulty", "enabled_in_daily", "comfort_seconds")}
 TACTICAL_BATTLE_SETTINGS = {f"tactical_battles_{key}": key

@@ -1,0 +1,432 @@
+[
+  {
+    "text": "Event",
+    "confidence": 0.99995,
+    "box": [
+      105,
+      9,
+      186,
+      39
+    ]
+  },
+  {
+    "text": "Specialized",
+    "confidence": 0.99999,
+    "box": [
+      260,
+      83,
+      358,
+      104
+    ]
+  },
+  {
+    "text": "Play Guide",
+    "confidence": 0.99934,
+    "box": [
+      92,
+      90,
+      202,
+      114
+    ]
+  },
+  {
+    "text": "Students",
+    "confidence": 0.99262,
+    "box": [
+      264,
+      102,
+      339,
+      114
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.88463,
+    "box": [
+      738,
+      98,
+      796,
+      115
+    ]
+  },
+  {
+    "text": "Ouest",
+    "confidence": 0.97239,
+    "box": [
+      913,
+      99,
+      977,
+      115
+    ]
+  },
+  {
+    "text": "Challenge",
+    "confidence": 0.99925,
+    "box": [
+      1065,
+      94,
+      1175,
+      120
+    ]
+  },
+  {
+    "text": "Mission Info",
+    "confidence": 0.99996,
+    "box": [
+      546,
+      120,
+      733,
+      157
+    ]
+  },
+  {
+    "text": "Rec.",
+    "confidence": 0.9841,
+    "box": [
+      657,
+      188,
+      702,
+      212
+    ]
+  },
+  {
+    "text": "01Sun-Kissed Beach",
+    "confidence": 0.9998,
+    "box": [
+      141,
+      196,
+      474,
+      233
+    ]
+  },
+  {
+    "text": "Lv.23",
+    "confidence": 0.99966,
+    "box": [
+      647,
+      211,
+      708,
+      238
+    ]
+  },
+  {
+    "text": "Sweep",
+    "confidence": 0.99993,
+    "box": [
+      900,
+      218,
+      969,
+      247
+    ]
+  },
+  {
+    "text": "Enemy/Syn.",
+    "confidence": 0.99969,
+    "box": [
+      177,
+      257,
+      292,
+      286
+    ]
+  },
+  {
+    "text": "Challenges",
+    "confidence": 0.99997,
+    "box": [
+      342,
+      259,
+      454,
+      286
+    ]
+  },
+  {
+    "text": "Min",
+    "confidence": 0.99995,
+    "box": [
+      765,
+      287,
+      811,
+      313
+    ]
+  },
+  {
+    "text": "Max",
+    "confidence": 0.99823,
+    "box": [
+      1055,
+      286,
+      1109,
+      314
+    ]
+  },
+  {
+    "text": "Mission Objectives (\u2606)",
+    "confidence": 0.99738,
+    "box": [
+      321,
+      312,
+      544,
+      341
+    ]
+  },
+  {
+    "text": "3 Required",
+    "confidence": 0.97149,
+    "box": [
+      877,
+      309,
+      1025,
+      345
+    ]
+  },
+  {
+    "text": "Clear",
+    "confidence": 0.99998,
+    "box": [
+      182,
+      354,
+      239,
+      378
+    ]
+  },
+  {
+    "text": "220\u2192220",
+    "confidence": 0.9704,
+    "box": [
+      994,
+      351,
+      1092,
+      375
+    ]
+  },
+  {
+    "text": "Clear within 120 second(s)",
+    "confidence": 0.98938,
+    "box": [
+      182,
+      388,
+      439,
+      413
+    ]
+  },
+  {
+    "text": "Start Sweep",
+    "confidence": 0.97875,
+    "box": [
+      851,
+      388,
+      1018,
+      425
+    ]
+  },
+  {
+    "text": "All students survive",
+    "confidence": 0.99988,
+    "box": [
+      181,
+      421,
+      375,
+      445
+    ]
+  },
+  {
+    "text": "Expected Rewards",
+    "confidence": 0.99959,
+    "box": [
+      341,
+      471,
+      525,
+      497
+    ]
+  },
+  {
+    "text": "220\u2192210",
+    "confidence": 0.9584,
+    "box": [
+      996,
+      474,
+      1111,
+      504
+    ]
+  },
+  {
+    "text": "1st Time",
+    "confidence": 0.9933,
+    "box": [
+      215,
+      512,
+      282,
+      533
+    ]
+  },
+  {
+    "text": "1st Time",
+    "confidence": 0.9995,
+    "box": [
+      285,
+      511,
+      350,
+      533
+    ]
+  },
+  {
+    "text": "1st Time",
+    "confidence": 0.99947,
+    "box": [
+      355,
+      511,
+      420,
+      533
+    ]
+  },
+  {
+    "text": "Start Mission",
+    "confidence": 0.9997,
+    "box": [
+      823,
+      519,
+      1047,
+      560
+    ]
+  },
+  {
+    "text": "x30",
+    "confidence": 0.912,
+    "box": [
+      175,
+      559,
+      210,
+      579
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.96333,
+    "box": [
+      206,
+      562,
+      229,
+      581
+    ]
+  },
+  {
+    "text": "x800",
+    "confidence": 0.95997,
+    "box": [
+      228,
+      558,
+      279,
+      579
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.94234,
+    "box": [
+      277,
+      562,
+      299,
+      581
+    ]
+  },
+  {
+    "text": "x50",
+    "confidence": 0.99316,
+    "box": [
+      311,
+      560,
+      348,
+      578
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.69409,
+    "box": [
+      349,
+      564,
+      366,
+      580
+    ]
+  },
+  {
+    "text": "x50",
+    "confidence": 0.94598,
+    "box": [
+      385,
+      559,
+      418,
+      578
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.65324,
+    "box": [
+      420,
+      564,
+      437,
+      580
+    ]
+  },
+  {
+    "text": "Stillwater Shore",
+    "confidence": 0.99199,
+    "box": [
+      779,
+      642,
+      971,
+      668
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99993,
+    "box": [
+      127,
+      658,
+      184,
+      689
+    ]
+  },
+  {
+    "text": "Shop",
+    "confidence": 0.99992,
+    "box": [
+      249,
+      658,
+      305,
+      689
+    ]
+  },
+  {
+    "text": "Tasks",
+    "confidence": 0.99984,
+    "box": [
+      369,
+      660,
+      428,
+      684
+    ]
+  },
+  {
+    "text": "Treasure",
+    "confidence": 0.99996,
+    "box": [
+      483,
+      655,
+      556,
+      673
+    ]
+  },
+  {
+    "text": "Hunt",
+    "confidence": 0.99998,
+    "box": [
+      496,
+      670,
+      543,
+      692
+    ]
+  }
+]
