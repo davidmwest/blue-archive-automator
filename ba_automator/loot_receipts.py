@@ -1173,20 +1173,27 @@ class ReceiptReader:
 
     def input(self, cap, target, *, end=None):
         r = self.r
-        cap = self.revalidate(cap)
-        r.journal.record(
-            "intent",
-            operation="loot_swipe" if end else "loot_tooltip",
-            target=target,
-            end=end,
-        )
-        if end:
-            sent = r.device.swipe(
-                target, end, duration_ms=800, deadline=cap.deadline, monotonic=r.clock
+        for attempt in range(3):
+            cap = self.revalidate(cap, force=attempt > 0)
+            r.journal.record(
+                "intent",
+                operation="loot_swipe" if end else "loot_tooltip",
+                target=target,
+                end=end,
             )
+            if end:
+                sent = r.device.swipe(
+                    target, end, duration_ms=800, deadline=cap.deadline, monotonic=r.clock
+                )
+            else:
+                sent = r.device.tap(*target, deadline=cap.deadline, monotonic=r.clock)
+            if sent:
+                break
+            # False guarantees ADB sent no input. Reobserve the same receipt
+            # before retrying; never extend the old screenshot's deadline.
+            r.journal.record("receipt_input_not_sent", reason="expired_preflight",
+                             attempt=attempt + 1)
         else:
-            sent = r.device.tap(*target, deadline=cap.deadline, monotonic=r.clock)
-        if not sent:
             r.fail("Reward inspection input expired during device preflight")
         self.inputs += 1
         r.actions += 1

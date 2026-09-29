@@ -1015,8 +1015,10 @@ def test_refresh_does_not_extend_deadline_during_device_preflight(harness):
     reader.read(cap)
     h.now += 6.0
 
+    deadlines = []
     def expired_tap(x, y, *, deadline, monotonic):
-        assert deadline == 11.0  # New capture began at 6; the original cap is still 0.
+        deadlines.append(deadline)
+        assert deadline == h.now + 5
         h.now += 6.0
         return monotonic() <= deadline
 
@@ -1024,7 +1026,34 @@ def test_refresh_does_not_extend_deadline_during_device_preflight(harness):
     with pytest.raises(TaskError, match="expired during device preflight"):
         reader.input(cap, h.pages[0].cards[0].target)
     assert cap.captured_at == 0 and cap.deadline == 5
+    assert deadlines == [11, 17, 23]
     assert h.inputs == []
+
+
+@pytest.mark.parametrize('changed', [False, True])
+def test_unsent_preflight_retries_only_after_receipt_revalidation(harness, changed):
+    h = harness
+    reader = h.reader()
+    cap = reader.capture()
+    reader.read(cap)
+    original = h.runner.device.tap
+    attempts = []
+    def tap(x, y, *, deadline, monotonic):
+        attempts.append(deadline)
+        if len(attempts) == 1:
+            h.now += 6
+            h.unknown = changed
+            return False
+        return original(x, y, deadline=deadline, monotonic=monotonic)
+    h.runner.device.tap = tap
+    if changed:
+        with pytest.raises(TaskError):
+            reader.input(cap, h.pages[0].cards[0].target)
+        assert len(attempts) == 1 and h.inputs == []
+    else:
+        reader.input(cap, h.pages[0].cards[0].target)
+        assert len(attempts) == 2 and len(h.inputs) == 1
+        assert reader.inputs == 1
 
 
 def test_heading_validation_cannot_extend_capture_deadline(harness, monkeypatch):

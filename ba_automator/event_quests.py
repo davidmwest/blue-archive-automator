@@ -171,6 +171,7 @@ class EventClearRunner(APRunner):
             if frame.screen.ap is None or frame.screen.ap < before-cost:
                 self.fail('Event result AP did not verify; inspect the receipt')
             stars = frame.screen.stars
+            self.journal.save_image(f'quest-{stage}-stars.png', frame.capture.png)
             state['clears'][str(stage)] = stars
             state['pending'] = None
             event_state.write_state(self.config,state)
