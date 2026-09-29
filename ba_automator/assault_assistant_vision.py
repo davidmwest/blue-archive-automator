@@ -226,7 +226,7 @@ def read_assistant_filter(frame, words):
     if (not has(words, "display settings", (470, 60, 825, 112))
             or not bright(frame, (410, 66, 500, 108))
             or not has(words, "reset all", (1040, 136, 1208, 187))
-            or not has(words, "atk attribute", (250, 193, 439, 242))
+            or not re.fullmatch(r"[i|]?atk attribute", text_in(words, (250, 193, 439, 242)).strip().lower())
             or not has(words, "confirm", (656, 559, 881, 638))
             or not cyan(frame, (690, 566, 845, 626))):
         return AssistantFilter()
@@ -255,7 +255,12 @@ def _template_match(crop, asset):
 
 def _assistant_marker(frame, x, y, *, slot=False):
     asset = "assault-assistant-slot-marker.png" if slot else "assault-assistant-marker.png"
-    return _template_match(frame[y-12:y+13, x-12:x+13], asset)
+    crop = frame[y-12:y+13, x-12:x+13]
+    # Match the opaque badge rather than the student portrait behind it.
+    template = cv2.imread(str(Path(__file__).parent / "assets" / asset))
+    return (template is not None and crop.shape == template.shape
+            and float(cv2.matchTemplate(crop[4:20, 7:17], template[4:20, 7:17],
+                                        cv2.TM_CCOEFF_NORMED)[0, 0]) >= .93)
 
 
 def verify_assistant_preview(frame, words, card, slot):
@@ -289,7 +294,7 @@ def verify_owned_quick(frame, words, *, startup=None, native_frame=None):
             or not cyan(frame, (1100, 562, 1225, 625))):
         return False
     levels = [text_in(words, (28 + 90*slot, 558, 93 + 90*slot, 585)).strip() for slot in range(6)]
-    if startup is not None and any(not re.fullmatch(r"Lv\.?\s*\d{1,3}", level, re.I) for level in levels):
+    if startup is not None and any(not re.fullmatch(r"Lv[.:]?\s*\d{1,3}", level, re.I) for level in levels):
         strip = np.full((600, 250, 3), 255, np.uint8)
         for slot in range(6):
             bounds = (33+90*slot, 561, 77+90*slot, 582)
@@ -299,7 +304,7 @@ def verify_owned_quick(frame, words, *, startup=None, native_frame=None):
         observations = startup.read(strip)
         levels = [text_in(observations, (0, slot*100, 250, (slot+1)*100)).strip() for slot in range(6)]
     for slot, level in enumerate(levels):
-        if not re.fullmatch(r"Lv\.?\s*\d{1,3}", level, re.I):
+        if not re.fullmatch(r"Lv[.:]?\s*\d{1,3}", level, re.I):
             return False
         if _assistant_marker(frame, 103 + 90*slot, 570, slot=True):
             return False

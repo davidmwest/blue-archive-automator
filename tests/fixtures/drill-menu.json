@@ -1,0 +1,322 @@
+[
+  {
+    "text": "Joint Firing Drill",
+    "confidence": 0.99725,
+    "box": [
+      100,
+      7,
+      315,
+      44
+    ]
+  },
+  {
+    "text": "Shooting Drill",
+    "confidence": 0.99634,
+    "box": [
+      737,
+      71,
+      1021,
+      123
+    ]
+  },
+  {
+    "text": "Drill Ticket",
+    "confidence": 0.9998,
+    "box": [
+      1023,
+      72,
+      1112,
+      93
+    ]
+  },
+  {
+    "text": "09/28 19:00",
+    "confidence": 0.99962,
+    "box": [
+      1166,
+      73,
+      1262,
+      97
+    ]
+  },
+  {
+    "text": "View Entire Area",
+    "confidence": 0.99992,
+    "box": [
+      59,
+      92,
+      221,
+      114
+    ]
+  },
+  {
+    "text": "3/6",
+    "confidence": 0.99975,
+    "box": [
+      1047,
+      94,
+      1086,
+      122
+    ]
+  },
+  {
+    "text": "- 10/05 11:59",
+    "confidence": 0.98701,
+    "box": [
+      1158,
+      95,
+      1262,
+      118
+    ]
+  },
+  {
+    "text": "Shooting Drill Stage 1",
+    "confidence": 0.99781,
+    "box": [
+      830,
+      162,
+      1079,
+      197
+    ]
+  },
+  {
+    "text": "01",
+    "confidence": 0.99998,
+    "box": [
+      764,
+      176,
+      799,
+      205
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99989,
+    "box": [
+      1145,
+      175,
+      1219,
+      204
+    ]
+  },
+  {
+    "text": "Shooting Drill Stage 2",
+    "confidence": 0.99987,
+    "box": [
+      829,
+      258,
+      1082,
+      294
+    ]
+  },
+  {
+    "text": "02",
+    "confidence": 0.99998,
+    "box": [
+      764,
+      272,
+      802,
+      303
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99991,
+    "box": [
+      1145,
+      272,
+      1219,
+      301
+    ]
+  },
+  {
+    "text": "Shooting Drill Stage 3",
+    "confidence": 0.97881,
+    "box": [
+      830,
+      356,
+      1081,
+      390
+    ]
+  },
+  {
+    "text": "03",
+    "confidence": 0.99999,
+    "box": [
+      764,
+      368,
+      802,
+      399
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99991,
+    "box": [
+      1145,
+      369,
+      1219,
+      398
+    ]
+  },
+  {
+    "text": "Shooting Drill Stage 4",
+    "confidence": 0.98958,
+    "box": [
+      830,
+      453,
+      1082,
+      487
+    ]
+  },
+  {
+    "text": "04",
+    "confidence": 0.99998,
+    "box": [
+      764,
+      466,
+      802,
+      496
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.9999,
+    "box": [
+      1145,
+      466,
+      1219,
+      495
+    ]
+  },
+  {
+    "text": "Best Season Score",
+    "confidence": 0.99967,
+    "box": [
+      56,
+      586,
+      210,
+      605
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.99934,
+    "box": [
+      219,
+      586,
+      232,
+      603
+    ]
+  },
+  {
+    "text": "00:34:09",
+    "confidence": 0.99998,
+    "box": [
+      1166,
+      599,
+      1237,
+      622
+    ]
+  },
+  {
+    "text": "Today's Top Score",
+    "confidence": 0.9773,
+    "box": [
+      41,
+      622,
+      221,
+      651
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.99925,
+    "box": [
+      225,
+      626,
+      240,
+      645
+    ]
+  },
+  {
+    "text": "Score",
+    "confidence": 0.99995,
+    "box": [
+      424,
+      628,
+      487,
+      652
+    ]
+  },
+  {
+    "text": "Reward",
+    "confidence": 0.99998,
+    "box": [
+      557,
+      631,
+      628,
+      652
+    ]
+  },
+  {
+    "text": "Progress Status",
+    "confidence": 0.99992,
+    "box": [
+      745,
+      621,
+      887,
+      643
+    ]
+  },
+  {
+    "text": "Mock Battle",
+    "confidence": 0.99995,
+    "box": [
+      899,
+      619,
+      1014,
+      639
+    ]
+  },
+  {
+    "text": "Forfeit",
+    "confidence": 0.99999,
+    "box": [
+      1122,
+      635,
+      1208,
+      664
+    ]
+  },
+  {
+    "text": "Sheet",
+    "confidence": 0.99996,
+    "box": [
+      423,
+      649,
+      489,
+      674
+    ]
+  },
+  {
+    "text": "Information",
+    "confidence": 0.99995,
+    "box": [
+      537,
+      649,
+      647,
+      671
+    ]
+  },
+  {
+    "text": "Current Score 30,176",
+    "confidence": 0.9995,
+    "box": [
+      42,
+      659,
+      251,
+      682
+    ]
+  }
+]

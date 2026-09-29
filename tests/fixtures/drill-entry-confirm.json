@@ -1,0 +1,332 @@
+[
+  {
+    "text": "Joint Firing Drill",
+    "confidence": 0.99935,
+    "box": [
+      100,
+      7,
+      315,
+      43
+    ]
+  },
+  {
+    "text": "Shooting Drill",
+    "confidence": 0.99994,
+    "box": [
+      737,
+      70,
+      1021,
+      124
+    ]
+  },
+  {
+    "text": "Drill Ticket",
+    "confidence": 0.99902,
+    "box": [
+      1023,
+      72,
+      1112,
+      93
+    ]
+  },
+  {
+    "text": "09/28 19:00",
+    "confidence": 0.99986,
+    "box": [
+      1167,
+      74,
+      1261,
+      96
+    ]
+  },
+  {
+    "text": "View Entire Area",
+    "confidence": 0.99966,
+    "box": [
+      59,
+      91,
+      221,
+      114
+    ]
+  },
+  {
+    "text": "3/6",
+    "confidence": 0.99946,
+    "box": [
+      1047,
+      93,
+      1086,
+      122
+    ]
+  },
+  {
+    "text": "10/05 11:59",
+    "confidence": 0.97589,
+    "box": [
+      1166,
+      95,
+      1261,
+      118
+    ]
+  },
+  {
+    "text": "Notice",
+    "confidence": 0.99997,
+    "box": [
+      587,
+      144,
+      692,
+      179
+    ]
+  },
+  {
+    "text": "ig Drill Stage 1",
+    "confidence": 0.96392,
+    "box": [
+      915,
+      162,
+      1078,
+      197
+    ]
+  },
+  {
+    "text": "Info",
+    "confidence": 0.9999,
+    "box": [
+      1152,
+      174,
+      1210,
+      204
+    ]
+  },
+  {
+    "text": "Shooting Drill",
+    "confidence": 0.99993,
+    "box": [
+      561,
+      261,
+      718,
+      292
+    ]
+  },
+  {
+    "text": "ig Drill Stage 2",
+    "confidence": 0.97791,
+    "box": [
+      916,
+      259,
+      1081,
+      295
+    ]
+  },
+  {
+    "text": "Info",
+    "confidence": 0.99989,
+    "box": [
+      1152,
+      271,
+      1210,
+      301
+    ]
+  },
+  {
+    "text": "Use Drill Tickets to begin the drill?",
+    "confidence": 0.98477,
+    "box": [
+      437,
+      325,
+      842,
+      361
+    ]
+  },
+  {
+    "text": "(Used tickets cannot be returned.)",
+    "confidence": 0.98739,
+    "box": [
+      437,
+      358,
+      843,
+      393
+    ]
+  },
+  {
+    "text": "ig Drill Stage 3",
+    "confidence": 0.96983,
+    "box": [
+      916,
+      355,
+      1081,
+      391
+    ]
+  },
+  {
+    "text": "Info",
+    "confidence": 0.99986,
+    "box": [
+      1151,
+      367,
+      1210,
+      398
+    ]
+  },
+  {
+    "text": "3\u21922",
+    "confidence": 0.98187,
+    "box": [
+      818,
+      444,
+      876,
+      469
+    ]
+  },
+  {
+    "text": "ig Drill Stage 4",
+    "confidence": 0.96343,
+    "box": [
+      917,
+      453,
+      1082,
+      488
+    ]
+  },
+  {
+    "text": "Info",
+    "confidence": 0.99978,
+    "box": [
+      1152,
+      464,
+      1210,
+      495
+    ]
+  },
+  {
+    "text": "Cancel",
+    "confidence": 0.99998,
+    "box": [
+      463,
+      483,
+      566,
+      520
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99998,
+    "box": [
+      705,
+      485,
+      827,
+      518
+    ]
+  },
+  {
+    "text": "Best Season Score",
+    "confidence": 0.99977,
+    "box": [
+      56,
+      585,
+      210,
+      604
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.99838,
+    "box": [
+      218,
+      585,
+      232,
+      604
+    ]
+  },
+  {
+    "text": "Today's Top Score",
+    "confidence": 0.99982,
+    "box": [
+      41,
+      622,
+      221,
+      650
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.99966,
+    "box": [
+      227,
+      627,
+      239,
+      644
+    ]
+  },
+  {
+    "text": "Score",
+    "confidence": 0.99995,
+    "box": [
+      424,
+      628,
+      487,
+      652
+    ]
+  },
+  {
+    "text": "Reward",
+    "confidence": 0.99997,
+    "box": [
+      558,
+      632,
+      628,
+      651
+    ]
+  },
+  {
+    "text": "Mock Battle",
+    "confidence": 0.99931,
+    "box": [
+      918,
+      638,
+      1045,
+      662
+    ]
+  },
+  {
+    "text": "Drill Start",
+    "confidence": 0.99944,
+    "box": [
+      1095,
+      635,
+      1219,
+      665
+    ]
+  },
+  {
+    "text": "Sheet",
+    "confidence": 0.99996,
+    "box": [
+      423,
+      649,
+      488,
+      674
+    ]
+  },
+  {
+    "text": "Information",
+    "confidence": 0.99997,
+    "box": [
+      537,
+      649,
+      647,
+      670
+    ]
+  },
+  {
+    "text": "Current Score 0",
+    "confidence": 0.99599,
+    "box": [
+      42,
+      658,
+      205,
+      683
+    ]
+  }
+]

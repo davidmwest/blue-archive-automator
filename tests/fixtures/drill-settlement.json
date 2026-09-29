@@ -1,0 +1,202 @@
+[
+  {
+    "text": "Joint Firing Drill",
+    "confidence": 0.98416,
+    "box": [
+      100,
+      6,
+      314,
+      43
+    ]
+  },
+  {
+    "text": "Assistant Settings",
+    "confidence": 0.99497,
+    "box": [
+      85,
+      88,
+      266,
+      119
+    ]
+  },
+  {
+    "text": "Drill End",
+    "confidence": 0.99957,
+    "box": [
+      575,
+      113,
+      705,
+      149
+    ]
+  },
+  {
+    "text": "Season Best Record!",
+    "confidence": 0.99837,
+    "box": [
+      483,
+      162,
+      795,
+      206
+    ]
+  },
+  {
+    "text": "Drill Exam",
+    "confidence": 0.9627,
+    "box": [
+      1020,
+      162,
+      1118,
+      183
+    ]
+  },
+  {
+    "text": "65,729 Points",
+    "confidence": 0.9999,
+    "box": [
+      521,
+      225,
+      760,
+      271
+    ]
+  },
+  {
+    "text": "Drill Open",
+    "confidence": 0.9995,
+    "box": [
+      72,
+      234,
+      169,
+      258
+    ]
+  },
+  {
+    "text": "2/6",
+    "confidence": 0.99953,
+    "box": [
+      209,
+      232,
+      249,
+      260
+    ]
+  },
+  {
+    "text": "Breakthrough",
+    "confidence": 0.99997,
+    "box": [
+      1035,
+      276,
+      1185,
+      304
+    ]
+  },
+  {
+    "text": "Drill",
+    "confidence": 0.99956,
+    "box": [
+      1086,
+      298,
+      1135,
+      324
+    ]
+  },
+  {
+    "text": "1st Formation ",
+    "confidence": 0.95417,
+    "box": [
+      414,
+      338,
+      533,
+      357
+    ]
+  },
+  {
+    "text": "30,711 Points",
+    "confidence": 0.97242,
+    "box": [
+      563,
+      335,
+      706,
+      360
+    ]
+  },
+  {
+    "text": "Info",
+    "confidence": 0.99987,
+    "box": [
+      1084,
+      350,
+      1140,
+      380
+    ]
+  },
+  {
+    "text": "Shooting Drill",
+    "confidence": 0.99945,
+    "box": [
+      90,
+      370,
+      235,
+      399
+    ]
+  },
+  {
+    "text": "2nd Formation ",
+    "confidence": 0.98368,
+    "box": [
+      411,
+      386,
+      534,
+      407
+    ]
+  },
+  {
+    "text": "18,667 Points",
+    "confidence": 0.99993,
+    "box": [
+      564,
+      384,
+      705,
+      410
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.9998,
+    "box": [
+      131,
+      424,
+      201,
+      452
+    ]
+  },
+  {
+    "text": "3rd Formation ",
+    "confidence": 0.98869,
+    "box": [
+      410,
+      435,
+      534,
+      456
+    ]
+  },
+  {
+    "text": "16,351 Points",
+    "confidence": 0.99986,
+    "box": [
+      564,
+      433,
+      704,
+      457
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.95372,
+    "box": [
+      578,
+      511,
+      702,
+      544
+    ]
+  }
+]

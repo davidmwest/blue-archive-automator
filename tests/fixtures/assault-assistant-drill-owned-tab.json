@@ -1,0 +1,382 @@
+[
+  {
+    "text": "Joint Firing Drill",
+    "confidence": 0.9785,
+    "box": [
+      99,
+      6,
+      315,
+      45
+    ]
+  },
+  {
+    "text": "Enemy/Syn.",
+    "confidence": 0.99946,
+    "box": [
+      61,
+      74,
+      182,
+      103
+    ]
+  },
+  {
+    "text": "Clear Unit",
+    "confidence": 0.9999,
+    "box": [
+      251,
+      76,
+      359,
+      100
+    ]
+  },
+  {
+    "text": "Quick Formation",
+    "confidence": 0.99993,
+    "box": [
+      503,
+      75,
+      779,
+      113
+    ]
+  },
+  {
+    "text": "My Students",
+    "confidence": 0.99917,
+    "box": [
+      669,
+      146,
+      811,
+      175
+    ]
+  },
+  {
+    "text": "Assistant (Available: 1/1)",
+    "confidence": 0.98491,
+    "box": [
+      973,
+      146,
+      1198,
+      172
+    ]
+  },
+  {
+    "text": "STRIKER",
+    "confidence": 0.99992,
+    "box": [
+      587,
+      197,
+      674,
+      220
+    ]
+  },
+  {
+    "text": "SPECIAL",
+    "confidence": 0.99981,
+    "box": [
+      704,
+      196,
+      795,
+      222
+    ]
+  },
+  {
+    "text": "Lv.",
+    "confidence": 0.99822,
+    "box": [
+      979,
+      198,
+      1013,
+      222
+    ]
+  },
+  {
+    "text": "Lv.80",
+    "confidence": 0.96286,
+    "box": [
+      590,
+      257,
+      630,
+      276
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.92115,
+    "box": [
+      701,
+      255,
+      743,
+      278
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.99506,
+    "box": [
+      1036,
+      258,
+      1073,
+      275
+    ]
+  },
+  {
+    "text": "Lv.73",
+    "confidence": 0.99361,
+    "box": [
+      1146,
+      255,
+      1187,
+      276
+    ]
+  },
+  {
+    "text": "Asuna",
+    "confidence": 0.99974,
+    "box": [
+      713,
+      348,
+      764,
+      366
+    ]
+  },
+  {
+    "text": "Yuuka",
+    "confidence": 0.99996,
+    "box": [
+      823,
+      346,
+      874,
+      367
+    ]
+  },
+  {
+    "text": "Niko",
+    "confidence": 0.99968,
+    "box": [
+      607,
+      354,
+      646,
+      374
+    ]
+  },
+  {
+    "text": "Yuuka",
+    "confidence": 0.99996,
+    "box": [
+      935,
+      356,
+      985,
+      374
+    ]
+  },
+  {
+    "text": "Kirino",
+    "confidence": 0.99993,
+    "box": [
+      1047,
+      355,
+      1096,
+      374
+    ]
+  },
+  {
+    "text": "Hina",
+    "confidence": 0.99995,
+    "box": [
+      1162,
+      354,
+      1203,
+      374
+    ]
+  },
+  {
+    "text": "(School)",
+    "confidence": 0.99904,
+    "box": [
+      706,
+      362,
+      769,
+      385
+    ]
+  },
+  {
+    "text": "(Pajamas)",
+    "confidence": 0.99929,
+    "box": [
+      811,
+      362,
+      888,
+      384
+    ]
+  },
+  {
+    "text": "Lv.68",
+    "confidence": 0.99686,
+    "box": [
+      591,
+      409,
+      631,
+      428
+    ]
+  },
+  {
+    "text": "Lv.67",
+    "confidence": 0.99856,
+    "box": [
+      813,
+      410,
+      853,
+      428
+    ]
+  },
+  {
+    "text": "Lv.67",
+    "confidence": 0.99844,
+    "box": [
+      924,
+      408,
+      965,
+      429
+    ]
+  },
+  {
+    "text": "Lv.67",
+    "confidence": 0.9973,
+    "box": [
+      1034,
+      407,
+      1076,
+      430
+    ]
+  },
+  {
+    "text": "Lv.67",
+    "confidence": 0.99362,
+    "box": [
+      1148,
+      407,
+      1187,
+      429
+    ]
+  },
+  {
+    "text": "Add students to the unit",
+    "confidence": 0.9996,
+    "box": [
+      173,
+      444,
+      395,
+      465
+    ]
+  },
+  {
+    "text": "Lv.78",
+    "confidence": 0.99766,
+    "box": [
+      125,
+      562,
+      165,
+      580
+    ]
+  },
+  {
+    "text": "Lv.78",
+    "confidence": 0.99282,
+    "box": [
+      214,
+      561,
+      256,
+      581
+    ]
+  },
+  {
+    "text": "Lv.78",
+    "confidence": 0.93548,
+    "box": [
+      306,
+      562,
+      345,
+      581
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.99811,
+    "box": [
+      397,
+      561,
+      438,
+      581
+    ]
+  },
+  {
+    "text": "Lv.76",
+    "confidence": 0.99755,
+    "box": [
+      487,
+      560,
+      529,
+      580
+    ]
+  },
+  {
+    "text": "Auto",
+    "confidence": 0.99991,
+    "box": [
+      594,
+      581,
+      650,
+      606
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99997,
+    "box": [
+      1111,
+      577,
+      1228,
+      609
+    ]
+  },
+  {
+    "text": "Hare",
+    "confidence": 0.99996,
+    "box": [
+      498,
+      664,
+      546,
+      685
+    ]
+  },
+  {
+    "text": "Utaha",
+    "confidence": 0.99931,
+    "box": [
+      843,
+      664,
+      899,
+      684
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.99954,
+    "box": [
+      411,
+      677,
+      458,
+      699
+    ]
+  },
+  {
+    "text": "Lv.76",
+    "confidence": 0.9996,
+    "box": [
+      761,
+      678,
+      808,
+      698
+    ]
+  }
+]

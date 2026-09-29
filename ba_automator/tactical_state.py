@@ -208,6 +208,8 @@ def ensure_restart_safe(config):
     the app. A durable, uncontested outcome can survive a restart and later be
     reconciled with the ticket count; an unrecorded result cannot.
     """
+    from .drill_state import ensure_restart_safe as ensure_drill_safe
+    ensure_drill_safe(config)
     try:
         state = read_state(config)
     except TacticalStateError as exc:

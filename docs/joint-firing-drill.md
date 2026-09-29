@@ -1,8 +1,8 @@
-# Joint Firing Drill — design proposal
+# Joint Firing Drill
 
-**Status:** design only. No runner, settings, or game actions are implemented by this document.
+**Status:** Shooting Drill MVP implemented. Prepared teams, practice qualification, paid entry, assistant fee checks, reward collection, and remaining-ticket sweeps have live evidence. The broader design below includes future work; see the implementation boundary section.
 
-**Reviewed:** September 28, 2026.
+**Reviewed:** September 29, 2026.
 
 the idea: get three teams that actually work, prove it in practice, do the daily clear, then sweep what we can. don't burn tickets finding out that we used every good student on the first team.
 
@@ -18,7 +18,7 @@ The official [March 12 patch notes](https://forum.nexon.com/bluearchive-en/board
 
 The walkthrough also confirms that a borrowed copy may be used in another team after using the owned copy. Keep those identities separate. The [fan wiki's assistant reference](https://bluearchive.fandom.com/wiki/Circle) describes distinct variants as separate units, no mock borrowing fee, and expected real borrowing fees of 40,000 credits for friends/club or 50,000 otherwise. Verify the displayed fee before confirming; the price reference is not spending authorization.
 
-Use walkthroughs and fan wikis to resolve unclear rule translations before implementation. Distinguish JP season examples from Global: a guide's current team or schedule is not proof of the account's active season. Remaining live work is recognition calibration—button layouts, quantity selection, confirmation, and receipt handling—not rediscovery of these established daily rules.
+Use walkthroughs and fan wikis to resolve unclear rule translations before implementation. Distinguish JP season examples from Global: a guide's current team or schedule is not proof of the account's active season. Recognition is calibrated against the observed English client; other drill types need their own fixtures.
 
 ## Scope and defaults
 
@@ -30,11 +30,34 @@ Expose **Joint Firing Drill** in Settings with three policies:
 | Sweep only | Use an existing qualifying clear from today. If none exists, ask for a manual clear or an enabled clear policy. |
 | Practice, clear, and sweep | Validate a complete three-team plan, perform one real entry, then sweep eligible remaining tickets. |
 
-Daily inclusion is off by default. Proposed defaults when enabled are zero reserved tickets, stages `[2, 2, 2]`, game Auto skills, a 30-second practice victory margin, and assistants disabled. Stage 2 is a starting target for validation, not a claim that the account can beat it. Each round's target is independently configurable from 1–4; there is no assumption that three stage-4 teams are available.
+Daily inclusion is off by default. Defaults when enabled are zero reserved tickets, stages `[2, 2, 2]`, game Auto skills, a 30-second practice victory margin, and a 40,000-credit assistant fee ceiling (set to zero to prevent borrowing). Stage 2 is a starting target for validation, not a claim that the account can beat it. Each round's target is independently configurable from 1–4; there is no assumption that three stage-4 teams are available.
 
 Start with three player-prepared formations. Allow an explicitly enabled, prevalidated lower-stage fallback, but never quietly lower the requested target. Show the actual completed stage tuple and score. Do not buy tickets, upgrade students, purchase shop items, or run repeated paid entries to chase a better score. A manual clear made earlier today can satisfy sweep eligibility without replaying combat.
 
 ## Plan all three teams together
+
+### Observed Shooting Drill: September 29, 2026
+
+The live menu identifies Shooting Drill, urban terrain, and light armor. Stage 2
+has no additional special rules. Stage 4's inspected tooltips explicitly identify
+increased Special-student damage and increased Box Cat defense. These observations
+take precedence over older season guides.
+
+Shooting Drill is a single-target damage race against a target that does not attack;
+defensive durability and healing are not objectives. Prefer effective single-target
+damage, damage amplification, defense reduction, and cost support. For this season's
+higher stages, account for the Special-student damage bonus rather than ranking all
+students by level or Striker damage alone. A tank or healer may still merit a slot
+for an offensive buff or debuff; classify their contribution, not just their role.
+This is specific to Shooting Drill, not a policy for Defense, Escort, or Breakthrough.
+
+References: [Shooting Drill walkthrough](https://note.com/ripple43/n/n87f5445147e0),
+[September 29 Global discussion](https://www.reddit.com/r/BlueArchive/comments/1wt1917/joint_firing_drill_shooting_drill_929_105_mon_659/).
+The live account shows **3/6 tickets**; capacity must be read from the client, not
+hard-coded from the older three-ticket guide. No paid tickets have been spent in
+this initial screen inspection.
+
+### Team allocation
 
 Treat the entry as one allocation problem. Read each formation's student identities, roles, slot order, and starting skills. Detect overlap between owned students across successful-round teams before practice. Identify a student by variant and ownership/lender, not character name alone. An owned copy and borrowed copy may occupy different round teams; the same variant cannot be duplicated within one formation. Add fixtures for those distinctions.
 
@@ -44,7 +67,7 @@ A later deterministic planner can use versioned local JSON profiles. A profile i
 
 Optimize the complete plan for reliable clears first and projected score second. Bound the number of candidate plans rather than testing every roster combination. A change to one team must recheck conflicts with both others. Do not reuse Total Assault's least-damage substitution rule: a low-damage healer or control student may be essential here.
 
-Assistant support is a later opt-in increment. Reserve the single borrow for a specified round, verify the actual offering and fee, and enforce an explicit credit limit. Practice must use the same assistant as the real formation. If availability changes, invalidate the affected plan before paid entry. Do not borrow a replacement midway through an entry without evidence that the game permits it.
+Assistant support is included in the requested implementation. Reserve the single borrow for one specified round across the entire entry, verify the actual offering and fee, and enforce an explicit credit limit. Both Striker and Special assistants are valid planning candidates; role must match the slot. Practice must use the exact same lender offering as the real formation. If availability changes, invalidate the affected plan before paid entry. An owned copy may appear in a different round from its borrowed copy, but neither two borrows across rounds nor duplicate variants within a formation are allowed. Do not borrow a replacement midway through an entry without evidence that the game permits it. The September 29 live run verified one borrowed assistant in both practice and the paid entry, including its 40,000-credit fee.
 
 ## Practice qualification
 
@@ -97,7 +120,7 @@ Mode-specific setup failures hold this mode. They must not stop all daily jobs o
 
 Show policy, per-round target stages, ticket reserve, practice margin, fallback switch, and team setup status. Advanced assistant controls appear only when supported. Show progress as `round 2/3`, not three independent ticket jobs. Important Actions and `YYYY-MM-DD.log` record plan selection, practice outcomes, ticket use, round scores, recovery, settlement, and reasons for skipping. Keep local account screenshots out of Git.
 
-Proposed modules are `joint_firing_drill.py` for orchestration, `drill_vision.py` for observed screens, `drill_policy.py` for pure planning/eligibility, and `drill_state.py` for persistence. These names and settings are proposals, not usable commands. Reuse device scaling, native OCR, locks, queue continuations, logs, and loot recognition; do not copy Total Assault's single-team state machine.
+Modules are `joint_firing_drill.py` for orchestration, `drill_vision.py` for observed screens, `drill_policy.py` for pure planning/eligibility, and `drill_state.py` for persistence. The runner and settings use these names. Reuse device scaling, native OCR, locks, queue continuations, logs, and loot recognition; do not copy Total Assault's single-team state machine.
 
 ## Rollout and acceptance criteria
 
@@ -105,8 +128,17 @@ Proposed modules are `joint_firing_drill.py` for orchestration, `drill_vision.py
 2. **Practice:** prove three compatible prepared teams without tickets. Test mismatched profiles, duplicate students, animation delays, losses, budget exhaustion, pause/resume, and 1440p at 20 FPS.
 3. **One entry:** with authorization to spend, validate one ticket decrement, three confirmed rounds, used-student tracking, final score, complete receipt, and return home. Exercise interruption recovery offline before the live entry.
 4. **Sweeps and scheduling:** validate the two remaining daily sweeps, supported quantity controls, reserves, manual clears, daily reset, downtime catch-up, and queue deduplication. Show that AP and Cafe work are not starved during practice.
-5. **Optional expansion:** assistants, reviewed substitutions, and mechanic-specific skill scripts follow separately. Each needs new evidence and tests.
+5. **Assistant validation and expansion:** verify the single borrowed offering in practice and the paid entry, including fees and changed availability. Reviewed substitutions and mechanic-specific skill scripts follow separately. Each needs new evidence and tests.
 
 Regression tests must cover crashes before/after each spending confirmation, contradictory ticket observations, expired entries, partial settlement, missing receipts, changed assistants, and season rollover with pending state. No test may treat a mock as a paid clear or a ticket decrement alone as proof of loot.
 
-**Live status:** nothing in this proposal has been validated on the account. A completed implementation must document which drill types, stage rules, team policies, and recovery paths actually passed, without generalizing one season's success to every drill.
+**Live status (September 29):** all three prepared teams won their free practices and the real Shooting Drill at stages `[2, 1, 1]`, scoring 65,729 points. The first team used one exact, previously qualified borrowed Hina (Dress), with a verified 40,000-credit fee. Settlement and both remaining-ticket sweeps were received and inspected; the ticket balance reached zero. Sweep receipt recovery was exercised live after an unrecognized empty sweep panel, without repeating spending. Other recovery branches have offline coverage only.
+
+
+## Implemented MVP and remaining design work
+
+The current runner uses three **prepared in-game formations**, validates distinct owned students and at most one exact assistant offering, and practices each team before spending. It uses empty starting-skill selections and game Auto. Settings expose daily inclusion, inspect/sweep-only/clear-and-sweep policy, three target stages, reserved tickets, practice margin, and assistant credit ceiling. Daily and “do everything” include enabled Drill work without requiring a notification dot.
+
+Intent is persisted before spending. Round results, receipt evidence, and ticket balances reconcile interrupted entries and sweeps. Uncertain confirmations are held rather than replayed. Pending entries also block unrelated restart/idle-close behavior. Sanitized screen fixtures and regression tests cover recognition and spending recovery.
+
+The following design elements remain future work: automatic roster construction and seasonal profiles; automatic replacement teams after losses; custom skill scripts; other drill types and closed-season recognition; one-mock-per-visit scheduling; and deadline-aware admission/partial settlement. Practices currently run together in one bounded visit. A prepared team that cannot qualify stops this mode with a setup error. A real-round failure holds the active entry for review. These limitations must not be presented as a fully autonomous seasonal team optimizer.

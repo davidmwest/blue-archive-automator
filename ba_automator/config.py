@@ -56,6 +56,14 @@ class Config:
     # Retained for older configuration files; time-based scouting does not use them.
     tactical_battles_refresh_limit: int = 50
     tactical_battles_confidence_percent: float = 99.0
+    drill_enabled_in_daily: bool = False
+    drill_policy: str = "inspect"
+    drill_stage_1: int = 2
+    drill_stage_2: int = 2
+    drill_stage_3: int = 2
+    drill_preserve_tickets: int = 0
+    drill_comfort_seconds: int = 30
+    drill_assistant_max_credits: int = 40000
     total_assault_difficulty: str = "hardcore"
     total_assault_enabled_in_daily: bool = False
     total_assault_comfort_seconds: int = 30
@@ -113,7 +121,7 @@ class Config:
             raise ConfigError("restart.auto_download must be true or false")
         for name in ("daily_schedule_enabled", "checkin_schedule_enabled", "cafe_schedule_enabled", "cafe_invite_enabled", "close_app_when_idle",
                      "lessons_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily",
-                     "total_assault_enabled_in_daily", "tactical_battles_enabled_in_daily",
+                     "drill_enabled_in_daily", "total_assault_enabled_in_daily", "tactical_battles_enabled_in_daily",
                      "tactical_battles_skip_battles", "crafting_schedule_enabled",
                      "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled",
                      "ap_schedule_enabled", "ap_hard_default_order"):
@@ -162,6 +170,15 @@ class Config:
         if (type(self.tactical_battles_confidence_percent) not in (int, float)
                 or not 80 <= self.tactical_battles_confidence_percent <= 99.9):
             raise ConfigError("tactical_battles.confidence_percent must be a number from 80 to 99.9")
+        from .drill_policy import POLICIES
+        if self.drill_policy not in POLICIES:
+            raise ConfigError("drill.policy must be inspect, sweep, or clear_and_sweep")
+        for field in ('drill_stage_1', 'drill_stage_2', 'drill_stage_3'):
+            if type(getattr(self, field)) is not int or not 1 <= getattr(self, field) <= 4:
+                raise ConfigError(f"{field} must be an integer from 1 to 4")
+        for field, maximum in (('drill_preserve_tickets', 99), ('drill_comfort_seconds', 180), ('drill_assistant_max_credits', 40000)):
+            if type(getattr(self, field)) is not int or not 0 <= getattr(self, field) <= maximum:
+                raise ConfigError(f"{field} must be an integer from 0 to {maximum}")
         if self.total_assault_difficulty not in ("normal", "hard", "very_hard", "hardcore", "extreme", "insane", "torment", "lunatic"):
             raise ConfigError("total_assault.difficulty must be normal, hard, very_hard, hardcore, extreme, insane, torment, or lunatic")
         if (type(self.total_assault_comfort_seconds) is not int
@@ -213,6 +230,7 @@ class Config:
             "bounties": {"enabled_in_daily"},
             "scrimmages": {"enabled_in_daily"},
             "tactical_battles": {"enabled_in_daily", "skip_battles", "preserve_tickets", "search_minutes", "refresh_limit", "confidence_percent"},
+            "drill": {"enabled_in_daily", "policy", "stage_1", "stage_2", "stage_3", "preserve_tickets", "comfort_seconds", "assistant_max_credits"},
             "total_assault": {"difficulty", "enabled_in_daily", "comfort_seconds"},
             "lessons": {"strategy", "max_tickets", "locations", "enabled_in_daily"},
             "automation": {"close_app_when_idle"},
@@ -228,7 +246,7 @@ class Config:
             unexpected_keys = entries.keys() - keys
             if unexpected_keys:
                 raise ConfigError(f"Unknown {section} settings: {', '.join(sorted(unexpected_keys))}")
-            values.update({f"{section}_{key}" if section in {"daily", "checkin", "cafe", "lessons", "crafting", "packs", "ap", "bounties", "scrimmages", "total_assault", "tactical_battles"} else key: value
+            values.update({f"{section}_{key}" if section in {"drill", "daily", "checkin", "cafe", "lessons", "crafting", "packs", "ap", "bounties", "scrimmages", "total_assault", "tactical_battles"} else key: value
                            for key, value in entries.items()})
         for required in ("serial", "package"):
             if required not in values:

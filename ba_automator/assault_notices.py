@@ -19,6 +19,9 @@ def _matches(frame, bounds, asset):
     x1, y1, x2, y2 = bounds
     crop = frame[y1:y2, x1:x2]
     template = _asset(asset)
+    if asset == "assault-assistant-fee-marker.png" and template is not None and crop.shape == template.shape:
+        # Only the opaque badge center; border pixels include the portrait.
+        crop, template = crop[4:20, 7:17], template[4:20, 7:17]
     return (template is not None and crop.shape == template.shape
             and float(cv2.matchTemplate(crop, template, cv2.TM_CCOEFF_NORMED)[0, 0]) >= .92)
 

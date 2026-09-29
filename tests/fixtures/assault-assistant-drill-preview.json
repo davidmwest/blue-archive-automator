@@ -1,0 +1,602 @@
+[
+  {
+    "text": "Joint Firing Drill",
+    "confidence": 0.95302,
+    "box": [
+      99,
+      6,
+      315,
+      45
+    ]
+  },
+  {
+    "text": "Enemy/Syn.",
+    "confidence": 0.99946,
+    "box": [
+      61,
+      74,
+      182,
+      103
+    ]
+  },
+  {
+    "text": "Clear Unit",
+    "confidence": 0.98355,
+    "box": [
+      251,
+      76,
+      359,
+      100
+    ]
+  },
+  {
+    "text": "Quick Formation",
+    "confidence": 0.99994,
+    "box": [
+      503,
+      75,
+      779,
+      113
+    ]
+  },
+  {
+    "text": "Basic Info",
+    "confidence": 0.9996,
+    "box": [
+      237,
+      141,
+      333,
+      165
+    ]
+  },
+  {
+    "text": "My Students",
+    "confidence": 0.99993,
+    "box": [
+      669,
+      146,
+      811,
+      175
+    ]
+  },
+  {
+    "text": "Assistant (Available: 1/1)",
+    "confidence": 0.98302,
+    "box": [
+      973,
+      147,
+      1198,
+      172
+    ]
+  },
+  {
+    "text": "Gehenna Academy",
+    "confidence": 0.99994,
+    "box": [
+      233,
+      186,
+      387,
+      212
+    ]
+  },
+  {
+    "text": "STRIKER",
+    "confidence": 0.99992,
+    "box": [
+      587,
+      197,
+      674,
+      220
+    ]
+  },
+  {
+    "text": "SPECIAL",
+    "confidence": 0.99981,
+    "box": [
+      704,
+      196,
+      794,
+      222
+    ]
+  },
+  {
+    "text": "Lv.",
+    "confidence": 0.99822,
+    "box": [
+      979,
+      198,
+      1013,
+      222
+    ]
+  },
+  {
+    "text": "Hina (Dress)",
+    "confidence": 0.99991,
+    "box": [
+      230,
+      212,
+      410,
+      251
+    ]
+  },
+  {
+    "text": "Dealer",
+    "confidence": 0.99998,
+    "box": [
+      202,
+      266,
+      254,
+      285
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.95838,
+    "box": [
+      589,
+      256,
+      630,
+      277
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.98337,
+    "box": [
+      705,
+      258,
+      741,
+      276
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.99084,
+    "box": [
+      810,
+      255,
+      854,
+      277
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.97716,
+    "box": [
+      923,
+      256,
+      965,
+      276
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.97619,
+    "box": [
+      1035,
+      256,
+      1076,
+      276
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.98264,
+    "box": [
+      1145,
+      256,
+      1186,
+      276
+    ]
+  },
+  {
+    "text": "Shortcut",
+    "confidence": 0.99998,
+    "box": [
+      42,
+      301,
+      134,
+      322
+    ]
+  },
+  {
+    "text": "BACK",
+    "confidence": 0.99997,
+    "box": [
+      188,
+      301,
+      242,
+      325
+    ]
+  },
+  {
+    "text": "Explosive",
+    "confidence": 0.99995,
+    "box": [
+      270,
+      302,
+      345,
+      325
+    ]
+  },
+  {
+    "text": "Elastic",
+    "confidence": 0.99982,
+    "box": [
+      361,
+      300,
+      416,
+      321
+    ]
+  },
+  {
+    "text": "Hina",
+    "confidence": 0.99994,
+    "box": [
+      606,
+      346,
+      647,
+      368
+    ]
+  },
+  {
+    "text": "Toki",
+    "confidence": 0.99993,
+    "box": [
+      942,
+      347,
+      978,
+      366
+    ]
+  },
+  {
+    "text": "Mari (Pop",
+    "confidence": 0.95512,
+    "box": [
+      1033,
+      345,
+      1109,
+      370
+    ]
+  },
+  {
+    "text": "Neru",
+    "confidence": 0.99992,
+    "box": [
+      1160,
+      346,
+      1204,
+      367
+    ]
+  },
+  {
+    "text": "Skill Info",
+    "confidence": 0.99768,
+    "box": [
+      116,
+      358,
+      196,
+      379
+    ]
+  },
+  {
+    "text": "Equipment Info",
+    "confidence": 0.99401,
+    "box": [
+      344,
+      357,
+      484,
+      382
+    ]
+  },
+  {
+    "text": "(Dress)",
+    "confidence": 0.99981,
+    "box": [
+      599,
+      362,
+      654,
+      384
+    ]
+  },
+  {
+    "text": "Azusa",
+    "confidence": 0.99919,
+    "box": [
+      714,
+      355,
+      763,
+      375
+    ]
+  },
+  {
+    "text": "Hina",
+    "confidence": 0.99996,
+    "box": [
+      828,
+      354,
+      870,
+      375
+    ]
+  },
+  {
+    "text": "(Bunny)",
+    "confidence": 0.9994,
+    "box": [
+      928,
+      361,
+      992,
+      386
+    ]
+  },
+  {
+    "text": "Idol)",
+    "confidence": 0.98506,
+    "box": [
+      1050,
+      361,
+      1091,
+      385
+    ]
+  },
+  {
+    "text": "(Bunny)",
+    "confidence": 0.99971,
+    "box": [
+      1151,
+      361,
+      1214,
+      385
+    ]
+  },
+  {
+    "text": "EXSkill",
+    "confidence": 0.99905,
+    "box": [
+      68,
+      402,
+      126,
+      422
+    ]
+  },
+  {
+    "text": "Basic Skill",
+    "confidence": 0.9998,
+    "box": [
+      184,
+      402,
+      263,
+      421
+    ]
+  },
+  {
+    "text": "Enhanced Skill+",
+    "confidence": 0.99844,
+    "box": [
+      292,
+      402,
+      407,
+      421
+    ]
+  },
+  {
+    "text": "Sub Skill",
+    "confidence": 0.99335,
+    "box": [
+      441,
+      402,
+      510,
+      422
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.92234,
+    "box": [
+      589,
+      433,
+      631,
+      453
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.93098,
+    "box": [
+      701,
+      433,
+      741,
+      453
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.87511,
+    "box": [
+      813,
+      434,
+      852,
+      453
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.9898,
+    "box": [
+      924,
+      434,
+      964,
+      452
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.99764,
+    "box": [
+      1035,
+      434,
+      1075,
+      453
+    ]
+  },
+  {
+    "text": "MAX",
+    "confidence": 0.98549,
+    "box": [
+      70,
+      493,
+      118,
+      515
+    ]
+  },
+  {
+    "text": "MAX",
+    "confidence": 0.95,
+    "box": [
+      195,
+      491,
+      245,
+      516
+    ]
+  },
+  {
+    "text": "MAX",
+    "confidence": 0.98019,
+    "box": [
+      322,
+      492,
+      371,
+      516
+    ]
+  },
+  {
+    "text": "MAX",
+    "confidence": 0.97648,
+    "box": [
+      449,
+      492,
+      498,
+      516
+    ]
+  },
+  {
+    "text": "LV.90",
+    "confidence": 0.90276,
+    "box": [
+      41,
+      564,
+      73,
+      579
+    ]
+  },
+  {
+    "text": "Lv.78",
+    "confidence": 0.99654,
+    "box": [
+      124,
+      561,
+      165,
+      581
+    ]
+  },
+  {
+    "text": "Lv.78",
+    "confidence": 0.99282,
+    "box": [
+      214,
+      561,
+      256,
+      581
+    ]
+  },
+  {
+    "text": "Lv.78",
+    "confidence": 0.93548,
+    "box": [
+      306,
+      562,
+      345,
+      581
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.99297,
+    "box": [
+      397,
+      560,
+      439,
+      581
+    ]
+  },
+  {
+    "text": "Lv.76",
+    "confidence": 0.99728,
+    "box": [
+      487,
+      561,
+      529,
+      581
+    ]
+  },
+  {
+    "text": "Auto",
+    "confidence": 0.99994,
+    "box": [
+      594,
+      581,
+      650,
+      607
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99995,
+    "box": [
+      1112,
+      578,
+      1228,
+      609
+    ]
+  },
+  {
+    "text": "Hare",
+    "confidence": 0.99996,
+    "box": [
+      498,
+      664,
+      546,
+      685
+    ]
+  },
+  {
+    "text": "Utaha",
+    "confidence": 0.99963,
+    "box": [
+      843,
+      664,
+      899,
+      684
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.99954,
+    "box": [
+      411,
+      677,
+      458,
+      699
+    ]
+  },
+  {
+    "text": "Lv.76",
+    "confidence": 0.9996,
+    "box": [
+      761,
+      678,
+      808,
+      698
+    ]
+  }
+]

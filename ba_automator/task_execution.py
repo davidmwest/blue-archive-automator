@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .adb import DeviceError
 from .assault_state import AssaultStateError
+from .drill_state import DrillStateError
 from .config import ConfigError
 from .locking import LockError
 from .runtime import TaskError
@@ -35,7 +36,7 @@ def _recoverable(task, error):
         if isinstance(cause, (DeviceError, ConfigError, LockError, OSError)):
             return False
         cause = cause.__cause__ or (None if cause.__suppress_context__ else cause.__context__)
-    return isinstance(error, (TaskError, AssaultStateError)) or (
+    return isinstance(error, (TaskError, AssaultStateError, DrillStateError)) or (
         type(error) is RuntimeError and str(error) in _STATE_REFUSALS
     )
 

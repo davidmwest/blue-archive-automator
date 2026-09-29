@@ -1,0 +1,212 @@
+[
+  {
+    "text": "Tip!",
+    "confidence": 0.99732,
+    "box": [
+      287,
+      78,
+      410,
+      161
+    ]
+  },
+  {
+    "text": "ew Entire Area",
+    "confidence": 0.9654,
+    "box": [
+      323,
+      156,
+      406,
+      171
+    ]
+  },
+  {
+    "text": "Drill Information",
+    "confidence": 0.99986,
+    "box": [
+      565,
+      156,
+      715,
+      178
+    ]
+  },
+  {
+    "text": "Rec.",
+    "confidence": 0.99882,
+    "box": [
+      786,
+      189,
+      816,
+      207
+    ]
+  },
+  {
+    "text": "04",
+    "confidence": 0.99998,
+    "box": [
+      463,
+      197,
+      488,
+      215
+    ]
+  },
+  {
+    "text": "Shooting Drill Stage 4",
+    "confidence": 0.99742,
+    "box": [
+      504,
+      195,
+      697,
+      218
+    ]
+  },
+  {
+    "text": "Stage 1",
+    "confidence": 0.97935,
+    "box": [
+      843,
+      198,
+      897,
+      218
+    ]
+  },
+  {
+    "text": "Lv.78",
+    "confidence": 0.99983,
+    "box": [
+      782,
+      203,
+      820,
+      222
+    ]
+  },
+  {
+    "text": "I Enemy Defense Type (Light Armor)",
+    "confidence": 0.9784,
+    "box": [
+      462,
+      233,
+      692,
+      254
+    ]
+  },
+  {
+    "text": "The enemy's defense type is Light Armor.",
+    "confidence": 0.9926,
+    "box": [
+      461,
+      257,
+      677,
+      276
+    ]
+  },
+  {
+    "text": "Stage 2",
+    "confidence": 0.99281,
+    "box": [
+      843,
+      255,
+      898,
+      274
+    ]
+  },
+  {
+    "text": "Stage 3",
+    "confidence": 0.96967,
+    "box": [
+      843,
+      311,
+      898,
+      331
+    ]
+  },
+  {
+    "text": "Drill Start",
+    "confidence": 0.99952,
+    "box": [
+      596,
+      361,
+      684,
+      381
+    ]
+  },
+  {
+    "text": "Stage 4",
+    "confidence": 0.99659,
+    "box": [
+      843,
+      368,
+      897,
+      387
+    ]
+  },
+  {
+    "text": "'s Top Score 85,868",
+    "confidence": 0.9955,
+    "box": [
+      325,
+      410,
+      435,
+      425
+    ]
+  },
+  {
+    "text": "Sweep",
+    "confidence": 0.99987,
+    "box": [
+      722,
+      418,
+      771,
+      435
+    ]
+  },
+  {
+    "text": "Mock Battle",
+    "confidence": 0.97213,
+    "box": [
+      802,
+      419,
+      877,
+      433
+    ]
+  },
+  {
+    "text": "Drill St",
+    "confidence": 0.99894,
+    "box": [
+      906,
+      418,
+      952,
+      435
+    ]
+  },
+  {
+    "text": "Sheet",
+    "confidence": 0.99981,
+    "box": [
+      515,
+      427,
+      550,
+      440
+    ]
+  },
+  {
+    "text": "Create a formation with students to meet the drill's requirements.",
+    "confidence": 0.99737,
+    "box": [
+      303,
+      491,
+      977,
+      523
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99996,
+    "box": [
+      575,
+      636,
+      706,
+      677
+    ]
+  }
+]

@@ -49,6 +49,7 @@ from . import packs_state
 from . import ap_state, loot, daily_log, daily_schedule, checkin_schedule, tactical_survey, tactical_retry, tactical_state
 from .club import game_day
 from .tactical_state import TacticalStateError, ensure_restart_safe
+from .drill_state import DrillStateError
 from .vision import decode_frame
 
 
@@ -72,8 +73,9 @@ TOTAL_ASSAULT_SETTINGS = {f"total_assault_{key}": key
                           for key in ("difficulty", "enabled_in_daily", "comfort_seconds")}
 TACTICAL_BATTLE_SETTINGS = {f"tactical_battles_{key}": key
                            for key in ("enabled_in_daily", "skip_battles", "preserve_tickets", "search_minutes", "refresh_limit", "confidence_percent")}
+DRILL_SETTINGS = {f"drill_{key}": key for key in ("enabled_in_daily", "policy", "stage_1", "stage_2", "stage_3", "preserve_tickets", "comfort_seconds", "assistant_max_credits")}
 TICKET_SETTINGS = {"bounties_enabled_in_daily", "scrimmages_enabled_in_daily"}
-SETTINGS = TACTICAL_BATTLE_SETTINGS.keys() | CHECKIN_SETTINGS.keys() | DAILY_SETTINGS.keys() | TOTAL_ASSAULT_SETTINGS.keys() | TICKET_SETTINGS | RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
+SETTINGS = DRILL_SETTINGS.keys() | TACTICAL_BATTLE_SETTINGS.keys() | CHECKIN_SETTINGS.keys() | DAILY_SETTINGS.keys() | TOTAL_ASSAULT_SETTINGS.keys() | TICKET_SETTINGS | RESTART_SETTINGS | CAFE_SETTINGS.keys() | LESSONS_SETTINGS.keys() | AUTOMATION_SETTINGS | CRAFTING_SETTINGS.keys() | PACKS_SETTINGS.keys() | AP_SETTINGS.keys()
 CAFE_INTERVAL = timedelta(hours=3, seconds=15)
 CAFE_RETRY_INTERVAL = timedelta(minutes=15)
 MAX_SCHEDULE_FAILURES = 3
@@ -131,6 +133,7 @@ def _config_document(config: Config) -> dict:
         "bounties": {"enabled_in_daily": config.bounties_enabled_in_daily},
         "scrimmages": {"enabled_in_daily": config.scrimmages_enabled_in_daily},
         "tactical_battles": {name: getattr(config, attribute) for attribute, name in TACTICAL_BATTLE_SETTINGS.items()},
+        "drill": {name: getattr(config, attribute) for attribute, name in DRILL_SETTINGS.items()},
         "total_assault": {name: getattr(config, attribute) for attribute, name in TOTAL_ASSAULT_SETTINGS.items()},
         "ap": {name: getattr(config, attribute) for attribute, name in AP_SETTINGS.items()},
     }
@@ -234,7 +237,7 @@ class DashboardController:
         values.update({name: getattr(self.config, name) for name in PACKS_SETTINGS})
         values.update({name: getattr(self.config, name) for name in (
             AP_SETTINGS.keys() | TICKET_SETTINGS | TACTICAL_BATTLE_SETTINGS.keys()
-            | TOTAL_ASSAULT_SETTINGS.keys()
+            | TOTAL_ASSAULT_SETTINGS.keys() | DRILL_SETTINGS.keys()
         )})
         return values
 
@@ -594,6 +597,12 @@ class DashboardController:
             if (self.config.total_assault_enabled_in_daily
                     and not any(job["task"] in {"daily", "total_assault"} for job in self._queue)):
                 job = {"id": uuid4().hex, "task": "total_assault", "source": "available",
+                       "created_at": _timestamp()}
+                self._queue.append(job)
+                self._queued(job)
+            if (self.config.drill_enabled_in_daily
+                    and not any(job["task"] in {"daily", "joint_firing_drill"} for job in self._queue)):
+                job = {"id": uuid4().hex, "task": "joint_firing_drill", "source": "available",
                        "created_at": _timestamp()}
                 self._queue.append(job)
                 self._queued(job)
@@ -1069,7 +1078,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info", child=True)
-                            marker = next((prefix for prefix in ("total_assault:", "assault_rewards:", "tactical_rewards:", "tactical_battles:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("joint_firing_drill:", "total_assault:", "assault_rewards:", "tactical_rewards:", "tactical_battles:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:
@@ -1271,8 +1280,9 @@ class DashboardController:
                 device.connect()
                 device.verify_package()
                 device.force_stop()
-        except TacticalStateError as exc:
-            self._phase += "; Blue Archive left open for Tactical Challenge review"
+        except (TacticalStateError, DrillStateError) as exc:
+            mode = "Joint Firing Drill" if isinstance(exc, DrillStateError) else "Tactical Challenge"
+            self._phase += f"; Blue Archive left open for {mode} review"
             self._log(f"Kept Blue Archive open: {exc}", "error")
             return
         except Exception as exc:
@@ -1300,7 +1310,7 @@ class DashboardController:
             available = tactical_state.search_allowances(state, tickets, reserve)
             return (f"{prefix}; {tickets} ticket{'s' if tickets != 1 else ''} left, reserve {reserve}; "
                     f"{available} ticket{'s' if available != 1 else ''} available for automation")
-        except (TacticalStateError, OSError, ValueError) as exc:
+        except (TacticalStateError, DrillStateError, OSError, ValueError) as exc:
             self._log(f"Could not read Tactical Challenge completion counts: {exc}", "error")
             return f"{prefix}; ticket counts unavailable"
 
@@ -1788,6 +1798,7 @@ class DashboardController:
                                "checkin" if name in CHECKIN_SETTINGS else
                                "daily" if name in DAILY_SETTINGS else
                                "tactical_battles" if name in TACTICAL_BATTLE_SETTINGS else
+                               "drill" if name in DRILL_SETTINGS else
                                "total_assault" if name in TOTAL_ASSAULT_SETTINGS else
                                "cafe" if name in CAFE_SETTINGS else
                                "ap" if name in AP_SETTINGS else
@@ -1797,6 +1808,7 @@ class DashboardController:
                                "automation" if name in AUTOMATION_SETTINGS else "restart")
                     key = AP_SETTINGS.get(name, PACKS_SETTINGS.get(name, CAFE_SETTINGS.get(name, LESSONS_SETTINGS.get(name, CRAFTING_SETTINGS.get(name, name)))))
                     if name in TACTICAL_BATTLE_SETTINGS: key = TACTICAL_BATTLE_SETTINGS[name]
+                    if name in DRILL_SETTINGS: key = DRILL_SETTINGS[name]
                     if name in TOTAL_ASSAULT_SETTINGS: key = TOTAL_ASSAULT_SETTINGS[name]
                     if name in DAILY_SETTINGS: key = DAILY_SETTINGS[name]
                     if name in CHECKIN_SETTINGS: key = CHECKIN_SETTINGS[name]

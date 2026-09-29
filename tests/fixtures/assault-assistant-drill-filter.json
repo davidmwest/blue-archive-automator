@@ -1,0 +1,152 @@
+[
+  {
+    "text": "Joint Firing Drill",
+    "confidence": 0.98507,
+    "box": [
+      100,
+      6,
+      315,
+      43
+    ]
+  },
+  {
+    "text": "Display Settings",
+    "confidence": 0.99995,
+    "box": [
+      518,
+      64,
+      766,
+      111
+    ]
+  },
+  {
+    "text": "Filter",
+    "confidence": 0.99996,
+    "box": [
+      112,
+      139,
+      180,
+      169
+    ]
+  },
+  {
+    "text": "List",
+    "confidence": 0.99995,
+    "box": [
+      255,
+      149,
+      300,
+      178
+    ]
+  },
+  {
+    "text": "Reset All",
+    "confidence": 0.99804,
+    "box": [
+      1080,
+      151,
+      1169,
+      175
+    ]
+  },
+  {
+    "text": "Sort",
+    "confidence": 0.99992,
+    "box": [
+      118,
+      199,
+      174,
+      228
+    ]
+  },
+  {
+    "text": "IATK Attribute",
+    "confidence": 0.98609,
+    "box": [
+      258,
+      206,
+      396,
+      232
+    ]
+  },
+  {
+    "text": "DEF Attribute",
+    "confidence": 0.9974,
+    "box": [
+      261,
+      352,
+      395,
+      377
+    ]
+  },
+  {
+    "text": "\u25b3\u00d7+\u25cb",
+    "confidence": 0.76818,
+    "box": [
+      61,
+      524,
+      119,
+      540
+    ]
+  },
+  {
+    "text": "Cancel",
+    "confidence": 0.99998,
+    "box": [
+      461,
+      576,
+      563,
+      613
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99996,
+    "box": [
+      702,
+      578,
+      828,
+      614
+    ]
+  },
+  {
+    "text": "Hare",
+    "confidence": 0.99997,
+    "box": [
+      498,
+      664,
+      546,
+      685
+    ]
+  },
+  {
+    "text": "Utaha",
+    "confidence": 0.99987,
+    "box": [
+      842,
+      663,
+      900,
+      686
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.99968,
+    "box": [
+      411,
+      677,
+      458,
+      699
+    ]
+  },
+  {
+    "text": "Lv.76",
+    "confidence": 0.99966,
+    "box": [
+      760,
+      676,
+      808,
+      700
+    ]
+  }
+]

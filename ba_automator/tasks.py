@@ -6,6 +6,7 @@ from .config import Config
 
 
 TASK_LABELS = {
+    "joint_firing_drill": "Joint Firing Drill checked",
     "total_assault": "Total Assault complete",
     "assault_rewards": "Total Assault rank and points rewards checked",
     "tactical_battles": "Tactical Challenge battles complete",
@@ -27,7 +28,7 @@ TASK_LABELS = {
     "daily": "Daily tasks complete",
 }
 TASKS = frozenset(TASK_LABELS)
-RUN_PREFIXES = ("total_assault-", "assault_rewards-", "tactical_rewards-", "tactical_battles-", "red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
+RUN_PREFIXES = ("joint_firing_drill-", "total_assault-", "assault_rewards-", "tactical_rewards-", "tactical_battles-", "red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
 
 
 def _task_plan(command: str, config: Config) -> tuple[str, ...]:
@@ -41,6 +42,7 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
         plan = (*plan, "tactical_rewards")
         plan = (*plan, "lessons") if config.lessons_enabled_in_daily else plan
         plan = (*plan, "total_assault") if config.total_assault_enabled_in_daily else plan
+        plan = (*plan, "joint_firing_drill") if config.drill_enabled_in_daily else plan
         plan = (*plan, "assault_rewards")
         plan = (*plan, "spend_ap") if config.ap_schedule_enabled else plan
         return (*plan, "tasks")
@@ -68,6 +70,14 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
             # Restart's guarded execution rejects corrupt state without input.
             pass
         return ("restart", "tactical_battles", "tactical_rewards")
+    if command == "joint_firing_drill":
+        from .drill_state import DrillStateError, read_state
+        try:
+            if read_state(config)["pending"]:
+                return (command,)
+        except DrillStateError:
+            pass
+        return ("restart", command)
     if command == "total_assault":
         return ("restart", "total_assault", "assault_rewards")
     if command in {"assault_rewards", "tactical_rewards", "tasks", "bounties", "scrimmages", "lessons", "crafting", "spend_ap", "scan_ap"}:
@@ -79,4 +89,14 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
 
 def task_plan(command: str, config: Config) -> tuple[str, ...]:
     """Check badges once after successful game work, before closing an idle app."""
-    return (*_task_plan(command, config), "red_dots")
+    plan = _task_plan(command, config)
+    if command == 'daily':
+        from .drill_state import DrillStateError, read_state
+        try:
+            if read_state(config)['pending']:
+                # Preserve the open receipt/battle before daily startup closes
+                # the game, even if daily Drill was disabled after entry.
+                plan = ('joint_firing_drill', *(task for task in plan if task != 'joint_firing_drill'))
+        except DrillStateError:
+            pass  # Restart's state guard prevents input on corrupt state.
+    return (*plan, "red_dots")

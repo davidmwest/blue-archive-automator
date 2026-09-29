@@ -173,3 +173,23 @@ def test_formation_digit_batches_enlarge_original_native_pixels(width, height, k
         np.testing.assert_array_equal(actual_batch[y1:y2, x1:x2], cv2.resize(region, output_size))
     invoke(canonical, reader)
     assert not np.array_equal(actual_batch, batches.pop())
+
+
+def test_ocr_cache_requires_identical_pixels_and_returns_independent_lists():
+    vision = object.__new__(StartupVision)
+    calls = []
+    def ocr(frame, **kwargs):
+        calls.append(frame.copy())
+        return SimpleNamespace(txts=['90'], boxes=[[[0, 0], [5, 0], [5, 5], [0, 5]]], scores=[.99])
+    vision.ocr = ocr
+    frame = np.zeros((10, 10, 3), np.uint8)
+    first = vision.read(frame)
+    first.clear()
+    assert len(vision.read(frame.copy())) == 1
+    assert len(calls) == 1
+    frame[0, 0] = 255
+    vision.read(frame)
+    assert len(calls) == 2
+    for value in range(40):
+        vision.read(np.full((10, 10, 3), value, np.uint8))
+    assert len(vision._ocr_cache) == 32

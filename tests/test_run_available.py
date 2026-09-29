@@ -123,17 +123,19 @@ def test_available_tactical_catchup_does_not_replay_completed_daily(controlled):
     assert daily_schedule.read_state(controller.config) == saved
 
 
+@pytest.mark.parametrize("task, setting", [("total_assault", "total_assault_enabled_in_daily"),
+                                          ("joint_firing_drill", "drill_enabled_in_daily")])
 @pytest.mark.parametrize("status", ["success", "failed", "stopped", "running", "skipped"])
 @pytest.mark.parametrize("enabled", [False, True])
-def test_available_total_assault_honors_opt_in_after_todays_daily(controlled, status, enabled):
+def test_available_raids_honor_opt_in_after_todays_daily(controlled, status, enabled, task, setting):
     controller, _ = controlled
-    configure(controller, daily_schedule_enabled=True, total_assault_enabled_in_daily=enabled)
+    configure(controller, daily_schedule_enabled=True, **{setting: enabled})
     saved = occurrence(status)
     daily_schedule.write_state(controller.config, saved)
     with controller._condition:
         result = controller.run_available()
         assert [job["task"] for job in result["jobs"]] == (
-            ["total_assault", "red_dots"] if enabled else ["red_dots"])
+            [task, "red_dots"] if enabled else ["red_dots"])
         assert controller.run_available()["jobs"] == []
     assert daily_schedule.read_state(controller.config) == saved
 

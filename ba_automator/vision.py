@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from importlib.resources import files
 import json
+import hashlib
+from collections import OrderedDict
 import math
 import os
 import re
@@ -157,6 +159,7 @@ class StartupVision:
             "EngineConfig.onnxruntime.intra_op_num_threads": 2,
             "EngineConfig.onnxruntime.inter_op_num_threads": 1,
         })
+        self._ocr_cache = OrderedDict()
         self.assets = []
         root = files("ba_automator").joinpath("assets")
         manifest = root.joinpath("startup.json")
@@ -171,6 +174,14 @@ class StartupVision:
                 self.assets.append((spec, template))
 
     def read(self, frame: np.ndarray) -> list[Word]:
+        # Exact pixel reuse makes repeated metadata reads cheap without reusing
+        # screen observations or extending an input's freshness deadline.
+        if not hasattr(self, "_ocr_cache"):
+            self._ocr_cache = OrderedDict()
+        key = (frame.shape, frame.dtype.str, hashlib.sha256(frame.tobytes()).digest())
+        if key in self._ocr_cache:
+            self._ocr_cache.move_to_end(key)
+            return list(self._ocr_cache[key])
         result = self.ocr(frame, use_cls=False)
         if result.txts is None:
             return []
@@ -181,6 +192,9 @@ class StartupVision:
             x1, y1 = np.min(box, axis=0)
             x2, y2 = np.max(box, axis=0)
             words.append(Word(text, float(score), (int(x1), int(y1), int(x2), int(y2))))
+        self._ocr_cache[key] = tuple(words)
+        if len(self._ocr_cache) > 32:
+            self._ocr_cache.popitem(last=False)
         return words
 
     def matches(self, frame: np.ndarray) -> dict[str, tuple[int, int]]:

@@ -1,0 +1,342 @@
+[
+  {
+    "text": "Joint Firing Drill",
+    "confidence": 0.99984,
+    "box": [
+      98,
+      7,
+      315,
+      44
+    ]
+  },
+  {
+    "text": "Shooting Drill",
+    "confidence": 0.99993,
+    "box": [
+      736,
+      69,
+      1021,
+      124
+    ]
+  },
+  {
+    "text": "Drill Ticket",
+    "confidence": 0.99826,
+    "box": [
+      1023,
+      72,
+      1111,
+      92
+    ]
+  },
+  {
+    "text": "09/28 19:00",
+    "confidence": 0.99975,
+    "box": [
+      1167,
+      74,
+      1261,
+      96
+    ]
+  },
+  {
+    "text": "View Entire Area",
+    "confidence": 0.97525,
+    "box": [
+      59,
+      91,
+      221,
+      114
+    ]
+  },
+  {
+    "text": "0/6",
+    "confidence": 0.99895,
+    "box": [
+      1048,
+      93,
+      1086,
+      122
+    ]
+  },
+  {
+    "text": "10/05 11:59",
+    "confidence": 0.96848,
+    "box": [
+      1165,
+      94,
+      1262,
+      119
+    ]
+  },
+  {
+    "text": "Sweep",
+    "confidence": 0.99983,
+    "box": [
+      584,
+      178,
+      694,
+      219
+    ]
+  },
+  {
+    "text": "Info",
+    "confidence": 0.9999,
+    "box": [
+      1152,
+      174,
+      1210,
+      204
+    ]
+  },
+  {
+    "text": "Info",
+    "confidence": 0.9999,
+    "box": [
+      1152,
+      271,
+      1210,
+      301
+    ]
+  },
+  {
+    "text": "Today's Top Score",
+    "confidence": 0.99994,
+    "box": [
+      328,
+      281,
+      530,
+      312
+    ]
+  },
+  {
+    "text": "Sweep Count",
+    "confidence": 0.99997,
+    "box": [
+      832,
+      278,
+      961,
+      302
+    ]
+  },
+  {
+    "text": "65,729",
+    "confidence": 0.99999,
+    "box": [
+      358,
+      313,
+      500,
+      368
+    ]
+  },
+  {
+    "text": "Min",
+    "confidence": 0.99992,
+    "box": [
+      725,
+      344,
+      773,
+      374
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.99922,
+    "box": [
+      884,
+      345,
+      908,
+      377
+    ]
+  },
+  {
+    "text": "Max",
+    "confidence": 0.99951,
+    "box": [
+      1016,
+      345,
+      1070,
+      374
+    ]
+  },
+  {
+    "text": "Info",
+    "confidence": 0.99988,
+    "box": [
+      1151,
+      367,
+      1210,
+      398
+    ]
+  },
+  {
+    "text": "Expected Rewards",
+    "confidence": 0.97134,
+    "box": [
+      342,
+      405,
+      520,
+      432
+    ]
+  },
+  {
+    "text": "Score Bonus",
+    "confidence": 0.9999,
+    "box": [
+      266,
+      452,
+      327,
+      464
+    ]
+  },
+  {
+    "text": "Start Sweep",
+    "confidence": 0.99984,
+    "box": [
+      811,
+      449,
+      980,
+      486
+    ]
+  },
+  {
+    "text": "Info",
+    "confidence": 0.9998,
+    "box": [
+      1152,
+      464,
+      1210,
+      495
+    ]
+  },
+  {
+    "text": "x70",
+    "confidence": 0.97383,
+    "box": [
+      223,
+      494,
+      255,
+      514
+    ]
+  },
+  {
+    "text": "x152K",
+    "confidence": 0.90346,
+    "box": [
+      276,
+      493,
+      327,
+      515
+    ]
+  },
+  {
+    "text": "Best Season Score",
+    "confidence": 0.99961,
+    "box": [
+      56,
+      585,
+      211,
+      604
+    ]
+  },
+  {
+    "text": "65,729",
+    "confidence": 0.99999,
+    "box": [
+      217,
+      584,
+      279,
+      605
+    ]
+  },
+  {
+    "text": "Today's Top Score 65,729",
+    "confidence": 0.98315,
+    "box": [
+      40,
+      621,
+      291,
+      650
+    ]
+  },
+  {
+    "text": "Score",
+    "confidence": 0.99995,
+    "box": [
+      424,
+      627,
+      488,
+      653
+    ]
+  },
+  {
+    "text": "Reward",
+    "confidence": 0.99998,
+    "box": [
+      558,
+      632,
+      628,
+      651
+    ]
+  },
+  {
+    "text": "Sweep",
+    "confidence": 0.99993,
+    "box": [
+      779,
+      635,
+      866,
+      669
+    ]
+  },
+  {
+    "text": "Mock Battle",
+    "confidence": 0.95382,
+    "box": [
+      918,
+      637,
+      1045,
+      661
+    ]
+  },
+  {
+    "text": "Drill Start",
+    "confidence": 0.99939,
+    "box": [
+      1095,
+      635,
+      1219,
+      665
+    ]
+  },
+  {
+    "text": "Sheet",
+    "confidence": 0.99997,
+    "box": [
+      423,
+      649,
+      488,
+      674
+    ]
+  },
+  {
+    "text": "Information",
+    "confidence": 0.99996,
+    "box": [
+      537,
+      649,
+      647,
+      670
+    ]
+  },
+  {
+    "text": "Current Score 0",
+    "confidence": 0.99369,
+    "box": [
+      42,
+      659,
+      205,
+      682
+    ]
+  }
+]

@@ -40,6 +40,7 @@ def main(argv=None) -> int:
     )
     inspect.add_argument("--image", type=Path)
     descriptions = {
+        "joint_firing_drill": "Inspect, practice and clear, or sweep Joint Firing Drill with prepared teams",
         "total_assault": "Mock-test the configured Total Assault difficulty before a real clear, then sweep remaining tickets",
         "assault_rewards": "Collect available Total Assault rank and points rewards without entering a battle",
         "tactical_battles": "Climb Tactical Challenge with existing tickets while preserving the configured manual-play reserve",
@@ -114,7 +115,11 @@ def main(argv=None) -> int:
             vision = StartupVision()
 
             def run_task(task):
-                if task == "total_assault":
+                if task == "joint_firing_drill":
+                    from .joint_firing_drill import run_joint_firing_drill
+
+                    runner = run_joint_firing_drill
+                elif task == "total_assault":
                     from .total_assault import run_total_assault
 
                     runner = run_total_assault

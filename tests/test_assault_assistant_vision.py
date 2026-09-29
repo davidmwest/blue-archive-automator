@@ -106,7 +106,7 @@ def test_selection_requires_selected_card_exact_name_and_both_assistant_markers(
 
 
 @pytest.mark.parametrize('name,selected', [
-    ('remove', set(FILTER_TARGETS)), ('mystic-filter', {'mystic'})])
+    ('remove', set(FILTER_TARGETS)), ('drill-filter', set(FILTER_TARGETS)), ('mystic-filter', {'mystic'})])
 def test_filter_default_gray_checks_differ_from_explicit_attack_filter(name, selected):
     frame, words = capture(name)
     screen = read_assistant_filter(frame, words)
@@ -156,3 +156,30 @@ def test_reopened_quick_formation_proves_retained_slot_without_guessing_preview(
     duplicate = frame.copy()
     duplicate[558:583, 271:296] = frame[558:583, 181:206]
     assert not verify_retained_assistant(duplicate, card, 1)
+
+
+def test_owned_level_ocr_accepts_colon_but_not_missing_digits():
+    frame, words = capture('owned')
+    words = [w for w in words if not (28 <= w.center[0] < 543 and 558 <= w.center[1] < 585)]
+    levels = [Word('Lv:79', .99, (33 + 90*i, 562, 77 + 90*i, 581)) for i in range(6)]
+    assert verify_owned_quick(frame, words + levels)
+    assert not verify_owned_quick(frame, words + levels[:-1])
+
+
+def test_drill_borrowed_badge_is_not_owned_on_a_different_portrait(startup):
+    frame, words = capture('drill-owned-tab')
+    assert verify_owned_quick(frame, words, startup=startup) is False
+
+
+def test_hina_preview_badges_exclude_the_variable_portrait_background():
+    from ba_automator.assault_assistant_vision import AssistantCard
+    from ba_automator.assault_policy import TeamMember
+    frame, words = capture('drill-preview')
+    card = AssistantCard(TeamMember('Hina (Dress)', 0, 'striker', 'explosive', 5, 90,
+                                    True, 'sanitized-offering'),
+                         (574, 245, 681, 416), (628, 300), True, 3)
+    assert verify_assistant_preview(frame, words, card, 0)
+    missing = frame.copy()
+    missing[200:225, 107:132] = 255
+    assert not verify_assistant_preview(missing, words, card, 0)
+    assert not verify_assistant_preview(frame, words, card, 1)

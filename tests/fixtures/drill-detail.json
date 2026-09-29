@@ -1,0 +1,382 @@
+[
+  {
+    "text": "Joint Firing Drill",
+    "confidence": 0.99768,
+    "box": [
+      98,
+      7,
+      316,
+      44
+    ]
+  },
+  {
+    "text": "Shooting Drill",
+    "confidence": 0.99993,
+    "box": [
+      737,
+      70,
+      1021,
+      124
+    ]
+  },
+  {
+    "text": "Drill Ticket",
+    "confidence": 0.99303,
+    "box": [
+      1023,
+      72,
+      1111,
+      92
+    ]
+  },
+  {
+    "text": "09/28 19:00",
+    "confidence": 0.99975,
+    "box": [
+      1167,
+      74,
+      1261,
+      96
+    ]
+  },
+  {
+    "text": "View Entire Area",
+    "confidence": 0.98097,
+    "box": [
+      59,
+      91,
+      221,
+      114
+    ]
+  },
+  {
+    "text": "3/6",
+    "confidence": 0.99932,
+    "box": [
+      1047,
+      93,
+      1086,
+      122
+    ]
+  },
+  {
+    "text": "10/05 11:59",
+    "confidence": 0.96672,
+    "box": [
+      1165,
+      94,
+      1262,
+      119
+    ]
+  },
+  {
+    "text": "Drill Information",
+    "confidence": 0.99979,
+    "box": [
+      512,
+      141,
+      768,
+      176
+    ]
+  },
+  {
+    "text": "Clear Unit",
+    "confidence": 0.99973,
+    "box": [
+      352,
+      146,
+      458,
+      171
+    ]
+  },
+  {
+    "text": "Stage 1",
+    "confidence": 0.95978,
+    "box": [
+      989,
+      164,
+      1078,
+      196
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99989,
+    "box": [
+      1145,
+      175,
+      1219,
+      204
+    ]
+  },
+  {
+    "text": "Rec.",
+    "confidence": 0.99552,
+    "box": [
+      890,
+      196,
+      944,
+      225
+    ]
+  },
+  {
+    "text": "Shooting Drill Stage 1 0",
+    "confidence": 0.97651,
+    "box": [
+      408,
+      202,
+      771,
+      249
+    ]
+  },
+  {
+    "text": "01",
+    "confidence": 0.99998,
+    "box": [
+      335,
+      209,
+      373,
+      241
+    ]
+  },
+  {
+    "text": "Lv.25",
+    "confidence": 0.99969,
+    "box": [
+      885,
+      222,
+      947,
+      249
+    ]
+  },
+  {
+    "text": "Stage 2",
+    "confidence": 0.99724,
+    "box": [
+      989,
+      259,
+      1082,
+      293
+    ]
+  },
+  {
+    "text": "Enemy/Syn.",
+    "confidence": 0.99893,
+    "box": [
+      352,
+      271,
+      468,
+      299
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99984,
+    "box": [
+      1145,
+      272,
+      1219,
+      301
+    ]
+  },
+  {
+    "text": "Special Rules",
+    "confidence": 0.99995,
+    "box": [
+      576,
+      324,
+      703,
+      351
+    ]
+  },
+  {
+    "text": "Stage 3",
+    "confidence": 0.98232,
+    "box": [
+      988,
+      356,
+      1081,
+      390
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99986,
+    "box": [
+      1145,
+      369,
+      1219,
+      397
+    ]
+  },
+  {
+    "text": "Remaining: 2/3",
+    "confidence": 0.96919,
+    "box": [
+      609,
+      448,
+      754,
+      475
+    ]
+  },
+  {
+    "text": "Stage 4",
+    "confidence": 0.97615,
+    "box": [
+      989,
+      454,
+      1081,
+      486
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99984,
+    "box": [
+      1145,
+      466,
+      1218,
+      494
+    ]
+  },
+  {
+    "text": "Drill Start",
+    "confidence": 0.99972,
+    "box": [
+      564,
+      489,
+      714,
+      525
+    ]
+  },
+  {
+    "text": "Best Season Score",
+    "confidence": 0.9997,
+    "box": [
+      56,
+      585,
+      210,
+      604
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.9974,
+    "box": [
+      218,
+      585,
+      232,
+      604
+    ]
+  },
+  {
+    "text": "00:33:57",
+    "confidence": 0.99997,
+    "box": [
+      1167,
+      600,
+      1236,
+      621
+    ]
+  },
+  {
+    "text": "Today's Top Score",
+    "confidence": 0.9998,
+    "box": [
+      41,
+      622,
+      221,
+      650
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.99924,
+    "box": [
+      226,
+      626,
+      240,
+      645
+    ]
+  },
+  {
+    "text": "Score",
+    "confidence": 0.99995,
+    "box": [
+      424,
+      628,
+      487,
+      652
+    ]
+  },
+  {
+    "text": "Reward",
+    "confidence": 0.99997,
+    "box": [
+      558,
+      632,
+      628,
+      651
+    ]
+  },
+  {
+    "text": "Progress Status",
+    "confidence": 0.98783,
+    "box": [
+      745,
+      620,
+      888,
+      644
+    ]
+  },
+  {
+    "text": "Mock Battle",
+    "confidence": 0.99208,
+    "box": [
+      898,
+      618,
+      1014,
+      639
+    ]
+  },
+  {
+    "text": "Forfeit",
+    "confidence": 0.99999,
+    "box": [
+      1123,
+      635,
+      1208,
+      664
+    ]
+  },
+  {
+    "text": "Sheet",
+    "confidence": 0.99996,
+    "box": [
+      424,
+      650,
+      488,
+      673
+    ]
+  },
+  {
+    "text": "Information",
+    "confidence": 0.99996,
+    "box": [
+      537,
+      649,
+      647,
+      670
+    ]
+  },
+  {
+    "text": "Current Score 30,176",
+    "confidence": 0.99887,
+    "box": [
+      42,
+      659,
+      250,
+      682
+    ]
+  }
+]

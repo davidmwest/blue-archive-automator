@@ -157,7 +157,7 @@ class AssaultAssistantMixin:
         while self.clock() < end:
             frame = self.assistant_frame()
             if (frame.screen.kind == kind and predicate(frame.screen)
-                    and frame.capture.deadline - self.clock() >= 1):
+                    and frame.capture.deadline - self.clock() >= 2):
                 return frame
             self.sleep(.7)
         self.fail('Assistant selection is unreadable; choose a lower difficulty or complete Total Assault manually')

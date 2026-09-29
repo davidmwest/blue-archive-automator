@@ -1,0 +1,292 @@
+[
+  {
+    "text": "Joint Firing Drill",
+    "confidence": 0.9877,
+    "box": [
+      100,
+      7,
+      315,
+      44
+    ]
+  },
+  {
+    "text": "Using an Assistant",
+    "confidence": 0.99986,
+    "box": [
+      492,
+      139,
+      792,
+      186
+    ]
+  },
+  {
+    "text": "Unit 1",
+    "confidence": 0.97652,
+    "box": [
+      28,
+      172,
+      108,
+      204
+    ]
+  },
+  {
+    "text": "Quick Formation",
+    "confidence": 0.9956,
+    "box": [
+      1147,
+      216,
+      1257,
+      233
+    ]
+  },
+  {
+    "text": "Would you like to borrow an assistant?",
+    "confidence": 0.98861,
+    "box": [
+      406,
+      235,
+      873,
+      272
+    ]
+  },
+  {
+    "text": "Unit 2",
+    "confidence": 0.95372,
+    "box": [
+      27,
+      252,
+      108,
+      282
+    ]
+  },
+  {
+    "text": "Starting Skill",
+    "confidence": 0.99611,
+    "box": [
+      1143,
+      314,
+      1259,
+      338
+    ]
+  },
+  {
+    "text": "Unit 3",
+    "confidence": 0.95413,
+    "box": [
+      27,
+      331,
+      108,
+      361
+    ]
+  },
+  {
+    "text": "Unit 4",
+    "confidence": 0.98175,
+    "box": [
+      27,
+      409,
+      109,
+      439
+    ]
+  },
+  {
+    "text": "40,000",
+    "confidence": 0.99998,
+    "box": [
+      609,
+      410,
+      693,
+      440
+    ]
+  },
+  {
+    "text": "Unit Info",
+    "confidence": 0.98996,
+    "box": [
+      1160,
+      415,
+      1242,
+      436
+    ]
+  },
+  {
+    "text": "BXX",
+    "confidence": 0.70881,
+    "box": [
+      950,
+      448,
+      978,
+      486
+    ]
+  },
+  {
+    "text": "BN",
+    "confidence": 0.6728,
+    "box": [
+      1002,
+      449,
+      1027,
+      484
+    ]
+  },
+  {
+    "text": "BACK",
+    "confidence": 0.99997,
+    "box": [
+      246,
+      495,
+      290,
+      515
+    ]
+  },
+  {
+    "text": "Cancel",
+    "confidence": 0.99998,
+    "box": [
+      464,
+      492,
+      563,
+      525
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99996,
+    "box": [
+      708,
+      492,
+      827,
+      525
+    ]
+  },
+  {
+    "text": "NT",
+    "confidence": 0.93893,
+    "box": [
+      939,
+      493,
+      968,
+      516
+    ]
+  },
+  {
+    "text": "Presets",
+    "confidence": 0.99996,
+    "box": [
+      1166,
+      517,
+      1236,
+      537
+    ]
+  },
+  {
+    "text": "Hina (Dr",
+    "confidence": 0.97845,
+    "box": [
+      264,
+      529,
+      340,
+      555
+    ]
+  },
+  {
+    "text": "Marina",
+    "confidence": 0.99984,
+    "box": [
+      959,
+      531,
+      1026,
+      553
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.99936,
+    "box": [
+      209,
+      547,
+      256,
+      567
+    ]
+  },
+  {
+    "text": "STRIKER",
+    "confidence": 0.9996,
+    "box": [
+      29,
+      558,
+      150,
+      582
+    ]
+  },
+  {
+    "text": "Mobilize",
+    "confidence": 0.99998,
+    "box": [
+      1115,
+      641,
+      1240,
+      674
+    ]
+  },
+  {
+    "text": "Hare",
+    "confidence": 0.99939,
+    "box": [
+      498,
+      664,
+      546,
+      685
+    ]
+  },
+  {
+    "text": "Utaha",
+    "confidence": 0.99874,
+    "box": [
+      842,
+      663,
+      900,
+      685
+    ]
+  },
+  {
+    "text": "Lv.79",
+    "confidence": 0.99965,
+    "box": [
+      411,
+      678,
+      458,
+      698
+    ]
+  },
+  {
+    "text": "Lv.76",
+    "confidence": 0.99795,
+    "box": [
+      760,
+      677,
+      808,
+      699
+    ]
+  },
+  {
+    "text": "Lv.90",
+    "confidence": 0.89908,
+    "box": [
+      595,
+      304,
+      647,
+      336
+    ]
+  },
+  {
+    "text": "5",
+    "confidence": 1.0,
+    "box": [
+      590,
+      371,
+      613,
+      395
+    ]
+  }
+]

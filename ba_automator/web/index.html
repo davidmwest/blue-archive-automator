@@ -180,6 +180,17 @@
           <label class="lesson-setting" for="lessons-max-tickets">tickets per run<input id="lessons-max-tickets" name="lessons_max_tickets" type="number" min="0" max="99" step="1" required><small>0 means all the tickets you already have. no ticket purchases.</small></label>
           <label class="lesson-setting" for="lessons-locations">only these locations<textarea id="lessons-locations" name="lessons_locations" rows="3" maxlength="5049" placeholder="leave empty to check them all" autocomplete="off"></textarea><small>optional. one exact English location name per line. unknown names stop the job so a typo can’t spend tickets somewhere else.</small></label>
         </div>
+        <div class="lessons-settings"><p class="section-kicker">JOINT FIRING DRILL</p>
+          <label class="download-setting"><span><strong>include joint firing drill in daily</strong><small>three prepared teams. mock-test before spending a ticket.</small></span><span class="toggle-row"><input id="drill-enabled-in-daily" name="drill_enabled_in_daily" type="checkbox"><span class="switch" aria-hidden="true"></span><span class="sr-only">Include Joint Firing Drill in daily</span></span></label>
+          <label class="lesson-setting">what should we do?<select id="drill-policy" name="drill_policy"><option value="inspect">check tickets only</option><option value="sweep">sweep an existing daily clear</option><option value="clear_and_sweep">mock, clear, then sweep</option></select></label>
+          <label class="lesson-setting">unit 1 stage<input id="drill-stage-1" name="drill_stage_1" type="number" min="1" max="4" required></label>
+          <label class="lesson-setting">unit 2 stage<input id="drill-stage-2" name="drill_stage_2" type="number" min="1" max="4" required></label>
+          <label class="lesson-setting">unit 3 stage<input id="drill-stage-3" name="drill_stage_3" type="number" min="1" max="4" required></label>
+          <label class="lesson-setting">tickets to keep<input id="drill-preserve-tickets" name="drill_preserve_tickets" type="number" min="0" max="99" required></label>
+          <label class="lesson-setting">seconds to spare in practice<input id="drill-comfort-seconds" name="drill_comfort_seconds" type="number" min="0" max="180" required></label>
+          <label class="lesson-setting">assistant credit limit (0 means no borrowing)<input id="drill-assistant-max-credits" name="drill_assistant_max_credits" type="number" min="0" max="40000" required></label>
+          <p class="microcopy">prepare three complete teams in the game first. one assistant across all three rounds. changing the lineup requires another mock.</p>
+        </div>
         <div class="lessons-settings"><p class="section-kicker">TOTAL ASSAULT</p>
           <label class="download-setting"><span><strong>use total assault tickets in daily</strong><small>check every game day, whatever color the dot is. mock-test the team, clear it for real, then sweep the remaining tickets. off by default.</small></span><span class="toggle-row"><input id="total-assault-enabled-in-daily" name="total_assault_enabled_in_daily" type="checkbox"><span class="switch" aria-hidden="true"></span><span class="sr-only">Include Total Assault in daily</span></span></label>
           <p id="total-assault-schedule-status" class="microcopy" role="status">loading raid schedule…</p>
