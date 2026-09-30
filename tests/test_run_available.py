@@ -50,6 +50,48 @@ def test_paused_idle_click_scans_now_with_timers_disabled_and_coalesces(controll
     assert len(factory.processes) == 1
 
 
+def test_dismiss_all_and_restart_preserves_history_holds_and_serial_work(controlled):
+    controller, factory = controlled
+    configure(controller)
+    controller.enqueue("restart")
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    controller.pause()
+    held = packs_state.read_state(controller.config)
+    held["blocked_reason"] = "Payment needs attention"
+    packs_state.write_state(controller.config, held)
+    with controller._condition:
+        controller._failures = [dict(id=letter * 32, task="cafe", time=NOW.isoformat(),
+                                    detail="test failure") for letter in ("a", "b")]
+        controller._save_failures()
+        history = list(controller._history)
+        result = controller.dismiss_failures_and_restart()
+        assert result["dismissed"] == 2 and result["pending"]
+        assert not result["queue_paused"]
+        assert controller._failures == []
+        assert json.loads(controller._failures_path().read_text()) == []
+        assert list(controller._history) == history
+        assert controller.dismiss_failures_and_restart()["dismissed"] == 0
+    assert packs_state.read_state(controller.config) == held
+    assert len(factory.processes) == 1
+    assert factory.processes[0].signals == []
+    factory.processes[0].finish()
+    eventually(lambda: len(factory.processes) == 2)
+    assert factory.processes[1].arguments[-1] == "red_dots"
+    factory.processes[1].finish()
+    eventually(lambda: not controller.status()["run_available_active"])
+    assert factory.max_active == 1
+
+
+def test_dismiss_all_restart_endpoint_requires_csrf(http_server):
+    request, controller, _, _ = http_server
+    path = "/api/dismiss-failures-and-restart"
+    assert request("POST", path, {})[0] == 403
+    headers = {"X-CSRF-Token": controller.csrf_token}
+    assert request("POST", path, {"unexpected": True}, headers)[0] == 400
+    assert request("POST", path, {}, headers)[0] == 200
+
+
 def test_active_job_and_queued_work_finish_before_one_catchup_scan(controlled):
     controller, factory = controlled
     configure(controller)

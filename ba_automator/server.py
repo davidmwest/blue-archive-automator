@@ -923,6 +923,18 @@ class DashboardController:
                     "pending": self._run_available_pending, "active": self._run_available_active,
                     "queue_paused": self._paused}
 
+    def dismiss_failures_and_restart(self) -> dict:
+        """Acknowledge current notices and request the ordinary serial catch-up."""
+        with self._condition:
+            if self._shutdown:
+                raise ApiError(409, "The server is shutting down")
+            identifiers = [item["id"] for item in self._failures]
+            for identifier in identifiers:
+                self.dismiss_failure(identifier)
+            result = self.run_available()
+            self._daily("failures_dismissed_and_restart_requested", dismissed=len(identifiers))
+            return {**result, "dismissed": len(identifiers)}
+
     def cancel(self, job_id: str) -> None:
         with self._condition:
             if self._current and self._current["id"] == job_id:
@@ -2063,7 +2075,8 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     raise ApiError(400, "Mutation requests do not accept query parameters")
                 body = self._body()
                 expected = {"/api/run": {"task"}, "/api/cancel": {"id"}, "/api/pause": set(),
-                            "/api/run-available": set(), "/api/event-choice": {"clear"},
+                            "/api/run-available": set(), "/api/dismiss-failures-and-restart": set(),
+                            "/api/event-choice": {"clear"},
                             "/api/dismiss-failure": {"id"}, "/api/clear-loot": set(),
                             "/api/resume": set(), "/api/stop": set(), "/api/capture": set(),
                             "/api/settings": SETTINGS}
@@ -2078,6 +2091,8 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     result = controller.event_choice(body.get("clear"))
                 elif target.path == "/api/run-available":
                     result = controller.run_available()
+                elif target.path == "/api/dismiss-failures-and-restart":
+                    result = controller.dismiss_failures_and_restart()
                 elif target.path == "/api/cancel":
                     if not isinstance(body.get("id"), str):
                         raise ApiError(400, "A queued job id is required")

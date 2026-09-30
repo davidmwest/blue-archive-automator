@@ -204,6 +204,7 @@
       || (Boolean(status.run_available_pending || status.run_available_active) && !paused);
     $("run-restart").disabled = unavailable;
     $("clear-loot").disabled = unavailable;
+    $("dismiss-failures-and-restart").disabled = unavailable || !(status?.failed_jobs || []).length;
     $("run-daily").disabled = unavailable;
     $("run-cafe").disabled = unavailable;
     $("run-club").disabled = unavailable;
@@ -929,6 +930,7 @@
   }
 
   $("run-available").addEventListener("click", () => void post("/api/run-available", {}, "checking what’s ready. everything runs in order."));
+  $("dismiss-failures-and-restart").addEventListener("click", () => void post("/api/dismiss-failures-and-restart", {}, "errors dismissed. checking what’s ready and getting things moving again."));
   $("run-restart").addEventListener("click", () => void post("/api/run", { task: "restart" }, "restart’s in the queue."));
   $("run-daily").addEventListener("click", () => void post("/api/run", { task: "daily" }, "daily’s in the queue."));
   $("run-club").addEventListener("click", () => void post("/api/run", { task: "club" }, "club check-in is in the queue."));
