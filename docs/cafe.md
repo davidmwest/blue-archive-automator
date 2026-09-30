@@ -87,6 +87,11 @@ On September 25, the blank-name path selected **Aris (Maid), relationship rank 2
 
 The paid Bonus Invitation route is not used. The game's current cooldown is authoritative; a locally elapsed timer does not authorize another invitation. Nexon's [Cafe guide](https://forum.nexon.com/bluearchive-en/board_view?board=3222&thread=2523171) documents the **20-hour free-invitation cooldown** and **three-hour student interaction interval**.
 
+If the selected student is visiting the neighboring Cafe, the recognized
+"Invite Neighboring Student" warning is canceled. The visit logs the skipped
+invitation and continues, leaving the student in place and preserving the invite.
+Unknown replacement or purchase dialogs still stop for review.
+
 ## Schedule and controls
 
 Enable scheduling in the dashboard or set `schedule_enabled = true`. Scheduling remains inactive unless `serve` is running. It is independent of whether free invitations are enabled.

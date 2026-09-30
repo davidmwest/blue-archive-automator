@@ -934,3 +934,18 @@ def test_wait_cafe_reports_unexpected_home_with_stable_evidence(cafe, monkeypatc
         cafe.runner.wait_cafe(timeout=3)
     assert cafe.device.taps == []
     assert (cafe.runner.run_dir / 'cafe-wait-failed.png').exists()
+
+
+def test_neighboring_student_warning_cancels_without_spending_invitation(cafe):
+    cafe.runner.config = replace(cafe.config, cafe_invite_enabled=True,
+                                 cafe_invite_student="Aris (Maid)")
+    records = json.loads((Path(__file__).parent / 'fixtures' /
+                          'cafe-neighbor-invitation-words.json').read_text())
+    dialog = [Word(item['text'], item['confidence'], tuple(item['box'])) for item in records]
+    cafe.script([], invite_list_words('Aris (Maid)'), dialog,
+                invite_list_words('Aris (Maid)'), [])
+    assert cafe.runner.invite() is False
+    assert cafe.device.taps == [(883, 652), (787, 222), (513, 504), (837, 95)]
+    actions = action_records(cafe.config)
+    assert [item['action'] for item in actions] == ['invitation_skipped']
+    assert actions[0]['student'] == 'Aris (Maid)'

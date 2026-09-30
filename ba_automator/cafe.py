@@ -118,6 +118,17 @@ def invitation_cooldown_notice(words):
     return "you can send an invite after the cooldown is over" in text_of(invitation_panel(words))
 
 
+def neighboring_invitation_cancel(words):
+    """Recognize the transfer warning so an optional invite can be skipped."""
+    panel = invitation_panel(words)
+    text = text_of(panel)
+    if ("invite neighboring student" not in text
+            or "empty spot in that cafe" not in text
+            or "proceed" not in text):
+        return None
+    return find_button(panel, {"cancel"}, bounds=(440, 440, 620, 560))
+
+
 def invitation_rows(words):
     """Join wrapped identities against their own OCR-visible row Invite control.
 
@@ -794,6 +805,14 @@ class CafeRunner:
         end = self.clock() + 20
         while self.clock() < end:
             cap = self.capture(ocr=True)
+            cancel = neighboring_invitation_cancel(cap[3])
+            if cancel is not None:
+                self.tap(cap, cancel, "Keep the student in their current Cafe")
+                record_action(self.config, "invitation_skipped",
+                              "Student is visiting the neighboring Cafe; kept them in place.",
+                              student=name, cafe=self.floor)
+                restore_cafe(False)
+                return False
             check_dialog(cap)
             if invitation_cooldown_notice(cap[3]):
                 dismiss_cooldown(cap)

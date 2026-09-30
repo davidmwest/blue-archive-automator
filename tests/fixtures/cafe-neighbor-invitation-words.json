@@ -1,0 +1,82 @@
+[
+  {
+    "text": "Invite Neighboring Student",
+    "confidence": 0.99924,
+    "box": [
+      487,
+      155,
+      790,
+      185
+    ]
+  },
+  {
+    "text": "Invite a student visiting the Neighboring",
+    "confidence": 0.98815,
+    "box": [
+      395,
+      233,
+      880,
+      271
+    ]
+  },
+  {
+    "text": "Cafe.",
+    "confidence": 0.99997,
+    "box": [
+      604,
+      267,
+      673,
+      301
+    ]
+  },
+  {
+    "text": "If you invite a student, there will be an",
+    "confidence": 0.99737,
+    "box": [
+      410,
+      335,
+      867,
+      371
+    ]
+  },
+  {
+    "text": "empty spot in that cafe.",
+    "confidence": 0.99743,
+    "box": [
+      495,
+      369,
+      782,
+      406
+    ]
+  },
+  {
+    "text": "Proceed?",
+    "confidence": 0.99994,
+    "box": [
+      581,
+      405,
+      696,
+      433
+    ]
+  },
+  {
+    "text": "Cancel",
+    "confidence": 0.99999,
+    "box": [
+      463,
+      487,
+      563,
+      522
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99996,
+    "box": [
+      703,
+      487,
+      827,
+      521
+    ]
+  }
+]

@@ -938,3 +938,8 @@ modal at native 1440p with the top account balances masked. The portrait backgro
 breaks the full star-badge template, exercising two agreeing close-up rarity
 reads before confirming the exact qualified assistant and 40,000-credit fee.
 This game-derived image remains outside the project's MIT grant.
+
+`cafe-neighbor-invitation-words.json` contains only OCR text and coordinates
+from the September 29 neighboring-Cafe transfer warning. It excludes account
+balances and the background student list. The regression verifies cancellation
+and continuation without confirming a transfer or spending an invitation.
