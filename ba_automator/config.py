@@ -45,9 +45,13 @@ class Config:
     packs_monthly_enabled: bool = False
     packs_half_monthly_enabled: bool = False
     packs_ap_enabled: bool = False
+    packs_weekly_ap_iv_enabled: bool = False
+    packs_weekly_reports_lite_enabled: bool = False
     packs_monthly_max_cents: int = 699
     packs_half_monthly_max_cents: int = 299
     packs_ap_max_cents: int = 299
+    packs_weekly_ap_iv_max_cents: int = 199
+    packs_weekly_reports_lite_max_cents: int = 299
     bounties_enabled_in_daily: bool = True
     scrimmages_enabled_in_daily: bool = True
     tactical_battles_enabled_in_daily: bool = True
@@ -124,7 +128,7 @@ class Config:
                      "lessons_enabled_in_daily", "bounties_enabled_in_daily", "scrimmages_enabled_in_daily",
                      "drill_enabled_in_daily", "total_assault_enabled_in_daily", "tactical_battles_enabled_in_daily",
                      "tactical_battles_skip_battles", "crafting_schedule_enabled",
-                     "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled",
+                     "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "packs_weekly_ap_iv_enabled", "packs_weekly_reports_lite_enabled",
                      "ap_schedule_enabled", "ap_event_priority", "ap_hard_default_order"):
             if type(getattr(self, name)) is not bool:
                 raise ConfigError(f"{name} must be true or false")
@@ -134,7 +138,7 @@ class Config:
         if (type(self.checkin_interval_minutes) is not int
                 or not 5 <= self.checkin_interval_minutes <= 1440):
             raise ConfigError("checkin.interval_minutes must be an integer from 5 to 1440")
-        for name in ('packs_monthly_max_cents', 'packs_half_monthly_max_cents', 'packs_ap_max_cents'):
+        for name in ('packs_monthly_max_cents', 'packs_half_monthly_max_cents', 'packs_ap_max_cents', 'packs_weekly_ap_iv_max_cents', 'packs_weekly_reports_lite_max_cents'):
             if type(getattr(self, name)) is not int or not 1 <= getattr(self, name) <= 10000:
                 raise ConfigError(f'{name} must be an integer from 1 to 10000 USD cents')
         from .ap_policy import STRATEGIES, stage_key
@@ -226,8 +230,8 @@ class Config:
             "cafe": {"schedule_enabled", "invite_enabled", "invite_student"},
             "crafting": {"schedule_enabled"},
             "ap": {"schedule_enabled", "event_priority", "floor", "strategy", "hard_default_order", "hard_order"},
-            "packs": {"monthly_enabled", "half_monthly_enabled", "ap_enabled",
-                      "monthly_max_cents", "half_monthly_max_cents", "ap_max_cents"},
+            "packs": {"monthly_enabled", "half_monthly_enabled", "ap_enabled", "weekly_ap_iv_enabled", "weekly_reports_lite_enabled",
+                      "monthly_max_cents", "half_monthly_max_cents", "ap_max_cents", "weekly_ap_iv_max_cents", "weekly_reports_lite_max_cents"},
             "bounties": {"enabled_in_daily"},
             "scrimmages": {"enabled_in_daily"},
             "tactical_battles": {"enabled_in_daily", "skip_battles", "preserve_tickets", "search_minutes", "refresh_limit", "confidence_percent"},

@@ -1,5 +1,5 @@
 """English pack checkout and mailbox recognition, using local OCR only."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import re
 import unicodedata
 
@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 from .crafting_vision import bright, cyan, yellow, has as _has, within, number
-from .packs_state import PACKS
+from .packs_state import PACKS, PERMANENT_PACKS, WEEKLY_PACKS
 from .vision import read_game_words, VisionError, classify, decode_frame
 from .home_badges import badges
 
@@ -64,6 +64,54 @@ def receipt_items(words):
     return tuple(items)
 
 
+def weekly_cards(frame, words):
+    """Read fully visible named cards, including scrolled and sold-out cards."""
+    cards = {}
+    for left in (257, 514, 772):
+        column = sorted(within(words, (left, 214, left + 251, 620)),
+                        key=lambda w: (w.box[1], w.box[0]))
+        for i, word in enumerate(column):
+            if not word.text.startswith('Weekly'):
+                continue
+            title = word.text
+            key = next((k for k in WEEKLY_PACKS if PACKS[k][0] == title), None)
+            if key is None and i + 1 < len(column):
+                following = column[i + 1]
+                if following.box[1] - word.box[1] < 32:
+                    title += ' ' + following.text
+                    key = next((k for k in WEEKLY_PACKS if PACKS[k][0] == title), None)
+            if key is None:
+                continue
+            buttons = [w for w in column if w.text == 'Purchase'
+                       and word.center[1] + 150 < w.center[1] < word.center[1] + 310]
+            if len(buttons) != 1:
+                continue
+            y = buttons[0].center[1]
+            cents = price(words, (left + 30, y - 52, left + 220, y - 12))
+            if cents is None:
+                continue
+            status = text_in(words, (left, y - 116, left + 251, y - 34)).lower()
+            active = re.search(r'(\d+) day\(s\) until subscription expires', status)
+            stock = re.search(r'can purchase (\d+) time\(s\) a week', status)
+            state, days = 'unknown', None
+            if active:
+                state, days = 'active', int(active[1])
+            elif 'check your' in status and 'mailbox' in status:
+                state = 'mail'
+            elif stock:
+                state = 'available' if int(stock[1]) > 0 else 'unavailable'
+            elif key == 'weekly_ap_iv' and not text_in(words, (left, y-85, left+251, y-54)):
+                # A missing OCR status must not hide a dark ownership stripe.
+                stripe = frame[y-83:y-55, left+2:left+245]
+                if float((stripe.max(axis=2) < 180).mean()) < .025:
+                    state = 'available'
+            if state == 'available' and not cyan(frame, (left+50, y-5, left+200, y+18)):
+                state = 'unknown'
+            cards[key] = {'state': state, 'days': days, 'cents': cents,
+                          'target': (left + 128, y)}
+    return cards
+
+
 def classify_shop(frame, words, *, home=False, billing=False):
     height, width = frame.shape[:2]
     if billing:
@@ -78,11 +126,16 @@ def classify_shop(frame, words, *, home=False, billing=False):
                 and has(words, 'turn on backup payment methods?', (20, 590, 700, 740))):
             return ShopScreen('backup_prompt', target=(668, 280), size=size)
         names = {key: title for key, (title, _) in PACKS.items()}
-        found = [key for key, title in names.items()
-                 if has(words, title.lower(), (110, 430, 580, 550))]
+        # Play uses this shorter product label for the Lite offer. The caller
+        # still requires the full in-game identity and matching price first.
+        names['weekly_reports_lite'] = 'Weekly Activity Report'
+        product = ' '.join(' '.join(w.text.strip() for w in sorted(
+            within(words, (110, 430, 570, 550)), key=lambda w: w.box[0])).split())
+        found = [key for key, title in names.items() if product == title]
         cents = price(words, (570, 430, 710, 570), play=True)
         if (len(found) == 1 and cents is not None
-                and has(words, 'google play', (15, 310, 350, 430))
+                and (has(words, 'google play', (15, 310, 350, 430))
+                     or has(words, 'googleplay', (15, 310, 350, 430)))
                 and has(words, 'blue archive', (110, 530, 480, 610))
                 and has(words, '1 tap buy', (110, 1150, 610, 1270))):
             return ShopScreen('checkout', (360, 1215), found[0], cents, size=size)
@@ -124,7 +177,7 @@ def classify_shop(frame, words, *, home=False, billing=False):
             and has(words, 'pyroxenes', (520, 150, 760, 210))
             and bright(frame, (420, 90, 500, 130))):
         cards = {}
-        for key, left in zip(PACKS, (257, 514, 772)):
+        for key, left in zip(PERMANENT_PACKS, (257, 514, 772)):
             title = text_in(words, (left, 215, left + 251, 276))
             if title != PACKS[key][0]:
                 continue
@@ -148,6 +201,7 @@ def classify_shop(frame, words, *, home=False, billing=False):
             if (cents is not None and has(words, 'purchase', (left + 35, 480, left + 225, 530))
                     and cyan(frame, (left + 50, 485, left + 200, 520))):
                 cards[key] = {'state': state, 'days': days, 'cents': cents, 'target': (left + 128, 500)}
+        cards.update(weekly_cards(frame, words))
         return ShopScreen('store', cards=cards, target=(640, 180))
     if (has(words, 'mailbox', (80, 0, 240, 50))
             and bright(frame, (250, 7, 350, 30))):
@@ -182,7 +236,22 @@ class ShopVision:
                 raise VisionError('Invalid shop screenshot')
         else:
             frame = decode_frame(png)
+        native_size = (frame.shape[1], frame.shape[0])
+        if billing and native_size == (1440, 2560):
+            frame = cv2.resize(frame, (720, 1280), interpolation=cv2.INTER_AREA)
         words = self.startup.read(frame) if billing else read_game_words(png, self.startup)
+        if billing and any(w.box[0] < 570 < w.box[2] and 430 < w.center[1] < 540 for w in words):
+            # OCR can join the long product label and adjacent price. Read
+            # those fields separately, without accepting partial title matches.
+            words = [w for w in words if not 430 < w.center[1] < 540]
+            for x1, y1, x2, y2 in ((110, 430, 570, 543), (570, 430, 710, 543)):
+                for word in self.startup.read(frame[y1:y2, x1:x2]):
+                    a, b, c, d = word.box
+                    words.append(replace(word, box=(a+x1, b+y1, c+x1, d+y1)))
         home = (not billing and frame.shape[:2] == (720, 1280)
                 and classify(words, self.startup.matches(frame)).state == 'home')
-        return classify_shop(frame, words, home=home, billing=billing)
+        screen = classify_shop(frame, words, home=home, billing=billing)
+        if billing and native_size == (1440, 2560):
+            target = tuple(2 * n for n in screen.target) if screen.target else None
+            return replace(screen, target=target, size=native_size)
+        return screen

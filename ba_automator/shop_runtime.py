@@ -44,25 +44,38 @@ class ShopRunner:
 
     def capture(self):
         self.budget()
-        package = self.device.foreground_package()
-        # Android can briefly report no focused window during a transition.
-        # Wait without sending input, but never treat another app as the game.
-        for attempt in range(3):
-            if package is not None:
-                break
-            self.journal.record('foreground_pending', task=self.task, attempt=attempt + 1)
-            self.sleep(.5)
+        allowed = {self.config.package}
+        if self.allows_billing:
+            allowed.add(BILLING_PACKAGE)
+        for transition in range(4):
             package = self.device.foreground_package()
-        if package != self.config.package and not (self.allows_billing and package == BILLING_PACKAGE):
-            self.journal.record('foreground_mismatch', task=self.task,
-                                expected=self.config.package, observed=package)
-            self.fail(f'Unexpected foreground during {self.task}: '
-                      f'{package or "no focused app"}; no input sent. '
-                      'Return to Blue Archive and retry')
-        at = self.clock()
-        png = self.device.screenshot()
-        if self.device.foreground_package() != package:
-            self.fail('Foreground changed while reading the screen; no input sent')
+            # Android can briefly report no focused window during a transition.
+            for attempt in range(3):
+                if package is not None:
+                    break
+                self.journal.record('foreground_pending', task=self.task, attempt=attempt + 1)
+                self.sleep(.5)
+                package = self.device.foreground_package()
+            if package not in allowed:
+                self.journal.record('foreground_mismatch', task=self.task,
+                                    expected=self.config.package, observed=package)
+                self.fail(f'Unexpected foreground during {self.task}: '
+                          f'{package or "no focused app"}; no input sent. '
+                          'Return to Blue Archive and retry')
+            at = self.clock()
+            png = self.device.screenshot()
+            observed = self.device.foreground_package()
+            if observed == package:
+                break
+            # Discard this frame: it could contain checkout details even when
+            # capture started in the game. Never save or act on mixed frames.
+            if observed is not None and observed not in allowed:
+                self.fail('Foreground changed while reading the screen; no input sent')
+            self.journal.record('foreground_transition', task=self.task,
+                                before=package, after=observed, attempt=transition + 1)
+            self.sleep(.5)
+        else:
+            self.fail('Foreground did not settle while reading the screen; no input sent')
         billing = package == BILLING_PACKAGE
         # Play screens can contain payment/account details. Never save them to
         # dashboard traces, OCR logs, receipts, or important actions.
@@ -71,14 +84,15 @@ class ShopRunner:
         screen = self.vision.analyze(png, billing=billing)
         return ShopFrame(Capture(png, at, package), screen)
 
-    def wait(self, kinds, *, timeout=40, predicate=lambda screen: True):
+    def wait(self, kinds, *, timeout=40, predicate=lambda screen: True, billing_grace=0):
         kinds = {kinds} if isinstance(kinds, str) else kinds
         end = self.clock() + timeout
+        billing_settle_until = self.clock() + billing_grace
         while self.clock() < end:
             frame = self.capture()
             if frame.screen.kind in kinds and predicate(frame.screen) and frame.capture.deadline - self.clock() >= 1:
                 return frame
-            if frame.screen.kind == 'billing_attention':
+            if frame.screen.kind == 'billing_attention' and self.clock() >= billing_settle_until:
                 self.fail('Google Play needs attention. Set up payment in this emulator and complete any verification manually')
             self.sleep(.7)
         self.fail(f'{self.task} did not reach {", ".join(sorted(kinds))}; inspect the local trace')

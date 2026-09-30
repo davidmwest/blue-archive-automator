@@ -69,7 +69,7 @@ tactical challenge gives each usable ticket its own 10-minute search window by d
 
 use the global English game in a dedicated BlueStacks instance. **2560×1440 landscape, 640 DPI** is the recommended setup; exact 16:9 resolutions from 1280×720 through 3840×2160 are supported. screenshots and text OCR use the native pixels. templates and coordinates keep their 1280×720 reference, and taps scale to the actual screen. sharper text and receipts cost more rendering, OCR time, and storage. 1440p has live startup, red-dot, two-floor Cafe, and Total Assault sweep evidence; 1080p and 2160p have offline coverage only. [validation details →](docs/engineering.md#evidence-and-its-limits)
 
-sign in manually once. Blue Archive and Azur Lane get different ADB endpoints; they can share a compatible host ADB server. paid Google Play checkout still requires its separately validated 720×1280 portrait layout. [setup and commands →](docs/getting-started.md)
+sign in manually once. Blue Archive and Azur Lane get different ADB endpoints; they can share a compatible host ADB server. paid Google Play checkout requires its separately validated 720×1280 or 1440×2560 portrait layout. [setup and commands →](docs/getting-started.md)
 
 ## why it's built this way
 

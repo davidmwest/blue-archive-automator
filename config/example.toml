@@ -87,6 +87,10 @@ ap_enabled = false
 monthly_max_cents = 699
 half_monthly_max_cents = 299
 ap_max_cents = 299
+weekly_ap_iv_enabled = false
+weekly_ap_iv_max_cents = 199
+weekly_reports_lite_enabled = false
+weekly_reports_lite_max_cents = 299
 
 [ap]
 # Spend existing AP only; never buys refills or Hard attempt resets.

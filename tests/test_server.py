@@ -1412,15 +1412,16 @@ def test_pack_schedule_uses_saved_reset_and_never_dispatches_a_blocked_purchase(
         controller._paused = True
 
 
-def test_pack_settings_roundtrip_and_defaults_are_off(controlled):
+@pytest.mark.parametrize(('pack','cents'), [('ap',299),('weekly_ap_iv',199),('weekly_reports_lite',299)])
+def test_pack_settings_roundtrip_and_defaults_are_off(controlled,pack,cents):
     controller, _ = controlled
     assert not controller.status()['schedule']['packs']['enabled']
     assert all(controller.status()['config'][f'packs_{key}_enabled'] is False
-               for key in ('monthly', 'half_monthly', 'ap'))
+               for key in ('monthly', 'half_monthly', 'ap', 'weekly_ap_iv', 'weekly_reports_lite'))
     controller.pause()
-    controller.update_settings({'packs_ap_enabled': True, 'packs_ap_max_cents': 299})
+    controller.update_settings({f'packs_{pack}_enabled': True, f'packs_{pack}_max_cents': cents})
     loaded = Config.from_file(controller.config_path)
-    assert loaded.packs_ap_enabled and loaded.packs_ap_max_cents == 299
+    assert getattr(loaded,f'packs_{pack}_enabled') and getattr(loaded,f'packs_{pack}_max_cents') == cents
 
 
 def test_only_explicit_pack_job_can_retry_a_payment_hold(controlled):

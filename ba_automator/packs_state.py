@@ -10,8 +10,13 @@ PACKS = {
     'monthly': ('Monthly Pyroxene Pack', 699),
     'half_monthly': ('Half Monthly Pyroxene Pack', 299),
     'ap': ('2-Week AP Pack', 299),
+    'weekly_ap_iv': ('Weekly AP Pack IV', 199),
+    'weekly_reports_lite': ('Weekly Activity Report Pack (Lite)', 299),
 }
 
+
+PERMANENT_PACKS = ('monthly', 'half_monthly', 'ap')
+WEEKLY_PACKS = ('weekly_ap_iv', 'weekly_reports_lite')
 
 def enabled(config):
     return tuple(key for key in PACKS if getattr(config, f'packs_{key}_enabled'))

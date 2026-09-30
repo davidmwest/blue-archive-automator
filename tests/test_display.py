@@ -102,11 +102,11 @@ def test_bad_capture_clears_old_geometry():
     assert dev._frame_size is None
 
 
-def test_high_resolution_billing_is_not_silently_enabled():
+def test_unobserved_billing_resolution_is_not_silently_enabled():
     dev = device()
     with patch.object(dev, "_execute") as execute:
         with pytest.raises(DeviceError, match="Unsupported Google Play"):
-            dev.tap_billing(600, 1000, size=(1440, 2560), deadline=20)
+            dev.tap_billing(600, 1000, size=(1080, 1920), deadline=20)
         execute.assert_not_called()
 
 

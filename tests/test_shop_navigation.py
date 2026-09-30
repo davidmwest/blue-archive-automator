@@ -42,6 +42,31 @@ def navigation(tmp_path, monkeypatch):
     runner.journal.close()
 
 
+def test_post_charge_transition_waits_without_input(navigation):
+    h = navigation
+    h.screens[:] = ['billing_attention', 'billing_attention', 'delivered']
+    assert h.runner.wait('delivered', billing_grace=10).screen.kind == 'delivered'
+    assert h.taps == []
+
+
+def test_unresolved_checkout_still_stops_after_grace(navigation):
+    h = navigation
+    h.screens[:] = ['billing_attention']
+    with pytest.raises(TaskError, match='Google Play needs attention'):
+        h.runner.wait('delivered', billing_grace=10)
+    assert 10 <= h.now[0] < 11
+    assert h.taps == []
+
+
+def test_checkout_attention_without_grace_stops_immediately(navigation):
+    h = navigation
+    h.screens[:] = ['billing_attention']
+    with pytest.raises(TaskError, match='Google Play needs attention'):
+        h.runner.wait('checkout')
+    assert h.now[0] == 0
+    assert h.taps == []
+
+
 def test_campaign_immediate_success_does_not_wait_ten_seconds(navigation):
     h = navigation
     h.screens[:] = ['home', 'campaign']

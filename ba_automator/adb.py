@@ -218,7 +218,7 @@ class AdbDevice:
     def tap_billing(self, x: int, y: int, *, size: tuple[int, int], deadline: float,
                     monotonic=time.monotonic) -> bool:
         """Explicit Google Play input; ordinary game taps remain landscape-only."""
-        if (size != (720, 1280) or type(x) is not int or type(y) is not int
+        if (size not in {(720, 1280), (1440, 2560)} or type(x) is not int or type(y) is not int
                 or not 0 <= x < size[0] or not 0 <= y < size[1]):
             raise DeviceError('Unsupported Google Play checkout display or target')
         if self.foreground_package() != 'com.android.vending':

@@ -943,3 +943,18 @@ This game-derived image remains outside the project's MIT grant.
 from the September 29 neighboring-Cafe transfer warning. It excludes account
 balances and the background student list. The regression verifies cancellation
 and continuation without confirming a transfer or spending an invitation.
+
+`packs-weekly-packs.png`, `packs-weekly-ap.png`, and
+`packs-weekly-ap-confirm.png` are September 30, 2026 BlueStacks Air 1440p
+captures of the named weekly offers and AP purchase confirmation. Account
+identity, currencies, and the surrounding home screen are masked. They verify
+exact titles, USD prices, and weekly stock before permitting a purchase.
+`packs-weekly-ap-payment-sanitized.png` preserves only Google Play's product,
+price, app title, heading, and buy-button labels; account and payment details
+are removed. It tests the 720p recognition layout and its observed 1440p scale.
+These game/store-derived images remain outside the project's MIT grant.
+
+`packs-weekly-reports-payment-sanitized.png` preserves only the September 30
+Lite report checkout's product/price, app title, Google Play heading, and buy
+button. Account, payment, and Play Points details are removed. It covers the
+shorter Play product label and OCR joining the adjacent title and price.

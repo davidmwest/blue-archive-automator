@@ -88,12 +88,12 @@ def test_native_receipt_heading_handles_ocr_accent_without_relaxing_store_status
     assert store.cards['ap']['state'] == 'unknown'
 
 
-def test_larger_portrait_checkout_is_not_normalized_into_an_authorized_purchase(vision):
+def test_observed_double_resolution_checkout_uses_native_target(vision):
     frame = cv2.imread(str(FIXTURES / 'packs-payment-current.png'))
     native = cv2.imencode('.png', cv2.resize(frame, (1440, 2560)))[1].tobytes()
     screen = vision.analyze(native, billing=True)
-    assert screen.kind == 'billing_attention'
-    assert screen.size == (1440, 2560) and screen.target is None
+    assert screen.kind == 'checkout' and screen.pack == 'ap' and screen.cents == 299
+    assert screen.size == (1440, 2560) and screen.target == (720, 2430)
 
 @pytest.fixture
 def config(tmp_path):
@@ -228,7 +228,7 @@ def test_successful_checkout_sends_one_charge_and_confirms_ownership(runner):
     screens=iter([frame('purchase_confirm',(760,592)),frame('checkout',(360,1215),True),
                   frame('backup_prompt',(668,280),True),frame('delivered',(640,505))])
     runner.wait=lambda *args,**kwargs:next(screens)
-    runner.settle_store=lambda:pack_frame(runner.config,'mail')
+    runner.select_pack=lambda key:pack_frame(runner.config,'mail')
     inputs=[]
     runner.tap=lambda f,*args:inputs.append(f.screen.kind)
     result=runner.purchase(pack_frame(runner.config),'ap')
@@ -237,19 +237,22 @@ def test_successful_checkout_sends_one_charge_and_confirms_ownership(runner):
     assert read_state(runner.config)['pending'] is None
 
 
+@pytest.mark.parametrize('scale', [1, 2])
 @pytest.mark.parametrize('case', ['valid','expired','wrong_foreground','foreground_changed','rotation','bad_target'])
-def test_billing_input_checks_foreground_dimensions_and_deadline(config,monkeypatch,case):
+def test_billing_input_checks_foreground_dimensions_and_deadline(config,monkeypatch,case,scale):
     from ba_automator.adb import AdbDevice,DeviceError
     device=AdbDevice(config);inputs=[]
     foreground=iter(['com.android.vending',config.package] if case=='foreground_changed'
                     else [config.package if case=='wrong_foreground' else 'com.android.vending']*2)
     monkeypatch.setattr(device,'foreground_package',lambda:next(foreground))
     image='packs-current.png' if case=='rotation' else 'packs-payment-current.png'
-    monkeypatch.setattr(device,'screenshot',lambda:(FIXTURES/image).read_bytes())
+    frame = cv2.imread(str(FIXTURES/image))
+    frame = cv2.resize(frame, (frame.shape[1]*scale, frame.shape[0]*scale))
+    monkeypatch.setattr(device,'screenshot',lambda:cv2.imencode('.png',frame)[1].tobytes())
     monkeypatch.setattr(device,'_check_shared_server',lambda:None)
     monkeypatch.setattr(device,'_execute',lambda *args,**kwargs:inputs.append(args))
-    def tap():return device.tap_billing(900 if case=='bad_target' else 360,1215,
-                                       size=(720,1280),deadline=5,monotonic=lambda:6 if case=='expired' else 0)
+    def tap():return device.tap_billing((900 if case=='bad_target' else 360)*scale,1215*scale,
+                                       size=(720*scale,1280*scale),deadline=5,monotonic=lambda:6 if case=='expired' else 0)
     if case in {'valid','expired'}:assert tap() is (case=='valid')
     else:
         with pytest.raises(DeviceError):tap()
@@ -263,3 +266,126 @@ def test_billing_frames_never_enter_saved_trace(runner):
     runner.journal.screenshot=lambda *_:pytest.fail('payment screenshot must not be saved')
     assert runner.capture().screen.kind=='billing_attention'
     assert runner.last_frame is None
+
+@pytest.mark.parametrize(('name','key','cents'), [
+    ('weekly-packs', 'weekly_reports_lite', 299),
+    ('weekly-ap', 'weekly_ap_iv', 199),
+])
+def test_weekly_store_cards_have_exact_identity_and_price(vision, name, key, cents):
+    screen = vision.analyze((FIXTURES / f'packs-{name}.png').read_bytes())
+    assert screen.cards[key]['state'] == 'available'
+    assert screen.cards[key]['cents'] == cents
+    assert set(screen.cards) == {key}
+
+
+def test_weekly_ap_confirm_and_billing_match_exact_product(vision):
+    for name, billing in [('weekly-ap-confirm', False), ('weekly-ap-payment-sanitized', True)]:
+        screen = vision.analyze((FIXTURES / f'packs-{name}.png').read_bytes(), billing=billing)
+        assert screen.pack == 'weekly_ap_iv' and screen.cents == 199
+    image = cv2.imread(str(FIXTURES / 'packs-weekly-ap-payment-sanitized.png'))
+    words = vision.startup.read(image)
+    wrong = [replace(w, text=w.text.replace('Pack IV', 'Pack II')) for w in words]
+    assert classify_shop(image, wrong, billing=True).kind == 'billing_attention'
+
+
+def test_weekly_report_stock_is_required_and_zero_cannot_purchase(vision):
+    image = cv2.imread(str(FIXTURES / 'packs-weekly-packs.png'))
+    from ba_automator.vision import read_game_words, decode_frame
+    png = (FIXTURES / 'packs-weekly-packs.png').read_bytes()
+    words = read_game_words(png, vision.startup)
+    frame = decode_frame(png)
+    missing = [w for w in words if 'Can purchase' not in w.text]
+    assert classify_shop(frame, missing).cards['weekly_reports_lite']['state'] == 'unknown'
+    sold = [replace(w, text=w.text.replace('1 time(s)', '0 time(s)')) for w in words]
+    assert classify_shop(frame, sold).cards['weekly_reports_lite']['state'] == 'unavailable'
+
+
+@pytest.mark.parametrize('key', ['weekly_ap_iv', 'weekly_reports_lite'])
+def test_weekly_purchases_default_off_and_validate_limits(config, key):
+    assert not getattr(config, f'packs_{key}_enabled')
+    with pytest.raises(ConfigError):
+        replace(config, **{f'packs_{key}_max_cents': 0})
+    with pytest.raises(ConfigError):
+        replace(config, **{f'packs_{key}_enabled': 1})
+    selected = replace(config, **{f'packs_{key}_enabled': True})
+    assert enabled(selected) == (key,)
+    assert 'packs' in task_plan('daily', selected)
+
+@pytest.mark.parametrize(('key','cents','owned'), [
+    ('weekly_ap_iv',199,'mail'), ('weekly_reports_lite',299,'unavailable'),
+])
+def test_weekly_delivery_completes_without_second_charge(runner,key,cents,owned):
+    runner.config=replace(runner.config,**{f'packs_{key}_enabled':True})
+    png=(FIXTURES/'packs-purchase-game-result.png').read_bytes()
+    screens=iter([
+        ShopFrame(Capture(png,0,runner.config.package),ShopScreen('purchase_confirm',(760,592),key,cents)),
+        ShopFrame(Capture(png,0,'com.android.vending'),ShopScreen('checkout',(360,1215),key,cents)),
+        ShopFrame(Capture(png,0,runner.config.package),ShopScreen('delivered',(640,505))),
+    ])
+    runner.wait=lambda *args,**kwargs:next(screens)
+    charges=[]
+    def tap(frame,target,detail):
+        if frame.screen.kind=='checkout':
+            assert read_state(runner.config)['pending']['pack']==key
+            charges.append(target)
+    runner.tap=tap
+    runner.select_pack=lambda selected:pack_frame(runner.config,owned,cents)
+    result=runner.purchase(pack_frame(runner.config,'available',cents),key)
+    assert len(charges)==1 and read_state(runner.config)['pending'] is None
+    assert result.screen.cards[key]['state']==owned
+    with pytest.raises(TaskError,match='availability'):
+        runner.purchase(result,key)
+    assert len(charges)==1
+
+@pytest.mark.parametrize(('before','after'), [
+    ('com.android.vending','com.nexon.bluearchive'),
+    ('com.nexon.bluearchive','com.android.vending'),
+])
+def test_checkout_handoff_discards_mixed_frames(runner,before,after):
+    focuses=iter([before,after,after,after])
+    images=iter([b'mixed-private-frame',b'stable-frame'])
+    saved,analyzed=[],[]
+    runner.device=SimpleNamespace(foreground_package=lambda:next(focuses),screenshot=lambda:next(images))
+    runner.journal.screenshot=lambda png:saved.append(png)
+    def analyze(png,*,billing):
+        analyzed.append((png,billing))
+        return ShopScreen('delivered' if not billing else 'checkout')
+    runner.vision=SimpleNamespace(analyze=analyze)
+    frame=runner.capture()
+    assert frame.capture.foreground==after
+    assert analyzed==[(b'stable-frame',after=='com.android.vending')]
+    assert saved==([b'stable-frame'] if after==runner.config.package else [])
+
+
+def test_checkout_handoff_rejects_unrelated_app_without_saving(runner):
+    focuses=iter([runner.config.package,'com.android.settings'])
+    runner.device=SimpleNamespace(foreground_package=lambda:next(focuses),screenshot=lambda:b'private')
+    runner.journal.screenshot=lambda _:pytest.fail('mixed frame saved')
+    with pytest.raises(TaskError,match='Foreground changed'):
+        runner.capture()
+
+
+def test_checkout_handoff_has_bounded_retries(runner):
+    focuses=iter([runner.config.package,'com.android.vending']*4)
+    runner.device=SimpleNamespace(foreground_package=lambda:next(focuses),screenshot=lambda:b'private')
+    runner.journal.screenshot=lambda _:pytest.fail('mixed frame saved')
+    with pytest.raises(TaskError,match='did not settle'):
+        runner.capture()
+
+
+def test_visible_weekly_offer_does_not_scroll_past_it(runner):
+    selected=pack_frame(runner.config,'available',299)
+    runner.wait=lambda *args,**kwargs:selected
+    runner.tap=lambda *args:None
+    runner.settle_store=lambda:selected
+    runner.scroll_store=lambda *args,**kwargs:pytest.fail('visible pack needs no scrolling')
+    assert runner.select_pack('weekly_reports_lite') is selected
+
+
+def test_weekly_report_play_label_and_price_are_separate_fields(vision):
+    png = (FIXTURES / 'packs-weekly-reports-payment-sanitized.png').read_bytes()
+    result = vision.analyze(png, billing=True)
+    assert (result.kind, result.pack, result.cents) == ('checkout', 'weekly_reports_lite', 299)
+    image = cv2.imdecode(np.frombuffer(png, np.uint8), cv2.IMREAD_COLOR)
+    image[430:540, 570:710] = 255
+    assert vision.analyze(cv2.imencode('.png', image)[1].tobytes(), billing=True).kind == 'billing_attention'
