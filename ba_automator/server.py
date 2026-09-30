@@ -1702,6 +1702,9 @@ class DashboardController:
             frames = sorted((p.name for p in run.iterdir() if re.fullmatch(r"trace-\d+\.png", p.name)
                              and p.is_file() and not p.is_symlink()),
                             key=lambda name: int(name[6:-4]))
+            failure = run / "cafe-wait-failed.png"
+            if failure.is_file() and not failure.is_symlink():
+                frames.append(failure.name)
             if not frames:
                 continue
             # Show the start and end even for long surveys; links remain local
@@ -2005,7 +2008,7 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     if target.query:
                         raise ApiError(400, "Trace requests do not accept query parameters")
                     self._send(200, controller.trace_page(match[1]), "text/html; charset=utf-8")
-                elif match := re.fullmatch(r"/api/runs/([a-f0-9]{32})/([A-Za-z0-9_-]+)/((?:trace-\d+|home)\.png)", target.path):
+                elif match := re.fullmatch(r"/api/runs/([a-f0-9]{32})/([A-Za-z0-9_-]+)/((?:trace-\d+|home|cafe-wait-failed)\.png)", target.path):
                     if target.query:
                         raise ApiError(400, "Trace requests do not accept query parameters")
                     self._send(200, controller.trace_image(*match.groups()), "image/png")

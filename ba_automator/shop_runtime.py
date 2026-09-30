@@ -45,8 +45,20 @@ class ShopRunner:
     def capture(self):
         self.budget()
         package = self.device.foreground_package()
+        # Android can briefly report no focused window during a transition.
+        # Wait without sending input, but never treat another app as the game.
+        for attempt in range(3):
+            if package is not None:
+                break
+            self.journal.record('foreground_pending', task=self.task, attempt=attempt + 1)
+            self.sleep(.5)
+            package = self.device.foreground_package()
         if package != self.config.package and not (self.allows_billing and package == BILLING_PACKAGE):
-            self.fail(f'Unexpected foreground during {self.task}; handle the screen manually')
+            self.journal.record('foreground_mismatch', task=self.task,
+                                expected=self.config.package, observed=package)
+            self.fail(f'Unexpected foreground during {self.task}: '
+                      f'{package or "no focused app"}; no input sent. '
+                      'Return to Blue Archive and retry')
         at = self.clock()
         png = self.device.screenshot()
         if self.device.foreground_package() != package:

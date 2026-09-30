@@ -242,7 +242,7 @@ def test_missing_reward_receipt_never_logs_successful_collection(cafe, monkeypat
 def test_pan_never_sends_a_swipe_without_verified_cafe_hud(cafe):
     cafe.vision.is_cafe = lambda image: False
     cafe.script([])
-    with pytest.raises(RestartError, match="unobstructed"):
+    with pytest.raises(RestartError, match="Cafe was left unexpectedly"):
         cafe.runner.pan(PAN_LEFT)
     assert cafe.device.swipes == []
     assert cafe.device.taps == []
@@ -926,3 +926,11 @@ def test_automatic_invitations_check_each_floor_independently(cafe, monkeypatch,
         if floor in available:
             expected.append(("scan", floor))
     assert events == expected
+
+
+def test_wait_cafe_reports_unexpected_home_with_stable_evidence(cafe, monkeypatch):
+    navigation_screen(cafe, monkeypatch, lambda: 'home')
+    with pytest.raises(RestartError, match='Cafe was left unexpectedly'):
+        cafe.runner.wait_cafe(timeout=3)
+    assert cafe.device.taps == []
+    assert (cafe.runner.run_dir / 'cafe-wait-failed.png').exists()

@@ -106,3 +106,36 @@ def test_campaign_retry_retains_input_guards(navigation, monkeypatch, fault):
     with pytest.raises(TaskError, match='fresh recognized|Foreground changed'):
         h.runner.navigate('home', 'campaign', (1200, 641))
     assert len(h.taps) == 1
+
+
+@pytest.mark.parametrize('focuses, succeeds, expected_waits', [
+    ([None, None, 'com.nexon.bluearchive'], True, 2),
+    ([None, None, None, None], False, 3),
+    (['com.android.launcher'], False, 0),
+    ([None, 'com.android.vending'], False, 1),
+])
+def test_capture_waits_only_for_missing_focus(tmp_path, focuses, succeeds, expected_waits):
+    remaining = list(focuses)
+    screenshots, sleeps, records = [], [], []
+    config = Config(serial='127.0.0.1:5695', package='com.nexon.bluearchive', run_dir=tmp_path)
+    def foreground():
+        return remaining.pop(0) if len(remaining) > 1 else remaining[0]
+    def screenshot():
+        screenshots.append(True)
+        return b'frame'
+    device = SimpleNamespace(foreground_package=foreground, screenshot=screenshot)
+    vision = SimpleNamespace(analyze=lambda *args, **kwargs: SimpleNamespace(kind='home'))
+    runner = ShopRunner(config, device, None, vision=vision, sleep=sleeps.append)
+    runner.journal.close()
+    runner.journal = SimpleNamespace(record=lambda event, **fields: records.append((event, fields)),
+                                     screenshot=lambda png: 'trace.png')
+    if succeeds:
+        assert runner.capture().screen.kind == 'home'
+        assert screenshots == [True]
+    else:
+        with pytest.raises(TaskError, match='Unexpected foreground.*no input sent'):
+            runner.capture()
+        assert screenshots == []  # Do not capture other apps or billing screens.
+        assert records[-1][0] == 'foreground_mismatch'
+        assert records[-1][1]['observed'] == focuses[-1]
+    assert sleeps == [.5] * expected_waits

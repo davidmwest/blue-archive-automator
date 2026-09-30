@@ -101,6 +101,11 @@ The optional `[automation] close_app_when_idle = true` setting closes the config
 
 ## Evidence
 
+If the Cafe does not become unobstructed, the runner retains
+`cafe-wait-failed.png` in the job's screenshot gallery. The error distinguishes
+an unexpected return home from an unknown overlay; it does not send navigation
+inputs to recover while another person might be using the game.
+
 Each visit has a run journal, a ring of recent screenshots, and retained reward/relationship evidence. `data/state/important-actions.jsonl` stores attempts and confirmed outcomes across dashboard sessions. The dashboard displays that history separately from debug logs.
 
 A collection attempt is recorded when Claim is pressed; earnings are recorded as collected only after the receipt appears. Relationship taps and verified heart/rank-up feedback are also separate. Invitation requests are recorded before result verification, and a verified new cooldown produces the completion record. A successful overall visit requires the final home screen.

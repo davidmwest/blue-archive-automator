@@ -442,12 +442,15 @@ def test_failed_job_trace_gallery_serves_saved_frames_only(http_server, tmp_path
     (run / "trace-0001.png").write_bytes(png)
     (run / "trace-0002.png").write_bytes(png)
     (run / "trace-10.png").write_bytes(png)
+    (run / "cafe-wait-failed.png").write_bytes(png)
     (run / "journal.jsonl").write_text("private", encoding="utf-8")
     code, page = request("GET", f"/api/runs/{job_id}")
     assert code == 200
     assert b"trace-0001.png" in page and b"trace-0002.png" in page
     assert page.index(b"trace-0002.png") < page.index(b"trace-10.png")
     assert request("GET", f"/api/runs/{job_id}/{run.name}/trace-0001.png") == (200, png)
+    assert b"cafe-wait-failed.png" in page
+    assert request("GET", f"/api/runs/{job_id}/{run.name}/cafe-wait-failed.png") == (200, png)
     assert request("GET", f"/api/runs/{job_id}/{run.name}/journal.jsonl")[0] == 404
     assert request("GET", f"/api/runs/{job_id}?path=journal.jsonl")[0] == 400
     secret = tmp_path / "secret.png"

@@ -275,7 +275,16 @@ class CafeRunner:
                 self.visitor_notice_after(pending_notice, cap, "unknown", "changed")
                 pending_notice = None
             self.sleep(.8)
-        self.fail("Cafe screen did not become unobstructed; review the screenshot trace")
+        # Keep a stable evidence file: the ordinary trace is a rotating buffer.
+        self.journal.save_image("cafe-wait-failed.png", cap[1])
+        state = self.startup.analyze(cap[1]).state
+        self.journal.record("cafe_wait_failed", observed=state,
+                            frame="cafe-wait-failed.png")
+        if state == "home":
+            self.fail("Cafe was left unexpectedly and the game is now on home; "
+                      "retry the Cafe visit. See cafe-wait-failed.png in the run trace")
+        self.fail("Cafe screen did not become unobstructed "
+                  f"(observed: {state}); see cafe-wait-failed.png in the run trace")
 
     def dismiss_visitor_notice(self, cap, target):
         popup_id = uuid4().hex

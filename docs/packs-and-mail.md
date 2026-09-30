@@ -26,6 +26,11 @@ After a failure that never reached a charge, fix the payment/setup issue and exp
 
 ## Collect mail
 
+If Android briefly reports no focused app, mail waits up to three half-second
+intervals without input and checks again. A different foreground app stops the
+job immediately and is named in the error and journal. Other apps' screens are
+not saved as diagnostic screenshots.
+
 `packs` runs **restart → packs → mail**. `mail` is also a standalone queue job. Daily includes mail, with a pack check immediately before it when any paid renewal is enabled.
 
 Mail visits Product first to activate purchased packs, then Unclaimed. It claims individual entries, handles the explicit claim confirmation, reads the reward receipt, and saves a local screenshot before dismissing it. Important actions include item names, quantities, and the verified Pyroxene balance increase when readable. Unreadable labels are identified as unreadable; an issued claim tap is not reported as a received reward. Unknown dialogs and capacity errors stop with diagnostics.
