@@ -220,11 +220,21 @@ def test_unknown_bonds_do_not_block_a_unique_count_winner():
     assert decision.bond_total is None
 
 
-@pytest.mark.parametrize("strategy", ["relationship", "school_rank"])
-def test_unknown_bonds_block_needed_tiebreaks_in_either_strategy(strategy):
-    decision = choose_lesson([location()], [room("known"), room("unknown", bonds=(None,))], strategy=strategy)
+def test_unknown_bonds_block_school_rank_tiebreak():
+    decision = choose_lesson([location()], [room("known"), room("unknown", bonds=(None,))], strategy="school_rank")
     assert decision.status == "blocked"
     assert "tie" in decision.reason
+
+
+def test_relationship_tie_with_unreadable_bond_preserves_maximum_encounters():
+    rooms = [room("a-unknown", bonds=(None, 3)), room("z-known", bonds=(90, 90)),
+             room("fewer-students", bonds=(100,))]
+    for candidates in (rooms, list(reversed(rooms))):
+        decision = choose_lesson([location()], candidates)
+        assert decision.status == "selected"
+        assert decision.room.id == "a-unknown"
+        assert decision.owned_count == 2 and decision.bond_total is None
+        assert "stable order" in decision.reason
 
 
 def test_unknown_bond_in_losing_room_does_not_block_selected_room():

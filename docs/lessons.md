@@ -25,7 +25,7 @@ Survey each school once using its **All Locations** room grid, then select the b
 
 Unowned students do not count toward relationship gains. A room with three students and two owned students loses to a room with three owned students. Relationship ranks only break a tie in owned-student count; a single high-rank student does not outrank two owned students.
 
-If every available room has zero owned students, this policy leaves the remaining tickets unused. Missing ownership evidence is not zero ownership. Missing relationship ranks block a decision only when the unresolved values could change a tied comparison.
+If every available room has zero owned students, this policy leaves the remaining tickets unused. Missing ownership evidence is not zero ownership. If relationship ranks are unreadable in an equal-count comparison, use stable room order and log the missing tie-break. This still selects the maximum number of owned-student opportunities; it does not treat an unreadable rank as zero.
 
 This policy optimizes owned-student count, rather than estimating exact relationship points. It does not weight location reward levels, random bonuses, or student relationship caps. The dashboard distinguishes a planned opportunity, an attempted lesson, and rewards verified from the game.
 
@@ -38,7 +38,7 @@ This policy follows the requested progression rule: raise the lowest-ranked loca
 3. Among locations tied at that rank and XP progress, choose the room with the most students. For tied student counts, prefer the highest sum of owned-student relationship ranks, then the stable location/room identity.
 4. Use one ticket and reread rank and XP before choosing again. If the location is no longer the lowest, switch to the new lowest location.
 
-Here, room population means all visible students; relationship opportunities use owned students only. When every eligible location is at maximum rank, fall back to the relationship policy.
+Here, room population means all visible students; relationship opportunities use owned students only. This policy still requires readable relationship ranks when they decide a student-count tie. When every eligible location is at maximum rank, fall back to the relationship policy.
 
 Balancing rank progress is a preference, not a mathematical claim that this always produces the next increase in aggregate rank with the fewest tickets. Daily ticket capacity grows at aggregate-rank thresholds, rather than equaling the sum of all location ranks. The observed ticket counter is authoritative for the current visit.
 
@@ -100,7 +100,7 @@ On September 24, 2026 UTC, the authorized BlueStacks Air staging instance comple
 
 The final local run is `lessons-20260924T064611-02b9e014`. Full screenshots, survey JSON, receipt evidence, and important-action history remain local; the repository contains sanitized replay fixtures.
 
-September 26 saved room grids exposed a thin relationship-rank `1` that remained below the OCR confidence threshold in the original crops. A fallback now checks the complete heart label at two scales and requires agreement. Sanitized Shiratori and Red Winter replays recover both missed ranks, and planner tests preserve the correct relationship tie-break. Conflicting or unreadable ranks still block comparisons that need them. The live retry (`lessons-20260926T152150-bcf1051a`) surveyed all 94 rooms across 12 schools before each selection, completed seven verified lessons, confirmed zero tickets remaining, and returned home.
+September 26 saved room grids exposed a thin relationship-rank `1` that remained below the OCR confidence threshold in the original crops. A fallback now checks the complete heart label at two scales and requires agreement. Sanitized Shiratori and Red Winter replays recover both missed ranks, and planner tests preserve the correct relationship tie-break. Conflicting or unreadable ranks remain unknown. The school-rank policy blocks ties that need them; the relationship policy now uses stable order among rooms with equal owned-student counts. The live retry (`lessons-20260926T152150-bcf1051a`) surveyed all 94 rooms across 12 schools before each selection, completed seven verified lessons, confirmed zero tickets remaining, and returned home.
 
 After the September 26 daily reset, a device preflight rejected an expired frame without sending its tap. The recovery run (`lessons-20260926T215356-7107c68b`) used the remaining four tickets, surveyed all 94 rooms across 12 schools before each selection, verified each receipt and ticket decrement, and returned home at zero tickets. Those four lessons provided eight owned-student opportunities. The narrowly bounded stale-frame retry is covered offline; this successful recovery did not require triggering that timing race again.
 

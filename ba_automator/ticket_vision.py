@@ -43,10 +43,12 @@ def ticket_counter(words, bounds):
     return tuple(map(int, match.groups())) if match else None
 
 
-def reread_ticket_projection(native, reader, words):
+def reread_ticket_projection(native, reader, words, *, ap=False):
     """Recover an incomplete projection only from agreeing native crop reads."""
-    bounds = (1010, 337, 1108, 384)
+    bounds = (855, 337, 1010, 384) if ap else (1010, 337, 1108, 384)
     pieces = sorted(within(words, bounds), key=lambda word: word.box[0])
+    if ap and len(pieces) != 2:
+        return None
     # Do not replace a complete, contradictory projection or reinterpret
     # Scrimmage's adjacent AP counter. Native whole-frame OCR can also
     # omit the arrow, final digit, or entire projection. Every surviving digit
@@ -66,7 +68,8 @@ def reread_ticket_projection(native, reader, words):
         else:
             return None
     elif pieces:
-        if not 1030 <= pieces[0].center[0] < pieces[1].center[0] <= 1100:
+        left, right = (900, 1000) if ap else (1030, 1100)
+        if not left <= pieces[0].center[0] < pieces[1].center[0] <= right:
             return None
     observed_digits = tuple(int(word.text) for word in pieces)
     expected = None
@@ -74,8 +77,8 @@ def reread_ticket_projection(native, reader, words):
     # Isolate the entire number/arrow row without the ticket icon or bubble
     # border. A little vertical margin avoids clipping thin arrow/digit edges.
     # Two scales must independently read the exact same complete projection.
-    for crop_bounds, scale in (((1025, 346, 1100, 381), 3),
-                               ((1025, 346, 1100, 381), 4)):
+    crop_bounds = (895, 346, 1000, 381) if ap else (1025, 346, 1100, 381)
+    for scale in (3, 4):
         crop = native_game_region(native, crop_bounds)
         width, height = crop_bounds[2] - crop_bounds[0], crop_bounds[3] - crop_bounds[1]
         enlarged = cv2.resize(crop, (width * scale, height * scale),
@@ -317,6 +320,18 @@ class TicketVision:
         home = {"home_left", "home_right"} <= self.startup.matches(frame).keys()
         screen = classify_tickets(frame, words, home=home)
         count = number(words, (904, 277, 970, 330))
+        if (screen.kind == "unknown" and count and count[0] > 0
+                and has(words, "scrimmage", (80, 0, 310, 55))
+                and has(words, "mission info", (440, 110, 850, 170))
+                and has(words, "sweep", (850, 200, 1010, 262))):
+            # At native resolution the AP arrow can disappear while both
+            # digits survive. Prove the complete projection twice; never infer
+            # a free sweep merely from the subscription or equal-looking AP.
+            projection = reread_ticket_projection(decode_native_frame(png), self.startup, words, ap=True)
+            if projection is not None:
+                pieces = within(words, (855, 337, 1010, 384))
+                words = [word for word in words if word not in pieces] + [projection]
+                screen = classify_tickets(frame, words, home=home)
         ap_projection = within(words, (855, 337, 1010, 384))
         ticket_projection_recoverable = (
             has(words, "bounty", (80, 0, 310, 55))

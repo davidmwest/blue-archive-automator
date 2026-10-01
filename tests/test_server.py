@@ -1382,6 +1382,65 @@ def test_failed_job_notice_persists_until_dismissed_without_clearing_purchase_ho
         restored.close()
 
 
+def test_transient_failure_is_logged_without_attention_notice(controlled):
+    controller, factory = controlled
+    job = controller.enqueue('restart')
+    eventually(lambda: len(factory.processes) == 1)
+    factory.processes[0].finish(1)
+    eventually(lambda: controller.status()['current_job'] is None)
+    assert controller.status()['state'] == 'failed'
+    assert controller.status()['failed_jobs'] == []
+    log = controller.daily_log_text(controller._wall_clock().astimezone().date().isoformat()).decode()
+    assert 'failure_logged' in log and job['id'] in log
+    assert 'job_finished' in log
+
+
+def test_legacy_noise_is_archived_but_transaction_hold_survives_restart(controlled, config_path):
+    from ba_automator.packs_state import read_state, write_state
+    controller, _ = controlled
+    controller.pause()
+    held = read_state(controller.config)
+    held['blocked_reason'] = 'payment failed'
+    write_state(controller.config, held)
+    controller._failures = [
+        dict(id='a' * 32, task='restart', time='2026-10-01T19:00:00Z', detail='startup timeout'),
+        dict(id='b' * 32, task='packs', time='2026-10-01T19:01:00Z', detail='payment failed'),
+    ]
+    controller._save_failures()
+    controller.close()
+    restored = DashboardController(config_path, process_factory=ProcessFactory())
+    try:
+        notices = restored.status()['failed_jobs']
+        assert [n['id'] for n in notices] == ['b' * 32]
+        assert 'Google Play' in notices[0]['actions'][0]['action']
+        assert read_state(restored.config)['blocked_reason'] == 'payment failed'
+        held['blocked_reason'] = None
+        write_state(restored.config, held)
+        restored._refresh_failure_notices('packs')
+        assert restored.status()['failed_jobs'] == []
+        log = restored.daily_log_text(restored._wall_clock().astimezone().date().isoformat()).decode()
+        assert 'failure_notice_archived' in log and 'startup timeout' in log
+    finally:
+        restored.close()
+
+
+def test_resolved_setup_notice_does_not_return_while_another_hold_remains(controlled):
+    from ba_automator.crafting_state import empty_state, write_state
+    controller, _ = controlled
+    controller.pause()
+    state = empty_state()
+    state['disabled_reason'] = 'Quick Craft needs a preset'
+    write_state(controller.config, state)
+    controller._failures = [dict(id='c' * 32, task='daily', time='2026-10-01T19:00:00Z',
+                                detail='Account sign-in needs attention')]
+    controller._refresh_failure_notices('daily')
+    controller._refresh_failure_notices()
+    notice = controller.status()['failed_jobs'][0]
+    assert notice['detail'] == 'Account sign-in needs attention'
+    assert [(a['task'], a['reason']) for a in notice['actions']] == [('crafting', 'state')]
+    assert controller._load_failures()[0]['resolved_external'] is True
+
+
 def test_pack_schedule_uses_saved_reset_and_never_dispatches_a_blocked_purchase(controlled):
     from ba_automator.packs_state import read_state, write_state
     controller, factory = controlled
@@ -1706,20 +1765,19 @@ def test_daily_summary_preserves_completed_work_and_identifies_failed_steps(conf
                       "disabled": "; Tactical Challenge disabled"}[deferred_status]
             assert status["phase"] == "Daily visit finished" + suffix
         elif terminal == "partial_failure":
-            assert status["phase"] == "Daily finished with failures; check failed jobs"
+            assert status["phase"] == "Daily visit finished; diagnostics saved in the daily log"
         if terminal in {"partial_failure", "failed"}:
             assert status["result"]["failed_tasks"][0]["task"] == "bounties"
-            notice = status["failed_jobs"][0]["detail"]
-            assert "3 tasks completed" in notice
-            assert "bounties: Earlier ticket sweep needs receipt review" in notice
-        else:
-            assert status["failed_jobs"] == []
+        # An error string alone is not proof of an unresolved transaction.
+        assert status["failed_jobs"] == []
         # Logs use the host's local calendar date, not the game's reset day.
         # This injected instant is September 25 in Los Angeles, but September 26 in UTC.
         local_now = now.astimezone()
         text = controller.daily_log_text(local_now.date().isoformat()).decode()
         assert local_now.isoformat(timespec="milliseconds") in text
         assert '"completed_tasks":["restart","cafe","scrimmages"]' in text
+        if terminal in {"partial_failure", "failed"}:
+            assert "Earlier ticket sweep needs receipt review" in text
         assert len(factory.processes) == 1
     finally:
         controller.close()

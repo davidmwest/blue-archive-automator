@@ -88,7 +88,9 @@ def choose_lesson(
     """Choose exactly one lesson, or explain why no ticket should be spent.
 
     ``relationship`` maximizes owned-student encounters, then the sum of their
-    relationship ranks. ``school_rank`` balances the lowest location rank and
+    relationship ranks when every tied room's ranks are readable. Otherwise
+    the equal-count rooms use stable order, preserving maximum encounters.
+    ``school_rank`` balances the lowest location rank and
     fractional XP first, then maximizes total students and owned bond-rank sum.
     Equal scores use stable location/room names and IDs. Capped locations are
     excluded while an eligible uncapped location exists; if all are capped,
@@ -210,12 +212,16 @@ def choose_lesson(
         candidates = [room for room in candidates if len(room.students) == best_count]
         score_description = f"{best_count} total students"
 
+    unreadable_tie = False
     if len(candidates) > 1:
         for room in candidates:
             if _bond_total(room) is None:
-                return blocked(f"Relationship ranks in {room.name} are needed to break the student-count tie.")
-        highest_bond = max(_bond_total(room) for room in candidates)
-        candidates = [room for room in candidates if _bond_total(room) == highest_bond]
+                if effective_strategy == "school_rank":
+                    return blocked(f"Relationship ranks in {room.name} are needed to break the student-count tie.")
+                unreadable_tie = True
+        if not unreadable_tie:
+            highest_bond = max(_bond_total(room) for room in candidates)
+            candidates = [room for room in candidates if _bond_total(room) == highest_bond]
 
     def stable_key(room: LessonRoom) -> tuple[str, str, str, str]:
         location = eligible_locations[room.location_id]
@@ -230,5 +236,7 @@ def choose_lesson(
         reason += f"; owned relationship-rank sum {bond}"
     if fallback:
         reason += "; all available locations are at maximum rank, so relationship priority applies"
+    if unreadable_tie:
+        reason += "; equal owned counts use stable order because some relationship ranks are unreadable"
     return LessonDecision("selected", reason + ".", strategy, location, room,
                           _owned_count(room), len(room.students), bond, fallback)

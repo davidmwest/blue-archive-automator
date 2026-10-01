@@ -109,6 +109,18 @@ def test_campaign_reentry_accepts_active_practice_menu(tmp_path):
     assert drill_state.read_state(r.config)['pending'] is None
 
 
+def test_menu_waits_for_sliding_balance_panel_before_planning(tmp_path):
+    r = runner(tmp_path)
+    moving = frame('menu', tickets=None, period=None)
+    settled = frame('menu', tickets=0, period='season')
+    r.wait = Mock(side_effect=[moving, settled])
+    assert r.menu() is settled
+    predicate = r.wait.call_args.kwargs['predicate']
+    assert not predicate(moving.screen)
+    assert predicate(settled.screen)  # Zero is a valid observed balance.
+    r.tap.assert_not_called()
+
+
 def test_verified_assistant_identity_survives_mock_and_matches_paid_proof(tmp_path):
     from dataclasses import replace
     from ba_automator.drill_policy import fingerprint

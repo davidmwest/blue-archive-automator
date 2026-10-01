@@ -397,7 +397,12 @@
       const row = document.createElement("li");
       const title = document.createElement("strong");
       title.textContent = `${taskName(failure.task)} · ${shortTime(failure.time)}`;
-      const detail = document.createElement("p"); detail.textContent = failure.detail;
+      const detail = document.createElement("details");
+      const summary = document.createElement("summary"); summary.textContent = "saved diagnostic";
+      const diagnostic = document.createElement("p"); diagnostic.textContent = failure.detail;
+      detail.append(summary, diagnostic);
+      const action = document.createElement("p");
+      action.textContent = (failure.actions || []).map(item => item.action).join(" ");
       const trace = document.createElement("a");
       trace.href = `/api/runs/${encodeURIComponent(failure.id)}`;
       trace.target = "_blank"; trace.rel = "noopener";
@@ -407,7 +412,7 @@
       dismiss.textContent = "dismiss notice";
       dismiss.disabled = !connected || pending > 0 || isDemo();
       dismiss.addEventListener("click", () => void post("/api/dismiss-failure", { id: failure.id }, "notice dismissed. retry settings haven’t changed."));
-      row.append(title, detail, trace, dismiss); list.append(row);
+      row.append(title, action, detail, trace, dismiss); list.append(row);
     });
     $("failed-jobs-list").replaceChildren(list);
   }
@@ -423,7 +428,8 @@
     }
     const running = isRunning();
     const successLabel = status.task === "daily" ? "Visit finished" : status.task === "restart" && !status.app_closed ? "Home reached" : "Completed";
-    stateBadge($("state-badge"), status.state, ({ disabled: "Disabled", deferred: "Awaiting reset test", idle: "Ready", running: "Running", success: successLabel, failed: "Needs attention", stopped: "Stopped" }[status.state] || status.state));
+    const loggedFailure = status.state === "failed" && !(status.failed_jobs || []).length;
+    stateBadge($("state-badge"), loggedFailure ? "idle" : status.state, loggedFailure ? "Run logged" : ({ disabled: "Disabled", deferred: "Awaiting reset test", idle: "Ready", running: "Running", success: successLabel, failed: "Needs attention", stopped: "Stopped" }[status.state] || status.state));
     $("run-phase").textContent = status.phase || "close the game, open it again, get to home. deal with the popups on the way.";
     $("current-task").textContent = running ? (status.current_job ? jobName(status.current_job) : taskName(status.task)) : "None running";
     $("device-serial").textContent = status.config?.serial || "—";

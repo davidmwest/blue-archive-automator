@@ -12,6 +12,8 @@ from .crafting_vision import bright, cyan, has
 from .home_badges import badges
 from .locking import InstanceLock
 from .shop_runtime import ShopRunner
+from .shop_vision import classify_shop
+from .loot_receipts import inspect_receipt
 from .home_badges import notification_dot
 from .vision import classify, decode_frame, read_game_words
 
@@ -122,7 +124,12 @@ class ClubVision:
         home = (
             not billing and classify(words, self.startup.matches(frame)).state == "home"
         )
-        return classify_club(frame, words, home=home)
+        screen = classify_club(frame, words, home=home)
+        if screen.kind == "unknown":
+            receipt = classify_shop(frame, words)
+            if receipt.kind == "receipt":
+                return receipt
+        return screen
 
 
 class ClubRunner(ShopRunner):
@@ -131,6 +138,29 @@ class ClubRunner(ShopRunner):
     def __init__(self, config, device, startup, **kwargs):
         kwargs.setdefault("vision", ClubVision(startup))
         super().__init__(config, device, startup, **kwargs)
+        self.login_receipts = 0
+
+    def wait(self, kinds, *, timeout=40, predicate=lambda screen: True, **kwargs):
+        if kinds != "home":
+            return super().wait(kinds, timeout=timeout, predicate=predicate, **kwargs)
+        deadline = self.clock() + timeout
+        while self.clock() < deadline:
+            frame = super().wait({"home", "receipt"}, timeout=deadline - self.clock(),
+                                 predicate=lambda s: s.kind == "receipt" or predicate(s), **kwargs)
+            if frame.screen.kind == "home":
+                return frame
+            if self.login_receipts >= 3:
+                self.fail("Club received repeated login rewards; inspect the saved receipts")
+            self.login_receipts += 1
+            name = f"login-reward-{self.login_receipts}.png"
+            self.journal.save_image(name, frame.capture.png)
+            inspection_started = self.clock()
+            frame = inspect_receipt(self, frame, self.run_dir / name)
+            self.tap(frame, frame.screen.target, "Acknowledge the late login reward before Club")
+            # Receipt inspection has its own input/time bounds. Do not spend
+            # the remaining home-navigation budget reading a long reward list.
+            deadline += self.clock() - inspection_started
+        self.fail("Club home did not settle after login rewards; inspect the local trace")
 
     def finish_visit(self, frame, day):
         reward_seen = frame.screen.kind == "club_reward"

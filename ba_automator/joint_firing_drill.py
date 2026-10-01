@@ -228,7 +228,9 @@ class DrillRunner(AssaultAssistantMixin, ShopRunner):
             self.tap(frame, frame.screen.target, 'Inspect the open drill')
             frame = self.wait('menu')
         if frame.screen.period is None or frame.screen.tickets is None:
-            self.fail('Drill season or ticket balance is unreadable')
+            # The menu title arrives before the sliding ticket/date panel.
+            # Wait for the full observation before planning any paid action.
+            frame = self.wait('menu', predicate=lambda s: s.period is not None and s.tickets is not None)
         return frame
 
     def stage(self, menu, stage):

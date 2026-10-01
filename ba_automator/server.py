@@ -46,6 +46,7 @@ from .locking import InstanceLock, LockError
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS, task_plan
 from .home_badges import PRIORITY
 from . import packs_state
+from .failure_notices import required_actions
 from . import ap_state, loot, daily_log, daily_schedule, checkin_schedule, tactical_survey, tactical_retry, tactical_state
 from .club import game_day
 from .tactical_state import TacticalStateError, ensure_restart_safe
@@ -201,6 +202,7 @@ class DashboardController:
         self._tactical_retry_error = None
         self._tactical_retry_not_before = 0
         self._failures = self._load_failures()
+        self._refresh_failure_notices()
         self._daily("dashboard_started", detail="Local serial queue started")
         self._initialize_checkin()
         self._worker = threading.Thread(target=self._work, name="blue-archive-queue", daemon=True)
@@ -263,6 +265,29 @@ class DashboardController:
             _write_atomic(self._failures_path(), json.dumps(self._failures[-50:], indent=2))
         except OSError as exc:
             self._log(f'Could not save failed-job notices: {exc}', 'error')
+
+    def _refresh_failure_notices(self, recovered_task=None):
+        """Retire recovered holds and migrate legacy catch-all error notices.
+
+        Called at startup and job boundaries, never during a resource transaction.
+        Archiving a notice leaves the original journal, trace, and holds intact.
+        """
+        retained = []
+        for notice in self._failures:
+            # Keep the original diagnostic, but do not resurrect a resolved
+            # sign-in/setup action if an unrelated durable hold retains it.
+            resolved_external = notice.get('resolved_external', False) or notice['task'] == recovered_task
+            detail = '' if resolved_external else notice['detail']
+            actions = required_actions(self.config, notice['task'], detail, self._schedule)
+            if actions:
+                retained.append({**notice, 'actions': actions, 'resolved_external': resolved_external})
+            else:
+                self._daily('failure_notice_archived', task=notice['task'], run=notice['id'],
+                            detail=notice['detail'], failed_at=notice['time'],
+                            reason='No outstanding user action; diagnostic retained in the log')
+        if retained != self._failures:
+            self._failures = retained
+            self._save_failures()
 
     def dismiss_failure(self, identifier):
         with self._condition:
@@ -391,7 +416,8 @@ class DashboardController:
             detail = f"Daily did not start because its saved schedule could not be updated: {exc}"
             self._log(detail, "error")
             self._failures.append({"id": job["id"], "task": "daily",
-                                   "time": _timestamp(), "detail": detail})
+                                   "time": _timestamp(), "detail": detail,
+                                   "actions": required_actions(self.config, "daily", detail, self._schedule)})
             self._failures = self._failures[-50:]
             self._save_failures()
             return False
@@ -1195,7 +1221,7 @@ class DashboardController:
                                 selected, (battle_result or self._result)["status"])
                     else:
                         self._state = "failed"
-                        self._phase = ("Daily finished with failures; check failed jobs"
+                        self._phase = ("Daily visit finished; diagnostics saved in the daily log"
                                        if summary and summary["status"] == "partial_failure"
                                        else "Task failed; check the log")
                     if self._state in {"failed", "stopped"} and not summary:
@@ -1213,18 +1239,6 @@ class DashboardController:
                                               "state": self._state, "completed_at": self._completed_at})
                     self._finish_daily(job)
                     self._finish_tactical_continuation(job, selected)
-                    if self._state == 'failed':
-                        detail = (self._summary_failure_detail(summary) if summary else
-                                  next((entry['message'] for entry in reversed(self._logs)
-                                        if entry['message'].startswith('Error:')), 'Task failed; check the runner log and screenshots'))
-                        self._failures.append({'id': job['id'], 'task': job['task'],
-                                               'time': self._completed_at, 'detail': detail[:1500]})
-                        self._failures = self._failures[-50:]
-                        self._save_failures()
-                        try:
-                            record_action(selected, 'job_failed', detail[:1500], task=job['task'])
-                        except OSError as exc:
-                            self._log(f'Could not append failed-job action: {exc}', 'error')
                     cafe_result = (self._parse_result(output, run_root, task="cafe")
                                    if job["task"] in {"daily", "cafe"} else None)
                     # A later lesson failure or stop does not undo a verified cafe visit.
@@ -1257,6 +1271,26 @@ class DashboardController:
                                 packs_state.write_state(selected, pack_state)
                         except (RuntimeError, OSError) as exc:
                             self._log(f'Could not save pack failure hold: {exc}', 'error')
+                    # Classify after durable holds and retry limits are saved.
+                    self._refresh_failure_notices(job['task'] if self._state == 'success' else None)
+                    if self._state in {'failed', 'disabled'}:
+                        detail = (self._summary_failure_detail(summary) if summary else
+                                  next((line.strip() for line in reversed(output.splitlines())
+                                        if line.strip().startswith('Error:')), self._phase))
+                        actions = required_actions(selected, job['task'], detail, self._schedule)
+                        if actions:
+                            self._failures.append({'id': job['id'], 'task': job['task'],
+                                                   'time': self._completed_at, 'detail': detail[:1500],
+                                                   'actions': actions})
+                            self._failures = self._failures[-50:]
+                            self._save_failures()
+                            try:
+                                record_action(selected, 'user_action_required',
+                                              ' '.join(item['action'] for item in actions), task=job['task'])
+                            except OSError as exc:
+                                self._log(f'Could not append attention notice: {exc}', 'error')
+                        else:
+                            self._daily('failure_logged', task=job['task'], run=job['id'], detail=detail)
                     if job["task"] == "clear_event":
                         self._persist_queue_pause(True)
                         self._paused = True

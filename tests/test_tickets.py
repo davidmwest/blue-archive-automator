@@ -1547,3 +1547,85 @@ def test_split_native_ap_projection_still_recovers_verified_ticket_digits(vision
     result = TicketVision(Startup()).analyze(fixture.with_suffix('.png').read_bytes())
     assert (result.kind, result.task, result.area, result.stage) == ('detail', 'scrimmages', 'Gehenna', 'B')
     assert (result.ap, result.after_ap, result.tickets, result.after_tickets, result.count) == (482, 482, 10, 6, 4)
+
+
+@pytest.fixture(scope='module')
+def native_scrimmage_ap_arrow():
+    import json
+    from ba_automator.vision import Word
+
+    fixture = Path(__file__).parent / 'fixtures/tickets-scrimmage-ap-arrow-native'
+    words = [Word(**w) for w in json.loads(fixture.with_suffix('.json').read_text())['words']]
+    return fixture.with_suffix('.png').read_bytes(), words
+
+
+def test_scrimmage_missing_ap_arrow_requires_two_matching_native_crops(vision, native_scrimmage_ap_arrow):
+    png, words = native_scrimmage_ap_arrow
+    assert classify_tickets(decode_frame(png), words).kind == 'unknown'
+
+    class Startup:
+        def __init__(self):
+            self.crops = []
+
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            self.crops.append(image.shape[:2])
+            return vision.startup.read(image)
+
+        def matches(self, image):
+            return {}
+
+    startup = Startup()
+    screen = TicketVision(startup).analyze(png)
+    assert startup.crops == [(153, 363), (204, 484)]
+    assert (screen.kind, screen.task, screen.area, screen.stage) == (
+        'detail', 'scrimmages', 'Trinity', 'B')
+    assert (screen.ap, screen.after_ap, screen.tickets, screen.after_tickets,
+            screen.count, screen.ap_cost) == (427, 427, 10, 9, 1, 0)
+
+
+@pytest.mark.parametrize('fault', [
+    'contradictory_digits', 'weak_digits', 'nan_digits', 'infinite_digits',
+    'missing_digit', 'conflicting_crop', 'weak_crop', 'nan_crop', 'infinite_crop',
+    'missing_arrow', 'wrong_ticket_count', 'wrong_ap_balance',
+])
+def test_ap_arrow_repair_preserves_independent_resource_guards(native_scrimmage_ap_arrow, fault):
+    from ba_automator.crafting_vision import within
+    from ba_automator.vision import Word
+
+    png, original = native_scrimmage_ap_arrow
+    pieces = within(original, (855, 337, 1010, 384))
+    assert len(pieces) == 2 and all(w.text == '427' for w in pieces)
+    words = list(original)
+    if fault in {'contradictory_digits', 'weak_digits', 'nan_digits', 'infinite_digits'}:
+        change = {'contradictory_digits': {'text': '428'}, 'weak_digits': {'confidence': .94},
+                  'nan_digits': {'confidence': float('nan')},
+                  'infinite_digits': {'confidence': float('inf')}}[fault]
+        words = [replace(w, **change) if w == pieces[0] else w for w in words]
+    elif fault == 'missing_digit':
+        words.remove(pieces[0])
+    elif fault == 'wrong_ticket_count':
+        words = [replace(w, text='10→8') if w in within(original, (1010, 337, 1108, 384)) else w for w in words]
+    elif fault == 'wrong_ap_balance':
+        words = [replace(w, text='428/220') if w in within(original, (460, 0, 600, 55)) else w for w in words]
+
+    class Startup:
+        crops = 0
+
+        def read(self, image):
+            if image.shape[:2] == (1440, 2560):
+                return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
+            self.crops += 1
+            text = '427→428' if fault == 'conflicting_crop' and self.crops == 2 else '427→427'
+            if fault == 'missing_arrow':
+                text = '427427'
+            confidence = {'weak_crop': .94, 'nan_crop': float('nan'),
+                          'infinite_crop': float('inf')}.get(fault, .99)
+            return [Word(text, confidence, (0, 0, 100, 30))]
+
+        def matches(self, image):
+            return {}
+
+    screen = TicketVision(Startup()).analyze(png)
+    assert screen.kind == 'unknown' and screen.target is None
