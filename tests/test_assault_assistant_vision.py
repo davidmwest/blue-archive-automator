@@ -183,3 +183,39 @@ def test_hina_preview_badges_exclude_the_variable_portrait_background():
     missing[200:225, 107:132] = 255
     assert not verify_assistant_preview(missing, words, card, 0)
     assert not verify_assistant_preview(frame, words, card, 1)
+
+
+def test_native_missing_batch_digits_are_recovered_without_losing_exact_metadata(startup):
+    from ba_automator.vision import decode_native_frame
+    png = (FIXTURES / 'assault-assistant-native-metadata.png').read_bytes()
+    frame = decode_frame(png)
+    bounds = tuple((x, 245, x+107, 416) for x in (574, 685, 796, 907, 1018, 1129))
+    metadata = read_assistant_metadata(frame, startup, bounds, native_frame=decode_native_frame(png))
+    assert [m.level for m in metadata] == [90] * 6
+    assert [m.stars for m in metadata] == [5] * 6
+    assert [m.weapon_stars for m in metadata] == [3, 1, 1, 2, 2, 1]
+
+
+@pytest.mark.parametrize('readings,expected', [
+    ([('3', .99), ('3', .99)], 3),
+    ([('3', .99), ('2', .99)], None),
+    ([('3', .89), ('3', .99)], None),
+    ([('6', .99), ('6', .99)], None),
+    ([('?', .99), ('3', .99)], None),
+    ([('0', .99), ('0', .99)], None),
+])
+def test_isolated_digit_requires_two_agreeing_confident_in_range_reads(readings, expected):
+    from unittest.mock import Mock
+    from ba_automator.assault_assistant_vision import _isolated_digit
+    reader = Mock()
+    reader.read.side_effect = [[Word(text, confidence, (1, 1, 10, 20))]
+                               for text, confidence in readings]
+    assert _isolated_digit(np.zeros((28, 18, 3), np.uint8), reader, 5, (9, 14)) == expected
+
+
+def test_isolated_digit_does_not_combine_multiple_tokens():
+    from unittest.mock import Mock
+    from ba_automator.assault_assistant_vision import _isolated_digit
+    reader = Mock()
+    reader.read.return_value = [Word('3', .99, (1, 1, 10, 20)), Word('1', .99, (1, 21, 10, 30))]
+    assert _isolated_digit(np.zeros((28, 18, 3), np.uint8), reader, 5, (9, 14)) is None

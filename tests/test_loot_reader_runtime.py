@@ -208,6 +208,22 @@ def test_one_pixel_border_in_overlap_never_duplicates_rewards(harness):
     assert len([action for action in h.inputs if action[0] == "tap"]) == 6
 
 
+def test_qualifier_spacing_overlap_is_reused_without_duplicate_loot(harness):
+    h = harness
+    a = card('Damaged Atlantis Medal', 100)
+    b = card('Beginner Tactical Training Blu-ray (Hyakkiyako)', 300)
+    shifted = replace(b, name='Beginner Tactical Training Blu-ray(Hyakkiyako)',
+                      box=(100, 250, 149, 222))
+    c = card('Advanced Tactical Training Blu-ray (Hyakkiyako)', 300)
+    h.pages = [lr.Page('reward', (a, b)), lr.Page('reward', (shifted, c))]
+    result = h.reader().run()
+    assert result['items_complete']
+    assert [(i['name'], i['quantity']) for i in result['items']] == [
+        (a.name, 1), (b.name, 1), (c.name, 1),
+    ]
+    assert len(h.events()) == 1
+
+
 def test_distinct_duplicate_cards_count_twice_and_page_overlap_is_reused(harness):
     h = harness
     a, b1, b2, c = (
@@ -315,7 +331,8 @@ def test_unreadable_full_list_never_returns_success_or_sends_blind_input(harness
     h.runner.device.tap = lambda x, y, **kw: h.inputs.append(("tap", (x, y))) or True
     with pytest.raises(TaskError, match="no readable cards|Foreground changed"):
         reader.run()
-    assert h.inputs == [("tap", (1039, 482))]
+    # Initial stabilization now catches a foreground change before opening.
+    assert h.inputs == ([] if failure == 'foreign' else [("tap", (1039, 482))])
     assert not h.result()["items_complete"] and not h.result()["items"]
     assert h.now < lr.GRID_ENTRY_TIMEOUT + 3
 
@@ -1421,3 +1438,36 @@ def test_lesson_notice_wait_ignores_background_but_requires_quiet_title(
         h.reader().capture(wait_for_stable_heading=True)
         assert h.now < 2
     assert not h.inputs
+
+
+@pytest.mark.parametrize('matches', [True, False])
+def test_recovery_checkpoint_requires_validated_reward_view(harness, monkeypatch, matches):
+    h = harness
+    h.pages = [replace(h.pages[0], kind='reward')]
+    checkpoints = []
+    h.runner.receipt_checkpoint = lambda cap, evidence: checkpoints.append((cap.png, evidence))
+    reader = h.reader()
+    cap = reader.capture()
+    reader.read(cap)
+    assert checkpoints == []  # Parsing alone cannot authorize recovery.
+    monkeypatch.setattr(lr, 'same_receipt_view', lambda *args, **kwargs: matches)
+    if matches:
+        fresh = reader.revalidate(cap, force=True)
+        assert checkpoints == [(fresh.png, h.evidence)]
+    else:
+        with pytest.raises(TaskError, match='Reward receipt changed'):
+            reader.revalidate(cap, force=True)
+        assert checkpoints == []
+    assert h.inputs == []
+
+
+def test_settled_carousel_page_records_recovery_checkpoint(harness):
+    h = harness
+    h.pages = [replace(h.pages[0], kind='reward')]
+    checkpoints = []
+    h.runner.receipt_checkpoint = lambda cap, evidence: checkpoints.append((cap.png, evidence))
+    reader = h.reader()
+    cap, parsed = reader.settled_reward_page(reader.capture())
+    assert parsed.kind == 'reward'
+    assert checkpoints == [(cap.png, h.evidence)]
+    assert h.inputs == []

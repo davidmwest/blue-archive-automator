@@ -191,14 +191,19 @@ def complete_name(name):
     )
 
 
-def reward_name(vision, image, box, *, native=None):
+def reward_label(name):
+    """Normalize OCR whitespace around qualifiers without changing their text."""
+    return re.sub(r"\s*\)", ")", re.sub(r"\s*\(\s*", " (", name)).strip()
+
+
+def reward_name(vision, image, box, *, native=None, minimum_confidence=.85):
     """Read the complete label in a full, already located reward card."""
     x, y, w, h = box
     titles = read_game_crop(
         vision, image if native is None else native,
         (x + 5, y + 6, x + w - 5, y + int(h * .24)),
     )
-    if not titles or any(a.confidence < .85 for a in titles):
+    if not titles or any(a.confidence < minimum_confidence for a in titles):
         return None
     # Separate words on one baseline can differ by a pixel in their top edge.
     # Group by substantial vertical overlap before sorting each line left/right;
@@ -216,7 +221,7 @@ def reward_name(vision, image, box, *, native=None):
     name = " ".join(
         word.text.strip() for line in lines for word in sorted(line, key=lambda a: a.box[0])
     )
-    return name if complete_name(name) else None
+    return reward_label(name) if complete_name(name) else None
 
 
 def reward_quantity(vision, image, box, *, minimum_confidence=.65, native=None):
@@ -372,12 +377,22 @@ def reward_heading_words(png, vision, words=None, *, isolated=False):
     native = decode_native_frame(png)
     if native.shape[:2] == (720, 1280):
         return []
-    crop = cv2.resize(native_game_region(native, (335, 103, 945, 213)), (610, 110))
-    return heading([
-        Word(w.text, w.confidence, tuple(
-            value + (335 if i % 2 == 0 else 103) for i, value in enumerate(w.box)
-        )) for w in vision.read(crop)
-    ], bounds=(335, 103, 945, 213))
+    source = native_game_region(native, (335, 103, 945, 213))
+    # A particle can merge into a letter at the canonical scale. Preserve the
+    # native detail on a second read, then enlarge it if OCR still segments a
+    # star as an extra word. Every accepted read must contain the entire exact
+    # phrase with high confidence; no words or punctuation are guessed away.
+    for scale in (1, 2, 3):
+        crop = cv2.resize(source, (610 * scale, 110 * scale))
+        exact = heading([
+            Word(w.text, w.confidence, tuple(
+                round(value / scale) + (335 if i % 2 == 0 else 103)
+                for i, value in enumerate(w.box)
+            )) for w in vision.read(crop)
+        ], bounds=(335, 103, 945, 213))
+        if exact:
+            return exact
+    return []
 
 
 def page(png, vision):
@@ -710,6 +725,17 @@ def reward_layout_stable(before, after):
     return True
 
 
+def same_opening_sweep_rewards(before, after):
+    """Bind a scaling Final row to the unchanged heading and per-run rewards."""
+    first, second = decode_frame(before), decode_frame(after)
+    if (getattr(first, 'shape', None) != (720, 1280, 3)
+            or getattr(second, 'shape', None) != (720, 1280, 3)
+            or has_tooltip(first) or has_tooltip(second)):
+        return False
+    return all(same_pixels(first[y:y+h, x:x+w], second[y:y+h, x:x+w])
+               for x, y, w, h in ((170, 70, 940, 65), (195, 210, 886, 163)))
+
+
 def same_receipt_view(before, after, expected, *, vision=None):
     """Revalidate recognized foreground with pixels and exact local OCR.
 
@@ -882,7 +908,7 @@ def same_card(a, b):
         # deliberately permits the same card to move after a scroll. A border
         # can rasterize one pixel wider at its new subpixel position; input
         # revalidation still requires the exact currently observed rectangle.
-        return a.name == b.name and all(
+        return reward_label(a.name) == reward_label(b.name) and all(
             abs(first - second) <= 1 for first, second in zip(a.box[2:], b.box[2:])
         )
     return same_icon(a.icon, b.icon) or (
@@ -930,14 +956,13 @@ def same_scrolled_grid_card(a, b):
     masks = [image[:, :, 3] > (127 if align_height else 0)
              for image in (first, second)]
     different = masks[0] != masks[1]
-    if np.count_nonzero(different) > (32 if align_height else 16):
+    if np.count_nonzero(different) > 32:
         return False
-    if align_height:
-        interior = cv2.erode((masks[0] | masks[1]).astype(np.uint8),
-                             np.ones((3, 3), np.uint8),
-                             borderType=cv2.BORDER_CONSTANT, borderValue=0).astype(bool)
-        if np.any(different & interior):
-            return False
+    interior = cv2.erode((masks[0] | masks[1]).astype(np.uint8),
+                         np.ones((3, 3), np.uint8),
+                         borderType=cv2.BORDER_CONSTANT, borderValue=0).astype(bool)
+    if np.any(different & interior):
+        return False
     visible = cv2.erode((masks[0] & masks[1]).astype(np.uint8),
                         np.ones((5, 5), np.uint8)).astype(bool)
     if np.count_nonzero(visible) < 4000:
@@ -945,11 +970,14 @@ def same_scrolled_grid_card(a, b):
     softened = [cv2.GaussianBlur(image[:, :, :3], (5, 5), 1).astype(np.float32)
                 for image in (first, second)]
     delta = np.abs(softened[0] - softened[1])[visible]
-    # Saved Bounty and event grids differ by subpixel antialiasing (event:
-    # mean <= 1.94, MSE <= 13.72, max <= 28). Quantity, column, contour,
+    # Saved Bounty and event grids differ by subpixel antialiasing, including
+    # equal-height contours. The 32px large event sweep scroll reaches mean
+    # 2.825, MSE 28.067, peak 37 with unchanged artwork; keep the tolerance
+    # confined to this multi-card, ordered scroll proof.
+    # Quantity, column, contour,
     # names and multiple ordered overlapping cards must still agree.
-    return (float(delta.mean()) <= 2.0 and float(np.mean(delta * delta)) <= 15
-            and float(delta.max()) <= 32)
+    return (float(delta.mean()) <= 2.9 and float(np.mean(delta * delta)) <= 29
+            and float(delta.max()) <= 38)
 
 
 def scrolled_grid_overlap(previous, current):
@@ -1035,6 +1063,7 @@ class ReceiptReader:
         self.sequence = 0
         self.observed = None
         self.tooltip_origin = None
+        self.sweep_origin = None
         self.timeout = RECEIPT_TIMEOUT
 
     def capture(self, *, wait_for_stable_heading=False):
@@ -1165,6 +1194,9 @@ class ReceiptReader:
             cap = fresh
             if expected is not None:
                 self.observed = (cap.png, expected)
+                checkpoint = getattr(r, "receipt_checkpoint", None)
+                if expected.kind == "reward" and callable(checkpoint):
+                    checkpoint(cap, self.evidence)
         if (
             not cap.is_fresh(r.clock())
             or r.device.foreground_package() != r.config.package
@@ -1345,12 +1377,51 @@ class ReceiptReader:
             if (same_receipt_view(cap.png, fresh.png, p, vision=self.vision)
                     and fresh.is_fresh(self.r.clock())):
                 self.observed = (fresh.png, p)
+                checkpoint = getattr(self.r, "receipt_checkpoint", None)
+                if callable(checkpoint):
+                    checkpoint(fresh, self.evidence)
                 return fresh, p
             self.evidence_frame(cap, f"scroll-read-{attempt + 1}")
             self.evidence_frame(fresh, f"scroll-refresh-{attempt + 1}")
             self.r.journal.record("receipt_scroll_reobserved", attempt=attempt + 1)
             cap = fresh
         self.r.fail("Reward receipt did not remain stable through OCR; receipt saved")
+
+    def settled_sweep_page(self, cap, parsed):
+        """Wait out the initial Final-row scale animation before any input.
+
+        The opening frame is discovery evidence, not an input reference. Keep
+        the strict identity check for all later tooltip/Full List round trips.
+        """
+        started, stable = self.r.clock(), 0
+        original, changed = cap.png, False
+        while self.r.clock() - started < GRID_RETURN_TIMEOUT:
+            self.r.sleep(.25)
+            following = self.capture()
+            matches = same_receipt_view(
+                cap.png, following.png, parsed, vision=self.vision
+            )
+            if not matches:
+                if not same_opening_sweep_rewards(original, following.png):
+                    self.r.fail('Sweep receipt changed while its opening animation settled')
+                changed = True
+            stable = stable + 1 if matches else 0
+            cap = following
+            if stable < 2:
+                continue
+            parsed = self.read(cap) if changed else parsed
+            if parsed.kind != 'sweep':
+                self.r.fail('Sweep receipt changed while its opening animation settled')
+            fresh = self.capture()
+            if (same_receipt_view(cap.png, fresh.png, parsed, vision=self.vision)
+                    and fresh.is_fresh(self.r.clock())):
+                self.observed = (fresh.png, parsed)
+                return fresh, parsed
+            if not same_opening_sweep_rewards(original, fresh.png):
+                self.r.fail('Sweep receipt changed while its opening animation settled')
+            cap, stable = fresh, 0
+        self.evidence_frame(cap, 'sweep-opening-unsettled')
+        self.r.fail('Sweep receipt opening animation did not settle; receipt saved')
 
     @staticmethod
     def same(a, b):
@@ -1427,6 +1498,54 @@ class ReceiptReader:
             self.r.sleep(.25)
             cap = self.capture()
 
+    def single_reward(self, cap, parsed):
+        """Read a centered one-card receipt without navigating its detail view.
+
+        Call only after initial reward stabilization. A scrolled, partial,
+        unnamed, or ambiguous card always follows the full inspection path.
+        """
+        if (parsed.kind != 'reward' or len(parsed.cards) != 1
+                or parsed.clipped or parsed.leading_clipped or parsed.trailing_clipped
+                or parsed.expand_target):
+            return None
+        card = parsed.cards[0]
+        x, y, w, h = card.box
+        if (abs(x + w / 2 - 640) > 2 or not 135 <= w <= 160
+                or not 200 <= h <= 230 or not complete_name(card.name)
+                or card.quantity is None or card.quantity <= 0 or not card.icon):
+            return None
+        native = decode_native_frame(cap.png)
+        image = decode_frame(cap.png)
+        name = reward_name(self.vision, image, card.box, native=native,
+                           minimum_confidence=.95)
+        quantity = reward_quantity(self.vision, image, card.box, native=native,
+                                   minimum_confidence=.95)
+        if name != card.name or quantity != card.quantity:
+            return None
+        # A passing heading sparkle can defeat an otherwise exact receipt
+        # comparison for one frame. Observe again, always against the original
+        # verified receipt; never adopt the rejected frame as a new reference.
+        for attempt in range(4):
+            fresh = self.capture()
+            if (same_receipt_view(cap.png, fresh.png, parsed, vision=self.vision)
+                    and fresh.is_fresh(self.r.clock())):
+                break
+            self.evidence_frame(fresh, f'single-card-rejected-{attempt + 1}')
+            self.r.journal.record('receipt_single_card_waiting', attempt=attempt + 1,
+                                  frame=f'{self.evidence.stem}-single-card-rejected-{attempt + 1}.png')
+            if attempt < 3:
+                self.r.sleep(.25)
+        else:
+            self.r.fail('Single reward receipt changed during verification')
+        self.observed = (fresh.png, parsed)
+        checkpoint = getattr(self.r, 'receipt_checkpoint', None)
+        if callable(checkpoint):
+            checkpoint(fresh, self.evidence)
+        self.evidence_frame(fresh, 'single-card')
+        self.r.journal.record('receipt_single_card_verified', name=name, quantity=quantity)
+        return {'name': name, 'quantity': quantity,
+                'icon_id': save_icon(self.r.config, card.icon)}
+
     def run(self):
         items = []
         complete = False
@@ -1441,6 +1560,18 @@ class ReceiptReader:
                 # input. Observe a settled row and validate it through OCR just
                 # as after a swipe; the strict input identity guard is unchanged.
                 cap, p = self.settled_reward_page(cap)
+                self.evidence_frame(cap, "initial-settled")
+                self.r.journal.record("receipt_initial_settled", cards=len(p.cards))
+                single = self.single_reward(cap, p)
+                if single is not None:
+                    return save_result(
+                        self.r.config, self.evidence, [single], True,
+                        task=getattr(self.r, 'task',
+                                     'cafe' if hasattr(self.r, 'floor') else 'lessons'),
+                    )
+            elif kind == "sweep":
+                cap, p = self.settled_sweep_page(cap, p)
+                self.sweep_origin = cap.png
                 self.evidence_frame(cap, "initial-settled")
                 self.r.journal.record("receipt_initial_settled", cards=len(p.cards))
             original_sweep = (cap.png, p) if kind == "sweep" else None
@@ -1657,7 +1788,8 @@ def settle_initial_sweep_notice(runner, frame, vision, evidence):
     return fresh
 
 
-def recover_sweep_receipt(runner, frame, vision, evidence, error, *, tooltip_origin=None):
+def recover_sweep_receipt(runner, frame, vision, evidence, error, *, tooltip_origin=None,
+                          sweep_origin=None):
     """Leave optional loot details only when the original sweep is still proven.
 
     This never retries a sweep or clears its pending spend. The caller must
@@ -1667,6 +1799,15 @@ def recover_sweep_receipt(runner, frame, vision, evidence, error, *, tooltip_ori
     original = page(frame.capture.png, vision)
     if original.kind != "sweep" or getattr(frame.screen, "count", None) is None:
         raise error
+    reference = frame.capture.png
+    if sweep_origin is not None:
+        # This reference was established before any loot-detail inputs. Bind it
+        # to the caller's opening receipt; never adopt a post-failure screen.
+        if not (same_receipt_view(reference, sweep_origin, original, vision=vision)
+                or same_opening_sweep_rewards(reference, sweep_origin)):
+            raise error
+        reference = sweep_origin
+        original = page(reference, vision)
     reader = ReceiptReader(runner, vision, evidence)
     reader.timeout = TASK_NOTICE_TIMEOUT + 10
     cap = reader.capture(wait_for_stable_heading=True)
@@ -1687,16 +1828,16 @@ def recover_sweep_receipt(runner, frame, vision, evidence, error, *, tooltip_ori
         cap = reader.revalidate(cap, force=True)
         reader.input(cap, (640, 533))
         cap = reader.capture()
-        cap, current = reader.returned_sweep(cap, (frame.capture.png, original))
+        cap, current = reader.returned_sweep(cap, (reference, original))
     if current.kind != "sweep" or not same_receipt_view(
-        frame.capture.png, cap.png, original, vision=vision
+        reference, cap.png, original, vision=vision
     ):
         reader.evidence_frame(cap, "sweep-recovery-rejected")
         runner.fail("Incomplete loot inspection did not return to the original sweep receipt")
     fresh = runner.wait("receipt")
     if (fresh.screen.count != frame.screen.count
             or getattr(fresh.screen, "task", None) != getattr(frame.screen, "task", None)
-            or not same_receipt_view(frame.capture.png, fresh.capture.png, original, vision=vision)):
+            or not same_receipt_view(reference, fresh.capture.png, original, vision=vision)):
         runner.fail("Sweep receipt changed after incomplete loot inspection")
     runner.journal.record("loot_inspection_incomplete", error=str(error),
                           evidence=str(evidence), next_step="verify_spent_resources")
@@ -1722,5 +1863,6 @@ def inspect_receipt(runner, frame, evidence):
                 or getattr(frame.screen, "kind", None) != "receipt"):
             raise
         return recover_sweep_receipt(runner, frame, vision, evidence, error,
-                                     tooltip_origin=reader.tooltip_origin)
+                                     tooltip_origin=reader.tooltip_origin,
+                                     sweep_origin=reader.sweep_origin)
     return runner.wait("receipt")

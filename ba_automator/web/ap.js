@@ -67,6 +67,7 @@
       const previous=catalog.join(',');catalog=descending(ap.hard_stages||[]);
       if(!dirty){
         $('ap-event-priority').checked=c.ap_event_priority===true;
+        $('ap-event-treasure').checked=c.ap_event_treasure_enabled===true;
         $('ap-floor').value=c.ap_floor??100;$('ap-enabled').checked=c.ap_schedule_enabled===true;
         const value=['elephs','reports','credits'].includes(c.ap_strategy)?c.ap_strategy:'elephs';document.querySelector(`input[name=strategy][value=${value}]`).checked=true;
         defaults=c.ap_hard_default_order!==false;const next=defaults?[...catalog]:[...(c.ap_hard_order||[])];
@@ -99,7 +100,7 @@
       if(new Set(typed).size!==typed.length||typed.some(s=>!catalog.includes(s))){error('use each scanned three-star stage at most once.');return;}
       order=typed;defaults=false;
     }
-    const result=await post('/api/settings',{ap_event_priority:$('ap-event-priority').checked,ap_floor:Number($('ap-floor').value),ap_schedule_enabled:$('ap-enabled').checked,ap_strategy:selectedStrategy(),ap_hard_default_order:defaults,ap_hard_order:defaults?[]:order});
+    const result=await post('/api/settings',{ap_event_treasure_enabled:$('ap-event-treasure').checked,ap_event_priority:$('ap-event-priority').checked,ap_floor:Number($('ap-floor').value),ap_schedule_enabled:$('ap-enabled').checked,ap_strategy:selectedStrategy(),ap_hard_default_order:defaults,ap_hard_order:defaults?[]:order});
     if(result!==null){dirty=false;textDirty=false;message('AP settings saved.');await refresh();}
   });
   $('ap-scan').addEventListener('click',async()=>{if(await post('/api/run',{task:'scan_ap'})!==null){message('stage scan queued. no AP will be spent.');await refresh();}});

@@ -35,8 +35,8 @@ def validate(s):
     for attempt in s['attempts']:
         if not isinstance(attempt, str) or not re.fullmatch(r'[0-9a-f]{64}', attempt):
             raise ValueError('Invalid Drill attempt fingerprint')
-    if len(set(s['attempts'])) != len(s['attempts']):
-        raise ValueError('Duplicate Drill practice attempt')
+    # This is an attempt ledger, not a set: rebuilding an expired free room
+    # can repeat a proven round, and every replay still consumes the daily budget.
     for key, proof in s['proofs'].items():
         if key not in s['attempts'] or not isinstance(proof, dict) or proof.get('won') is not True:
             raise ValueError('Invalid Drill proof')
@@ -137,11 +137,15 @@ def begin_practice(config, context, fingerprint):
     s = for_context(config, context)
     if s['pending'] is not None:
         raise DrillStateError('Resolve the paid Drill entry before practice')
-    if fingerprint in s['attempts']:
+    if fingerprint in s['attempts'] and fingerprint not in s['proofs']:
         raise DrillStateError('This Drill setup was already attempted today; change the plan or review its result')
     if len(s['attempts']) >= PRACTICE_LIMIT:
         raise DrillStateError('Daily limit of six Drill practice battles reached')
     s['attempts'].append(fingerprint)
+    # A free room may expire between rounds. Replay a previously won round to
+    # reach the unfinished teams, but require fresh evidence before paid entry.
+    # Removing the proof durably also blocks replay after an unknown outcome.
+    s['proofs'].pop(fingerprint, None)
     return write_state(config, s)
 
 

@@ -179,3 +179,47 @@ ticket balance reached zero, pending transaction state cleared, and the runner
 returned home. The exact assistant fee was confirmed once while resuming the
 saved entry. The revised scrolling gesture has regression coverage but was not
 needed in this successful retry because the retained offering was already visible.
+
+### Missing slots and interrupted free practice
+
+An explicitly empty owned slot can now be restored from the exact saved team
+during free practice. The runner searches the owned roster for the full variant
+name, preserves every occupied portrait, and checks the complete formation's
+identity, level, rarity, damage type, and ownership again before mobilizing.
+It does not choose substitutes, alter filters, or repair a paid formation this
+way. A filtered-out student or unreadable slot stops the attempt. Sanitized
+roster fixtures and offline runner tests cover this path; it has not yet been
+validated through a complete live restoration and battle.
+
+When a free room expires, a previously successful team may be practiced again
+to reach the unfinished rounds. Each replay consumes the same persisted
+six-battle daily budget, removes the old qualification before mobilization, and
+requires fresh victory evidence. Failed or unknown practice outcomes are never
+automatically replayed. An active room's detail supplies its actual remaining
+rounds; only the completed prefix with matching victory proofs is skipped.
+This distinguishes an interrupted fresh room from an older partial room even
+when both have saved wins. The next stage's remaining-round count must agree
+again before any formation input. Mismatched progress is held rather than inferred
+from the ticket balance. These interrupted-practice branches have offline
+regression coverage. Completed live entries are recorded below.
+
+### Assistant metadata recovery
+
+On September 30, tall-strip OCR omitted a weapon-star digit even though the
+exact mock-tested assistant was still offered. Missing digits now get two
+independent, high-confidence crop reads; disagreement stays unresolved. The
+student, lender fingerprint, level, rarity, and damage-type checks remain intact,
+and an interrupted paid entry never substitutes a different assistant. The
+runner can leave an interrupted Quick Formation panel and validate the existing
+paid entry before continuing. Sanitized badge fixtures cover the OCR failure,
+and the journal records parsed card metadata without lender names.
+
+The September 30 recovery completed all three paid rounds for 65,542 points,
+collected 152,171 credits and 70 Drill coins, and swept the two remaining tickets.
+The pending transaction cleared and the runner returned home. Animated sparkles
+had made the reward heading unreadable at canonical resolution despite identical
+item cards. Isolated native-resolution heading OCR now verifies the exact phrase;
+card identity, quantity, position, and frame-freshness checks remain required.
+Sanitized before/after fixtures reject shifted headings and changed quantities.
+Recovery collected the already-earned reward without replaying a battle or
+confirming the assistant fee a second time.

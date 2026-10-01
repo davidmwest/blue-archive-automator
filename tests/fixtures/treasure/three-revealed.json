@@ -1,0 +1,102 @@
+[
+  {
+    "text": "Treasure Hunt",
+    "confidence": 0.98961,
+    "box": [
+      104,
+      10,
+      301,
+      39
+    ]
+  },
+  {
+    "text": "6,767",
+    "confidence": 0.99998,
+    "box": [
+      641,
+      143,
+      701,
+      170
+    ]
+  },
+  {
+    "text": "Current Round: Round 1",
+    "confidence": 0.99977,
+    "box": [
+      844,
+      139,
+      992,
+      154
+    ]
+  },
+  {
+    "text": "Refresh",
+    "confidence": 0.99999,
+    "box": [
+      1130,
+      143,
+      1206,
+      166
+    ]
+  },
+  {
+    "text": "Remaining Slots: 42/45",
+    "confidence": 0.98616,
+    "box": [
+      834,
+      163,
+      1005,
+      183
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.99987,
+    "box": [
+      920,
+      571,
+      934,
+      590
+    ]
+  },
+  {
+    "text": "Open Slot x0",
+    "confidence": 0.99246,
+    "box": [
+      840,
+      598,
+      999,
+      633
+    ]
+  },
+  {
+    "text": "x2",
+    "confidence": 0.99982,
+    "box": [
+      208,
+      678,
+      230,
+      694
+    ]
+  },
+  {
+    "text": "x4",
+    "confidence": 0.99223,
+    "box": [
+      344,
+      675,
+      370,
+      695
+    ]
+  },
+  {
+    "text": "x2",
+    "confidence": 0.99971,
+    "box": [
+      483,
+      679,
+      504,
+      694
+    ]
+  }
+]

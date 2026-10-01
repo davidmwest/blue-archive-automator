@@ -284,6 +284,8 @@ def run_restart(
             ensure_restart_safe(config)
             from .event_state import ensure_safe as ensure_event_safe
             ensure_event_safe(config)
+            from .treasure_state import ensure_safe as ensure_treasure_safe
+            ensure_treasure_safe(config)
             device.connect()
             device.verify_package()
             size = device.display_size()

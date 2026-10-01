@@ -86,6 +86,20 @@ def _text(words):
     return " ".join(word.text for word in _reading_order(words))
 
 
+def _overlapping_header_words(words):
+    # A crop detector can duplicate the end of a preceding word: the observed
+    # "School" + "I Cafeteria" boxes overlap at both OCR scales. Agreement of
+    # their strings is not independent evidence when the segmentation is bad.
+    for index, left in enumerate(words):
+        for right in words[index + 1:]:
+            horizontal = min(left.box[2], right.box[2]) - max(left.box[0], right.box[0])
+            vertical = min(left.box[3], right.box[3]) - max(left.box[1], right.box[1])
+            if (horizontal > .1 * min(left.box[2] - left.box[0], right.box[2] - right.box[0])
+                    and vertical > .5 * min(left.box[3] - left.box[1], right.box[3] - right.box[1])):
+                return True
+    return False
+
+
 def _has(words, text, bounds):
     return any(word.normalized == text for word in _within(words, bounds))
 
@@ -277,7 +291,9 @@ class LessonVision:
                 enlarged = cv2.resize(padded, ((251 + 16) * scale, (62 + 16) * scale),
                                       interpolation=cv2.INTER_CUBIC)
                 words = self.startup.read(enlarged)
-                candidates.append(_text(words).strip() if words and all(word.confidence >= .85 for word in words) else None)
+                candidates.append(_text(words).strip() if words
+                                  and all(word.confidence >= .85 for word in words)
+                                  and not _overlapping_header_words(words) else None)
             normalized = [re.sub(r"[^a-z0-9]", "", candidate.lower()) if candidate else None
                           for candidate in candidates]
             value = candidates[-1] if normalized[0] and normalized[0] == normalized[1] else None

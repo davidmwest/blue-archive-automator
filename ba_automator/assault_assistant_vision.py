@@ -102,6 +102,29 @@ def _digit(words, cell, maximum):
     return value if 1 <= value <= maximum else None
 
 
+def _isolated_digit(source, startup, maximum, canonical_size):
+    """Retry a missing batch digit independently, requiring two agreeing reads.
+
+    Native tiny digits can be omitted when OCR groups the tall metadata strip.
+    Independent scales avoid that layout issue without interpreting a missing
+    weapon-star digit as a particular rarity or accepting a contradictory read.
+    """
+    readings = []
+    for scale in (3, 5):
+        crop = cv2.resize(source, (canonical_size[0] * scale, canonical_size[1] * scale))
+        crop = cv2.copyMakeBorder(crop, 30, 30, 30, 30, cv2.BORDER_CONSTANT,
+                                 value=(255, 255, 255))
+        words = startup.read(crop)
+        if (len(words) != 1 or words[0].confidence < .9
+                or not re.fullmatch(r"\d{1,3}", words[0].text)):
+            return None
+        value = int(words[0].text)
+        if not 1 <= value <= maximum:
+            return None
+        readings.append(value)
+    return readings[0] if readings[0] == readings[1] else None
+
+
 def read_assistant_metadata(frame, startup, bounds=None, *, native_frame=None):
     """Read tightly cropped level/star digits in one local OCR batch."""
     bounds = _card_bounds(frame)[0] if bounds is None else tuple(bounds)
@@ -109,15 +132,19 @@ def read_assistant_metadata(frame, startup, bounds=None, *, native_frame=None):
         return ()
     strip = np.full((len(bounds) * 360, 240, 3), 255, np.uint8)
     blue = []
+    sources = []
     for index, (x, y, _, _) in enumerate(bounds):
+        card_sources = []
         for part, region in enumerate(((x+38, y+12, x+57, y+32),
                                        (x+16, y+72, x+25, y+86))):
             x1, y1, x2, y2 = region
             source = (native_game_region(native_frame, region) if native_frame is not None
                       else frame[y1:y2, x1:x2])
+            card_sources.append((source, (x2-x1, y2-y1)))
             crop = cv2.resize(source, ((x2-x1)*5, (y2-y1)*5))
             offset = index * 360 + part * 180 + 45
             strip[offset:offset+crop.shape[0], 70:70+crop.shape[1]] = crop
+        sources.append(card_sources)
         star = cv2.cvtColor(frame[y+70:y+86, x+12:x+29], cv2.COLOR_BGR2HSV)
         blue.append(float(((star[:, :, 0] >= 85) & (star[:, :, 0] <= 115)
                            & (star[:, :, 1] > 100) & (star[:, :, 2] > 120)).mean()) > .15)
@@ -125,8 +152,13 @@ def read_assistant_metadata(frame, startup, bounds=None, *, native_frame=None):
     result = []
     for index, box in enumerate(bounds):
         digit = _digit(words, index*2+1, 5)
+        if digit is None:
+            digit = _isolated_digit(sources[index][1][0], startup, 5, sources[index][1][1])
+        level = _digit(words, index*2, 999)
+        if level is None:
+            level = _isolated_digit(sources[index][0][0], startup, 999, sources[index][0][1])
         stars = 5 if blue[index] and digit in (1, 2, 3, 4) else digit if not blue[index] else None
-        result.append(AssistantMetadata(box, _digit(words, index*2, 999), stars,
+        result.append(AssistantMetadata(box, level, stars,
                                         digit if blue[index] and digit in (1, 2, 3, 4) else None))
     return tuple(result)
 

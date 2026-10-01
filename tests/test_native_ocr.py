@@ -155,7 +155,8 @@ def test_formation_digit_batches_enlarge_original_native_pixels(width, height, k
     reader = SimpleNamespace(read=lambda image: batches.append(image.copy()) or [])
     invoke(canonical, reader, native_frame=native)
     x1, y1, x2, y2 = strip_bounds
-    actual_batch = batches.pop()
+    actual_batch = batches[0]
+    batches.clear()
     if kind == 'roster':
         # The roster uses a fixed bounded composite canvas. Compare the complete
         # batch so its final resize cannot hide an earlier 720p downsample.
@@ -172,7 +173,7 @@ def test_formation_digit_batches_enlarge_original_native_pixels(width, height, k
     else:
         np.testing.assert_array_equal(actual_batch[y1:y2, x1:x2], cv2.resize(region, output_size))
     invoke(canonical, reader)
-    assert not np.array_equal(actual_batch, batches.pop())
+    assert not np.array_equal(actual_batch, batches[0])
 
 
 def test_ocr_cache_requires_identical_pixels_and_returns_independent_lists():

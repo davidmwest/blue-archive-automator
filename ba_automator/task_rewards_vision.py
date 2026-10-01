@@ -7,7 +7,7 @@ from .home_badges import notification_dot
 from .crafting_vision import bright, has, yellow, within
 from .loot_receipts import reward_heading_words
 from .shop_vision import text_in
-from .vision import read_game_words, classify, decode_frame
+from .vision import Word, read_game_words, classify, decode_frame
 
 # The text label is the recognized Home control. The illustration above it
 # remained visible while three accepted taps failed to open Tasks at 1440p.
@@ -104,5 +104,14 @@ class TaskRewardsVision:
             # never accept a prefix or turn a missing receipt into another claim.
             heading = reward_heading_words(png, self.startup, words)
             if heading:
-                screen = classify_task_rewards(frame, [*words, *heading], home=home)
+                # The exact validated title may be split into two OCR words.
+                # Keep its joint bounds so the normal receipt guards still apply.
+                title = Word(
+                    "REWARD ACQUIRED!", min(word.confidence for word in heading),
+                    (min(word.box[0] for word in heading),
+                     min(word.box[1] for word in heading),
+                     max(word.box[2] for word in heading),
+                     max(word.box[3] for word in heading)),
+                )
+                screen = classify_task_rewards(frame, [*words, title], home=home)
         return screen

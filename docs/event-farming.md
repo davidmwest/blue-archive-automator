@@ -1,6 +1,6 @@
 # Event farming
 
-**Status:** quest clearing, seasonal navigation, and optional event-first AP routing are implemented. Quest clears and event sweeps have live evidence at 1440p. The greedy treasure planner exists, but treasure spending and event shops are not implemented.
+**Status:** quest clearing, seasonal navigation, and optional event-first AP routing are implemented. Quest clears and event sweeps have live evidence at 1440p. Treasure Hunt now has an independent opt-in runner with journaled cell spending and reward receipts. Event shops remain unimplemented.
 **Researched:** September 29, 2026 · global English
 
 farm what we actually want, collect it, then get back to the daily stuff. a new banner shouldn't require a new automator.
@@ -21,7 +21,7 @@ The [rerun farming guide](https://www.reddit.com/r/BlueArchive/comments/1wt161e/
 - Preserve the existing **100 AP floor** and the user's automatic-spending switch. No AP purchases, attempt resets, recruitment, or other resource purchases are implied.
 - Story unlocks remain manual. Initial quest clears can be explicitly requested from the dashboard and use the game's default Auto Formation each time. Specialized bonus-team optimization remains future work.
 
-The reviewed asset uses season ID `aquatic-showdown-global-2026-rerun`. Original-run shop and reward tables must not be copied without comparison. Navigation, early quest costs and results, and the treasure entrance have live evidence. Later stage costs, shop stock, and treasure spending still require observation; no guessed coordinates authorize a spend.
+The reviewed asset uses season ID `aquatic-showdown-global-2026-rerun`. Original-run shop and reward tables must not be copied without comparison. Navigation, early quest costs and results, and the treasure entrance have live evidence. Later stage costs and shop stock still require observation. Treasure Hunt geometry and the 200-currency reveal confirmation were verified in the client.
 
 ## One runner, small event profiles
 
@@ -115,23 +115,33 @@ For the three-round preset, encode the reviewed guide's chosen treasures rather 
 
 ### Implemented greedy policy
 
-`ba_automator/treasure_policy.py` implements the pure planner. It is not yet wired to live board recognition or resource spending. Live inspection found round 1 with zero treasure currency, and no cleared event quests; no treasure click has been live-tested.
+`ba_automator/treasure_policy.py` contains both the original bounded exact planner and the runtime's faster local greedy planner. The live adapter reads a 5 × 9 board and remaining counts from each supply card, allowing rotation. `treasure_rounds.py` defines the round-specific layouts from the [rerun reward tables](https://bluearchive.wiki/wiki/A_Flower_Blooms_Among_The_Hundred_%EF%BD%9E_Honorable_Sea_Showdown_%EF%BD%9E/Rerun):
 
-For every treasure, enumerate its rectangular placements within the board. Only permit rotations when the reviewed profile says they are allowed. Reject placements covering a confirmed empty cell or another treasure's revealed cell, or missing one of this treasure's revealed cells. Then enumerate non-overlapping full-board arrangements and retain only placements that occur in at least one legal arrangement. Unwanted and already completed treasures still constrain the available space.
+| Rounds | Prize rectangles and initial counts |
+| --- | --- |
+| 1, 4 | 2 × 3: 2; 1 × 3: 5; 1 × 2: 2 |
+| 2, 5 | 2 × 4: 1; 1 × 4: 2; 1 × 3: 5 |
+| 3, 6 | 3 × 3: 1; 2 × 2: 4; 1 × 2: 3 |
+| 7 onward | 2 × 4: 2; 1 × 3: 3; 1 × 2: 6 |
 
-For each unopened cell `c`, compute:
+These definitions validate observations; they do not extend the configured three-round spending goal.
 
-```
-coverage(c) = number of distinct supported placements of desired treasures containing c
-completion(c) = number of those placements whose only unopened cell is c
-next cell = highest coverage, then highest completion, then row/column order
-```
+For every remaining shape, enumerate distinct rectangular placements that avoid confirmed empty cells and completed prizes. Score each closed tile lexicographically:
 
-A placement counts once even if many arrangements of the other treasures support it. All clicks have the same currency cost, so coverage per click also maximizes coverage per unit of currency under this heuristic. This score is not a calibrated hit probability or a globally optimal spending strategy. It intentionally favors cells that test many hiding places at once, including overlapping possibilities for larger prizes. Confirmed hits constrain future placements naturally; we do not blindly open adjacent cells.
+1. Placements whose only unopened tile is this one.
+2. Placements through this tile that include a known, unfinished hit.
+3. All feasible placements through this tile.
+4. Row/column order for reproducible ties.
 
-After one paid reveal, wait for the stable board, identify the revealed cell, reconcile currency, and rerun the planner. Never batch the resulting coordinates. If all selected treasures are fully revealed, the planner returns no move; the separate round controller verifies rewards before deciding whether to refresh. Reaching round 3 is not completing round 3: finish its selected rewards before releasing the AP priority hold.
+This favors finishing exposed prizes, then investigating the largest number of plausible hiding places. It is a local heuristic, not an exhaustive non-overlapping arrangement search, calibrated probability, or global resource optimum. Anonymous hits do not identify a prize until its inventory count decreases and a unique completed rectangle is established. Contradictory boards fail without another purchase.
 
-Unreadable cells remain unknown, never empty. Contradictory observations or enumeration beyond the configured node budget produce `BoardUncertain`, with no proposed click. The caller must save evidence and request review/re-observe; it must not fall back to random spending. Round identity, currency checks, intent journaling, reward recognition, and reset authorization remain the executor's responsibility.
+The `[ap].event_treasure_enabled` switch is independent of `[ap].event_priority`, off by default, and appears beside event farming on the Spend AP page. When enabled, daily work visits Treasure Hunt and AP jobs follow farming with Treasure Hunt, including when no AP can be spent. It uses saved Wooden Yukari Dolls; it cannot purchase refills or spend premium currency.
+
+Each tile is a separate transaction: recognize two consistent boards, select one tile, verify the 200-currency cost, persist intent before confirming, wait for the delayed reward overlay, record the receipt, and verify exactly one fewer closed tile and exactly 200 less currency. New intents preserve the complete pre-spend board and validated receipt checkpoints. Recovery runs before startup and accepts only the same saved receipt or an exact post-transaction board after its receipt was logged; it never repeats the spending input. Legacy intents, changed receipts, and interruptions during an unverified scroll or tooltip remain held for review. Completed prizes are remembered across visits. Refresh intent is also persisted, and a reset must advance exactly one round without changing currency.
+
+The first implementation collects every prize in rounds 1–3. It does not discard remaining prizes just because Refresh becomes available. After completing round 3 it advances to round 4 without revealing a tile there; existing AP routing then observes that the three-round goal is complete. With insufficient currency it returns home and waits for the next visit. A visit has explicit action, tile, and time limits. Long visits yield between tiles after 40 minutes or 420 inputs, leaving room to finish the current receipt before the one-hour/600-input hard limit. Saved currency remains available for the next visit. Recovery can confirm a recognized free refresh only when a durable intent proves the prior board had no prizes left; other notices remain untouched.
+
+Live development on September 30 completed round 1: all nine prizes in 37 reveals, costing 7,400 event currency. The board contained 31 prize cells and six revealed empty cells. Saved receipts and exact board deltas were reconciled without repeating spending after recognition fixes. The completed-board overlay and free refresh into round 2 were verified live; the balance stayed at 2,359 through the refresh. Round 2's different inventory was also verified in the client. Round 3 and the final round-goal transition remain covered offline rather than claimed as live-tested. Multi-item rewards use the shared item inspector; stable, fully visible single-item receipts use the guarded no-input fast path.
 
 ## Shops, receipts, and crash recovery
 
@@ -175,7 +185,7 @@ Completion means the configured goals progress without crossing the AP floor or 
 
 The Campaign carousel can open a concurrent event whose play period has ended but whose reward shop remains available. Inspection uses the home banner, then verifies the Aquatic Showdown subtitle (or the title plus Sun-Kissed Beach quest), Quest tab, and Treasure Hunt entrance before proceeding. Expired event screens are regression fixtures and must not match. No resource-spending inputs exist in the inspector.
 
-The optional `[ap].event_priority` setting reserves AP while this event is playable, regardless of the ordinary farming strategy. It is off by default. When enabled, the AP runner checks the treasure round before ordinary farming. Through round 3 it selects the first available three-star quest in the reviewed order 9 → 5 → 1 and projects a sweep down to the shared AP floor. A missing clear or uncertain screen holds normal farming; it never silently falls through. Normal farming resumes only after observing a round above 3, when the event expires, or when the setting is disabled. The adapter has live sweep evidence on Quest 5. It does not spend treasure currency or advance rounds.
+The optional `[ap].event_priority` setting reserves AP while this event is playable, regardless of the ordinary farming strategy. It is off by default. When enabled, the AP runner checks the treasure round before ordinary farming. Through round 3 it selects the first available three-star quest in the reviewed order 9 → 5 → 1 and projects a sweep down to the shared AP floor. A missing clear or uncertain screen holds normal farming; it never silently falls through. Normal farming resumes only after observing a round above 3, when the event expires, or when the setting is disabled. The adapter has live sweep evidence on Quest 5. The separate opt-in Treasure Hunt task spends saved treasure currency and advances completed rounds.
 
 Live validation on 2026-09-29 completed an eight-input inspection and returned home: Quest 1 had zero stars and Treasure Hunt was on round 1; AP remained 220/220. The home banner can also rotate into recruitment. The inspector recognizes that wrong destination, returns home, and retries at most three entries. This verifies navigation and prerequisite inspection only, not event farming or treasure spending.
 
@@ -185,7 +195,7 @@ A reviewed profile in its playable date window exposes the dashboard's yes/no pr
 
 After success or failure, dispatch pauses and the existing queue stays intact. No red-dot follow-up or treasure input runs afterward. No dismisses the prompt for this season without touching the device. First-clear consent is separate from enabling automatic event farming. The local state records a pending battle before Mobilize, so an interruption cannot silently spend AP again.
 
-Tests cover actual sanitized 1440p screens, quest-number/row matching, per-quest Auto Formation, stopping below three stars, pending-intent guards, event-priority holds, queue preservation, and pause-after-clear behavior. Live validation on September 29 verified Quests 1–8 at three stars using Auto Formation. Quest 9 finished in 2:11 with two stars: every student survived, but the 120-second objective was missed. Clearing stopped there, returned home, and left dispatch paused with 115 AP. All nine reward receipts were recorded. The subsequent event sweep validation is recorded below; treasure execution remains unverified live.
+Tests cover actual sanitized 1440p screens, quest-number/row matching, per-quest Auto Formation, stopping below three stars, pending-intent guards, event-priority holds, queue preservation, and pause-after-clear behavior. Live validation on September 29 verified Quests 1–8 at three stars using Auto Formation. Quest 9 finished in 2:11 with two stars: every student survived, but the 120-second objective was missed. Clearing stopped there, returned home, and left dispatch paused with 115 AP. All nine reward receipts were recorded. The subsequent event sweep validation is recorded below; the independent Treasure Hunt implementation is described above.
 
 Quest 9 also exposed a receipt input whose screenshot expired during the ADB preflight. No input had been sent. The reader now makes at most three attempts, each requiring fresh validation of the same receipt; changed screens still stop the job. The interrupted receipt was recovered and its stars verified without replaying the battle. Post-battle star screenshots are now saved alongside reward evidence.
 
@@ -220,3 +230,12 @@ quantities, card dimensions, rarity, column alignment, and multiple ordered card
 Changed quantities, substituted artwork, and reordered cards remain rejected.
 This is saved-screen validation; the original partial receipt remains partial,
 and no sweep was repeated to reconstruct missing item names.
+
+On September 30, Quest 9 was observed with three stars and swept 44 times at
+20 AP each: **880 AP**, taking **990 to 110** with the 100 AP floor preserved.
+A larger Full List receipt exposed a separate, marginal scroll-overlap mismatch.
+Sanitized before/after fixtures now verify that six unchanged cards survive a
+uniform 32-pixel scroll, while altered quantities, artwork, ordering, and ambiguous
+overlaps are still rejected. This correction is limited to scrolling comparison;
+it does not relax receipt identity checks before input. The original partially
+itemized receipt remains incomplete because later rows were never captured.

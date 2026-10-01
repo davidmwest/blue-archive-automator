@@ -68,7 +68,7 @@ CRAFTING_SETTINGS = {"crafting_schedule_enabled": "schedule_enabled"}
 PACKS_SETTINGS = {f'packs_{key}_{suffix}': f'{key}_{suffix}'
                   for key in packs_state.PACKS for suffix in ('enabled', 'max_cents')}
 AP_SETTINGS = {f'ap_{key}': key for key in
-               ('schedule_enabled', 'event_priority', 'floor', 'strategy', 'hard_default_order', 'hard_order')}
+               ('schedule_enabled', 'event_priority', 'event_treasure_enabled', 'floor', 'strategy', 'hard_default_order', 'hard_order')}
 TOTAL_ASSAULT_SETTINGS = {f"total_assault_{key}": key
                           for key in ("difficulty", "enabled_in_daily", "comfort_seconds")}
 TACTICAL_BATTLE_SETTINGS = {f"tactical_battles_{key}": key
@@ -1150,7 +1150,7 @@ class DashboardController:
                         output = (output + line)[-100000:]
                         if message:
                             self._log(message, "error" if message.startswith(("Error:", "Traceback")) else "info", child=True)
-                            marker = next((prefix for prefix in ("clear_event:", "joint_firing_drill:", "total_assault:", "assault_rewards:", "tactical_rewards:", "tactical_battles:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
+                            marker = next((prefix for prefix in ("event_treasure:", "clear_event:", "joint_firing_drill:", "total_assault:", "assault_rewards:", "tactical_rewards:", "tactical_battles:", "red_dots:", "free_pack:", "tasks:", "bounties:", "scrimmages:", "restart:", "club:", "cafe:", "crafting:", "lessons:", "packs:", "mail:", "spend_ap:", "scan_ap:") if prefix in message), None)
                             if marker:
                                 with self._condition:
                                     if not self._stop_requested:

@@ -1,0 +1,172 @@
+[
+  {
+    "text": "Treasure Hunt",
+    "confidence": 0.99983,
+    "box": [
+      103,
+      7,
+      303,
+      40
+    ]
+  },
+  {
+    "text": "2,359",
+    "confidence": 0.99994,
+    "box": [
+      641,
+      143,
+      701,
+      170
+    ]
+  },
+  {
+    "text": "Current Round: Round 1",
+    "confidence": 0.99973,
+    "box": [
+      844,
+      139,
+      992,
+      155
+    ]
+  },
+  {
+    "text": "Refresh",
+    "confidence": 0.99999,
+    "box": [
+      1130,
+      143,
+      1206,
+      166
+    ]
+  },
+  {
+    "text": "Remaining Slots: 8/45",
+    "confidence": 0.97222,
+    "box": [
+      838,
+      162,
+      1000,
+      183
+    ]
+  },
+  {
+    "text": "Please refresh for the next round.",
+    "confidence": 0.9999,
+    "box": [
+      752,
+      349,
+      1082,
+      376
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.99984,
+    "box": [
+      921,
+      572,
+      934,
+      590
+    ]
+  },
+  {
+    "text": "Open Slot x0",
+    "confidence": 0.99655,
+    "box": [
+      840,
+      599,
+      998,
+      633
+    ]
+  },
+  {
+    "text": "Finish",
+    "confidence": 0.99999,
+    "box": [
+      144,
+      618,
+      202,
+      640
+    ]
+  },
+  {
+    "text": "Finish",
+    "confidence": 0.99998,
+    "box": [
+      282,
+      619,
+      340,
+      640
+    ]
+  },
+  {
+    "text": "Finish",
+    "confidence": 0.99997,
+    "box": [
+      419,
+      619,
+      477,
+      640
+    ]
+  },
+  {
+    "text": "x0",
+    "confidence": 0.9774,
+    "box": [
+      206,
+      676,
+      231,
+      695
+    ]
+  },
+  {
+    "text": "x0",
+    "confidence": 0.9569,
+    "box": [
+      346,
+      679,
+      367,
+      693
+    ]
+  },
+  {
+    "text": "x0",
+    "confidence": 0.98558,
+    "box": [
+      481,
+      677,
+      506,
+      695
+    ]
+  },
+  {
+    "text": "X0",
+    "confidence": 0.76614,
+    "box": [
+      190,
+      665,
+      245,
+      708
+    ]
+  },
+  {
+    "text": "X0",
+    "confidence": 0.69468,
+    "box": [
+      320,
+      665,
+      385,
+      708
+    ]
+  },
+  {
+    "text": "X0",
+    "confidence": 0.67032,
+    "box": [
+      460,
+      665,
+      520,
+      708
+    ]
+  }
+]

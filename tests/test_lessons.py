@@ -1061,6 +1061,52 @@ def test_changed_selected_room_blocks_preview_and_start(harness, monkeypatch):
     assert not harness.device.taps
 
 
+def test_prior_lesson_bond_gain_does_not_invalidate_same_room(harness, monkeypatch):
+    runner, decision = prepare_execution(harness, monkeypatch,
+        preview_students=(LessonStudent("preview-slot", True, 11),))
+    runner.confirmed = 1
+    card = RoomCard(0, "Library", 1, True, (250, 250), (LessonStudent("0", True, 11),))
+    monkeypatch.setattr(runner, "room_grid", lambda frame: harness.frame(
+        LessonScreen("rooms", tickets=2, room_cards=(card,))))
+
+    runner.execute(decision)
+
+    assert runner.confirmed == 2
+    assert harness.device.taps.count((640, 550)) == 1
+    assert any(e["event"] == "lesson_survey_bonds_updated" for e in journal(runner))
+
+
+@pytest.mark.parametrize("observed,confirmed", [
+    ((LessonStudent("0", True, 11),), 0),
+    ((LessonStudent("0", True, 9),), 1),
+    ((LessonStudent("0", True, 12),), 1),
+    ((LessonStudent("0", False, None),), 1),
+    ((LessonStudent("0", True, None),), 1),
+    ((LessonStudent("1", True, 11),), 1),
+    ((), 1),
+])
+def test_survey_bond_refresh_preserves_room_guards(harness, monkeypatch, observed, confirmed):
+    runner, decision = prepare_execution(harness, monkeypatch)
+    runner.confirmed = confirmed
+    card = RoomCard(0, "Library", 1, True, (250, 250), observed)
+    monkeypatch.setattr(runner, "room_grid", lambda frame: harness.frame(
+        LessonScreen("rooms", tickets=2, room_cards=(card,))))
+    with pytest.raises(TaskError, match="room changed"):
+        runner.execute(decision)
+    assert not harness.device.taps
+
+
+def test_fresh_bond_in_grid_still_requires_same_bond_in_preview(harness, monkeypatch):
+    runner, decision = prepare_execution(harness, monkeypatch)
+    runner.confirmed = 1
+    card = RoomCard(0, "Library", 1, True, (250, 250), (LessonStudent("0", True, 11),))
+    monkeypatch.setattr(runner, "room_grid", lambda frame: harness.frame(
+        LessonScreen("rooms", tickets=2, room_cards=(card,))))
+    with pytest.raises(TaskError, match="students differ"):
+        runner.execute(decision)
+    assert harness.device.taps == [(250, 250)]
+
+
 def test_incomplete_room_grid_cannot_be_passed_to_planner(harness):
     runner = harness.make()
     runner.expected_tickets = 2

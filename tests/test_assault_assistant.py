@@ -1,6 +1,7 @@
 """Assistant choice proofs and fail-closed serial selection, without device input."""
 from dataclasses import replace
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -132,6 +133,7 @@ def test_maximum_candidate_avoids_unnecessary_scroll_and_does_not_need_lower_unr
 
 class VerificationRunner(AssaultAssistantMixin):
     def __init__(self, assistant_page, final_team):
+        self.journal = Mock()
         self.selected = frame(assistant_page)
         self.final = frame(SimpleNamespace(kind='formation', team=final_team))
         self.taps = []
@@ -407,3 +409,68 @@ def test_fallback_cannot_treat_missing_damage_as_zero():
     with pytest.raises(RuntimeError, match='Mock damage report is incomplete'):
         runner.choose_assistant_team(None, team(), MockResult(False, None, None, {}))
     assert not runner.taps and not runner.context_checked
+
+
+def test_free_replan_restores_new_lender_only_with_exact_student_stats_and_empty_slot(monkeypatch):
+    from ba_automator import assault_assistant
+    runner = RestorationRunner(card(lender='replacement'))
+    monkeypatch.setattr(assault_assistant, 'decode_frame', lambda png: 'decoded')
+    monkeypatch.setattr(assault_assistant, 'verify_assistant_preview',
+                        lambda image, words, selected, slot: selected.selected and slot == 1)
+    result = runner.verify_real_assistant(real_formation(members=()), borrowed_team(), allow_free_replan=True)
+    assert result is runner.final and runner.restored
+    assert runner.assistant == replace(borrowed_team()[1], assistant_id='replacement')
+    assert runner.journal.record.call_args.kwargs['requires_fresh_mock'] is True
+    names = [call.args[0] for call in runner.journal.save_image.call_args_list]
+    assert names == ['assistant-verification-first.png', 'assistant-verification-top.png',
+                     'assistant-free-replan.png']
+
+
+@pytest.mark.parametrize('offered', [card('different-student', lender='new'),
+                                     card(level=89, lender='new'), card(stars=4, lender='new'),
+                                     card(damage='explosive', lender='new')])
+def test_free_replan_does_not_substitute_student_or_stats(offered):
+    runner = RestorationRunner(offered)
+    with pytest.raises(RuntimeError, match='ticket intent is held'):
+        runner.verify_real_assistant(real_formation(members=()), borrowed_team(), allow_free_replan=True)
+    assert runner.assistant is None and not runner.restored
+
+
+def test_free_replan_cannot_replace_an_occupied_offering():
+    runner = VerificationRunner(page((card(lender='new', selected=True),), at_bottom=True), ())
+    with pytest.raises(RuntimeError, match='different assistant is selected'):
+        runner.verify_real_assistant(real_formation(), borrowed_team(), allow_free_replan=True)
+    assert runner.assistant is None
+
+
+def test_free_replan_preserves_exact_original_if_it_is_available(monkeypatch):
+    from ba_automator import assault_assistant
+    runner = RestorationRunner()
+    monkeypatch.setattr(assault_assistant, 'decode_frame', lambda png: 'decoded')
+    monkeypatch.setattr(assault_assistant, 'verify_assistant_preview', lambda *args: True)
+    runner.verify_real_assistant(real_formation(members=()), borrowed_team(), allow_free_replan=True)
+    assert runner.assistant == borrowed_team()[1]
+    assert all(call.args[0] == "assistant_verification_page"
+               for call in runner.journal.record.call_args_list)
+
+
+def test_free_replan_scans_for_original_then_relocates_new_offering_on_fresh_page(monkeypatch):
+    from ba_automator import assault_assistant
+    runner = RestorationRunner(card(lender='replacement'))
+    top = frame(replace(runner.selected.screen, at_bottom=False))
+    bottom = frame(page((card('another student', lender='other'),), words=EMPTY_SLOT_ONE,
+                        at_top=False, at_bottom=True, scrollbar=(422, 514)))
+    runner.selected = top
+    starts = []
+    def start(current):
+        starts.append(current)
+        runner.selected = top
+        return top
+    runner._assistant_start = start
+    runner.swipe = Mock(side_effect=lambda *args: setattr(runner, 'selected', bottom))
+    monkeypatch.setattr(assault_assistant, 'decode_frame', lambda png: 'decoded')
+    monkeypatch.setattr(assault_assistant, 'verify_assistant_preview', lambda *args: True)
+    runner.verify_real_assistant(real_formation(members=()), borrowed_team(), allow_free_replan=True)
+    assert len(starts) == 2 and starts[1] is bottom
+    assert runner.swipe.call_count == 1
+    assert runner.assistant.assistant_id == 'replacement'

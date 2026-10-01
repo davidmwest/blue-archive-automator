@@ -65,12 +65,14 @@ class AssaultAssistantMixin:
             self.fail('The real owned formation changed; the ticket intent is held')
         return formation
 
-    def verify_real_assistant(self, formation, team):
+    def verify_real_assistant(self, formation, team, *, allow_free_replan=False):
         """Restore a cleared borrowed slot, then verify the exact tested offering.
 
         Entering for real can clear the mock's borrowed slot. Only an explicitly
         empty expected slot permits selection; an occupied slot is never edited.
         A matching student from another lender is not the qualified offering.
+        Only a caller inside free practice may explicitly request replanning;
+        that returns a new identity requiring a new mock victory.
         """
         borrowed = [member for member in team if member.assistant]
         if len(borrowed) != 1:
@@ -92,6 +94,21 @@ class AssaultAssistantMixin:
             if not frame.screen.available:
                 self.fail('The mock-tested assistant is no longer available; the ticket intent is held')
             frame = self.filter_assistants(frame, expected.damage_type)
+        def record_page(observed):
+            page = observed.screen
+            self.journal.record(
+                'assistant_verification_page', expected_offering=expected.assistant_id,
+                cards=[dict(student=card.member.student_id, level=card.member.level,
+                            stars=card.member.stars, weapon_stars=card.weapon_stars,
+                            offering=card.member.assistant_id, selected=card.selected,
+                            bounds=card.bounds) for card in page.cards],
+                incomplete=getattr(page, 'incomplete', ()),
+                unavailable=getattr(page, 'unavailable', ()),
+                scrollbar=page.scrollbar, at_bottom=page.at_bottom)
+
+        record_page(frame)
+        self.journal.save_image('assistant-verification-first.png', frame.capture.png)
+        replacement = None
         # Inspect the current viewport first: reopening can retain its scroll.
         selected = next((card for card in frame.screen.cards
                          if (restore or card.selected) and card.member.assistant_id == expected.assistant_id), None)
@@ -99,11 +116,18 @@ class AssaultAssistantMixin:
             if any(card.selected for card in frame.screen.cards):
                 self.fail('A different assistant is selected; the ticket intent is held')
             frame = self._assistant_start(frame)
+            self.journal.save_image('assistant-verification-top.png', frame.capture.png)
+            record_page(frame)
             previous_scroll = None
             unchanged = 0
             for _ in range(240):
                 selected = next((card for card in frame.screen.cards
                                  if (restore or card.selected) and card.member.assistant_id == expected.assistant_id), None)
+                if allow_free_replan and restore and replacement is None:
+                    replacement = next((card.member for card in frame.screen.cards
+                                        if not card.selected and card.member.assistant_id
+                                        and replace(card.member, slot=expected.slot,
+                                                    assistant_id=expected.assistant_id) == expected), None)
                 if selected or frame.screen.at_bottom:
                     break
                 if any(card.selected for card in frame.screen.cards):
@@ -118,6 +142,39 @@ class AssaultAssistantMixin:
                 previous_scroll = frame.screen.scrollbar
                 self.swipe(frame, (1015, 458), (1015, 378), 'Locate the retained assistant offering')
                 frame = self.wait_assistant()
+                record_page(frame)
+        if (selected is None and allow_free_replan and restore and replacement is not None
+                and frame.screen.at_bottom):
+            # The original offering was not verifiable in a bounded full scan.
+            # Re-find one observed exact-character/stat replacement, never use
+            # a stale tap coordinate or substitute during paid restoration.
+            original = expected
+            frame = self._assistant_start(frame)
+            previous_scroll, unchanged = None, 0
+            for _ in range(240):
+                selected = next((card for card in frame.screen.cards
+                                 if card.member == replacement and not card.selected), None)
+                if selected or frame.screen.at_bottom:
+                    break
+                if any(card.selected for card in frame.screen.cards):
+                    self.fail('A different assistant is selected; free replanning was stopped')
+                if frame.screen.scrollbar is None:
+                    self.fail('Assistant scroll position is unreadable; free replanning was stopped')
+                unchanged = unchanged + 1 if frame.screen.scrollbar == previous_scroll else 0
+                if unchanged >= 3:
+                    self.fail('Assistant scrolling stalled; free replanning was stopped')
+                previous_scroll = frame.screen.scrollbar
+                self.swipe(frame, (1015, 458), (1015, 378), 'Locate a replacement for free mock qualification')
+                frame = self.wait_assistant()
+                record_page(frame)
+            if selected is not None:
+                expected = replace(selected.member, slot=original.slot)
+                team = tuple(expected if member == original else member for member in team)
+                self.journal.save_image('assistant-free-replan.png', frame.capture.png)
+                self.journal.record('assistant_free_replan', student=expected.student_id,
+                                    previous_offering=original.assistant_id,
+                                    replacement_offering=expected.assistant_id,
+                                    requires_fresh_mock=True)
         if selected is None or replace(selected.member, slot=expected.slot) != expected:
             self.fail('The exact mock-tested assistant cannot be verified; the ticket intent is held')
         if restore:

@@ -1,0 +1,52 @@
+[
+  {
+    "text": "Treasure Hunt",
+    "confidence": 0.98227,
+    "box": [
+      102,
+      5,
+      303,
+      40
+    ]
+  },
+  {
+    "text": "Notice",
+    "confidence": 0.99996,
+    "box": [
+      585,
+      146,
+      692,
+      183
+    ]
+  },
+  {
+    "text": "Refresh for the next round?",
+    "confidence": 0.99995,
+    "box": [
+      472,
+      319,
+      804,
+      351
+    ]
+  },
+  {
+    "text": "Cancel",
+    "confidence": 0.99998,
+    "box": [
+      463,
+      487,
+      563,
+      522
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99997,
+    "box": [
+      703,
+      485,
+      828,
+      521
+    ]
+  }
+]

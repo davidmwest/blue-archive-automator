@@ -1,0 +1,192 @@
+[
+  {
+    "text": "All",
+    "confidence": 0.99148,
+    "box": [
+      557,
+      96,
+      588,
+      121
+    ]
+  },
+  {
+    "text": "Daily",
+    "confidence": 0.99991,
+    "box": [
+      693,
+      92,
+      755,
+      128
+    ]
+  },
+  {
+    "text": "Weekly",
+    "confidence": 0.99998,
+    "box": [
+      835,
+      93,
+      918,
+      125
+    ]
+  },
+  {
+    "text": "Achievement",
+    "confidence": 0.99999,
+    "box": [
+      962,
+      96,
+      1099,
+      121
+    ]
+  },
+  {
+    "text": "Challenges",
+    "confidence": 0.99996,
+    "box": [
+      1117,
+      95,
+      1242,
+      125
+    ]
+  },
+  {
+    "text": "REWARD ACQUIRED!(s)",
+    "confidence": 0.98046,
+    "box": [
+      357,
+      118,
+      964,
+      200
+    ]
+  },
+  {
+    "text": "Until 10/05/2026 at11:59:59",
+    "confidence": 0.97698,
+    "box": [
+      604,
+      194,
+      818,
+      214
+    ]
+  },
+  {
+    "text": "Expert Permit",
+    "confidence": 0.99813,
+    "box": [
+      574,
+      266,
+      707,
+      292
+    ]
+  },
+  {
+    "text": "s)via Concentrated",
+    "confidence": 0.95626,
+    "box": [
+      1050,
+      429,
+      1182,
+      442
+    ]
+  },
+  {
+    "text": "x100",
+    "confidence": 0.97732,
+    "box": [
+      613,
+      433,
+      666,
+      459
+    ]
+  },
+  {
+    "text": "X30",
+    "confidence": 0.92232,
+    "box": [
+      1036,
+      515,
+      1068,
+      534
+    ]
+  },
+  {
+    "text": "Challenge",
+    "confidence": 0.99997,
+    "box": [
+      540,
+      564,
+      636,
+      591
+    ]
+  },
+  {
+    "text": "Clear Mission 7, Stage 4 Strategy on Normal within 3 turn(s) via Concentrated",
+    "confidence": 0.99763,
+    "box": [
+      652,
+      561,
+      1185,
+      581
+    ]
+  },
+  {
+    "text": "Command.",
+    "confidence": 0.99998,
+    "box": [
+      652,
+      578,
+      729,
+      593
+    ]
+  },
+  {
+    "text": "TOUCH TO CONTINUE",
+    "confidence": 0.99063,
+    "box": [
+      493,
+      617,
+      787,
+      647
+    ]
+  },
+  {
+    "text": "Complete at least 8 Daily Task(s)",
+    "confidence": 0.97967,
+    "box": [
+      504,
+      646,
+      753,
+      667
+    ]
+  },
+  {
+    "text": "Count6/8",
+    "confidence": 0.99971,
+    "box": [
+      771,
+      648,
+      852,
+      667
+    ]
+  },
+  {
+    "text": "Claim",
+    "confidence": 0.99996,
+    "box": [
+      939,
+      654,
+      1008,
+      682
+    ]
+  },
+  {
+    "text": "Claim All",
+    "confidence": 0.97929,
+    "box": [
+      1091,
+      655,
+      1208,
+      682
+    ]
+  }
+]

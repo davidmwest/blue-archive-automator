@@ -38,6 +38,7 @@ class Config:
     crafting_schedule_enabled: bool = False
     ap_schedule_enabled: bool = False
     ap_event_priority: bool = False
+    ap_event_treasure_enabled: bool = False
     ap_floor: int = 100
     ap_strategy: str = 'elephs'
     ap_hard_default_order: bool = True
@@ -129,7 +130,7 @@ class Config:
                      "drill_enabled_in_daily", "total_assault_enabled_in_daily", "tactical_battles_enabled_in_daily",
                      "tactical_battles_skip_battles", "crafting_schedule_enabled",
                      "packs_monthly_enabled", "packs_half_monthly_enabled", "packs_ap_enabled", "packs_weekly_ap_iv_enabled", "packs_weekly_reports_lite_enabled",
-                     "ap_schedule_enabled", "ap_event_priority", "ap_hard_default_order"):
+                     "ap_schedule_enabled", "ap_event_priority", "ap_event_treasure_enabled", "ap_hard_default_order"):
             if type(getattr(self, name)) is not bool:
                 raise ConfigError(f"{name} must be true or false")
         if (type(self.daily_reset_delay_minutes) is not int
@@ -229,7 +230,7 @@ class Config:
             "checkin": {"schedule_enabled", "interval_minutes"},
             "cafe": {"schedule_enabled", "invite_enabled", "invite_student"},
             "crafting": {"schedule_enabled"},
-            "ap": {"schedule_enabled", "event_priority", "floor", "strategy", "hard_default_order", "hard_order"},
+            "ap": {"schedule_enabled", "event_priority", "event_treasure_enabled", "floor", "strategy", "hard_default_order", "hard_order"},
             "packs": {"monthly_enabled", "half_monthly_enabled", "ap_enabled", "weekly_ap_iv_enabled", "weekly_reports_lite_enabled",
                       "monthly_max_cents", "half_monthly_max_cents", "ap_max_cents", "weekly_ap_iv_max_cents", "weekly_reports_lite_max_cents"},
             "bounties": {"enabled_in_daily"},

@@ -6,6 +6,7 @@ from .config import Config
 
 
 TASK_LABELS = {
+    "event_treasure": "Event treasure checked; rewards logged",
     "clear_event": "Event quest clear finished; queue paused",
     "joint_firing_drill": "Joint Firing Drill checked",
     "total_assault": "Total Assault complete",
@@ -29,7 +30,7 @@ TASK_LABELS = {
     "daily": "Daily tasks complete",
 }
 TASKS = frozenset(TASK_LABELS)
-RUN_PREFIXES = ("clear_event-","joint_firing_drill-", "total_assault-", "assault_rewards-", "tactical_rewards-", "tactical_battles-", "red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
+RUN_PREFIXES = ("event_treasure-", "clear_event-","joint_firing_drill-", "total_assault-", "assault_rewards-", "tactical_rewards-", "tactical_battles-", "red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
 
 
 def _task_plan(command: str, config: Config) -> tuple[str, ...]:
@@ -47,6 +48,8 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
         plan = (*plan, "total_assault") if config.total_assault_enabled_in_daily else plan
         plan = (*plan, "joint_firing_drill") if config.drill_enabled_in_daily else plan
         plan = (*plan, "assault_rewards")
+        if config.ap_event_treasure_enabled:
+            plan = (*plan, "event_treasure")
         return (*plan, "tasks")
     if command == "cafe":
         return ("restart", "club", "mail", "cafe")
@@ -82,7 +85,9 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
         return ("restart", command)
     if command == "total_assault":
         return ("restart", "total_assault", "assault_rewards")
-    if command in {"assault_rewards", "tactical_rewards", "tasks", "bounties", "scrimmages", "lessons", "crafting", "spend_ap", "scan_ap"}:
+    if command == "spend_ap" and config.ap_event_treasure_enabled:
+        return ("restart", "spend_ap", "event_treasure")
+    if command in {"event_treasure", "assault_rewards", "tactical_rewards", "tasks", "bounties", "scrimmages", "lessons", "crafting", "spend_ap", "scan_ap"}:
         return ("restart", command)
     if command == "restart":
         return ("restart",)
@@ -92,6 +97,16 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
 def task_plan(command: str, config: Config) -> tuple[str, ...]:
     """Check badges once after successful game work, before closing an idle app."""
     plan = _task_plan(command, config)
+    from .treasure_state import read_state as read_treasure_state
+    try:
+        if read_treasure_state(config)['pending']:
+            # Recovery only reconciles the interrupted tile and returns home.
+            # Keep the ordinary enabled visit so new farming currency is used.
+            followup = plan if config.ap_event_treasure_enabled else tuple(
+                task for task in plan if task != 'event_treasure')
+            plan = ('event_treasure', *followup)
+    except (RuntimeError, ValueError):
+        pass  # Restart's state guard prevents input on corrupt state.
     if command == "clear_event":
         return plan
     if command == 'daily':

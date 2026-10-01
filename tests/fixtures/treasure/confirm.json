@@ -1,0 +1,122 @@
+[
+  {
+    "text": "Treasure Hunt",
+    "confidence": 0.99961,
+    "box": [
+      103,
+      7,
+      302,
+      39
+    ]
+  },
+  {
+    "text": "Notice",
+    "confidence": 0.99994,
+    "box": [
+      586,
+      147,
+      691,
+      182
+    ]
+  },
+  {
+    "text": "nd: Round 1",
+    "confidence": 0.99797,
+    "box": [
+      917,
+      139,
+      993,
+      155
+    ]
+  },
+  {
+    "text": "Refresh",
+    "confidence": 0.99997,
+    "box": [
+      1129,
+      143,
+      1206,
+      165
+    ]
+  },
+  {
+    "text": "Slots: 45/45",
+    "confidence": 0.98855,
+    "box": [
+      917,
+      161,
+      1005,
+      182
+    ]
+  },
+  {
+    "text": "Open the selected slot(s)?",
+    "confidence": 0.99751,
+    "box": [
+      481,
+      317,
+      795,
+      355
+    ]
+  },
+  {
+    "text": "Cancel",
+    "confidence": 0.99999,
+    "box": [
+      463,
+      487,
+      564,
+      522
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99997,
+    "box": [
+      704,
+      487,
+      827,
+      520
+    ]
+  },
+  {
+    "text": "200",
+    "confidence": 1.0,
+    "box": [
+      910,
+      569,
+      947,
+      592
+    ]
+  },
+  {
+    "text": "Open Slot x1",
+    "confidence": 0.99897,
+    "box": [
+      839,
+      598,
+      996,
+      633
+    ]
+  },
+  {
+    "text": "x2",
+    "confidence": 0.99894,
+    "box": [
+      208,
+      678,
+      230,
+      694
+    ]
+  },
+  {
+    "text": "x5",
+    "confidence": 0.98072,
+    "box": [
+      344,
+      675,
+      370,
+      695
+    ]
+  }
+]

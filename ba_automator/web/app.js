@@ -34,7 +34,7 @@
   let actionsLimit = 15;
   let noticeTimer = null;
 
-  const taskName = (task) => ({ joint_firing_drill: "Joint Firing Drill", tactical_battles: "Tactical Challenge battles", total_assault: "Total Assault", assault_rewards: "Total Assault rewards", tactical_rewards: "Tactical rewards", red_dots: "Collect red dots", free_pack: "Free pack + mail", tasks: "Collect Tasks", bounties: "Bounties", scrimmages: "Scrimmages", spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
+  const taskName = (task) => ({ event_treasure: "Event treasure", clear_event: "Clear event quests", joint_firing_drill: "Joint Firing Drill", tactical_battles: "Tactical Challenge battles", total_assault: "Total Assault", assault_rewards: "Total Assault rewards", tactical_rewards: "Tactical rewards", red_dots: "Collect red dots", free_pack: "Free pack + mail", tasks: "Collect Tasks", bounties: "Bounties", scrimmages: "Scrimmages", spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
   const jobName = (job) => job?.source === "checkin" && job?.task === "red_dots" ? "Check-in" : taskName(job?.task);
   const isRunning = () => Boolean(status && (status.state === "running" || status.current_job));
   const queue = () => (Array.isArray(status?.queue) ? status.queue : []);

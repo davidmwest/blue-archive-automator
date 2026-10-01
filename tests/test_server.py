@@ -2023,3 +2023,21 @@ def test_live_settings_reach_next_job_but_not_active_snapshot(controlled):
     eventually(lambda: len(factory.processes) == 2)
     after = Config.from_file(factory.processes[1].arguments[4])
     assert after.packs_ap_enabled and after.ap_event_priority
+
+
+def test_treasure_toggle_persists_without_enabling_event_farming(controlled):
+    from ba_automator.tasks import task_plan
+
+    controller, factory = controlled
+    controller.pause()
+    result = controller.update_settings({"ap_event_treasure_enabled": True})
+    assert result["config"]["ap_event_treasure_enabled"] is True
+    saved = Config.from_file(controller.config_path)
+    assert saved.ap_event_treasure_enabled
+    assert not saved.ap_event_priority
+    controller.enqueue("spend_ap")
+    controller.resume()
+    eventually(lambda: len(factory.processes) == 1)
+    snapshot = Config.from_file(factory.processes[0].arguments[4])
+    assert snapshot.ap_event_treasure_enabled
+    assert "event_treasure" in task_plan("spend_ap", snapshot)

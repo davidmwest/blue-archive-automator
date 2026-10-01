@@ -467,10 +467,12 @@ class TacticalBattleVision:
                 and has(words, 'skip battle', (1125, 575, 1270, 631))
                 and yellow(frame, (1090, 642, 1250, 698))):
             # The cyan check is distinct from the muted blue empty checkbox.
+            # Native 1440p downsampling puts much of the tick near saturation
+            # 166; the observed empty box remains below 122.
             box = frame[590:617, 1100:1130]
             hsv = cv2.cvtColor(box, cv2.COLOR_BGR2HSV)
             checked = ((hsv[:, :, 0] >= 85) & (hsv[:, :, 0] <= 105)
-                       & (hsv[:, :, 1] >= 170) & (hsv[:, :, 2] >= 150))
+                       & (hsv[:, :, 1] >= 160) & (hsv[:, :, 2] >= 150))
             plain = np.mean(np.abs(box.astype(float) - (181, 154, 114)), axis=2) < 12
             selected = True if checked.mean() > .1 else False if plain.mean() > .65 else None
             timer = _match(words, r'(\d{2}):(\d{2})', (60, 633, 145, 674))

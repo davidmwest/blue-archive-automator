@@ -93,6 +93,8 @@ weekly_reports_lite_enabled = false
 weekly_reports_lite_max_cents = 299
 
 [ap]
+# Independent opt-in: spend saved event currency on treasure through the event goal.
+event_treasure_enabled = false
 # Spend existing AP only; never buys refills or Hard attempt resets.
 schedule_enabled = false
 floor = 100

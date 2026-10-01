@@ -155,6 +155,23 @@ def test_native_receipt_real_ocr_smoke(vision):
     assert parsed.kind == "receipt" and parsed.claim is None
 
 
+def test_expert_permit_receipt_with_split_isolated_title(vision, monkeypatch):
+    from ba_automator import task_rewards_vision as tv
+    from ba_automator.loot_receipts import reward_heading_words
+
+    stem = FIXTURES / "task-rewards-expert-permit-split-native"
+    png = stem.with_suffix('.png').read_bytes()
+    words = [Word(**item) for item in json.loads(stem.with_suffix('.json').read_text())]
+    assert classify_task_rewards(decode_frame(png), words).kind == 'unknown'
+    # This real crop splits the title; both words together are an exact match.
+    heading = reward_heading_words(png, vision.startup, words)
+    assert [word.normalized for word in heading] == ['reward', 'acquired']
+    monkeypatch.setattr(tv, 'read_game_words', lambda *args: words)
+    result = vision.analyze(png)
+    assert result.kind == 'receipt' and result.claim is None
+    assert {'name': 'Expert Permit', 'quantity': 100} in result.items
+
+
 @pytest.mark.parametrize("text,confidence,box", [
     ("REWARD ACQUIRED!k(s)", .999, (20, 10, 580, 100)),
     ("REWARD AGQUIRED!", .999, (20, 10, 580, 100)),
@@ -171,7 +188,10 @@ def test_native_receipt_fallback_rejects_ambiguous_title(
     png, words = recorded_native_receipt()
     monkeypatch.setattr(tv, "read_game_words", lambda *args: words)
     startup = SimpleNamespace(
-        matches=lambda frame: {}, read=lambda frame: [Word(text, confidence, box)],
+        matches=lambda frame: {},
+        # Keep the simulated word in the same location at every OCR scale.
+        read=lambda frame: [Word(text, confidence, tuple(
+            round(value * frame.shape[1] / 610) for value in box))],
     )
     assert TaskRewardsVision(startup).analyze(png).kind == "unknown"
 
@@ -549,11 +569,10 @@ def test_inconsistent_or_disjoint_receipt_pages_do_not_invent_rewards(config, ba
 def test_task_plans_and_daily_order(config):
     assert task_plan("tasks", config) == ("restart", "tasks", "red_dots")
     assert task_plan("daily", config)[-2:] == ("tasks", "red_dots")
-    assert task_plan("daily", replace(config, ap_schedule_enabled=True))[-3:] == (
-        "spend_ap",
-        "tasks",
-        "red_dots",
-    )
+    daily = task_plan("daily", replace(config, ap_schedule_enabled=True))
+    assert daily[-2:] == ("tasks", "red_dots")
+    # AP runs separately at the lowest queue priority, after ready chores.
+    assert "spend_ap" not in daily
 
 
 def test_claim_limit_stops_a_never_ending_sequence(config):

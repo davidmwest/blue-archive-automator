@@ -94,3 +94,44 @@ def test_daily_resumes_pending_drill_before_restart_even_when_disabled(config):
     plan = task_plan('daily', cfg)
     assert plan[:2] == ('joint_firing_drill', 'restart')
     assert plan.count('joint_firing_drill') == 1
+
+
+def test_expired_free_room_can_requalify_successful_round(config):
+    keys = qualify(config)
+    state.begin_practice(config, 'day|season', keys[0])
+    saved = state.read_state(config)
+    assert saved['attempts'] == keys + [keys[0]]
+    assert keys[0] not in saved['proofs']
+    assert not state.qualified(config, keys, 30)
+    with pytest.raises(state.DrillStateError, match='practice victories'):
+        state.begin_spend(config, 'day|season', 3, 1, kind='entry', fingerprints=keys)
+    state.record_practice(config, keys[0], True, 50, 30)
+    assert state.qualified(config, keys, 30)
+
+
+def test_free_requalification_unknown_outcome_is_not_replayed(config):
+    keys = qualify(config)
+    state.begin_practice(config, 'day|season', keys[0])
+    with pytest.raises(state.DrillStateError, match='already attempted'):
+        state.begin_practice(config, 'day|season', keys[0])
+    assert len(state.read_state(config)['attempts']) == 4
+
+
+def test_successful_free_replays_still_obey_daily_battle_limit(config):
+    keys = qualify(config)
+    for key in keys:
+        state.begin_practice(config, 'day|season', key)
+        state.record_practice(config, key, True, 60, 30)
+    with pytest.raises(state.DrillStateError, match='six'):
+        state.begin_practice(config, 'day|season', keys[0])
+    assert len(state.read_state(config)['attempts']) == 6
+    assert state.qualified(config, keys, 30)
+
+
+def test_paid_uncertainty_prevents_even_proven_free_requalification(config):
+    keys = qualify(config)
+    state.begin_spend(config, 'day|season', 3, 1, kind='entry', fingerprints=keys)
+    before = state.read_state(config)
+    with pytest.raises(state.DrillStateError, match='paid Drill entry'):
+        state.begin_practice(config, 'day|season', keys[0])
+    assert state.read_state(config) == before

@@ -70,6 +70,58 @@ def test_free_pack_entrance_animation_needs_a_settled_initial_reference(vision):
     assert lr.same_receipt_view(after, after, settled, vision=vision)
 
 
+def test_event_sweep_opening_settles_before_full_list_reference(vision, tmp_path):
+    from unittest.mock import Mock
+    from ba_automator.runtime import Capture
+
+    before, after = [(FIXTURES / f'loot-event-sweep-opening-{suffix}.png').read_bytes()
+                     for suffix in ('before', 'after')]
+    initial = lr.page(before, vision)
+    assert initial.kind == 'sweep' and initial.expand_target is not None
+    assert not lr.same_receipt_view(before, after, initial, vision=vision)
+    assert lr.same_opening_sweep_rewards(before, after)
+    clock = SimpleNamespace(now=0.)
+    def sleep(seconds):
+        clock.now += seconds
+    def fail(message):
+        raise AssertionError(message)
+    runner = SimpleNamespace(clock=lambda: clock.now, sleep=sleep, fail=fail)
+    reader = lr.ReceiptReader(runner, vision, tmp_path / 'receipt.png')
+    reader.capture = Mock(side_effect=lambda: Capture(after, clock.now, 'game'))
+    settled, parsed = reader.settled_sweep_page(Capture(before, 0., 'game'), initial)
+    assert settled.png == after and parsed.kind == 'sweep'
+    assert reader.inputs == 0
+    assert lr.same_receipt_view(settled.png, after, parsed, vision=vision)
+    # Changing the run count or reward area is never opening-animation evidence.
+    changed = decode_frame(after).copy()
+    changed[230:250, 225:245] = 0
+    assert not lr.same_opening_sweep_rewards(before, lr.encode(changed))
+
+
+def test_incomplete_loot_uses_only_preinput_settled_sweep_reference(vision, tmp_path, monkeypatch):
+    from unittest.mock import Mock
+    from ba_automator.runtime import Capture
+
+    before, after = [(FIXTURES / f'loot-event-sweep-opening-{suffix}.png').read_bytes()
+                     for suffix in ('before', 'after')]
+    screen = SimpleNamespace(kind='receipt', count=1, task=None)
+    frame = SimpleNamespace(capture=Capture(before, 0., 'game'), screen=screen)
+    returned = SimpleNamespace(capture=Capture(after, 0., 'game'), screen=screen)
+    def fail(message):
+        raise TaskError(message, tmp_path)
+    runner = SimpleNamespace(clock=lambda: 0., fail=fail, journal=Mock(),
+                             config=None, task='spend_ap', wait=lambda _: returned)
+    monkeypatch.setattr(lr.ReceiptReader, 'capture', lambda *a, **kw: returned.capture)
+    monkeypatch.setattr(lr, 'record_action', Mock())
+    error = TaskError('Full List pages did not overlap', tmp_path)
+    assert lr.recover_sweep_receipt(runner, frame, vision, tmp_path / 'receipt.png',
+                                    error, sweep_origin=after) is returned
+    # Without an established pre-input reference, the old animated screenshot
+    # must still fail strict recovery; post-failure pixels cannot authorize it.
+    with pytest.raises(TaskError, match='original sweep receipt'):
+        lr.recover_sweep_receipt(runner, frame, vision, tmp_path / 'receipt.png', error)
+
+
 def test_mail_heading_sparkle_requires_another_exact_read(vision):
     clear, sparkle = [(FIXTURES / f"loot-mail-heading-{suffix}.png").read_bytes()
                       for suffix in ("clear", "sparkle")]
@@ -624,4 +676,25 @@ def test_cafe_heading_sparkles_keep_exact_text_and_fixed_lettering(vision):
     assert not lr.same_receipt_view(before, lr.encode(moved), parsed, vision=vision)
     changed = native.copy()
     changed[865:925, 1310:1540] = 0
+    assert not lr.same_receipt_view(before, lr.encode(changed), parsed, vision=vision)
+
+
+def test_native_drill_heading_keeps_detail_when_canonical_ocr_merges_sparkles(vision):
+    before, after = [(FIXTURES / f'loot-drill-title-native-{label}.png').read_bytes()
+                     for label in ('before', 'after')]
+    parsed = lr.page(before, vision)
+    assert parsed.kind == 'reward'
+    assert [(c.name, c.quantity) for c in parsed.cards] == [
+        ('Credit Points', 152171), ('Joint Firing Drill Coin', 70)]
+    for png in (before, after):
+        heading = lr.reward_heading_words(png, vision, isolated=True)
+        assert ''.join(w.normalized.replace(' ', '') for w in heading) == 'rewardacquired'
+        assert all(w.confidence >= .95 for w in heading)
+    assert lr.same_receipt_view(before, after, parsed, vision=vision)
+    native = lr.decode_native_frame(after)
+    moved = native.copy()
+    moved[206:426, 670:1890] = np.roll(moved[206:426, 670:1890], 40, axis=1)
+    assert not lr.same_receipt_view(before, lr.encode(moved), parsed, vision=vision)
+    changed = native.copy()
+    changed[870:928, 1340:1550] = 0
     assert not lr.same_receipt_view(before, lr.encode(changed), parsed, vision=vision)

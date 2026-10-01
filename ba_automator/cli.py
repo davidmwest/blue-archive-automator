@@ -45,6 +45,7 @@ def main(argv=None) -> int:
         "assault_rewards": "Collect available Total Assault rank and points rewards without entering a battle",
         "tactical_battles": "Climb Tactical Challenge with existing tickets while preserving the configured manual-play reserve",
         "tactical_rewards": "Collect Tactical Challenge time and daily rewards without fighting",
+        "event_treasure": "Spend saved event treasure currency with the configured treasure policy",
         "clear_event": "Clear event quests once with Auto Formation, stopping below three stars",
         "red_dots": "Check home and Campaign notifications for daemon collection jobs",
         "free_pack": "Claim the Free daily pack when its home badge is visible, then collect mail",
@@ -116,7 +117,10 @@ def main(argv=None) -> int:
             vision = StartupVision()
 
             def run_task(task):
-                if task == "clear_event":
+                if task == "event_treasure":
+                    from .event_treasure import run_event_treasure
+                    runner = run_event_treasure
+                elif task == "clear_event":
                     from .event_quests import run_clear_event
                     runner = run_clear_event
                 elif task == "joint_firing_drill":

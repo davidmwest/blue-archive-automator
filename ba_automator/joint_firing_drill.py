@@ -5,6 +5,9 @@ receipt, and an unresolved paid entry blocks unrelated restart operations.
 """
 from dataclasses import asdict, replace
 import json
+import re
+
+import numpy as np
 
 from .assault_policy import TeamMember
 from .actions import record_action
@@ -20,6 +23,58 @@ from .vision import decode_frame, read_game_region
 from .assault_assistant_vision import verify_retained_assistant, verify_owned_quick
 from .vision import decode_native_frame
 from .loot_receipts import inspect_receipt
+
+
+def owned_drill_blanks(words):
+    """Only the game's explicit EMPTY labels authorize roster restoration."""
+    return tuple(slot for slot in range(6) if any(
+        w.normalized == 'empty' and w.confidence >= .9
+        and 23 + 90*slot <= w.center[0] < 113 + 90*slot
+        and 560 <= w.center[1] < 635 for w in words))
+
+
+def exact_owned_drill_card(image, words, student):
+    """Find an exact named, fully visible, unselected owned roster card.
+
+    Roster names may wrap onto two OCR lines. Stats are verified again on the
+    complete formation; selecting a card alone never qualifies a team.
+    """
+    normalize = lambda value: re.sub(r'\s+', '', value).casefold()
+    wanted = normalize(student)
+    choices = []
+    for x in (574, 685, 796, 907, 1018, 1129):
+        local = sorted((w for w in words if w.confidence >= .9
+                        and x+3 <= w.center[0] <= x+104
+                        and 338 <= w.box[1] and w.box[3] <= 511),
+                       key=lambda w: (w.box[1], w.box[0]))
+        groups = []
+        for word in local:
+            if groups and word.box[1] <= max(w.box[3] for w in groups[-1]) + 8:
+                groups[-1].append(word)
+            else:
+                groups.append([word])
+        for group in groups:
+            # Match the complete name block: Hoshino is not Hoshino (Swimsuit).
+            if normalize(' '.join(w.text for w in group)) != wanted:
+                continue
+            top, bottom = min(w.box[1] for w in group), max(w.box[3] for w in group)
+            if bottom-top > 45:
+                continue
+            # The neon outline denotes a selected card; tapping it removes
+            # a student, so those cards cannot restore an empty slot.
+            border = image[max(242, top-98):bottom+5, x:x+5].astype(float)
+            green = (border[:, :, 1] > 220) & (border[:, :, 0] < 150) & (border[:, :, 2] > 100)
+            if green.mean() > .2:
+                continue
+            choices.append((x+54, top-45))
+    choices = set(choices)
+    return next(iter(choices)) if len(choices) == 1 else None
+
+
+def unchanged_drill_portraits(before, after, occupied):
+    return all(float(np.abs(before[584:616, 48+90*i:85+90*i].astype(float)
+                            - after[584:616, 48+90*i:85+90*i].astype(float)).mean()) <= 3
+               for i in occupied)
 
 
 class DrillRunner(AssaultAssistantMixin, ShopRunner):
@@ -160,7 +215,8 @@ class DrillRunner(AssaultAssistantMixin, ShopRunner):
             frame = self.navigate('home', 'campaign', (1200, 641))
         if frame.screen.kind == 'campaign':
             self.tap(frame, frame.screen.target, 'Open Joint Firing Drill')
-            frame = self.wait({'lobby', 'mock_settlement'})
+            # An unfinished practice room opens directly on its stage menu.
+            frame = self.wait({'lobby', 'menu', 'mock_settlement'})
         if frame.screen.kind == 'mock_settlement':
             if drill_state.read_state(self.config)['pending'] is not None:
                 self.fail('A pending paid Drill transaction must be reconciled before dismissing practice')
@@ -234,9 +290,84 @@ class DrillRunner(AssaultAssistantMixin, ShopRunner):
         self.journal.record('drill_plan', teams=[[asdict(m) for m in team] for team in teams], stages=stages)
         return formation, teams, stages
 
-    def open_unit(self, menu, index, stage, expected=None, *, paid=False):
+    def restore_owned_mock(self, formation, expected):
+        """Restore only missing owned slots of a saved plan in free practice.
+
+        Every occupied portrait survives unchanged, and all six metadata and
+        ownership checks still run before practice. Paid entry never calls this.
+        """
+        if any(member.assistant for member in expected):
+            self.fail('Owned Drill restoration cannot replace a borrowed formation')
+        self.tap(formation, formation.screen.quick_target, 'Inspect missing owned Drill students')
+        quick = self.wait('quick')
+        blanks = owned_drill_blanks(quick.screen.words)
+        if not blanks:
+            self.fail('Drill formation is unreadable without explicitly empty slots')
+        expected = sorted(expected, key=lambda member: member.slot)
+        for slot in blanks:
+            member = expected[slot]
+            self.tap(quick, (735, 158), 'Show owned students for the saved Drill team')
+            quick = self.wait('quick')
+            self.tap(quick, (744, 209) if member.role == 'special' else (631, 209),
+                     f'Find the saved {member.role}: {member.student_id}')
+            quick = self.wait('quick')
+            # Reach the top without changing sorting or the user's filters.
+            # Missing filtered-out students stop restoration rather than
+            # authorizing a replacement or a new mock team.
+            previous = None
+            for _ in range(12):
+                image = decode_frame(quick.capture.png)
+                track = image[243:515, 1246:1251].mean(axis=(1, 2))
+                thumb = np.flatnonzero((track > 110) & (track < 173))
+                if len(thumb) >= 8 and thumb[0] <= 2:
+                    break
+                current = tuple(thumb)
+                if current == previous:
+                    self.fail('Owned Drill roster did not reach its readable beginning')
+                previous = current
+                self.swipe(quick, (1234, 275), (1234, 455), 'Find the beginning of the owned Drill roster')
+                quick = self.wait('quick')
+            else:
+                self.fail('Owned Drill roster exceeded its bounded search for the beginning')
+            for _ in range(48):
+                image = decode_frame(quick.capture.png)
+                # White owned-tab background distinguishes this from Assistant.
+                if (image[137:175, 580:890].min(axis=2) > 240).mean() < .85:
+                    self.fail('The owned Drill roster tab could not be verified')
+                target = exact_owned_drill_card(image, quick.screen.words, member.student_id)
+                if target is not None:
+                    break
+                track = image[243:515, 1246:1251].mean(axis=(1, 2))
+                thumb = np.flatnonzero((track > 110) & (track < 173))
+                if len(thumb) < 8 or thumb[-1] >= 269:
+                    self.fail(f'The exact saved Drill student {member.student_id} was not available')
+                self.swipe(quick, (1234, 463), (1234, 383), 'Locate the exact saved owned Drill student')
+                quick = self.wait('quick')
+            else:
+                self.fail('Owned Drill roster search reached its bounded limit')
+            current_blanks = owned_drill_blanks(quick.screen.words)
+            role_slots = range(4) if member.role == 'striker' else range(4, 6)
+            if next((i for i in current_blanks if i in role_slots), None) != slot:
+                self.fail('The missing Drill slot changed before restoration')
+            occupied = [i for i in range(6) if i not in current_blanks]
+            self.tap(quick, target, f'Restore {member.student_id} to Drill unit slot {slot+1}')
+            after = self.wait('quick', predicate=lambda s: owned_drill_blanks(s.words)
+                              == tuple(i for i in current_blanks if i != slot))
+            if not unchanged_drill_portraits(image, decode_frame(after.capture.png), occupied):
+                self.fail('An occupied Drill slot changed during restoration; no battle entered')
+            quick = after
+        quick = self.verify_owned_quick(quick)
+        self.tap(quick, quick.screen.confirm_target, 'Confirm the restored owned Drill team')
+        formation = self.wait('formation', predicate=lambda s: len(s.team) == 6)
+        # open_unit next checks the complete names, roles, levels, stars,
+        # damage types and owned provenance. No qualification is inherited.
+        return formation
+
+    def open_unit(self, menu, index, stage, expected=None, *, paid=False,
+                  remaining_rounds=None):
         detail = self.stage(menu, stage)
-        if paid and detail.screen.remaining_rounds != 3 - index:
+        expected_rounds = 3 - index if paid else remaining_rounds
+        if expected_rounds is not None and detail.screen.remaining_rounds != expected_rounds:
             self.fail('The observed Drill rounds disagree with saved progress; entry held')
         self.tap(detail, detail.screen.target, f'Open Drill round {index + 1}')
         formation = self.wait('formation')
@@ -244,8 +375,14 @@ class DrillRunner(AssaultAssistantMixin, ShopRunner):
         self.sleep(2)
         formation = self.wait('formation')
         if expected is not None:
+            if (not paid and menu.screen.active and menu.screen.mock
+                    and not any(m.assistant for m in expected) and len(formation.screen.team) != 6):
+                formation = self.restore_owned_mock(formation, expected)
             if any(m.assistant for m in expected):
-                formation = self.verify_real_assistant(formation, expected)
+                free_replan = (not paid and menu.screen.active and menu.screen.mock
+                               and drill_state.read_state(self.config)['pending'] is None)
+                formation = self.verify_real_assistant(formation, expected,
+                                                       allow_free_replan=free_replan)
             else:
                 formation = self.verify_real_owned(formation, expected)
         return formation
@@ -271,6 +408,7 @@ class DrillRunner(AssaultAssistantMixin, ShopRunner):
                                           self.config.drill_comfort_seconds)):
             teams = [tuple(TeamMember(**m) for m in team) for team in plan['teams']]
             return menu, teams, stages, plan['fingerprints']
+        resuming_mock = menu.screen.active and menu.screen.mock
         menu = self.open_mock(menu)
         if plan is None:
             formation = self.open_unit(menu, 0, stages[0])
@@ -282,8 +420,56 @@ class DrillRunner(AssaultAssistantMixin, ShopRunner):
             teams = [tuple(TeamMember(**m) for m in team) for team in plan['teams']]
         validate_plan(teams, stages)
         keys = []
+        # A failed later formation check leaves the free room open. Preserve
+        # the exact earlier victories instead of attempting an already-used
+        # unit again. The next detail screen must confirm the same progress.
+        if resuming_mock and plan is not None and plan['stages'] == stages:
+            state = drill_state.read_state(self.config)
+            if state['context'] != context or state['pending'] is not None:
+                self.fail('Active Drill practice does not match the current saved context')
+            for team, stage in zip(teams, stages):
+                key = fingerprint(team, stage, 'empty-five-auto')
+                proof = state['proofs'].get(key)
+                if not proof or not comfortable(proof['won'], proof['remaining'],
+                                                self.config.drill_comfort_seconds):
+                    break
+                keys.append(key)
+            # Proofs can outlive an expired room. Read the actual room progress
+            # before skipping a prefix: a freshly opened room still needs all
+            # three rounds even if an earlier room produced winning proofs.
+            detail = self.stage(menu, stages[0])
+            remaining = detail.screen.remaining_rounds
+            if type(remaining) is not int or not 1 <= remaining <= 3:
+                self.fail('Active Drill practice remaining rounds could not be verified')
+            completed = 3 - remaining
+            if completed > len(keys):
+                self.fail('Active Drill practice has completed rounds without matching victory proofs')
+            keys = keys[:completed]
+            self.tap(detail, (952, 158), 'Close the verified free Drill progress detail')
+            menu = self.wait('menu', predicate=lambda s: s.active and s.mock
+                             and s.period == period and s.tickets == menu.screen.tickets)
+            if keys:
+                self.journal.record('drill_mock_resumed', completed_rounds=len(keys),
+                                    fingerprints=keys.copy())
         for index, (team, stage) in enumerate(zip(teams, stages)):
-            formation = self.open_unit(menu, index, stage, team)
+            if index < len(keys):
+                continue
+            formation = self.open_unit(menu, index, stage, team, remaining_rounds=3-index)
+            borrowed = next((member for member in team if member.assistant), None)
+            if borrowed is not None and self.assistant != borrowed:
+                replacement = self.assistant
+                if (replacement is None or replace(replacement, assistant_id=borrowed.assistant_id) != borrowed
+                        or not menu.screen.active or not menu.screen.mock
+                        or drill_state.read_state(self.config)['pending'] is not None):
+                    self.fail('Free Drill assistant replacement did not preserve the verified team')
+                team = tuple(replacement if member == borrowed else member for member in team)
+                teams[index] = team
+                # Persist before Mobilize: a crash must not restore the old
+                # lender or attribute a new victory to its old fingerprint.
+                drill_state.save_plan(self.config, period, teams, stages, ['empty-five-auto'] * 3)
+                self.important('drill_assistant_replanned',
+                               f'{replacement.student_id}: testing a replacement assistant in a free mock',
+                               student=replacement.student_id, round=index + 1)
             menu, observed, key, ok = self.practice_round(formation, stage, context, verified_team=team)
             if observed != team or not ok:
                 self.fail(f'Drill unit {index + 1} did not qualify; improve its formation or lower its stage')
@@ -398,8 +584,18 @@ class DrillRunner(AssaultAssistantMixin, ShopRunner):
         teams = [tuple(TeamMember(**m) for m in team) for team in plan['teams']]
         self.assistant = next((m for team in teams for m in team if m.assistant), None)
         frame = self.wait({'menu', 'battle', 'result', 'receipt', 'settlement',
-                           'assistant_confirm'}, timeout=90)
+                           'assistant_confirm', 'quick', 'formation'}, timeout=90)
         battle = pending.get('battle')
+        if frame.screen.kind in ('quick', 'formation'):
+            if battle is not None:
+                self.fail('A mobilized Drill round returned to formation without a result')
+            # A failed pre-battle check can leave Quick Formation open. Close
+            # only that recognized panel, then revalidate the paid room below.
+            if frame.screen.kind == 'quick':
+                self.tap(frame, (1242, 88), 'Close interrupted Drill formation inspection')
+                frame = self.wait('formation')
+            self.tap(frame, (38, 23), 'Return to the existing paid Drill room')
+            frame = self.wait('menu')
         if frame.screen.kind == 'assistant_confirm':
             if battle is None:
                 self.fail('Assistant confirmation has no saved round intent')

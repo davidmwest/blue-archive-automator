@@ -457,7 +457,10 @@ class TacticalBattleRunner(TacticalFormationMixin, ShopRunner):
         formation = self.fill_attack_formation(formation)
         skip = self.config.tactical_battles_skip_battles
         if type(formation.screen.skip_selected) is not bool:
-            self.fail("The battle skip setting could not be verified")
+            # Entry animations can obscure the small check. Wait for evidence;
+            # never toggle an unknown value or reserve a ticket on that frame.
+            formation = self.wait("formation", timeout=12,
+                                  predicate=lambda s: type(s.skip_selected) is bool)
         if formation.screen.skip_selected != skip:
             self.tap(formation, (1115, 604),
                      "Enable battle skip" if skip else "Watch Tactical Challenge battle")

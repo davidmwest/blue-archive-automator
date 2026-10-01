@@ -575,6 +575,42 @@ def test_unrecognized_result_leaves_pending_and_never_reenters(runner):
     assert sum(target == (1170, 666) for target, _ in runner.inputs) == 1
 
 
+@pytest.mark.parametrize("settles", [True, False])
+def test_unknown_skip_waits_without_input_or_ticket_reservation(runner, settles):
+    candidate = Candidate(Opponent("enemy", 80, 79))
+    detail = frame("opponent", opponents=(candidate,), tickets=5, after_tickets=4,
+                   target=(640, 570))
+    uncertain = frame("formation", formation_seconds=120, skip_selected=None,
+                      target=(1170, 666))
+    settled = frame("formation", formation_seconds=117, skip_selected=True,
+                    target=(1170, 666))
+    result = frame("result", won=False, target=(1100, 650))
+    observations = iter((detail, uncertain, result))
+    def wait(kinds, **kwargs):
+        if kinds == "formation":
+            assert kwargs["timeout"] == 12
+            assert not kwargs["predicate"](uncertain.screen)
+            assert kwargs["predicate"](settled.screen)
+            assert state.read_state(runner.config)["pending"] is None
+            assert len(runner.inputs) == 2  # opponent and formation only
+            if not settles:
+                raise RuntimeError("checkbox did not settle")
+            return settled
+        return next(observations)
+    runner.wait = wait
+    runner.fill_attack_formation = lambda f: f
+    returned = frame(tickets=4, rank=100)
+    runner.menu = lambda: returned
+    if settles:
+        assert runner.battle(frame(tickets=5, rank=100), candidate) == (returned, False)
+        assert sum(target == (1170, 666) for target, _ in runner.inputs) == 1
+    else:
+        with pytest.raises(RuntimeError, match="checkbox did not settle"):
+            runner.battle(frame(tickets=5, rank=100), candidate)
+        assert state.read_state(runner.config)["pending"] is None
+        assert len(runner.inputs) == 2
+
+
 def test_changed_detail_ticket_projection_never_opens_formation(runner):
     candidate = Candidate(Opponent("enemy", 80, 79))
     runner.wait = lambda *a, **k: frame("opponent", opponents=(candidate,),

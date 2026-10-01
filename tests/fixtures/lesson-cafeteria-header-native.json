@@ -1,0 +1,67 @@
+{
+  "source": "September 30 native Millennium room grid; header region only, no account data",
+  "bounds": [
+    209,
+    336,
+    460,
+    398
+  ],
+  "full_frame_words": [
+    {
+      "text": "Lv.3 School Cafeteria",
+      "confidence": 0.99275,
+      "box": [
+        152,
+        351,
+        389,
+        378
+      ]
+    }
+  ],
+  "crop_reads": {
+    "2": [
+      {
+        "text": "School",
+        "confidence": 0.99995,
+        "box": [
+          22,
+          43,
+          182,
+          104
+        ]
+      },
+      {
+        "text": "I Cafeteria",
+        "confidence": 0.97207,
+        "box": [
+          150,
+          42,
+          380,
+          106
+        ]
+      }
+    ],
+    "3": [
+      {
+        "text": "School",
+        "confidence": 0.99996,
+        "box": [
+          32,
+          65,
+          272,
+          156
+        ]
+      },
+      {
+        "text": "I Cafeteria",
+        "confidence": 0.99912,
+        "box": [
+          232,
+          64,
+          570,
+          158
+        ]
+      }
+    ]
+  }
+}

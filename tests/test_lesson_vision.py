@@ -270,6 +270,47 @@ def test_padded_header_avoids_overlapping_multimedia_letter_fragments():
     assert grid.room_cards[3].name == "Haruhabara Electric Street"
 
 
+def test_native_cafeteria_crop_cannot_replace_correct_header_with_overlapping_fragments():
+    from ba_automator.lesson_vision import _header_name
+
+    path = FIXTURES / "lesson-cafeteria-header-native.png"
+    crop = cv2.imread(str(path))
+    metadata = json.loads(path.with_suffix(".json").read_text())
+    native = np.zeros((1440, 2560, 3), dtype=np.uint8)
+    x1, y1, x2, y2 = metadata["bounds"]
+    native[y1 * 2:y2 * 2, x1 * 2:x2 * 2] = crop
+    padded = cv2.copyMakeBorder(crop, 16, 16, 16, 16, cv2.BORDER_CONSTANT,
+                                value=(255, 255, 255))
+    reads = {}
+    for scale in (2, 3):
+        image = cv2.resize(padded, (267 * scale, 78 * scale), interpolation=cv2.INTER_CUBIC)
+        reads[image.tobytes()] = [Word(item["text"], item["confidence"], tuple(item["box"]))
+                                 for item in metadata["crop_reads"][str(scale)]]
+
+    class HeaderOCR:
+        def read(self, image):
+            return reads[image.tobytes()]
+
+    header = [Word(item["text"], item["confidence"], tuple(item["box"]))
+              for item in metadata["full_frame_words"]]
+    level, fallback = _header_name(header, level=True)
+    assert level == 3 and fallback == "School Cafeteria"
+    vision = LessonVision(HeaderOCR())
+    frame = cv2.resize(native, (1280, 720), interpolation=cv2.INTER_AREA)
+    assert vision._room_name(frame, 129, 332, fallback, native_frame=native) == "School Cafeteria"
+    assert list(vision._header_cache.values()) == [None]
+
+
+@pytest.mark.parametrize("words, expected", [
+    ([Word("School", .99, (0, 0, 100, 20)), Word("Cafeteria", .99, (110, 0, 210, 20))], False),
+    ([Word("School", .99, (0, 0, 100, 20)), Word("Cafeteria", .99, (0, 25, 110, 45))], False),
+    ([Word("School", .99, (0, 0, 100, 20)), Word("I Cafeteria", .99, (80, 0, 210, 20))], True),
+])
+def test_header_overlap_guard_preserves_adjacent_and_wrapped_words(words, expected):
+    from ba_automator.lesson_vision import _overlapping_header_words
+    assert _overlapping_header_words(words) is expected
+
+
 def test_same_line_ocr_fragments_keep_reading_order_despite_baseline_jitter():
     frame, ocr, vision = replay("gehenna-rooms")
     ocr.words = [word for word in ocr.words

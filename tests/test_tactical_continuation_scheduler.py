@@ -107,7 +107,7 @@ def test_continuation_honors_dispatch_and_enable_gates(controlled, gate):
         controller._paused = True
 
 
-def test_continuation_goes_after_existing_and_due_resource_jobs(controlled, monkeypatch):
+def test_continuation_preserves_existing_jobs_and_keeps_ap_last(controlled, monkeypatch):
     controller, _, due, _ = controlled
     # The real worker also polls schedules while paused. Keep this unguarded
     # observation probe inside one locked pass, restoring it before that worker
@@ -121,7 +121,8 @@ def test_continuation_goes_after_existing_and_due_resource_jobs(controlled, monk
                        lambda: checkin_seen.append([job["task"] for job in controller._queue]))
         enqueue_due(controller)
         assert [job["task"] for job in controller.status()["queue"]] == [
-            "crafting", "spend_ap", "cafe", "tactical_battles"]
+            "crafting", "cafe", "tactical_battles", "spend_ap"]
+        # Schedules append before the completed pass sorts AP to the end.
         assert checkin_seen == [["crafting", "spend_ap", "cafe", "tactical_battles"]]
 
 

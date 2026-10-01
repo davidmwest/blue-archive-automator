@@ -575,6 +575,18 @@ def test_missing_formation_timer_or_unreadable_checkbox_does_not_authorize_entry
     assert result.skip_selected is None
 
 
+def test_native_checked_skip_box_with_lower_saturation_is_recognized(vision):
+    frame, words = fixture('formation-settled')
+    # Exact canonical crop from the failed 1440p run, with no account details.
+    # Its check is ~166 saturation; the old >=170 threshold lost most pixels.
+    crop = cv2.imread(str(FIXTURES / 'tactical-battles-native-checked-crop.png'))
+    assert crop.shape == (27, 30, 3)
+    frame[590:617, 1100:1130] = crop
+    result = vision.classify(frame, words)
+    assert result.kind == 'formation'
+    assert result.skip_selected is True
+
+
 def test_observed_defeat_and_following_tip_have_separate_confirm_states(vision):
     result = vision.classify(*fixture('defeat'))
     assert (result.kind, result.won, result.target) == ('result', False, (640, 660))

@@ -1,0 +1,112 @@
+[
+  {
+    "text": "All Rewards",
+    "confidence": 0.99862,
+    "box": [
+      87,
+      90,
+      211,
+      114
+    ]
+  },
+  {
+    "text": "REWARD ACQUIRED!",
+    "confidence": 0.99937,
+    "box": [
+      359,
+      120,
+      919,
+      197
+    ]
+  },
+  {
+    "text": "bund: Round 1",
+    "confidence": 0.97031,
+    "box": [
+      907,
+      138,
+      993,
+      155
+    ]
+  },
+  {
+    "text": "Refresh",
+    "confidence": 0.99999,
+    "box": [
+      1128,
+      144,
+      1206,
+      166
+    ]
+  },
+  {
+    "text": "g Slots: 43/45",
+    "confidence": 0.9656,
+    "box": [
+      910,
+      161,
+      1004,
+      182
+    ]
+  },
+  {
+    "text": "Credit Points",
+    "confidence": 0.98561,
+    "box": [
+      579,
+      266,
+      702,
+      290
+    ]
+  },
+  {
+    "text": "x40000",
+    "confidence": 0.99629,
+    "box": [
+      602,
+      433,
+      676,
+      458
+    ]
+  },
+  {
+    "text": "Supply List",
+    "confidence": 0.98644,
+    "box": [
+      255,
+      538,
+      368,
+      568
+    ]
+  },
+  {
+    "text": "Open Slot x0",
+    "confidence": 0.99416,
+    "box": [
+      842,
+      600,
+      997,
+      629
+    ]
+  },
+  {
+    "text": "TOUCH TO CONTINUE",
+    "confidence": 0.99746,
+    "box": [
+      493,
+      617,
+      787,
+      647
+    ]
+  },
+  {
+    "text": "x5",
+    "confidence": 0.98174,
+    "box": [
+      343,
+      674,
+      370,
+      696
+    ]
+  }
+]

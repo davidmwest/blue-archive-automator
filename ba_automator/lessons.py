@@ -41,6 +41,28 @@ def counter_visible(screen: LessonScreen) -> bool:
     return type(screen.tickets) is int
 
 
+def compatible_survey_students(surveyed, observed, completed_lessons: int) -> bool:
+    """Keep room slots/ownership fixed while allowing gains from earlier lessons.
+
+    The same student can appear at multiple schools. A previously completed
+    lesson can raise their bond after the one-pass survey. Accept at most one
+    rank per confirmed lesson, never a decrease or an unreadable replacement.
+    The spending preview must still exactly match this fresh room observation.
+    """
+    if len(surveyed) != len(observed):
+        return False
+    for before, after in zip(surveyed, observed):
+        if before.id != after.id or before.owned != after.owned:
+            return False
+        if before.bond == after.bond:
+            continue
+        if (before.owned is not True or type(before.bond) is not int
+                or type(after.bond) is not int
+                or not 0 < after.bond - before.bond <= completed_lessons):
+            return False
+    return True
+
+
 @dataclass(frozen=True)
 class LessonFrame:
     capture: Capture
@@ -436,9 +458,15 @@ class LessonsRunner:
         if len(candidates) != 1:
             self.fail('Selected room could not be found again')
         card = candidates[0]
-        if (not card.available or not card.inspection_complete or card.students != room.students
+        if (not card.available or not card.inspection_complete
+                or not compatible_survey_students(room.students, card.students, self.confirmed)
                 or identity(card.name) != identity(room.name)):
             self.fail('Selected room changed since the survey; no ticket was spent')
+        if card.students != room.students:
+            self.journal.record('lesson_survey_bonds_updated', location=location.name, room=room.name,
+                                surveyed=[asdict(s) for s in room.students],
+                                observed=[asdict(s) for s in card.students],
+                                confirmed_lessons=self.confirmed)
         self.tap(grid, card.target, f'Preview {location.name} / {room.name}')
         self.sleep(1)
         preview = self.wait('confirm')
@@ -450,7 +478,7 @@ class LessonsRunner:
             self.fail('Lesson preview did not confirm the chosen room and a single-ticket cost')
         # Student slot IDs differ between grid and preview; compare their observed values.
         profile = lambda students: tuple((student.owned, student.bond) for student in students)
-        if profile(s.students) != profile(room.students):
+        if profile(s.students) != profile(card.students):
             self.fail('Lesson preview students differ from the surveyed room')
         self.journal.save_image(f'lesson-{self.confirmed + 1:02d}-before.png', preview.capture.png)
         self.phase(decision.reason)

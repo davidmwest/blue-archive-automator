@@ -958,3 +958,84 @@ These game/store-derived images remain outside the project's MIT grant.
 Lite report checkout's product/price, app title, Google Play heading, and buy
 button. Account, payment, and Play Points details are removed. It covers the
 shorter Play product label and OCR joining the adjacent title and price.
+
+`task-rewards-expert-permit-split-native.png/json` preserve the September 30
+Expert Permit receipt with the top account strip masked. The native image
+exercises an isolated reward heading split into two OCR words, while the saved
+full-frame OCR reproduces background text merging into the title.
+
+`loot-event-sweep-opening-before.png` and `loot-event-sweep-opening-after.png`
+preserve the September 30 event Quest 5 receipt's opening and settled layouts.
+Account identity, balances, and experience are masked. They verify that the
+Final-row animation settles before establishing the reference for Full List
+inspection and that incomplete inspection keeps that proven reference. These
+game-derived images remain outside the project's MIT grant.
+
+`loot-event-grid-equal-height-before.png` and
+`loot-event-grid-equal-height-after.png` retain only the Full List modal from
+the September 30 Quest 5 sweep receipt. Account identity and balances outside
+the modal are masked. They verify six repeated equipment cards across a
+16-pixel scroll, preserving the final activity report and 514 credits without
+double counting. These game-derived images remain outside the MIT grant.
+
+`loot-treasure-single-credits-native.png` preserves the September 30 treasure
+tile's centered Credit Points ×40,000 reward receipt at native 1440p. The top
+account bar is masked. It exercises a complete, stable, single-card receipt
+whose high-confidence title and quantity can be recorded without opening a
+tooltip or scrolling. This game-derived image remains outside the MIT grant.
+
+`loot-treasure-carousel-qualifier-before.png` and
+`loot-treasure-carousel-qualifier-after.png` preserve September 30 treasure
+prize carousel pages 3 and 4, with the account bar masked. They reproduce OCR
+dropping the space before `(Hyakkiyako)` after a scroll. The regression requires
+the unique three-card overlap and leaves the partially visible final doll for
+the next page. These game-derived images remain outside the MIT grant.
+
+`drill-owned-restoration.png/.json` captures the owned Quick Formation roster with
+one explicitly empty slot, selected owned cards, and an available Aris (Maid).
+The account header is masked and removed from OCR. This tests exact variant names,
+selected-card exclusion, and recovery of a saved formation before free mock
+qualification; it does not establish a live-tested restored Drill victory.
+
+`lesson-cafeteria-header-native.png/.json` preserves only the native Millennium
+School Cafeteria room header and its recorded OCR. Both enlarged reads duplicated
+the end of “School” into an overlapping “I Cafeteria” box, despite correct
+full-frame OCR. This regression rejects the corrupt crop override while keeping
+the exact preview-name and ticket-cost checks. No account data is included; the
+game-derived image remains outside the MIT grant.
+
+`loot-single-credit-reference-native.png`, `loot-single-credit-sparkle-native.png`,
+and `loot-single-credit-settled-native.png` retain only the September 30 single
+Credit Points ×40,000 receipt heading and card. A passing heading sparkle
+changes OCR boxes enough to fail strict receipt identity for one frame. The
+regression waits for another read against the original reference, without
+relaxing identity checks or sending input. All other pixels are masked; these
+game-derived images remain outside the MIT grant.
+
+`loot-event-grid-large-sweep-before.png` and `loot-event-grid-large-sweep-after.png`
+retain only the Full List modal from a September 30 event Quest 9 ×44 sweep.
+Six equipment cards move upward by 32 pixels with identical columns, quantities,
+and artwork; fractional rendering adds minor antialiasing differences. Tests
+prove the six-card overlap without double counting and reject changed amounts,
+artwork, alpha masks, tiers, columns, and ordering. The second page still has
+more rewards below it, so these fixtures do not establish a complete receipt.
+All account background is masked; these game-derived images remain outside the
+MIT grant.
+
+`assault-assistant-native-metadata.png` preserves only six native-resolution
+level and weapon-star badge crops from the September 30 paid-entry assistant
+verification. Tall-strip OCR omitted Hina (Dress)'s weapon-star digit and another
+card's level; independent agreeing digit reads recover the exact metadata.
+All student portraits, names, lenders, and account content are masked. The
+game-derived badge pixels remain outside the MIT grant.
+
+`loot-drill-title-native-before.png` and `loot-drill-title-native-after.png`
+retain only the heading and two reward cards from a completed September 30
+three-round Joint Firing Drill. Canonical title OCR merges passing sparkles;
+native/enlarged isolated reads preserve the exact phrase. Tests retain strict
+card quantities and title placement. Account content is masked; game-derived
+pixels remain outside the MIT grant.
+
+`treasure/entry-dialogue` preserves the entry speech bubble crossing the board;
+account currency and AP headers are masked. It guards against treating the
+bubble's translucent white panel as revealed empty stone.
