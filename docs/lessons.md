@@ -114,6 +114,17 @@ On September 28, the relationship policy's single-survey plan passed live at 144
 
 All live spending used the relationship policy. The school-rank policy is covered by observed-data and multi-ticket rank/XP tests, including switching schools after each ticket, but a real school rank-up popup remains unverified as described above. Live Windows execution and broader account/layout coverage remain future checks.
 
+On October 1, recovery visits verified all seven available tickets across two
+runs. The first completed four lessons, then stopped before Start when the
+Hyakkiyako preview resolved an unreadable surveyed relationship rank to 1.
+The corrected comparison accepts that added information while still requiring
+the same ownership, room, ticket cost, and previously known ranks. The recovery
+run surveyed all 94 rooms across 12 schools once, completed the remaining three
+lessons, observed zero tickets, and returned home in 525.7 seconds. It also
+recorded a relationship celebration at rank 2 with ATK +2. The local run is
+`lessons-20261001T223634-a042a6e9`; this verifies recovered completion, not an
+uninterrupted seven-ticket visit.
+
 ## Mechanics references
 
 Nexon's [Lessons guide](https://forum.nexon.com/bluearchiveTW/board_view?allBoard=1&board=3354&thread=2482450) explains ownership indicators, location progression, and daily lesson availability. The [May 26, 2026 update notes](https://forum.nexon.com/bluearchive-en/board_view?board=3217&thread=3443143) describe the lesson location EXP display control. These references inform recognition; the current game screen determines whether a room or ticket is available.
