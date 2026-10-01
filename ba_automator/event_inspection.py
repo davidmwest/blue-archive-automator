@@ -1,6 +1,10 @@
 """Read-only Aquatic Showdown navigation, shared with the serial AP runner."""
 from dataclasses import dataclass
 import re
+from functools import lru_cache
+from pathlib import Path
+import cv2
+import numpy as np
 
 from .ap_vision import ap_value, mission_stars
 from .crafting_vision import bright, within
@@ -54,6 +58,24 @@ class EventVision:
         return classify_event(frame, words) or self.fallback.analyze(png, billing=billing)
 
 
+@lru_cache(maxsize=1)
+def event_banner_template():
+    return cv2.imread(str(Path(__file__).parent / 'assets/aquatic-showdown-banner.png'))
+
+
+def event_banner_centered(crop):
+    """Recognize the settled event title without waiting for carousel OCR.
+
+    At 1440p a screenshot takes nearly a second. Two captures plus OCR can use
+    the entire card dwell time; its link may change before the tap arrives.
+    The reviewed template excludes the animated background and other cards.
+    """
+    title = crop[44:80, 99:253]
+    reference = event_banner_template()
+    return (reference is not None and title.shape == reference.shape
+            and float(np.abs(title.astype(float) - reference).mean()) < 5)
+
+
 def enter_event(runner, startup):
     """Verify the unique playable event before returning its quest page."""
     for entrance_attempt in range(3):
@@ -61,21 +83,27 @@ def enter_event(runner, startup):
         # The Campaign carousel contains concurrent and expired events. Use
         # the home banner and verify the unique destination before proceeding.
         end = runner.clock() + 45
+        # See a nonmatching card first, then tap the first fully centered
+        # arrival. Entering midway through an already visible card is unsafe.
+        previous_match = True
         while True:
             at = runner.clock()
             png = runner.device.screenshot()
-            words = startup.read(decode_frame(png)[475:585, 20:295])
-            banner = ''.join(w.normalized for w in words if w.confidence >= .9).replace(' ', '')
-            if 'amongthehundred' in banner and runner.clock() - at < 1.5:
-                break
+            crop = decode_frame(png)[490:580, 20:295]
+            matched = event_banner_centered(crop)
+            if matched and not previous_match and runner.clock() - at < 1.5:
+                if runner.device.foreground_package() != runner.config.package:
+                    runner.fail('Foreground changed during event entrance inspection')
+                runner.journal.record('intent', operation='tap', detail='Open event home banner', target=(150, 535))
+                if runner.device.tap(150, 535, deadline=at + 1.5, monotonic=runner.clock):
+                    # Save after delivery so writing the native frame cannot
+                    # delay time-sensitive carousel input.
+                    runner.journal.save_image(f'event-banner-{entrance_attempt + 1}.png', png)
+                    break
+            previous_match = matched
             if runner.clock() >= end:
                 runner.fail('Aquatic Showdown home banner was not verified; event AP remains reserved')
-            runner.sleep(.2)
-        if runner.device.foreground_package() != runner.config.package:
-            runner.fail('Foreground changed during event entrance inspection')
-        runner.journal.record('intent', operation='tap', detail='Open event home banner', target=(150, 535))
-        if not runner.device.tap(150, 535, deadline=at + 2, monotonic=runner.clock):
-            runner.fail('Event banner input expired')
+            runner.sleep(.05)
         runner.actions += 1
         frame = runner.wait({'event_page', 'other_event'})
         if frame.screen.kind == 'event_page':

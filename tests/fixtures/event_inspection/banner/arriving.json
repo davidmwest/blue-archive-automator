@@ -1,0 +1,32 @@
+[
+  {
+    "text": "AFlower Blooms",
+    "confidence": 0.97853,
+    "box": [
+      104,
+      47,
+      193,
+      64
+    ]
+  },
+  {
+    "text": "Among the Hundred",
+    "confidence": 0.94409,
+    "box": [
+      128,
+      54,
+      255,
+      80
+    ]
+  },
+  {
+    "text": "Reron",
+    "confidence": 0.9051,
+    "box": [
+      20,
+      68,
+      40,
+      78
+    ]
+  }
+]

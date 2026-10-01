@@ -243,3 +243,23 @@ def test_umbrella_art_is_not_a_dialogue_overlay(vision):
     # Confident text over the grid still blocks spending.
     words.append(Word('Here are your rewards!', .99, (650, 270, 950, 295)))
     assert classify_treasure(frame, words, vision.templates).kind == 'unknown'
+
+
+def test_small_surfboard_tip_is_a_hit_and_leaves_a_feasible_board(vision):
+    from ba_automator.treasure_policy import TreasureShape, choose_greedy_cell
+    from ba_automator.treasure_rounds import round_shapes
+
+    frame, words = sample('round-two-surfboard-tip')
+    board = classify_treasure(frame, words, vision.templates)
+    assert board.kind == 'treasure_board'
+    assert (board.round, board.currency, board.remaining, board.inventory) == (2, 1035, 32, (1, 1, 4))
+    assert (1, 1) in board.hits  # Only a small yellow triangle is exposed.
+    assert board.empty == {(2, 3)}
+    completed = {(1, c) for c in range(4, 8)} | {(3, c) for c in range(3, 6)}
+    choice = choose_greedy_cell(5, 9, tuple(
+        TreasureShape(shape.height, shape.width, count)
+        for shape, count in zip(round_shapes(board.round), board.inventory)),
+        empty=board.empty, hits=board.hits - completed, completed=completed)
+    assert choice.cell in board.closed
+    assert (1, 1) not in choice.scores
+    assert classify_treasure((frame * .6).astype('uint8'), words, vision.templates).kind == 'unknown'

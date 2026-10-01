@@ -145,6 +145,17 @@ Live development on September 30 completed round 1: all nine prizes in 37 reveal
 
 The subsequent daily run completed successfully, including another seven round-2 reveals. Across the first two round-2 visits, 11 reveals cost 2,200 currency and completed two prizes, leaving 159 currency. The AP follow-up swept event Quest 9 twice (40 AP), leaving 113 AP above the configured 100-AP floor. Its rewards raised treasure currency to 263; the automatic treasure follow-up opened another tile, verified its 40,000-credit receipt, and returned home with 63 currency. One earlier temporarily unidentified 40,000-credit receipt was reconciled from its saved image without repeating the transaction. Initial unreadable reward layouts now receive three bounded, read-only retries before remaining marked unidentified; foreground, freshness, and receipt identity checks still apply.
 
+A later round-2 reveal exposed a narrow yellow surfboard tip against mostly
+white stone. White coverage alone misclassified it as empty, making the
+remaining prize placements inconsistent. Empty-cell recognition now also
+requires the absence of colored or dark prize artwork. A sanitized regression
+preserves this fragment as a hit, verifies that the planner finds a valid next
+cell, and continues to reject a dimmed board.
+The live retry then opened five more tiles for 1,000 event currency, recorded
+five 40,000-credit receipts, and returned home with 35 currency. Round 2 remains
+in progress; this validates recovery and the insufficient-currency stop, not
+completion of the three-round goal.
+
 ## Shops, receipts, and crash recovery
 
 All resource-consuming actions follow the same transaction boundary:
@@ -186,6 +197,15 @@ Completion means the configured goals progress without crossing the AP floor or 
 ### Event identity and inspection
 
 The Campaign carousel can open a concurrent event whose play period has ended but whose reward shop remains available. Inspection uses the home banner, then verifies the Aquatic Showdown subtitle (or the title plus Sun-Kissed Beach quest), Quest tab, and Treasure Hunt entrance before proceeding. Expired event screens are regression fixtures and must not match. No resource-spending inputs exist in the inspector.
+
+The home carousel changes quickly enough that OCR followed by another native
+capture can outlast a card's display time. Entry uses the reviewed, centered
+event-title template, waits for a fresh arrival after another card, and gives
+ADB a 1.5-second input deadline. Expired inputs wait for a new cycle. The
+pre-tap frame is saved locally and the destination is still verified before
+any spending. This fixed a live 1440p failure that opened the incoming
+Recruitment banner; a subsequent live retry entered Aquatic Showdown and
+opened its Treasure Hunt on the first attempt.
 
 The optional `[ap].event_priority` setting reserves AP while this event is playable, regardless of the ordinary farming strategy. It is off by default. When enabled, the AP runner clears unfinished Stories first, then checks the treasure round before repeatable quest or ordinary farming. Through round 3 it selects the first available three-star quest in the reviewed order 9 → 5 → 1 and projects a sweep down to the shared AP floor. A missing clear or uncertain screen holds normal farming; it never silently falls through. Normal farming resumes only after observing a round above 3, when the event expires, or when the setting is disabled. The adapter has live sweep evidence on Quest 5. The separate opt-in Treasure Hunt task spends saved treasure currency and advances completed rounds.
 

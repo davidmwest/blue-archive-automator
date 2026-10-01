@@ -130,9 +130,11 @@ def classify_treasure(frame, words, templates):
                                 & (hsv[:, :, 2] <= 160))
                 # Completed prizes darken their artwork, sometimes covering nearly
                 # the entire cell; require both that gray art and exposed white stone.
-                if float(white.mean()) > .90:
-                    # Observed empty slots expose only white cracked stone. Even
-                    # narrow prize fragments retain substantially more nonwhite art.
+                prize_art = (hsv[:, :, 1] > 75) | (hsv[:, :, 2] < 180)
+                if float(white.mean()) > .90 and float(prize_art.mean()) < .005:
+                    # A pointed surfboard fragment can leave over 93% white
+                    # stone. Require the absence of colored/dark artwork too;
+                    # white coverage alone would turn that hit into a miss.
                     empty.add((r, c))
                 elif (float(white.mean()) > .06
                         or (float(white.mean()) > .025 and float(dimmed_prize.mean()) > .6)):

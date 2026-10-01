@@ -11,6 +11,7 @@ These canonical 1280×720 crops retain only the game title, treasure board, and 
 - `round-complete`, `final-reveal.json`: shaded round-one completion banner and the last reveal's durable pre-spend board; recovery requires a logged receipt and exact remaining prize footprint.
 - `refresh-confirm`: the exact free next-round Notice, accepted only with a completed-board refresh intent.
 - `round-two-umbrella`: partially revealed umbrella artwork misread by OCR as low-confidence glyphs; no dialogue covers the grid.
+- `round-two-surfboard-tip`: row 1, column 1 exposes a small yellow tip on otherwise white stone. It is a hit, not an empty tile; the remaining round-two shapes still fit.
 - `round-two`: fresh second-round board with 2,359 event currency and inventory (1, 2, 5); detects layout changes across refresh.
 - `board`, `revealed-one`: dialogue overlaps the leftmost tiles. Recognition must wait for a clear board.
 - `confirm`: the exact open-selected-slots confirmation.

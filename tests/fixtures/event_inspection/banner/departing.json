@@ -1,0 +1,72 @@
+[
+  {
+    "text": "Just like",
+    "confidence": 0.98671,
+    "box": [
+      157,
+      9,
+      198,
+      21
+    ]
+  },
+  {
+    "text": "the coming of spi",
+    "confidence": 0.91129,
+    "box": [
+      174,
+      15,
+      274,
+      43
+    ]
+  },
+  {
+    "text": "at first snow n",
+    "confidence": 0.98282,
+    "box": [
+      179,
+      35,
+      274,
+      52
+    ]
+  },
+  {
+    "text": "oms",
+    "confidence": 0.9091,
+    "box": [
+      0,
+      52,
+      17,
+      62
+    ]
+  },
+  {
+    "text": "theHundred",
+    "confidence": 0.94959,
+    "box": [
+      0,
+      54,
+      81,
+      78
+    ]
+  },
+  {
+    "text": "Pick-Up",
+    "confidence": 0.9995,
+    "box": [
+      219,
+      62,
+      265,
+      79
+    ]
+  },
+  {
+    "text": "Recrultment",
+    "confidence": 0.9819,
+    "box": [
+      220,
+      76,
+      263,
+      84
+    ]
+  }
+]
