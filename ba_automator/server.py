@@ -346,8 +346,9 @@ class DashboardController:
             if (saved["game_day"] == game_day(now) and saved["status"] == "running"
                     and not (self._current and self._current["id"] == saved["run_id"])):
                 status["blocked_reason"] = "Previous Daily was interrupted; inspect the log before manually retrying Daily"
-            elif saved["game_day"] == game_day(now) and saved["status"] in {"failed", "stopped"}:
-                status["blocked_reason"] = "Daily did not finish; inspect the log and queue Daily to retry. The next game day still runs automatically."
+            # A finished attempt does not block tomorrow's schedule. Concrete
+            # resource/setup holds have their own actionable notices; the
+            # failed/stopped occurrence remains available in the daily log.
             if self._daily_not_before and now < self._daily_not_before:
                 status["next_due_at"] = max(datetime.fromisoformat(status["next_due_at"]),
                                              self._daily_not_before).isoformat()

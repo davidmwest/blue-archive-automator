@@ -179,6 +179,8 @@ def test_saved_attempt_is_not_retried_by_resume_but_next_game_day_runs(config_pa
         assert not controller.status()["queue"]
         if status == "running":
             assert "interrupted" in controller.status()["schedule"]["daily"]["blocked_reason"]
+        else:
+            assert controller.status()["schedule"]["daily"]["blocked_reason"] is None
         now[0] += timedelta(days=3)  # Catch up today's routine, not three missed routines.
         wake(controller)
         eventually(lambda: len(factory.processes) == 1)
@@ -224,6 +226,8 @@ def test_manual_daily_failure_can_be_explicitly_retried(config_path):
         factory.processes[0].finish(1)
         eventually(lambda: controller.status()["current_job"] is None)
         assert daily_schedule.read_state(controller.config)["status"] == "failed"
+        assert controller.status()["schedule"]["daily"]["blocked_reason"] is None
+        assert controller.status()["failed_jobs"] == []
         controller.pause()
         controller.update_settings({"daily_schedule_enabled": True})
         controller.enqueue("daily")
