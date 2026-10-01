@@ -1581,7 +1581,7 @@ def test_scrimmage_missing_ap_arrow_requires_two_matching_native_crops(vision, n
 
     startup = Startup()
     screen = TicketVision(startup).analyze(png)
-    assert startup.crops == [(153, 363), (204, 484)], startup.readings
+    assert startup.crops == [(144, 333), (192, 444)], startup.readings
     assert (screen.kind, screen.task, screen.area, screen.stage) == (
         'detail', 'scrimmages', 'Trinity', 'B')
     assert (screen.ap, screen.after_ap, screen.tickets, screen.after_tickets,

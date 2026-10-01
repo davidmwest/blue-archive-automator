@@ -223,3 +223,14 @@ card identity, quantity, position, and frame-freshness checks remain required.
 Sanitized before/after fixtures reject shifted headings and changed quantities.
 Recovery collected the already-earned reward without replaying a battle or
 confirming the assistant fee a second time.
+
+### Waiting for the menu to settle
+
+The October 1 daily visit recognized the Drill menu heading before its ticket
+balance and season dates had appeared. Menu waits now require both fields;
+zero tickets remain a valid observation. The live retry reused the qualified
+prepared teams at stages `[2, 1, 1]`, completed the paid entry for 65,692 points,
+and swept both remaining tickets. Both reward receipts were itemized, the final
+ticket balance was zero, the pending transaction cleared, and the runner
+returned home. This verifies the menu fix and recovery visit, not an
+uninterrupted Daily run.

@@ -77,7 +77,10 @@ def reread_ticket_projection(native, reader, words, *, ap=False):
     # Isolate the entire number/arrow row without the ticket icon or bubble
     # border. A little vertical margin avoids clipping thin arrow/digit edges.
     # Two scales must independently read the exact same complete projection.
-    crop_bounds = (895, 346, 1000, 381) if ap else (1025, 346, 1100, 381)
+    # AP's lightning icon extends to x=902; including even its right edge
+    # makes some OCR backends prepend a spurious "B". Exclude it and the
+    # cyan lower border while retaining both complete numbers and the arrow.
+    crop_bounds = (903, 346, 998, 378) if ap else (1025, 346, 1100, 381)
     for scale in (3, 4):
         crop = native_game_region(native, crop_bounds)
         width, height = crop_bounds[2] - crop_bounds[0], crop_bounds[3] - crop_bounds[1]
