@@ -1,0 +1,322 @@
+[
+  {
+    "text": "Formation",
+    "confidence": 0.99999,
+    "box": [
+      104,
+      9,
+      247,
+      38
+    ]
+  },
+  {
+    "text": "131/220",
+    "confidence": 0.96354,
+    "box": [
+      508,
+      9,
+      588,
+      38
+    ]
+  },
+  {
+    "text": "Unit 1",
+    "confidence": 0.99152,
+    "box": [
+      29,
+      172,
+      108,
+      204
+    ]
+  },
+  {
+    "text": "Quick Formation",
+    "confidence": 0.99958,
+    "box": [
+      1146,
+      216,
+      1257,
+      233
+    ]
+  },
+  {
+    "text": "Starting Skill",
+    "confidence": 0.99968,
+    "box": [
+      1143,
+      314,
+      1259,
+      338
+    ]
+  },
+  {
+    "text": "\u81ea",
+    "confidence": 0.67423,
+    "box": [
+      1187,
+      360,
+      1218,
+      398
+    ]
+  },
+  {
+    "text": "Unit Info",
+    "confidence": 0.99524,
+    "box": [
+      1160,
+      415,
+      1242,
+      436
+    ]
+  },
+  {
+    "text": "BACK",
+    "confidence": 0.99996,
+    "box": [
+      246,
+      496,
+      289,
+      515
+    ]
+  },
+  {
+    "text": "BACK",
+    "confidence": 0.99996,
+    "box": [
+      470,
+      496,
+      514,
+      515
+    ]
+  },
+  {
+    "text": "FRONT",
+    "confidence": 0.99991,
+    "box": [
+      689,
+      496,
+      741,
+      514
+    ]
+  },
+  {
+    "text": "MIDDLE",
+    "confidence": 0.96417,
+    "box": [
+      909,
+      496,
+      970,
+      514
+    ]
+  },
+  {
+    "text": "Presets",
+    "confidence": 0.99998,
+    "box": [
+      1166,
+      517,
+      1236,
+      537
+    ]
+  },
+  {
+    "text": "Yukari",
+    "confidence": 0.99996,
+    "box": [
+      291,
+      522,
+      351,
+      543
+    ]
+  },
+  {
+    "text": "Renge",
+    "confidence": 0.99997,
+    "box": [
+      514,
+      522,
+      575,
+      547
+    ]
+  },
+  {
+    "text": "Izuna",
+    "confidence": 0.9993,
+    "box": [
+      742,
+      522,
+      795,
+      544
+    ]
+  },
+  {
+    "text": "Chise",
+    "confidence": 0.99998,
+    "box": [
+      967,
+      522,
+      1018,
+      543
+    ]
+  },
+  {
+    "text": "Lv.25",
+    "confidence": 0.99994,
+    "box": [
+      208,
+      546,
+      256,
+      568
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.99992,
+    "box": [
+      274,
+      542,
+      367,
+      566
+    ]
+  },
+  {
+    "text": "Lv.25",
+    "confidence": 0.99994,
+    "box": [
+      432,
+      546,
+      480,
+      568
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.9999,
+    "box": [
+      498,
+      542,
+      591,
+      566
+    ]
+  },
+  {
+    "text": "Lv.25",
+    "confidence": 0.99993,
+    "box": [
+      656,
+      546,
+      704,
+      568
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.99993,
+    "box": [
+      721,
+      541,
+      814,
+      566
+    ]
+  },
+  {
+    "text": "Lv.25",
+    "confidence": 0.99993,
+    "box": [
+      880,
+      546,
+      928,
+      568
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.9999,
+    "box": [
+      946,
+      542,
+      1039,
+      566
+    ]
+  },
+  {
+    "text": "STRIKER",
+    "confidence": 0.99963,
+    "box": [
+      29,
+      558,
+      150,
+      582
+    ]
+  },
+  {
+    "text": "Mobilize",
+    "confidence": 0.99998,
+    "box": [
+      1114,
+      642,
+      1240,
+      674
+    ]
+  },
+  {
+    "text": "Kikyou",
+    "confidence": 0.99993,
+    "box": [
+      489,
+      653,
+      554,
+      677
+    ]
+  },
+  {
+    "text": "Mimori",
+    "confidence": 0.99998,
+    "box": [
+      838,
+      654,
+      905,
+      675
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.9999,
+    "box": [
+      475,
+      673,
+      568,
+      698
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.99908,
+    "box": [
+      825,
+      673,
+      918,
+      698
+    ]
+  },
+  {
+    "text": "Lv.25",
+    "confidence": 0.99992,
+    "box": [
+      410,
+      677,
+      458,
+      699
+    ]
+  },
+  {
+    "text": "Lv.25",
+    "confidence": 0.99995,
+    "box": [
+      760,
+      678,
+      808,
+      698
+    ]
+  }
+]

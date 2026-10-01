@@ -1,0 +1,42 @@
+[
+  {
+    "text": "Auto",
+    "confidence": 0.99992,
+    "box": [
+      1042,
+      26,
+      1110,
+      57
+    ]
+  },
+  {
+    "text": "Menu",
+    "confidence": 0.99924,
+    "box": [
+      1165,
+      26,
+      1242,
+      56
+    ]
+  },
+  {
+    "text": "Shizuko Festival Operations Department",
+    "confidence": 0.99953,
+    "box": [
+      118,
+      510,
+      724,
+      564
+    ]
+  },
+  {
+    "text": "Hello, everyone! It's what you've all been waiting for!",
+    "confidence": 0.99336,
+    "box": [
+      121,
+      574,
+      831,
+      616
+    ]
+  }
+]

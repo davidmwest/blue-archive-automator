@@ -1,0 +1,62 @@
+[
+  {
+    "text": "Auto",
+    "confidence": 0.99993,
+    "box": [
+      1042,
+      26,
+      1110,
+      57
+    ]
+  },
+  {
+    "text": "Menu",
+    "confidence": 0.99991,
+    "box": [
+      1165,
+      25,
+      1243,
+      57
+    ]
+  },
+  {
+    "text": "\u76ee",
+    "confidence": 0.87329,
+    "box": [
+      1095,
+      88,
+      1180,
+      152
+    ]
+  },
+  {
+    "text": "\u2190\u2192",
+    "confidence": 0.93391,
+    "box": [
+      964,
+      95,
+      1018,
+      144
+    ]
+  },
+  {
+    "text": "Shizuko Festival Operations Department",
+    "confidence": 0.99982,
+    "box": [
+      119,
+      510,
+      724,
+      565
+    ]
+  },
+  {
+    "text": "Hello, everyone! It's what you've all been waiting for!",
+    "confidence": 0.98548,
+    "box": [
+      121,
+      574,
+      830,
+      615
+    ]
+  }
+]

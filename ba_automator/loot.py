@@ -31,6 +31,8 @@ ALIASES = {
     "credit points": "Credits",
     "pyroxene": "Pyroxenes",
     "pyroxenes": "Pyroxenes",
+    "bounty coin": "Bounty Coin",
+    "bounty coins": "Bounty Coin",
     "total assault coin": "Total Assault Coin",
     "total assault coins": "Total Assault Coin",
     "advanced total assault coin": "Advanced Total Assault Coin",
@@ -547,6 +549,8 @@ GROUPS = (
 ARTIFACTS = frozenset({"aether dust", "crystal haniwa fragment"})
 SHOP_CURRENCIES = frozenset(
     {
+        "bounty coin",
+        "bounty coins",
         "expert permit",
         "expert permits",
         "tactical challenge coin",

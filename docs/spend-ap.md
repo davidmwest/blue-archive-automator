@@ -71,3 +71,9 @@ Commission Max, Min, plus, and minus controls were also checked live, including 
 A September 26 Hard 11-1 sweep leveled the account from 79 to 80: 156/218 AP projected 136, then became 356/220 after the 220 AP refill. Sanitized before/receipt fixtures cover that recognition. Runtime regressions verify that the refill cannot advance the cursor until the receipt count and post-sweep capacity, AP, and attempts all verify. This is replay coverage of the captured level-up, not a second live level-up under the new code.
 
 The old intent was reconciled separately against its saved receipt and the live Hard 11-1 counter (three attempts before, two afterward), then returned to verified Home without repeating the sweep. The normal queue resumed at Hard 10-3 and verified fresh sweeps with the 100 AP floor intact. The original receipt remains available as evidence; recovery did not invent identities for drops that had not been inspected.
+
+
+When event priority is enabled, supported event Stories run before repeatable
+quests, even if the Treasure Hunt goal is already complete. Stories persist
+verified progress, obey the same AP floor, and hold lower-priority farming until
+finished. See [event farming](event-farming.md#story-first-ap-spending).

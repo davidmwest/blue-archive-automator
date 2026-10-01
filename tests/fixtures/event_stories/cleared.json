@@ -1,0 +1,342 @@
+[
+  {
+    "text": "Event",
+    "confidence": 0.99996,
+    "box": [
+      104,
+      9,
+      186,
+      39
+    ]
+  },
+  {
+    "text": "Specialized",
+    "confidence": 0.99999,
+    "box": [
+      261,
+      83,
+      359,
+      104
+    ]
+  },
+  {
+    "text": "Play Guide",
+    "confidence": 0.99946,
+    "box": [
+      92,
+      89,
+      201,
+      117
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99993,
+    "box": [
+      733,
+      95,
+      798,
+      127
+    ]
+  },
+  {
+    "text": "Quest",
+    "confidence": 0.9999,
+    "box": [
+      909,
+      96,
+      981,
+      125
+    ]
+  },
+  {
+    "text": "Challenge",
+    "confidence": 0.99999,
+    "box": [
+      1064,
+      94,
+      1175,
+      126
+    ]
+  },
+  {
+    "text": "\u0160tudents",
+    "confidence": 0.94707,
+    "box": [
+      260,
+      101,
+      340,
+      120
+    ]
+  },
+  {
+    "text": "01",
+    "confidence": 0.99998,
+    "box": [
+      712,
+      164,
+      748,
+      197
+    ]
+  },
+  {
+    "text": "Water Festival Front",
+    "confidence": 0.99979,
+    "box": [
+      782,
+      180,
+      1016,
+      206
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99988,
+    "box": [
+      1093,
+      177,
+      1168,
+      206
+    ]
+  },
+  {
+    "text": "02",
+    "confidence": 0.99998,
+    "box": [
+      712,
+      262,
+      751,
+      295
+    ]
+  },
+  {
+    "text": "Water Gun Colosseum",
+    "confidence": 0.99968,
+    "box": [
+      781,
+      263,
+      1038,
+      291
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99989,
+    "box": [
+      1093,
+      276,
+      1168,
+      305
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99986,
+    "box": [
+      799,
+      292,
+      856,
+      321
+    ]
+  },
+  {
+    "text": "03",
+    "confidence": 0.99998,
+    "box": [
+      714,
+      364,
+      749,
+      391
+    ]
+  },
+  {
+    "text": "Jet Boat Stadium",
+    "confidence": 0.99981,
+    "box": [
+      779,
+      361,
+      977,
+      392
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99982,
+    "box": [
+      798,
+      391,
+      856,
+      420
+    ]
+  },
+  {
+    "text": "AFlowerBlooms",
+    "confidence": 0.99742,
+    "box": [
+      146,
+      462,
+      344,
+      499
+    ]
+  },
+  {
+    "text": "04",
+    "confidence": 0.99998,
+    "box": [
+      715,
+      463,
+      749,
+      490
+    ]
+  },
+  {
+    "text": "Skipwater Obstacle Co.",
+    "confidence": 0.99421,
+    "box": [
+      780,
+      460,
+      1043,
+      490
+    ]
+  },
+  {
+    "text": "Among the Hundred",
+    "confidence": 0.92465,
+    "box": [
+      203,
+      481,
+      483,
+      534
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99986,
+    "box": [
+      801,
+      491,
+      854,
+      518
+    ]
+  },
+  {
+    "text": "Fair and Square Aquatic Showdown",
+    "confidence": 0.99701,
+    "box": [
+      184,
+      527,
+      465,
+      543
+    ]
+  },
+  {
+    "text": "05",
+    "confidence": 0.99998,
+    "box": [
+      714,
+      560,
+      749,
+      589
+    ]
+  },
+  {
+    "text": "Torii View Beach",
+    "confidence": 0.96755,
+    "box": [
+      781,
+      560,
+      972,
+      586
+    ]
+  },
+  {
+    "text": "Schedule: 09/28/2026 19:00 - 10/12/2026 18:59",
+    "confidence": 0.97863,
+    "box": [
+      133,
+      569,
+      532,
+      592
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99701,
+    "box": [
+      803,
+      590,
+      854,
+      617
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99984,
+    "box": [
+      126,
+      658,
+      185,
+      689
+    ]
+  },
+  {
+    "text": "Shop",
+    "confidence": 0.9999,
+    "box": [
+      249,
+      658,
+      305,
+      689
+    ]
+  },
+  {
+    "text": "Tasks",
+    "confidence": 0.99973,
+    "box": [
+      369,
+      660,
+      429,
+      684
+    ]
+  },
+  {
+    "text": "Treasure",
+    "confidence": 0.99998,
+    "box": [
+      482,
+      653,
+      556,
+      674
+    ]
+  },
+  {
+    "text": "06",
+    "confidence": 0.99994,
+    "box": [
+      713,
+      659,
+      750,
+      688
+    ]
+  },
+  {
+    "text": "Beach Volleyball Court",
+    "confidence": 0.99881,
+    "box": [
+      780,
+      657,
+      1044,
+      688
+    ]
+  },
+  {
+    "text": "Hunt",
+    "confidence": 0.99997,
+    "box": [
+      496,
+      670,
+      543,
+      691
+    ]
+  }
+]

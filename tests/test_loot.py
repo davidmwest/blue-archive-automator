@@ -710,13 +710,30 @@ def test_shop_currency_priority_and_only_verified_artifact_names(config):
 
 
 @pytest.mark.parametrize("name", [
+    "Bounty Coin",
+    "bounty coins",
+    "  BOUNTY\u00a0 COINS  ",
     "Total Assault Coin",
     "Advanced Total Assault Coin",
     "total assault coins",
     "  ADVANCED\u00a0TOTAL   ASSAULT COINS  ",
 ])
-def test_total_assault_coin_names_are_shop_currencies(name):
+def test_known_coin_names_are_shop_currencies(name):
     assert loot.category(name) == "shop"
+
+
+def test_existing_bounty_coin_receipts_move_to_shop_without_rewriting_history(config):
+    record_action(config, "loot_received", "Bounty rewards", items_complete=True,
+                  items=[{"name": "Bounty Coins", "quantity": 12},
+                         {"name": "Bounty Coin", "quantity": 8},
+                         {"name": "Bounty Ticket", "quantity": 3}])
+    history = config.state_dir / "important-actions.jsonl"
+    before = history.read_bytes()
+    groups = loot.snapshot(config)["groups"]
+    assert [group["id"] for group in groups] == ["energy", "shop"]
+    assert [(item["name"], item["quantity"]) for item in groups[1]["items"]] == [
+        ("Bounty Coin", 20)]
+    assert history.read_bytes() == before
 
 
 def test_total_assault_coins_group_without_merging_tiers_or_matching_unrelated_items(config):

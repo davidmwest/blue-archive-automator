@@ -19,7 +19,7 @@ The [rerun farming guide](https://www.reddit.com/r/BlueArchive/comments/1wt161e/
 - Prioritize available pyroxene and eligma exchanges. Offer Izuna elephs, activity reports, artifacts, and furniture as individually editable targets. Show limited furniture explicitly; do not silently buy duplicates.
 - Default Treasure Hunt goal: the valuable rewards through round 3, stopping once the selected exchange targets are funded. Offer a six-round preset and manual targets. Never enter repeating rounds by default.
 - Preserve the existing **100 AP floor** and the user's automatic-spending switch. No AP purchases, attempt resets, recruitment, or other resource purchases are implied.
-- Story unlocks remain manual. Initial quest clears can be explicitly requested from the dashboard and use the game's default Auto Formation each time. Specialized bonus-team optimization remains future work.
+- Event Stories run first when event AP priority is enabled; each episode preserves the shared AP floor. Initial quest clears can be explicitly requested from the dashboard and use the game's default Auto Formation each time. Specialized bonus-team optimization remains future work.
 
 The reviewed asset uses season ID `aquatic-showdown-global-2026-rerun`. Original-run shop and reward tables must not be copied without comparison. Navigation, early quest costs and results, and the treasure entrance have live evidence. Later stage costs and shop stock still require observation. Treasure Hunt geometry and the 200-currency reveal confirmation were verified in the client.
 
@@ -187,7 +187,7 @@ Completion means the configured goals progress without crossing the AP floor or 
 
 The Campaign carousel can open a concurrent event whose play period has ended but whose reward shop remains available. Inspection uses the home banner, then verifies the Aquatic Showdown subtitle (or the title plus Sun-Kissed Beach quest), Quest tab, and Treasure Hunt entrance before proceeding. Expired event screens are regression fixtures and must not match. No resource-spending inputs exist in the inspector.
 
-The optional `[ap].event_priority` setting reserves AP while this event is playable, regardless of the ordinary farming strategy. It is off by default. When enabled, the AP runner checks the treasure round before ordinary farming. Through round 3 it selects the first available three-star quest in the reviewed order 9 → 5 → 1 and projects a sweep down to the shared AP floor. A missing clear or uncertain screen holds normal farming; it never silently falls through. Normal farming resumes only after observing a round above 3, when the event expires, or when the setting is disabled. The adapter has live sweep evidence on Quest 5. The separate opt-in Treasure Hunt task spends saved treasure currency and advances completed rounds.
+The optional `[ap].event_priority` setting reserves AP while this event is playable, regardless of the ordinary farming strategy. It is off by default. When enabled, the AP runner clears unfinished Stories first, then checks the treasure round before repeatable quest or ordinary farming. Through round 3 it selects the first available three-star quest in the reviewed order 9 → 5 → 1 and projects a sweep down to the shared AP floor. A missing clear or uncertain screen holds normal farming; it never silently falls through. Normal farming resumes only after observing a round above 3, when the event expires, or when the setting is disabled. The adapter has live sweep evidence on Quest 5. The separate opt-in Treasure Hunt task spends saved treasure currency and advances completed rounds.
 
 Live validation on 2026-09-29 completed an eight-input inspection and returned home: Quest 1 had zero stars and Treasure Hunt was on round 1; AP remained 220/220. The home banner can also rotate into recruitment. The inspector recognizes that wrong destination, returns home, and retries at most three entries. This verifies navigation and prerequisite inspection only, not event farming or treasure spending.
 
@@ -241,3 +241,33 @@ uniform 32-pixel scroll, while altered quantities, artwork, ordering, and ambigu
 overlaps are still rejected. This correction is limited to scrolling comparison;
 it does not relax receipt identity checks before input. The original partially
 itemized receipt remains incomplete because later rows were never captured.
+
+
+### Story-first AP spending
+
+Aquatic Showdown has 12 Story stages, each costing 10 AP, as listed in the
+[rerun stage table](https://bluearchive.wiki/wiki/A_Flower_Blooms_Among_The_Hundred_%EF%BD%9E_Honorable_Sea_Showdown_%EF%BD%9E/Rerun).
+The adapter opens the Story tab and checks numbered rows in order. Narrative
+stages use the game's Menu → Skip → Confirm flow. Battle stages retain a locked
+guest team when the game supplies one; otherwise they use default Auto Formation.
+Battles use Auto, and rewards enter the ordinary loot ledger.
+
+Every paid entry requires a verified AP projection and keeps the configured
+floor. Unfinished stories hold quest and normal farming, even when the treasure
+round goal has already been met. A bounded visit may defer remaining stories
+until the next AP check. Confirmed progress survives daemon restarts and resets
+with the event season; an unresolved paid entry blocks replay until its saved
+receipt and completion are reconciled. These routes remain deterministic and
+require no AI during normal operation.
+
+Live validation on September 30 cleared Stories 1–4 for **40 AP total** and
+returned home with **103 AP**, preserving the 100 AP floor. Story 2 used the
+game's locked guest team and Auto battle; the narrative stages used the skip
+flow. Reward receipts and gold completion markers verified each clear, and
+progress persisted with no unresolved entry. Stories 5–12 remain for later
+visits as AP becomes available; their individual layouts have not yet been
+live-verified. The editable Auto Formation path has offline control-flow tests;
+the later battle episode still needs its own live validation.
+After restarting the daemon, its scheduled visit resumed at Story 5, verified
+the 10 AP cost, and left the episode unstarted to preserve the floor. It returned
+home without falling through to event quests or normal Hard farming.

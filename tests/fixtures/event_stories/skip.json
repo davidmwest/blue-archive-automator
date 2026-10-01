@@ -1,0 +1,112 @@
+[
+  {
+    "text": "Auto",
+    "confidence": 0.99974,
+    "box": [
+      1041,
+      25,
+      1111,
+      57
+    ]
+  },
+  {
+    "text": "Menu",
+    "confidence": 0.99996,
+    "box": [
+      1165,
+      26,
+      1243,
+      56
+    ]
+  },
+  {
+    "text": "Summary",
+    "confidence": 0.99996,
+    "box": [
+      563,
+      125,
+      716,
+      164
+    ]
+  },
+  {
+    "text": "The Hyakkiyako Water Festival Begins!",
+    "confidence": 0.99996,
+    "box": [
+      425,
+      184,
+      854,
+      216
+    ]
+  },
+  {
+    "text": "The first round is the water gun gauntlet. Let the games",
+    "confidence": 0.99034,
+    "box": [
+      378,
+      226,
+      883,
+      257
+    ]
+  },
+  {
+    "text": "begin!",
+    "confidence": 0.99988,
+    "box": [
+      377,
+      254,
+      445,
+      285
+    ]
+  },
+  {
+    "text": "Skip this story?",
+    "confidence": 0.99952,
+    "box": [
+      557,
+      429,
+      721,
+      461
+    ]
+  },
+  {
+    "text": "Cancel",
+    "confidence": 0.99998,
+    "box": [
+      461,
+      504,
+      564,
+      541
+    ]
+  },
+  {
+    "text": "Confirm",
+    "confidence": 0.99997,
+    "box": [
+      704,
+      504,
+      828,
+      539
+    ]
+  },
+  {
+    "text": "Shizuko Festi",
+    "confidence": 0.99678,
+    "box": [
+      119,
+      510,
+      352,
+      557
+    ]
+  },
+  {
+    "text": "Hello, everyone!",
+    "confidence": 0.98903,
+    "box": [
+      123,
+      576,
+      343,
+      614
+    ]
+  }
+]

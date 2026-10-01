@@ -93,6 +93,7 @@ def test_failed_event_inspection_never_falls_back_to_normal_farming(tmp_path, mo
 ])
 def test_event_farm_goal_and_verified_stage_selection(tmp_path, monkeypatch, round_number, available, expected_stage):
     from ba_automator.event_quests import farm_event
+    monkeypatch.setattr('ba_automator.event_stories.complete_stories', lambda *a: None)
     from ba_automator.event_priority import available_event
     c = config(tmp_path, ap_event_priority=True, ap_floor=100)
     old_vision = object()
@@ -125,6 +126,7 @@ def test_event_farm_goal_and_verified_stage_selection(tmp_path, monkeypatch, rou
 
 def test_unreadable_event_cost_retries_instead_of_reporting_low_ap(tmp_path, monkeypatch):
     from ba_automator.event_quests import farm_event
+    monkeypatch.setattr('ba_automator.event_stories.complete_stories', lambda *a: None)
     from ba_automator.event_priority import available_event
     c = config(tmp_path, ap_event_priority=True)
     old_vision = object()
@@ -149,3 +151,41 @@ def test_unreadable_event_cost_retries_instead_of_reporting_low_ap(tmp_path, mon
     with pytest.raises(TaskError, match='Unreadable'):
         farm_event(runner, profile)
     assert 'detail' in calls and runner.vision is old_vision
+
+
+def test_unfinished_stories_hold_quest_goal_and_normal_farming(tmp_path, monkeypatch):
+    from ba_automator.event_quests import farm_event
+    from ba_automator.event_priority import available_event
+    c = config(tmp_path, ap_event_priority=True)
+    old_vision = object()
+    frame = SimpleNamespace(screen=SimpleNamespace(kind='event_list'))
+    homes = []
+    runner = SimpleNamespace(config=c, vision=old_vision, startup=None,
+                             wait=lambda *a:frame)
+    runner.tap = lambda *a:pytest.fail('Must not inspect the treasure goal or quests before Stories finish')
+    monkeypatch.setattr('ba_automator.event_quests.enter_event', lambda *a:frame)
+    monkeypatch.setattr('ba_automator.event_stories.complete_stories',
+                        lambda *a:'Stories waiting for AP above the floor')
+    monkeypatch.setattr('ba_automator.event_quests.event_home', lambda *a:homes.append(True))
+    result = farm_event(runner, available_event(datetime(2026,9,30,tzinfo=timezone.utc)))
+    assert 'Stories waiting' in result
+    assert homes == [True] and runner.vision is old_vision
+
+
+def test_story_visit_budget_requests_a_prompt_continuation(tmp_path, monkeypatch):
+    c = config(tmp_path, ap_event_priority=True)
+    now = datetime(2026,9,30,tzinfo=timezone.utc)
+    r = APRunner(c,None,None,vision=object(),wall_clock=lambda:now)
+    r.wait=lambda *a,**kw:ShopFrame(Capture(b'',0,c.package),APScreen('home',ap=500))
+    r.finish=lambda:None
+    def deferred(r, profile):
+        r.event_deferred=True
+        return 'Event Stories will continue next visit'
+    monkeypatch.setattr('ba_automator.event_quests.farm_event',deferred)
+    try:
+        r.run()
+        saved=read_state(c)
+        assert (datetime.fromisoformat(saved['next_check_at'])-now).total_seconds()==60
+        assert 'Stories' in saved['last_summary']
+    finally:
+        r.journal.close()

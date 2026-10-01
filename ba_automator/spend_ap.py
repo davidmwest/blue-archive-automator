@@ -483,6 +483,7 @@ class APRunner(ShopRunner):
         if event:
             from .event_quests import farm_event
             event_summary = farm_event(self, event)
+            continue_soon = getattr(self, 'event_deferred', False)
             frame = self.wait("home", predicate=lambda s: s.ap is not None)
             if event_summary is not None:
                 summary = event_summary

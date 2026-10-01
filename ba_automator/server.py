@@ -868,7 +868,7 @@ class DashboardController:
                 if profile is None:
                     raise ApiError(409, 'The event play period has ended')
                 if state['event_id'] != profile['id']:
-                    state.update(event_id=profile['id'], detected=False, clears={}, summary=None)
+                    state.update(event_id=profile['id'], detected=False, clears={}, stories={}, summary=None)
                 state['declined'] = True
                 write_state(self.config,state)
             if not clear:

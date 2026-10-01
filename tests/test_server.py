@@ -1992,6 +1992,20 @@ def test_event_prompt_does_not_require_farming_to_be_enabled(controlled):
     assert not factory.processes
 
 
+def test_new_event_choice_resets_previous_story_progress(controlled):
+    from ba_automator import event_state
+    controller, factory = controlled
+    controller.pause()
+    controller._wall_clock = lambda: datetime(2026, 9, 30, tzinfo=timezone.utc)
+    state = event_state.read_state(controller.config)
+    state.update(event_id='previous-event', stories={'1': True}, clears={'1': 3})
+    event_state.write_state(controller.config, state)
+    controller.event_choice(False)
+    state = event_state.read_state(controller.config)
+    assert state['stories'] == {} and state['clears'] == {}
+    assert not factory.processes
+
+
 def test_ap_dispatches_after_other_queued_work(controlled):
     controller, factory = controlled
     controller.pause()

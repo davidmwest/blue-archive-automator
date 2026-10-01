@@ -14,7 +14,7 @@ def read_state(config):
         value = json.loads(state_path(config).read_text())
     except FileNotFoundError:
         return dict(version=1, event_id=None, detected=False, declined=False,
-                    pending=None, clears={}, summary=None)
+                    pending=None, clears={}, stories={}, summary=None)
     except (ValueError, UnicodeError) as exc:
         raise RuntimeError('Invalid event state; inspect before spending AP') from exc
     if (not isinstance(value, dict) or value.get('version') != 1
@@ -25,6 +25,12 @@ def read_state(config):
             or value.get('pending') is not None and (
                 not isinstance(value['pending'], dict) or not value['pending'])):
         raise RuntimeError('Invalid event state; inspect before spending AP')
+    stories = value.setdefault('stories', {})
+    if (not isinstance(stories, dict) or any(
+            not isinstance(key, str) or not key.isdecimal()
+            or not 1 <= int(key) <= 12 or cleared is not True
+            for key, cleared in stories.items())):
+        raise RuntimeError('Invalid event story progress; inspect before spending AP')
     return value
 
 
@@ -47,7 +53,7 @@ def observe(config, profile):
     if state['event_id'] != profile['id']:
         if state['pending']:
             raise RuntimeError('An earlier event battle has an unresolved result')
-        state.update(event_id=profile['id'], declined=False, clears={}, summary=None)
+        state.update(event_id=profile['id'], declined=False, clears={}, stories={}, summary=None)
     state['detected'] = True
     write_state(config, state)
     return state

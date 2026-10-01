@@ -1,7 +1,7 @@
 """Deterministic, opt-in event clears and priority sweeps.
 
-A first-clear request is a separate job. Farming never starts a battle, changes
-formation, or falls back to ordinary AP spending after uncertain event progress.
+Quest first-clear requests are separate jobs. Enabled event farming completes
+the reviewed Stories first, and never falls back after uncertain event progress.
 """
 import re
 from . import event_state
@@ -211,6 +211,12 @@ def farm_event(runner, profile):
     runner.vision = QuestVision(runner.startup,previous)
     try:
         frame = enter_event(runner,runner.startup)
+        from .event_stories import complete_stories
+        story_summary = complete_stories(runner, profile, frame)
+        frame = runner.wait(LISTS)
+        if story_summary is not None:
+            event_home(runner, frame)
+            return story_summary
         runner.tap(frame,(515,663),'Check event farming goal')
         board = runner.wait('event_board')
         if board.screen.round > profile['target_round']:

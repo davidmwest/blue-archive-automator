@@ -1,0 +1,362 @@
+[
+  {
+    "text": "Event",
+    "confidence": 0.99995,
+    "box": [
+      104,
+      9,
+      186,
+      39
+    ]
+  },
+  {
+    "text": "104/220",
+    "confidence": 0.99999,
+    "box": [
+      507,
+      9,
+      587,
+      37
+    ]
+  },
+  {
+    "text": "Specialized",
+    "confidence": 0.99998,
+    "box": [
+      260,
+      83,
+      358,
+      103
+    ]
+  },
+  {
+    "text": "Play Guide",
+    "confidence": 0.9975,
+    "box": [
+      91,
+      88,
+      201,
+      117
+    ]
+  },
+  {
+    "text": "Students",
+    "confidence": 0.93366,
+    "box": [
+      260,
+      100,
+      341,
+      120
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99992,
+    "box": [
+      733,
+      95,
+      798,
+      127
+    ]
+  },
+  {
+    "text": "Quest",
+    "confidence": 0.99983,
+    "box": [
+      910,
+      97,
+      980,
+      124
+    ]
+  },
+  {
+    "text": "Challenge",
+    "confidence": 0.99997,
+    "box": [
+      1064,
+      95,
+      1176,
+      125
+    ]
+  },
+  {
+    "text": "Episode Info",
+    "confidence": 0.99994,
+    "box": [
+      545,
+      140,
+      736,
+      185
+    ]
+  },
+  {
+    "text": "Front",
+    "confidence": 0.99995,
+    "box": [
+      947,
+      165,
+      1017,
+      192
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99989,
+    "box": [
+      1093,
+      177,
+      1168,
+      207
+    ]
+  },
+  {
+    "text": "01 Water Festival Front",
+    "confidence": 0.98184,
+    "box": [
+      350,
+      204,
+      691,
+      239
+    ]
+  },
+  {
+    "text": "Expected Rewards",
+    "confidence": 0.99997,
+    "box": [
+      549,
+      273,
+      732,
+      297
+    ]
+  },
+  {
+    "text": "osseum",
+    "confidence": 0.99837,
+    "box": [
+      948,
+      269,
+      1037,
+      290
+    ]
+  },
+  {
+    "text": "1st Time",
+    "confidence": 0.99932,
+    "box": [
+      361,
+      315,
+      425,
+      337
+    ]
+  },
+  {
+    "text": "1st Time",
+    "confidence": 0.99625,
+    "box": [
+      433,
+      315,
+      496,
+      336
+    ]
+  },
+  {
+    "text": "1st Time",
+    "confidence": 0.97274,
+    "box": [
+      504,
+      315,
+      568,
+      336
+    ]
+  },
+  {
+    "text": "x15x275",
+    "confidence": 0.91575,
+    "box": [
+      388,
+      359,
+      498,
+      387
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.92686,
+    "box": [
+      493,
+      366,
+      516,
+      385
+    ]
+  },
+  {
+    "text": "x15",
+    "confidence": 0.85733,
+    "box": [
+      530,
+      363,
+      567,
+      382
+    ]
+  },
+  {
+    "text": "0",
+    "confidence": 0.91908,
+    "box": [
+      565,
+      366,
+      588,
+      385
+    ]
+  },
+  {
+    "text": "AFlowerBloom",
+    "confidence": 0.98792,
+    "box": [
+      146,
+      461,
+      334,
+      501
+    ]
+  },
+  {
+    "text": "104\u219294",
+    "confidence": 0.99961,
+    "box": [
+      676,
+      459,
+      761,
+      482
+    ]
+  },
+  {
+    "text": "tacle Co.",
+    "confidence": 0.99337,
+    "box": [
+      950,
+      460,
+      1042,
+      488
+    ]
+  },
+  {
+    "text": "Among.th",
+    "confidence": 0.94588,
+    "box": [
+      208,
+      490,
+      334,
+      530
+    ]
+  },
+  {
+    "text": "Enter Episode",
+    "confidence": 0.99994,
+    "box": [
+      534,
+      498,
+      747,
+      540
+    ]
+  },
+  {
+    "text": "Fair and Square",
+    "confidence": 0.99946,
+    "box": [
+      184,
+      527,
+      315,
+      543
+    ]
+  },
+  {
+    "text": "Schedule: 09/28/2026",
+    "confidence": 0.99675,
+    "box": [
+      133,
+      569,
+      324,
+      592
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99992,
+    "box": [
+      805,
+      591,
+      852,
+      616
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99988,
+    "box": [
+      126,
+      658,
+      184,
+      689
+    ]
+  },
+  {
+    "text": "Shop",
+    "confidence": 0.99986,
+    "box": [
+      249,
+      658,
+      305,
+      689
+    ]
+  },
+  {
+    "text": "Tasks",
+    "confidence": 0.99985,
+    "box": [
+      369,
+      660,
+      429,
+      683
+    ]
+  },
+  {
+    "text": "Treasure",
+    "confidence": 0.99994,
+    "box": [
+      483,
+      655,
+      556,
+      673
+    ]
+  },
+  {
+    "text": "06",
+    "confidence": 0.99994,
+    "box": [
+      715,
+      660,
+      749,
+      687
+    ]
+  },
+  {
+    "text": "Beach Volleyball Court",
+    "confidence": 0.99962,
+    "box": [
+      780,
+      656,
+      1044,
+      688
+    ]
+  },
+  {
+    "text": "Hunt",
+    "confidence": 0.99997,
+    "box": [
+      497,
+      671,
+      543,
+      691
+    ]
+  }
+]
