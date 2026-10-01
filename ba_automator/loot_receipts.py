@@ -1553,6 +1553,17 @@ class ReceiptReader:
         try:
             cap = self.capture()
             p = self.read(cap)
+            # Reward headings can disappear briefly under their entrance sparkle.
+            # Observe again before declaring the receipt unreadable. No input is
+            # permitted here; recognized layouts still pass the normal guards.
+            for attempt in range(3):
+                if p.kind != "unknown":
+                    break
+                self.evidence_frame(cap, f"initial-unrecognized-{attempt + 1}")
+                self.r.journal.record("receipt_initial_unrecognized", attempt=attempt + 1)
+                self.r.sleep(.5)
+                cap = self.capture()
+                p = self.read(cap)
             kind = p.kind
             if kind == "reward":
                 # The heading appears while the last card is still scaling in.

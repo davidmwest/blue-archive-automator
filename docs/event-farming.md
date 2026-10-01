@@ -143,6 +143,8 @@ The first implementation collects every prize in rounds 1–3. It does not disca
 
 Live development on September 30 completed round 1: all nine prizes in 37 reveals, costing 7,400 event currency. The board contained 31 prize cells and six revealed empty cells. Saved receipts and exact board deltas were reconciled without repeating spending after recognition fixes. The completed-board overlay and free refresh into round 2 were verified live; the balance stayed at 2,359 through the refresh. Round 2's different inventory was also verified in the client. Round 3 and the final round-goal transition remain covered offline rather than claimed as live-tested. Multi-item rewards use the shared item inspector; stable, fully visible single-item receipts use the guarded no-input fast path.
 
+The subsequent daily run completed successfully, including another seven round-2 reveals. Across the first two round-2 visits, 11 reveals cost 2,200 currency and completed two prizes, leaving 159 currency. The AP follow-up swept event Quest 9 twice (40 AP), leaving 113 AP above the configured 100-AP floor. Its rewards raised treasure currency to 263; the automatic treasure follow-up opened another tile, verified its 40,000-credit receipt, and returned home with 63 currency. One earlier temporarily unidentified 40,000-credit receipt was reconciled from its saved image without repeating the transaction. Initial unreadable reward layouts now receive three bounded, read-only retries before remaining marked unidentified; foreground, freshness, and receipt identity checks still apply.
+
 ## Shops, receipts, and crash recovery
 
 All resource-consuming actions follow the same transaction boundary:

@@ -56,6 +56,30 @@ def test_real_treasure_credits_saved_once_without_inputs(reader, receipt):
     assert len(events) == 1 and json.loads(events[0])['action'] == 'loot_received'
 
 
+def test_initial_unrecognized_heading_retries_without_inputs(reader):
+    read = reader.read
+    calls = 0
+    def transient(cap):
+        nonlocal calls
+        calls += 1
+        return lr.Page('unknown') if calls <= 2 else read(cap)
+    reader.read = transient
+    result = reader.run()
+    assert result['items_complete']
+    assert result['items'][0]['quantity'] == 40000
+    assert reader.inputs == 0
+    assert reader.r.clock() >= 1.5
+
+
+def test_persistently_unrecognized_receipt_stops_after_bounded_observation(reader):
+    reader.read = Mock(return_value=lr.Page('unknown'))
+    result = reader.run()
+    assert not result['items_complete'] and result['items'] == []
+    assert reader.capture.call_count == 4
+    assert reader.inputs == 0
+    assert reader.r.clock() == 1.5
+
+
 @pytest.mark.parametrize('change', ['clipped', 'leading_clipped', 'trailing_clipped',
                                    'expand', 'off_center', 'small', 'unnamed', 'no_quantity',
                                    'no_icon', 'two_cards'])

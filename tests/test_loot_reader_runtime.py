@@ -160,6 +160,18 @@ def test_stale_capture_and_foreign_foreground_send_no_input(harness, failure):
     assert len(h.events()) == 1
 
 
+def test_initial_unknown_retry_stops_on_foreign_foreground(harness):
+    h = harness
+    h.unknown = True
+    def change_after_capture(number):
+        h.foreground = 'com.android.settings'
+    h.on_capture = change_after_capture
+    with pytest.raises(TaskError, match='Foreground changed'):
+        h.reader().run()
+    assert h.inputs == []
+    assert not h.result()['items_complete']
+
+
 def test_same_box_and_quantity_with_changed_icon_cannot_tap_or_learn(harness):
     h = harness
     original = card("A", 100)
