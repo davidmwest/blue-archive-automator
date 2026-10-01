@@ -23,6 +23,8 @@ The objective is to maximize **owned-student relationship opportunities** with t
 
 Survey each school once using its **All Locations** room grid, then select the best room set for the available ticket budget. Visit selected rooms grouped by school, choosing the nearest remaining school in the verified arrow-navigation order. Travel order does not change which rooms were selected. Before every Start, recheck the room, students, and one-ticket cost. After each receipt, use the observed school rank and XP for subsequent visits to that school; do not predict progress or repeat the full survey. The journal saves both the priority list and the actual visit order. A new invocation starts with a new survey.
 
+A clearer room grid or confirmation preview may resolve a previously unreadable relationship rank. That refinement is logged and does not invalidate the room. Ownership, portrait order and count, and every already-readable rank must still agree. A readable rank becoming unknown or conflicting in the preview stops before Start.
+
 Unowned students do not count toward relationship gains. A room with three students and two owned students loses to a room with three owned students. Relationship ranks only break a tie in owned-student count; a single high-rank student does not outrank two owned students.
 
 If every available room has zero owned students, this policy leaves the remaining tickets unused. Missing ownership evidence is not zero ownership. If relationship ranks are unreadable in an equal-count comparison, use stable room order and log the missing tie-break. This still selects the maximum number of owned-student opportunities; it does not treat an unreadable rank as zero.

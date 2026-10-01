@@ -1390,6 +1390,7 @@ def test_transient_failure_is_logged_without_attention_notice(controlled):
     eventually(lambda: controller.status()['current_job'] is None)
     assert controller.status()['state'] == 'failed'
     assert controller.status()['failed_jobs'] == []
+    assert controller.status()['phase'] == 'Run finished; details saved in the daily log'
     log = controller.daily_log_text(controller._wall_clock().astimezone().date().isoformat()).decode()
     assert 'failure_logged' in log and job['id'] in log
     assert 'job_finished' in log

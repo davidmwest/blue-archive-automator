@@ -1566,19 +1566,22 @@ def test_scrimmage_missing_ap_arrow_requires_two_matching_native_crops(vision, n
     class Startup:
         def __init__(self):
             self.crops = []
+            self.readings = []
 
         def read(self, image):
             if image.shape[:2] == (1440, 2560):
                 return [replace(w, box=tuple(v * 2 for v in w.box)) for w in words]
             self.crops.append(image.shape[:2])
-            return vision.startup.read(image)
+            observed = vision.startup.read(image)
+            self.readings.append(observed)
+            return observed
 
         def matches(self, image):
             return {}
 
     startup = Startup()
     screen = TicketVision(startup).analyze(png)
-    assert startup.crops == [(153, 363), (204, 484)]
+    assert startup.crops == [(153, 363), (204, 484)], startup.readings
     assert (screen.kind, screen.task, screen.area, screen.stage) == (
         'detail', 'scrimmages', 'Trinity', 'B')
     assert (screen.ap, screen.after_ap, screen.tickets, screen.after_tickets,

@@ -98,7 +98,8 @@
     if (running) notes.push("running now");
     else if (queued) notes.push(status?.queue_paused ? "queued · waiting for resume" : "queued · runs in order");
     else if (schedule?.blocked_reason) notes.push(`needs a look: ${schedule.blocked_reason}`);
-    else if (["failed", "stopped"].includes(schedule?.status)) notes.push(currentOccurrence ? "didn't finish. check the log, then queue daily to retry." : "last daily didn't finish");
+    else if (schedule?.status === "failed") notes.push("daily visit logged · details in the daily log");
+    else if (schedule?.status === "stopped") notes.push("daily visit stopped");
     else if (schedule?.status === "success") {
       notes.push(currentOccurrence ? "daily visit finished" : "last daily visit finished");
       for (const entry of schedule.deferred_tasks || []) {
@@ -130,7 +131,8 @@
     if (running) notes.push("checking red dots and AP now");
     else if (queued) notes.push(status?.queue_paused ? "queued · waiting for resume" : "queued · runs in order");
     else if (schedule?.blocked_reason) notes.push(`needs a look: ${schedule.blocked_reason}`);
-    else if (["failed", "stopped"].includes(schedule?.status)) notes.push("last check didn't finish · see the log");
+    else if (schedule?.status === "failed") notes.push("check-in logged · details in the daily log");
+    else if (schedule?.status === "stopped") notes.push("last check stopped");
     else if (last) notes.push(`last checked ${last.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`);
     if (!enabled) notes.push("schedule off");
     else if (!running && !queued) {

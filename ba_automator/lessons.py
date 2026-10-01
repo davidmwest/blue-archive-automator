@@ -47,7 +47,8 @@ def compatible_survey_students(surveyed, observed, completed_lessons: int) -> bo
     The same student can appear at multiple schools. A previously completed
     lesson can raise their bond after the one-pass survey. Accept at most one
     rank per confirmed lesson, never a decrease or an unreadable replacement.
-    The spending preview must still exactly match this fresh room observation.
+    A clearer observation may also resolve a previously unreadable bond.
+    The spending preview must still match every value read in this observation.
     """
     if len(surveyed) != len(observed):
         return False
@@ -56,11 +57,29 @@ def compatible_survey_students(surveyed, observed, completed_lessons: int) -> bo
             return False
         if before.bond == after.bond:
             continue
+        if before.owned is True and before.bond is None and type(after.bond) is int:
+            continue
         if (before.owned is not True or type(before.bond) is not int
                 or type(after.bond) is not int
                 or not 0 < after.bond - before.bond <= completed_lessons):
             return False
     return True
+
+
+def compatible_preview_students(observed, previewed) -> bool:
+    """Allow clearer preview bonds without discarding any known room evidence.
+
+    Slot IDs are local to each layout. Ownership, order, count, and every known
+    bond must agree; an unreadable grid bond can become readable in the preview.
+    """
+    if len(observed) != len(previewed):
+        return False
+    return all(
+        before.owned is not None and before.owned == after.owned
+        and (before.bond == after.bond
+             or (before.owned is True and before.bond is None and type(after.bond) is int))
+        for before, after in zip(observed, previewed)
+    )
 
 
 @dataclass(frozen=True)
@@ -476,10 +495,12 @@ class LessonsRunner:
                 or s.tickets_after != before - 1 or s.start_target is None
                 or s.inspection_complete is not True):
             self.fail('Lesson preview did not confirm the chosen room and a single-ticket cost')
-        # Student slot IDs differ between grid and preview; compare their observed values.
-        profile = lambda students: tuple((student.owned, student.bond) for student in students)
-        if profile(s.students) != profile(card.students):
+        if not compatible_preview_students(card.students, s.students):
             self.fail('Lesson preview students differ from the surveyed room')
+        if any(a.bond != b.bond for a, b in zip(card.students, s.students)):
+            self.journal.record('lesson_preview_bonds_resolved', location=location.name, room=room.name,
+                                observed=[asdict(student) for student in card.students],
+                                previewed=[asdict(student) for student in s.students])
         self.journal.save_image(f'lesson-{self.confirmed + 1:02d}-before.png', preview.capture.png)
         self.phase(decision.reason)
         record_action(self.config, 'lesson_start_attempted', decision.reason, task='lessons',

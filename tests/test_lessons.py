@@ -655,10 +655,11 @@ def test_scaled_time_allowance_does_not_extend_global_input_limit(harness, monke
 
 
 def prepare_execution(harness, monkeypatch, *, receipt=True, after_tickets=1,
-                      completed=True, preview_cost=1, preview_students=None, return_kind="rooms"):
+                      completed=True, preview_cost=1, preview_students=None, return_kind="rooms",
+                      students=None):
     runner = harness.make()
     runner.expected_tickets = runner.initial_tickets = 2
-    students = (LessonStudent("0", True, 10),)
+    students = (LessonStudent("0", True, 10),) if students is None else students
     location = LessonLocation("a", "A", 3, 100, 450)
     room = LessonRoom("a", "0", "Library", students)
     decision = choose_lesson([location], [room])
@@ -1025,6 +1026,46 @@ def test_changed_preview_student_profile_blocks_start(harness, monkeypatch):
     with pytest.raises(TaskError, match="students differ"):
         runner.execute(decision)
     assert harness.device.taps == [(250, 250)]
+
+
+def test_preview_resolves_missing_grid_bond_without_blocking_lesson(harness, monkeypatch):
+    # Live Hyakkiyako: the grid misses a thin rank 1 but the preview reads it.
+    students = (LessonStudent("0", True, None), LessonStudent("1", False, None),
+                LessonStudent("2", True, 24))
+    preview = (LessonStudent("preview-0", True, 1), LessonStudent("preview-1", False, None),
+               LessonStudent("preview-2", True, 24))
+    runner, decision = prepare_execution(harness, monkeypatch, students=students,
+                                         preview_students=preview)
+    runner.execute(decision)
+    assert runner.confirmed == 1
+    assert harness.device.taps.count((640, 550)) == 1
+    assert any(e["event"] == "lesson_preview_bonds_resolved" for e in journal(runner))
+
+
+@pytest.mark.parametrize("preview", [
+    (LessonStudent("0", True, None),),  # a known rank cannot become unreadable
+    (LessonStudent("0", False, None),),  # ownership cannot change
+    (LessonStudent("0", None, 10),),
+    (),
+    (LessonStudent("0", True, 10), LessonStudent("1", True, 10)),
+])
+def test_preview_refinement_preserves_known_evidence(harness, monkeypatch, preview):
+    runner, decision = prepare_execution(harness, monkeypatch, preview_students=preview)
+    with pytest.raises(TaskError, match="students differ"):
+        runner.execute(decision)
+    assert harness.device.taps == [(250, 250)]
+
+
+def test_fresh_grid_can_resolve_missing_survey_bond(harness, monkeypatch):
+    runner, decision = prepare_execution(harness, monkeypatch,
+                                         students=(LessonStudent("0", True, None),),
+                                         preview_students=(LessonStudent("preview", True, 1),))
+    card = RoomCard(0, "Library", 1, True, (250, 250), (LessonStudent("0", True, 1),))
+    monkeypatch.setattr(runner, "room_grid", lambda frame: harness.frame(
+        LessonScreen("rooms", tickets=2, room_cards=(card,))))
+    runner.execute(decision)
+    assert runner.confirmed == 1
+    assert any(e["event"] == "lesson_survey_bonds_updated" for e in journal(runner))
 
 
 def test_incomplete_preview_blocks_start_even_when_known_portraits_match(harness, monkeypatch):

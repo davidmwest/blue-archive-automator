@@ -1291,6 +1291,10 @@ class DashboardController:
                                 self._log(f'Could not append attention notice: {exc}', 'error')
                         else:
                             self._daily('failure_logged', task=job['task'], run=job['id'], detail=detail)
+                            if self._state == 'failed':
+                                self._phase = ('Daily visit finished; diagnostics saved in the daily log'
+                                               if summary and summary['status'] == 'partial_failure'
+                                               else 'Run finished; details saved in the daily log')
                     if job["task"] == "clear_event":
                         self._persist_queue_pause(True)
                         self._paused = True
