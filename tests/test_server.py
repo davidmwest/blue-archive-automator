@@ -2055,3 +2055,23 @@ def test_treasure_toggle_persists_without_enabling_event_farming(controlled):
     snapshot = Config.from_file(factory.processes[0].arguments[4])
     assert snapshot.ap_event_treasure_enabled
     assert "event_treasure" in task_plan("spend_ap", snapshot)
+
+
+@pytest.mark.parametrize('mode', ['treasure', 'event'])
+def test_idle_closure_preserves_unresolved_event_transaction(close_controlled, mode):
+    from ba_automator import treasure_state, event_state
+    controller, processes, devices = close_controlled
+    controller.update_settings({'close_app_when_idle': True})
+    controller.enqueue('restart')
+    eventually(lambda: len(processes.processes) == 1)
+    store = treasure_state if mode == 'treasure' else event_state
+    saved = store.read_state(controller.config)
+    saved['pending'] = {'currency': 200, 'cell': [2, 4]} if mode == 'treasure' else {'stage': 1}
+    store.write_state(controller.config, saved)
+    before = store.state_path(controller.config).read_bytes()
+    processes.processes[0].finish(1)
+    eventually(lambda: any('Could not close Blue Archive' in item['message']
+                           for item in controller.status()['logs']))
+    assert devices.calls == []
+    assert not controller.status()['app_closed']
+    assert store.state_path(controller.config).read_bytes() == before

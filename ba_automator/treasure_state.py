@@ -72,8 +72,25 @@ def completed_rectangle(before, after, hits, last_cell, completed, round_no=1):
     return rectangles.pop()
 
 
-def ensure_safe(config):
-    if read_state(config)['pending']:
+def logged_reveal_can_navigate(pending):
+    """Only a durable, already logged receipt permits leaving its old screen.
+
+    This does not resolve the transaction: the original board delta must still
+    match exactly after navigation, before any further currency can be spent.
+    """
+    if not pending or pending.get('version') != 2:
+        return False
+    validate_intent(pending)
+    if pending['kind'] != 'reveal' or not pending['receipt_logged']:
+        return False
+    reference = (pending.get('receipt_ready') or pending.get('receipt_checkpoint')
+                 or pending.get('receipt_seen'))
+    return bool(reference and Path(reference).is_file() and Path(reference).stat().st_size)
+
+
+def ensure_safe(config, *, recover_logged_receipt=False):
+    pending = read_state(config)['pending']
+    if pending and not (recover_logged_receipt and logged_reveal_can_navigate(pending)):
         raise RuntimeError('Treasure reveal has an unresolved receipt; inspect its trace before restarting')
 
 

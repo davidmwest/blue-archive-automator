@@ -156,6 +156,18 @@ five 40,000-credit receipts, and returned home with 35 currency. Round 2 remains
 in progress; this validates recovery and the insufficient-currency stop, not
 completion of the three-round goal.
 
+On October 1, a collected round-2 prize left a balance of 75 that full-screen
+OCR read below the confidence threshold. Currency now gets a bounded native
+region reread, with the same confidence and conflict checks as other counters.
+Idle cleanup preserves unresolved event and treasure transactions. If the game
+was already closed, recovery may relaunch from a recognized Android launcher
+only when the reward was durably logged. It reopens the verified event and
+requires the exact saved board, currency, and inventory delta before clearing
+the intent. Unlogged or legacy transactions remain held. This path was verified
+live from the launcher through home to round 2: the saved 275-to-75 transaction
+was reconciled, its completed umbrella recorded, and home reached without
+another reveal or duplicate reward receipt.
+
 ## Shops, receipts, and crash recovery
 
 All resource-consuming actions follow the same transaction boundary:

@@ -622,3 +622,90 @@ def test_stable_completed_board_uses_journaled_final_reveal(runtime):
     assert frame.screen.kind == 'treasure_board'
     assert len(frame.screen.hits) == 31
     runtime.tap.assert_not_called()
+
+
+@pytest.mark.parametrize('kind', ['home', 'event_page'])
+def test_logged_pending_can_reopen_board_without_replaying_tile(runtime, kind):
+    recovery_intent(runtime)
+    after = board(currency=0, remaining=44, closed=CELLS-{CELL}, empty=frozenset({CELL}))
+    runtime.capture.return_value = board(kind=kind)
+    runtime.wait.return_value = after
+    runtime.stable_board.return_value = after
+    event_treasure.enter_event.side_effect = None
+    event_treasure.enter_event.return_value = board(kind='event_page')
+    runtime.run()
+    assert treasure_state.read_state(runtime.config)['pending'] is None
+    assert event_treasure.enter_event.call_count == (1 if kind == 'home' else 0)
+    assert [c.args[1] for c in runtime.tap.call_args_list] == [(515, 663), (1237, 24)]
+    event_treasure.inspect_receipt.assert_not_called()
+    event_treasure.choose_greedy_cell.assert_not_called()
+
+
+@pytest.mark.parametrize('damage', ['unlogged', 'missing_receipt', 'legacy'])
+def test_pending_home_requires_durable_logged_receipt_before_navigation(runtime, damage):
+    pending = recovery_intent(runtime, logged=damage != 'unlogged')
+    if damage == 'missing_receipt':
+        from pathlib import Path
+        Path(pending['receipt_seen']).unlink()
+    elif damage == 'legacy':
+        saved = treasure_state.read_state(runtime.config)
+        saved['pending'] = {'currency': 200, 'cell': [2, 4]}
+        treasure_state.write_state(runtime.config, saved)
+    runtime.capture.return_value = board(kind='home')
+    with pytest.raises(RuntimeError):
+        runtime.run()
+    event_treasure.enter_event.assert_not_called()
+    runtime.tap.assert_not_called()
+    assert treasure_state.read_state(runtime.config)['pending'] is not None
+
+
+def test_restart_exception_is_specific_to_logged_treasure_recovery(runtime):
+    pending = recovery_intent(runtime)
+    with pytest.raises(RuntimeError, match='unresolved'):
+        treasure_state.ensure_safe(runtime.config)
+    treasure_state.ensure_safe(runtime.config, recover_logged_receipt=True)
+    saved = treasure_state.read_state(runtime.config)
+    saved['pending']['receipt_logged'] = False
+    treasure_state.write_state(runtime.config, saved)
+    with pytest.raises(RuntimeError, match='unresolved'):
+        treasure_state.ensure_safe(runtime.config, recover_logged_receipt=True)
+
+
+@pytest.mark.parametrize('foreground,logged,relaunch', [
+    ('com.uncube.launcher3', True, True),
+    ('com.android.launcher3', True, True),
+    ('game.test', True, False),
+    ('other.app', True, False),
+    ('com.uncube.launcher3', False, False),
+])
+def test_runner_only_relaunches_logged_recovery_from_known_launcher(
+        runtime, monkeypatch, foreground, logged, relaunch):
+    from ba_automator import restart
+    from ba_automator.locking import InstanceLock, LockError
+    pending = recovery_intent(runtime, logged=logged)
+    runtime.config.lock_dir = runtime.run_dir / 'locks'
+    device = Mock()
+    device.foreground_package.return_value = foreground
+
+    def boot(config, selected_device, vision, **kwargs):
+        assert selected_device is device
+        assert kwargs['recover_logged_treasure'] is True
+        # Restart must be able to take its own lock and must preserve intent.
+        with InstanceLock(config):
+            treasure_state.ensure_safe(config, recover_logged_receipt=True)
+            assert treasure_state.read_state(config)['pending'] == pending
+
+    boot_mock = Mock(side_effect=boot)
+    monkeypatch.setattr(restart, 'run_restart', boot_mock)
+    runner = Mock()
+    def run():
+        with pytest.raises(LockError):
+            with InstanceLock(runtime.config):
+                pass
+        assert treasure_state.read_state(runtime.config)['pending'] == pending
+        return 'completed'
+    runner.run.side_effect = run
+    monkeypatch.setattr(event_treasure, 'TreasureRunner', Mock(return_value=runner))
+    assert event_treasure.run_event_treasure(runtime.config, device, runtime.startup) == 'completed'
+    assert boot_mock.call_count == int(relaunch)
+    runner.journal.close.assert_called_once()

@@ -89,6 +89,7 @@ def run_restart(
     *,
     monotonic: Callable[[], float] = time.monotonic,
     sleep: Callable[[float], None] = time.sleep,
+    recover_logged_treasure: bool = False,
 ) -> RunResult:
     """Restart the game and return only after its home screen remains unobstructed.
 
@@ -96,6 +97,8 @@ def run_restart(
     and deterministic tests. Startup timeout or a sustained blank black screen
     permits one shared force-stop/relaunch while holding the same lock;
     subsequent tasks have not begun and are never replayed.
+    Treasure recovery may explicitly relaunch after a durably logged receipt;
+    the original board delta must still be verified by that runner afterward.
     Ctrl-C is journaled and propagated after releasing the lock.
     """
     started = monotonic()
@@ -285,7 +288,7 @@ def run_restart(
             from .event_state import ensure_safe as ensure_event_safe
             ensure_event_safe(config)
             from .treasure_state import ensure_safe as ensure_treasure_safe
-            ensure_treasure_safe(config)
+            ensure_treasure_safe(config, recover_logged_receipt=recover_logged_treasure)
             device.connect()
             device.verify_package()
             size = device.display_size()

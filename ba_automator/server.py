@@ -1351,6 +1351,10 @@ class DashboardController:
         try:
             with InstanceLock(selected):
                 ensure_restart_safe(selected)
+                from .event_state import ensure_safe as ensure_event_safe
+                from .treasure_state import ensure_safe as ensure_treasure_safe
+                ensure_event_safe(selected)
+                ensure_treasure_safe(selected)
                 device = self._device_factory(selected)
                 device.connect()
                 device.verify_package()

@@ -16,6 +16,7 @@ Cell = tuple[int, int]
 INVENTORY_BOXES = ((195, 668, 240, 702), (330, 668, 380, 702), (470, 668, 515, 702))
 INVENTORY_CROPS = ((190, 665, 245, 708), (320, 665, 385, 708), (460, 665, 520, 708))
 FINISH_BOXES = ((110, 605, 245, 650), (245, 605, 380, 650), (380, 605, 520, 650))
+CURRENCY_BOX = (635, 135, 755, 178)
 
 
 @dataclass(frozen=True)
@@ -86,7 +87,7 @@ def classify_treasure(frame, words, templates):
         return TreasureScreen('unknown')
     round_no = _match_number(words, (830, 130, 1010, 163), r'Current Round:\s*Round\s*(\d+)')
     remaining = _match_number(words, (825, 160, 1020, 188), r'Remaining Slots:\s*(\d+)/45')
-    currency = _match_number(words, (635, 135, 755, 178), r'(\d+)')
+    currency = _match_number(words, CURRENCY_BOX, r'(\d+)')
     selected = _match_number(words, (820, 593, 1010, 640), r'Open Slot\s*[x×]\s*(\d+)')
     cost = _match_number(words, (890, 562, 965, 595), r'(\d+)')
     inventory = tuple(_inventory_number(words, box, finish)
@@ -169,8 +170,11 @@ class TreasureVision:
         if has(words, 'treasure hunt', (70, 0, 370, 60)):
             # Full-frame OCR sometimes drops the narrow x1 counter. Re-read only
             # missing counters at native resolution; still require exact text.
-            for box, crop in zip(INVENTORY_BOXES, INVENTORY_CROPS):
-                if _match_number(words, box, r'[x×]\s*(\d+)') is None:
+            counters = [(CURRENCY_BOX, CURRENCY_BOX, r'(\d+)'),
+                        *((box, crop, r'[x×]\s*(\d+)')
+                          for box, crop in zip(INVENTORY_BOXES, INVENTORY_CROPS))]
+            for box, crop, pattern in counters:
+                if _match_number(words, box, pattern) is None:
                     local = read_game_region(png, self.startup, crop)
                     words.extend(Word(w.text, w.confidence,
                                       (w.box[0] + crop[0], w.box[1] + crop[1],

@@ -263,3 +263,33 @@ def test_small_surfboard_tip_is_a_hit_and_leaves_a_feasible_board(vision):
     assert choice.cell in board.closed
     assert (1, 1) not in choice.scores
     assert classify_treasure((frame * .6).astype('uint8'), words, vision.templates).kind == 'unknown'
+
+
+@pytest.mark.parametrize('currency_words,expected', [
+    ([Word('75', 1., (2, 5, 40, 37))], 'treasure_board'),
+    ([Word('75', .8, (2, 5, 40, 37))], 'unknown'),
+    ([], 'unknown'),
+    ([Word('75 15', 1., (2, 5, 40, 37))], 'unknown'),
+])
+def test_faint_low_balance_uses_exact_native_currency_read(monkeypatch, vision, currency_words, expected):
+    _, words = sample('low-balance')
+    monkeypatch.setattr('ba_automator.treasure_vision.read_game_words', lambda *a: list(words))
+    regional = Mock(side_effect=lambda png, startup, box: currency_words if box == (635, 135, 755, 178)
+                    else [Word('X0', .70107, (0, 0, 65, 43))])
+    monkeypatch.setattr('ba_automator.treasure_vision.read_game_region', regional)
+    result = vision.analyze((ROOT / 'low-balance.png').read_bytes())
+    assert result.kind == expected
+    assert regional.call_count == 2
+    if expected == 'treasure_board':
+        assert (result.round, result.currency, result.remaining, result.inventory) == (2, 75, 23, (0, 0, 4))
+        assert (0, 3) in result.hits
+
+
+def test_currency_retry_does_not_override_conflicting_high_confidence_text(monkeypatch, vision):
+    _, words = sample('low-balance')
+    words.extend([Word('75', 1., (641, 144, 655, 169)), Word('15', 1., (657, 144, 672, 169))])
+    monkeypatch.setattr('ba_automator.treasure_vision.read_game_words', lambda *a: list(words))
+    monkeypatch.setattr('ba_automator.treasure_vision.read_game_region',
+                        lambda png, startup, box: [Word('75', 1., (2, 5, 40, 37))]
+                        if box == (635, 135, 755, 178) else [Word('X0', .7, (0, 0, 65, 43))])
+    assert vision.analyze((ROOT / 'low-balance.png').read_bytes()).kind == 'unknown'

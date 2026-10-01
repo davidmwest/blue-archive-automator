@@ -1,5 +1,6 @@
 """Serial, opt-in Treasure Hunt execution with a journaled intent per tile."""
 from dataclasses import asdict, replace
+from datetime import datetime, timezone
 from pathlib import Path
 from hashlib import sha256
 import os
@@ -69,6 +70,11 @@ class TreasureRunner(ShopRunner):
         if pending.get('version') != 2 or 'before' not in pending:
             self.fail('An earlier treasure reveal has an unresolved result; inspect its saved receipt before retrying')
         frame = self.capture()
+        if frame.screen.kind in {'home', 'event_page'} and treasure_state.logged_reveal_can_navigate(pending):
+            if frame.screen.kind == 'home':
+                frame = enter_event(self, self.startup)
+            self.tap(frame, (515, 663), 'Reopen Treasure Hunt to verify the logged result')
+            frame = self.wait({'treasure_board', 'treasure_complete'})
         if pending['kind'] == 'refresh':
             if frame.screen.kind == 'treasure_refresh_confirm':
                 # This exact free-refresh notice is only actionable with a
@@ -267,6 +273,22 @@ class TreasureRunner(ShopRunner):
 
 
 def run_event_treasure(config, device, startup, **kwargs):
+    # The old idle cleanup could close the game after a logged receipt. Startup
+    # owns its own lock and rechecks the durable guard before any input. Release
+    # this inspection lock first; the runner re-reads state under a new lock.
+    relaunch = False
+    with InstanceLock(config):
+        saved = treasure_state.read_state(config)
+        profile = available_event(kwargs.get('wall_clock', lambda: datetime.now(timezone.utc))())
+        if (profile and saved['event_id'] == profile['id']
+                and treasure_state.logged_reveal_can_navigate(saved['pending'])):
+            device.connect(); device.verify_package()
+            relaunch = device.foreground_package() in {
+                'com.uncube.launcher3', 'com.android.launcher3', 'com.bluestacks.launcher'}
+    if relaunch:
+        from .restart import run_restart
+        run_restart(config, device, startup, recover_logged_treasure=True,
+                    **{key: kwargs[key] for key in ('monotonic', 'sleep') if key in kwargs})
     with InstanceLock(config):
         runner = TreasureRunner(config, device, startup, **kwargs)
         try:
