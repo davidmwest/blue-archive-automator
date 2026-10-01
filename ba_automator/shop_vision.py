@@ -8,7 +8,7 @@ import numpy as np
 
 from .crafting_vision import bright, cyan, yellow, has as _has, within, number
 from .packs_state import PACKS, PERMANENT_PACKS, WEEKLY_PACKS
-from .vision import read_game_words, VisionError, classify, decode_frame
+from .vision import read_game_words, VisionError, Word, classify, decode_frame
 from .home_badges import badges
 
 
@@ -32,6 +32,35 @@ def text_in(words, box):
 
 def has(words, text, box):
     return _has(words, re.sub(r'[^a-z0-9]+', ' ', text.lower()).strip(), box)
+
+
+def receipt_heading(words):
+    return any(w.confidence >= .9 and re.sub(
+        r'[^a-z]', '', unicodedata.normalize('NFKD', w.text).lower()
+    ) == 'rewardacquired' for w in within(words, (300, 120, 980, 210)))
+
+
+def repair_receipt_prompt(frame, words, vision):
+    """Separate the white continue prompt from text behind a reward overlay.
+
+    Native OCR can merge this prompt with the dark stage title underneath it.
+    Only retry on a verified yellow reward heading, and still require the
+    entire exact prompt with high confidence before exposing a dismiss target.
+    """
+    if (has(words, 'touch to continue', (380, 590, 900, 665))
+            or not receipt_heading(words)
+            or not yellow(frame, (375, 134, 901, 182))):
+        return words
+    crop = frame[595:665, 450:825]
+    white = cv2.inRange(crop, (210, 210, 210), (255, 255, 255))
+    isolated = cv2.cvtColor(255 - white, cv2.COLOR_GRAY2BGR)
+    prompt = sorted(vision.read(isolated), key=lambda w: w.box[0])
+    if (not prompt or any(w.confidence < .95 for w in prompt)
+            or ''.join(w.normalized.replace(' ', '') for w in prompt) != 'touchtocontinue'):
+        return words
+    box = (min(w.box[0] for w in prompt) + 450, min(w.box[1] for w in prompt) + 595,
+           max(w.box[2] for w in prompt) + 450, max(w.box[3] for w in prompt) + 595)
+    return [*words, Word('TOUCH TO CONTINUE', min(w.confidence for w in prompt), box)]
 
 
 def price(words, box, *, play=False):
@@ -152,8 +181,7 @@ def classify_shop(frame, words, *, home=False, billing=False):
         balances['ap'] = ap[0]
     # The animated heading can add an accent to an otherwise correctly read A.
     # Normalize only this receipt label, never product names, prices or status.
-    if (any(re.sub(r'[^a-z]', '', unicodedata.normalize('NFKD', w.text).lower()) == 'rewardacquired'
-            for w in within(words, (300, 120, 980, 210)))
+    if (receipt_heading(words)
             and has(words, 'touch to continue', (380, 590, 900, 665))
             and yellow(frame, (375, 134, 901, 182))):
         return ShopScreen('receipt', (640, 631), items=receipt_items(words), balances=balances)
@@ -240,6 +268,8 @@ class ShopVision:
         if billing and native_size == (1440, 2560):
             frame = cv2.resize(frame, (720, 1280), interpolation=cv2.INTER_AREA)
         words = self.startup.read(frame) if billing else read_game_words(png, self.startup)
+        if not billing:
+            words = repair_receipt_prompt(frame, words, self.startup)
         if billing and any(w.box[0] < 570 < w.box[2] and 430 < w.center[1] < 540 for w in words):
             # OCR can join the long product label and adjacent price. Read
             # those fields separately, without accepting partial title matches.

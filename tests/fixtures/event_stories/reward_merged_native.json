@@ -1,0 +1,422 @@
+[
+  {
+    "text": "Event",
+    "confidence": 0.99996,
+    "box": [
+      105,
+      10,
+      185,
+      38
+    ]
+  },
+  {
+    "text": "343/220",
+    "confidence": 0.99999,
+    "box": [
+      507,
+      9,
+      587,
+      37
+    ]
+  },
+  {
+    "text": "Specialized",
+    "confidence": 0.99998,
+    "box": [
+      261,
+      84,
+      357,
+      103
+    ]
+  },
+  {
+    "text": "Play Guide",
+    "confidence": 0.99932,
+    "box": [
+      92,
+      90,
+      200,
+      116
+    ]
+  },
+  {
+    "text": "Students",
+    "confidence": 0.95578,
+    "box": [
+      261,
+      102,
+      340,
+      119
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99994,
+    "box": [
+      733,
+      95,
+      798,
+      126
+    ]
+  },
+  {
+    "text": "Quest",
+    "confidence": 0.99977,
+    "box": [
+      911,
+      97,
+      979,
+      122
+    ]
+  },
+  {
+    "text": "Challenge",
+    "confidence": 0.99992,
+    "box": [
+      1065,
+      96,
+      1175,
+      124
+    ]
+  },
+  {
+    "text": "REWARD ACQUIRED!",
+    "confidence": 0.99909,
+    "box": [
+      358,
+      121,
+      922,
+      198
+    ]
+  },
+  {
+    "text": "Wooden Yukari",
+    "confidence": 0.99386,
+    "box": [
+      338,
+      260,
+      455,
+      278
+    ]
+  },
+  {
+    "text": "Wooden Nagusa",
+    "confidence": 0.99996,
+    "box": [
+      495,
+      260,
+      622,
+      280
+    ]
+  },
+  {
+    "text": "Wooden Yukari",
+    "confidence": 0.98184,
+    "box": [
+      986,
+      260,
+      1104,
+      278
+    ]
+  },
+  {
+    "text": "Pyroxenes",
+    "confidence": 0.99998,
+    "box": [
+      183,
+      268,
+      286,
+      292
+    ]
+  },
+  {
+    "text": "Credit Points",
+    "confidence": 0.99994,
+    "box": [
+      660,
+      266,
+      783,
+      290
+    ]
+  },
+  {
+    "text": "Mandrake Seed",
+    "confidence": 0.98632,
+    "box": [
+      815,
+      269,
+      950,
+      288
+    ]
+  },
+  {
+    "text": "Doll",
+    "confidence": 0.99991,
+    "box": [
+      379,
+      278,
+      415,
+      299
+    ]
+  },
+  {
+    "text": "Doll",
+    "confidence": 0.99986,
+    "box": [
+      541,
+      278,
+      578,
+      299
+    ]
+  },
+  {
+    "text": "Doll",
+    "confidence": 0.9999,
+    "box": [
+      1028,
+      278,
+      1064,
+      299
+    ]
+  },
+  {
+    "text": "1st Time",
+    "confidence": 0.99987,
+    "box": [
+      190,
+      315,
+      271,
+      339
+    ]
+  },
+  {
+    "text": "1st Time",
+    "confidence": 0.99988,
+    "box": [
+      352,
+      316,
+      433,
+      339
+    ]
+  },
+  {
+    "text": "1st Time",
+    "confidence": 0.99983,
+    "box": [
+      515,
+      315,
+      595,
+      339
+    ]
+  },
+  {
+    "text": "18day(s)",
+    "confidence": 0.99994,
+    "box": [
+      1001,
+      315,
+      1092,
+      343
+    ]
+  },
+  {
+    "text": "x15",
+    "confidence": 0.99753,
+    "box": [
+      213,
+      433,
+      255,
+      459
+    ]
+  },
+  {
+    "text": "x275",
+    "confidence": 0.99879,
+    "box": [
+      370,
+      434,
+      422,
+      458
+    ]
+  },
+  {
+    "text": "x15",
+    "confidence": 0.99364,
+    "box": [
+      537,
+      433,
+      579,
+      459
+    ]
+  },
+  {
+    "text": "x778",
+    "confidence": 0.99848,
+    "box": [
+      695,
+      434,
+      747,
+      458
+    ]
+  },
+  {
+    "text": "X1",
+    "confidence": 0.75458,
+    "box": [
+      867,
+      435,
+      896,
+      458
+    ]
+  },
+  {
+    "text": "x5",
+    "confidence": 0.99929,
+    "box": [
+      1029,
+      434,
+      1060,
+      459
+    ]
+  },
+  {
+    "text": "AmongtheNunure",
+    "confidence": 0.87405,
+    "box": [
+      210,
+      501,
+      461,
+      526
+    ]
+  },
+  {
+    "text": "Fair and Square",
+    "confidence": 0.99366,
+    "box": [
+      184,
+      527,
+      316,
+      541
+    ]
+  },
+  {
+    "text": "Aquatic Showdown",
+    "confidence": 0.99827,
+    "box": [
+      314,
+      528,
+      463,
+      541
+    ]
+  },
+  {
+    "text": "Event Battle Stadium",
+    "confidence": 0.97722,
+    "box": [
+      782,
+      524,
+      1024,
+      551
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99992,
+    "box": [
+      1094,
+      523,
+      1167,
+      551
+    ]
+  },
+  {
+    "text": "Schedule: 09/28/2026 19:00 \u2013 10/12/2026 18:59",
+    "confidence": 0.97638,
+    "box": [
+      134,
+      569,
+      532,
+      591
+    ]
+  },
+  {
+    "text": "TOUCH TO CONTINUEShining Sand Beach",
+    "confidence": 0.98533,
+    "box": [
+      489,
+      603,
+      1012,
+      653
+    ]
+  },
+  {
+    "text": "Enter",
+    "confidence": 0.99991,
+    "box": [
+      1094,
+      622,
+      1167,
+      650
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99939,
+    "box": [
+      783,
+      640,
+      854,
+      666
+    ]
+  },
+  {
+    "text": "Story",
+    "confidence": 0.99991,
+    "box": [
+      127,
+      659,
+      184,
+      688
+    ]
+  },
+  {
+    "text": "Shop",
+    "confidence": 0.99991,
+    "box": [
+      249,
+      658,
+      305,
+      689
+    ]
+  },
+  {
+    "text": "Tasks",
+    "confidence": 0.99994,
+    "box": [
+      368,
+      659,
+      428,
+      684
+    ]
+  },
+  {
+    "text": "Treasure",
+    "confidence": 0.99996,
+    "box": [
+      483,
+      654,
+      556,
+      673
+    ]
+  },
+  {
+    "text": "Hunt",
+    "confidence": 0.99996,
+    "box": [
+      497,
+      670,
+      543,
+      691
+    ]
+  }
+]

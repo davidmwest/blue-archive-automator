@@ -64,6 +64,40 @@ def test_completed_battle_sword_is_distinct_from_uncleared_story_book():
     assert classify_story(frame // 3, words) is None
 
 
+def test_story_reward_merged_with_background_title_is_read_in_isolation():
+    from ba_automator.event_story_vision import StoryVision
+    from ba_automator.shop_vision import ShopVision
+    from ba_automator.vision import StartupVision
+    frame, words = load('reward_merged_native')
+    assert any('TOUCH TO CONTINUEShining' in w.text for w in words)
+    assert classify_story(frame, words) is None
+    png = (FIXTURES / 'reward_merged_native.png').read_bytes()
+    startup = StartupVision()
+    fallback = NS(analyze=lambda *a, **kw: pytest.fail('reward fell through to quest navigation'))
+    story = StoryVision(startup, fallback).analyze(png)
+    assert story.kind == 'receipt' and story.target == (640, 631)
+    assert ShopVision(startup).analyze(png) == story
+
+
+@pytest.mark.parametrize('text,confidence', [('TOUCH TO CONTINUE', .5),
+                                           ('TOUCH TO', .99), ('CONTINUE', .99),
+                                           ('TOUCH TO CONTINUE Story', .99)])
+def test_receipt_prompt_repair_requires_complete_confident_text(text, confidence):
+    from ba_automator.shop_vision import repair_receipt_prompt
+    frame, words = load('reward_merged_native')
+    reader = NS(read=lambda _: [Word(text, confidence, (30, 15, 340, 55))])
+    assert repair_receipt_prompt(frame, words, reader) == words
+
+
+def test_receipt_prompt_repair_requires_visible_reward_heading():
+    from ba_automator.shop_vision import repair_receipt_prompt
+    frame, words = load('reward_merged_native')
+    reader = NS(read=lambda _: pytest.fail('non-reward screen must not be repaired'))
+    assert repair_receipt_prompt(frame // 3, words, reader) == words
+    without_heading = [w for w in words if w.normalized != 'reward acquired']
+    assert repair_receipt_prompt(frame, without_heading, reader) == without_heading
+
+
 def setup(tmp_path, monkeypatch, *, ap=130, count=3, completed=(), proof=True):
     c = Config(serial='localhost:5695', package='com.nexon.bluearchive', ap_floor=100,
                state_dir=tmp_path/'state', run_dir=tmp_path/'runs')
@@ -141,14 +175,35 @@ def test_season_change_resets_story_progress(tmp_path,monkeypatch):
     assert event_state.observe(r.config,dict(p,id='new-event'))['stories']=={}
 
 
-def test_locked_guest_team_can_mobilize_without_quick_formation():
-    frame, words = load('preset')
+@pytest.mark.parametrize('name,ap', [('preset',131), ('preset_five',363)])
+def test_locked_guest_team_can_mobilize_without_quick_formation(name, ap):
+    frame, words = load(name)
     result = classify_story(frame, words)
-    assert result.kind == 'event_formation' and result.preset and result.ap == 131
+    assert result.kind == 'event_formation' and result.preset and result.ap == ap
     assert classify_story(frame // 3, words) is None
     assert classify_story(frame, []) is None
     incomplete = [w for w in words if w.text != 'Lv.25']
     assert classify_story(frame, incomplete) is None
+
+
+@pytest.mark.parametrize('name', ['preset','preset_five'])
+def test_guest_team_detection_requires_disabled_editor_and_a_striker(name):
+    frame, words = load(name)
+    # An editable team must still use Auto, even with the same student count.
+    active = frame.copy()
+    active[159:198,1185:1220] = (200,100,0)
+    assert classify_story(active, words) is None
+    only_specials = [w for w in words if not (w.text == 'Lv.25' and w.center[1] < 590)]
+    assert classify_story(frame, only_specials) is None
+
+
+def test_story_vision_keeps_partial_guest_team_out_of_quick_formation():
+    from ba_automator.event_story_vision import StoryVision
+    frame, words = load('preset_five')
+    startup = NS(read=lambda _: words)
+    fallback = NS(analyze=lambda *a, **kw: pytest.fail('Guest team fell through to editable formation'))
+    screen = StoryVision(startup, fallback).analyze((FIXTURES/'preset_five.png').read_bytes())
+    assert screen.kind == 'event_formation' and screen.preset
 
 
 @pytest.mark.parametrize('preset', [True, False])
@@ -168,7 +223,7 @@ def test_battle_story_handles_dialogue_then_formation_before_rewards(tmp_path, m
                    frame('receipt',target=(640,631))])
     r.capture=lambda:next(frames)
     r.sleep=lambda _:None
-    r.wait=lambda kind,**_:frame(kind,ap=131)
+    r.wait=lambda kind,**_:frame('story_list' if isinstance(kind,set) else kind,ap=131)
     r.tap=lambda f,t,detail:taps.append(detail)
     monkeypatch.setattr(event_stories,'inspect_receipt',lambda r,f,p:f)
     # setup replaces finish_story to test the outer sequence; restore the real
@@ -179,6 +234,32 @@ def test_battle_story_handles_dialogue_then_formation_before_rewards(tmp_path, m
     assert any('Enable Auto' in x for x in taps)
     assert any('Quick Formation' in x for x in taps) is not preset
     assert event_state.read_state(r.config)['pending']['ap_before'] == 131
+
+
+@pytest.mark.parametrize('destination', ['story_list','event_page','event_list'])
+def test_story_reward_can_return_to_quests_without_replaying_episode(tmp_path, monkeypatch, destination):
+    r, _, _, _, taps, _ = setup(tmp_path, monkeypatch)
+    state = event_state.read_state(r.config)
+    pending = dict(mode='story', stage='12', ap_before=130, cost=10, run_dir=str(tmp_path))
+    state['pending'] = pending
+    event_state.write_state(r.config, state)
+    receipt = NS(screen=StoryScreen('receipt',target=(640,631)),capture=NS(png=b'receipt'))
+    r.capture = lambda: receipt
+    destinations = iter([destination, 'story_list'])
+    def wait(kinds, **_):
+        kind = next(destinations)
+        assert kind in kinds if isinstance(kinds,set) else kind == kinds
+        return NS(screen=StoryScreen(kind,ap=120))
+    r.wait = wait
+    r.tap = lambda f,t,detail: taps.append((f.screen.kind,t))
+    monkeypatch.setattr(event_stories,'inspect_receipt',lambda r,f,p:f)
+    result = REAL_FINISH_STORY(r,12)
+    assert result.screen.kind == 'story_list'
+    assert taps == [('receipt',(640,631))] + ([] if destination == 'story_list'
+                                           else [(destination,(758,110))])
+    # Reaching the tab does not prove completion or authorize another paid entry.
+    assert event_state.read_state(r.config)['pending'] == pending
+    assert not event_state.read_state(r.config)['stories']
 
 
 def test_story_floor_is_rechecked_after_narrative_before_mobilizing(tmp_path, monkeypatch):

@@ -52,6 +52,15 @@ def return_to_quests(runner):
     return runner.wait({'event_page','event_list'})
 
 
+def return_to_stories(runner):
+    """The last episode can return to Quest; reopen Story to verify its marker."""
+    frame = runner.wait({'story_list','event_page','event_list'}, timeout=90)
+    if frame.screen.kind != 'story_list':
+        runner.tap(frame, (758,110), 'Reopen Story tab to verify event Story completion')
+        frame = runner.wait('story_list')
+    return frame
+
+
 def finish_story(runner, stage):
     """Bounded, recognized dialogue/battle inputs; never blindly advance."""
     deadline = runner.clock() + STORY_TIMEOUT
@@ -64,7 +73,7 @@ def finish_story(runner, stage):
             runner.journal.save_image(evidence.name, frame.capture.png)
             frame = inspect_receipt(runner, frame, evidence)
             runner.tap(frame, frame.screen.target, 'Return after recording event Story rewards')
-            return runner.wait('story_list', timeout=90)
+            return return_to_stories(runner)
         if kind in {'story_dialogue','story_menu','story_skip','event_complete','event_bonus'}:
             runner.tap(frame, frame.screen.target, f'Continue event Story {stage}: {kind}')
         elif kind == 'event_formation':

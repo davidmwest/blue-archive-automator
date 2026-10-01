@@ -296,10 +296,46 @@ Live validation on September 30 cleared Stories 1–4 for **40 AP total** and
 returned home with **103 AP**, preserving the 100 AP floor. Story 2 used the
 game's locked guest team and Auto battle; the narrative stages used the skip
 flow. Reward receipts and gold completion markers verified each clear, and
-progress persisted with no unresolved entry. Stories 5–12 remain for later
-visits as AP becomes available; their individual layouts have not yet been
-live-verified. The editable Auto Formation path has offline control-flow tests;
-the later battle episode still needs its own live validation.
+progress persisted with no unresolved entry. Stories 5–12 were left for later
+visits as AP became available. The editable Auto Formation path has offline
+control-flow tests.
 After restarting the daemon, its scheduled visit resumed at Story 5, verified
 the 10 AP cost, and left the episode unstarted to preserve the floor. It returned
 home without falling through to event quests or normal Hard farming.
+
+On October 1, Story 10 exposed a different locked formation: three guest
+strikers and two specials, with one striker slot deliberately empty. Requiring
+six students misclassified it as editable, so the runner tapped the disabled
+Quick Formation button and timed out waiting for `event_quick`. Recognition now
+requires the disabled control, an occupied striker slot, and the active
+Mobilize screen rather than a six-student count. Sanitized fixtures cover both
+guest layouts and reject an active editor or a team with no recognized striker.
+The live recovery kept the supplied team, won with Auto, recorded its reward
+receipt and gold completion marker, and returned home: **10 AP spent, 353 AP
+remaining**. The unresolved Story 10 entry was cleared only after that evidence
+was verified.
+
+The next visit cleared Story 11 but waited on its already-earned reward overlay:
+native OCR joined `TOUCH TO CONTINUE` to the dark stage title visible behind it.
+The receipt recognizer now isolates the white foreground prompt only after
+verifying the yellow reward heading, and still requires the entire exact prompt
+at high confidence. A sanitized native fixture covers the merged read and
+rejection cases. Live recovery recorded all six reward cards, verified the gold
+Story 11 completion marker, cleared its pending entry, and returned home with
+**343 AP**. It did not replay the stage or spend another entry fee.
+
+Story 12 then completed through the regular queue and recorded its six reward
+cards, but the game returned to the Quest tab after the last episode. The runner
+now accepts that recognized destination, reopens Story, and checks the gold
+completion marker before clearing the pending entry. It never treats arriving
+on Quest as proof of a story clear. Live recovery verified Story 12 and returned
+home with **333 AP**, with all 12 stories saved as complete and no unresolved
+story entry. Transition tests cover both Story and Quest return paths.
+
+The subsequent normal queue visit skipped the completed stories and swept
+three-star Quest 9 **11 times**, spending **220 AP** and returning home with
+**113 AP**, above the unchanged 100 AP floor. Its AP intent and spending hold
+were cleared after balance verification. Item logging saved a partial receipt:
+it could not establish overlap between two scrolled Full List pages. That
+separate loot-reading limitation did not block resource verification or trigger
+another sweep; the saved pages remain available for review.

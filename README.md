@@ -34,6 +34,7 @@ on Windows: `py -3.11 -m ba_automator.demo`. open [localhost:8766](http://127.0.
 | --- | --- |
 | restart | closes and relaunches the game, accepts required data downloads, dismisses startup popups, verifies a clear home screen; force-restarts once if startup times out |
 | club | checks Social → Club once per game day, then collects the attendance mail |
+| [Joint Firing Drill](docs/joint-firing-drill.md) | uses prepared Shooting Drill teams, proves all three in practice, clears once, then sweeps remaining tickets; supports one borrowed assistant |
 | [total_assault](docs/total-assault.md) | configurable target, mock-tested assistant fallback, real clear, and remaining-ticket sweeps; Hardcore completed in staged live validation |
 | assault_rewards | checks Rank Reward and Total Points Rewards, claims available loot, and leaves raid tickets alone |
 | tactical_rewards | collects available time and daily rewards without spending battle tickets |
@@ -45,29 +46,33 @@ on Windows: `py -3.11 -m ba_automator.demo`. open [localhost:8766](http://127.0.
 | loot gathered | game icons, exact tooltip names, grouped totals, itemized receipts, and relationship level-ups with stat gains; clearing keeps the history |
 | [daily logs](docs/daily-logs.md) | the full day's text log beside important actions, saved as YYYY-MM-DD.log and kept across restarts |
 | bounties and scrimmages | split tickets across three areas, rotate extras by weekday, sweep the highest three-star clears, save receipts |
-| packs and mail | optional paid renewal of the three permanent daily-benefit packs, off by default; collect product and ordinary mail with reward logs |
+| packs and mail | five optional paid packs, including Weekly AP Pack IV and Weekly Activity Report Pack (Lite), all off by default; collects mail and logs the rewards |
 | crafting | uses the saved Quick Craft preset, fills affordable slots, and persists collection/refill timers; all three natural completions and the zero-keystone path passed |
-| lessons | surveys locations before each ticket; defaults to the most owned students, with lowest-school-rank leveling as an option |
-| dashboard | one serial queue, do everything / pause controls, tucked-away manual tasks, settings, screenshots, and persistent important-action history |
+| lessons | checks all schools once, picks rooms with the most owned students, and groups visits by school; optional lowest-school-rank strategy rechecks after each ticket |
+| dashboard | one serial queue, do everything / pause / resume controls, tucked-away manual tasks, settings, screenshots, and persistent important-action history |
 | spend AP | configurable AP floor, highest-cleared commissions, and a persistent Hard-stage round robin with its own planning page |
 | scheduling | regular red-dot/AP check-ins, optional daily routine after Global reset with saved occurrence state, hourly AP checks, daily pack checks, Cafe visits and per-slot crafting deadlines, optional game closure between visits |
-| events | verified seasonal navigation, opt-in quest clearing with Auto Formation, and optional event-first AP routing; see the validation limits below |
+| events | season-specific profiles, stories before quest farming, opt-in quest clearing, and a separate automatic treasure switch; see below for limits |
 
 restart, a complete two-floor Cafe visit, a free invitation, and the relationship-focused Lessons routine have passed live on the development Mac. seven lesson tickets were tested with verified receipts; the final run reached zero tickets, returned home, and closed the game. offline tests run on macOS, Windows, and Ubuntu. actual school rank-up popups, live Windows operation, and running beside ALAS still need verification. a completed scan and a verified relationship increase are different results; the logs keep them separate.
 
 cafe invitations are off by default. turn them on and leave the name blank to pick the highest relationship that still has room to grow, or give it an exact student name. it checks current rarity when a rank might be capped; it doesn't assume everybody is still at their original stars. only normal free invitations are supported. [setup and validation limits →](docs/getting-started.md#cafe-and-scheduling)
 
-`daily` runs restart → club → free pack → optional packs → mail → cafe → bounties → scrimmages → optional tactical battles → tactical rewards → lessons → optional Total Assault → optional Joint Firing Drill → Total Assault rewards → optional event treasure → collect Tasks. AP spending follows as a separate, lowest-priority queue job. Club is live: the three-hour cafe schedule checks attendance and mail after restart, leaving lesson tickets alone. home and Campaign red dots queue their collection jobs after a successful run; excess AP can queue Spend AP immediately. [red-dot collection →](docs/red-dots.md) lessons can also be queued on their own, with a ticket limit and optional location list. it uses the tickets you already have; it never buys more. [Tactical Challenge →](docs/tactical-challenge.md) [task rewards →](docs/task-rewards.md) [ticket splitting and sweeps →](docs/tickets.md) [how the lesson strategies work →](docs/lessons.md) [Club attendance →](docs/club.md) [crafting and saved timers →](docs/crafting.md) [paid packs and mail →](docs/packs-and-mail.md) [AP spending and rotation →](docs/spend-ap.md)
+the daily routine covers startup, Club, free packs, mail, Cafe, Bounties, Scrimmages, Lessons, and Tasks. turn on the optional jobs for paid packs, Tactical Challenge battles, Total Assault, Joint Firing Drill, and event treasure. reward collectors check home and Campaign red dots. **Spend AP runs last**, as its own queue job, so collecting AP doesn't leave it sitting there until tomorrow.
+
+paid packs need payment set up in Google Play. each pack is opt-in with a price limit; a payment failure disables automatic purchases and shows a notice. authentication can still need your help. [packs and mail →](docs/packs-and-mail.md)
 
 turn on **run daily after reset** in settings to run that plan once per game day. it defaults to one minute after Global reset, with the next run shown in your local time in the queue. missed reset? it catches up on the current day when the server is back. if one activity fails, Daily logs it, gets back home, and carries on with the independent jobs when it can. uncertain spending stays on hold; the failed step isn't repeated. the final summary tells you what finished and what needs attention. keep the server running and the computer awake. [daily schedule →](docs/getting-started.md#daily-schedule)
 
 between jobs, it checks red dots and AP every 30 minutes by default. change that interval or turn it off in settings. a successful check after another job resets the timer, so it doesn't wake the game just to look again. reward collection and AP spending use the same queue and your existing settings. [periodic check-ins →](docs/getting-started.md#periodic-check-ins)
 
-most of the time, the controls are just **do everything** and **pause queue**. do everything resumes the queue, finishes anything already in progress, runs enabled jobs that are due, then checks for red dots and extra AP right away. it also checks Joint Firing Drill, Total Assault tickets, and remaining Tactical Challenge tickets above your reserve when their daily battle settings are enabled, even if today's Daily was already attempted. it keeps your AP floor and spending settings. individual jobs and the immediate stop button are under **manual controls**. failed jobs show up underneath, when there's something to look at. each failed job links to its saved screenshot trace, so you can actually see where it got stuck.
+most of the time, the controls are just **do everything** and **pause queue**. do everything resumes the queue, finishes anything already in progress, runs enabled jobs that are due, then checks for red dots and extra AP right away. it also checks Joint Firing Drill, Total Assault tickets, and remaining Tactical Challenge tickets above your reserve when their daily battle settings are enabled, even if today's Daily was already attempted. it keeps your AP floor and spending settings. when paused, **resume queue** picks up the existing work. individual jobs and the immediate stop button are under **manual controls**. failed jobs show up underneath, when there's something to look at. each failed job links to its saved screenshot trace, so you can actually see where it got stuck.
 
 tactical challenge gives each usable ticket its own 10-minute search window by default, adjustable in settings. it spends the first 37% setting a benchmark, then gradually relaxes toward the weakest quarter of teams it has seen. after ten minutes, it keeps searching and relaxes one observed score tier per unsuccessful refresh until an eligible opponent qualifies. the timer never consumes a ticket; the manual-play reserve stays available. [tactical settings →](docs/getting-started.md#tactical-challenge)
 
-use the global English game in a dedicated BlueStacks instance. **2560×1440 landscape, 640 DPI** is the recommended setup; exact 16:9 resolutions from 1280×720 through 3840×2160 are supported. screenshots and text OCR use the native pixels. templates and coordinates keep their 1280×720 reference, and taps scale to the actual screen. sharper text and receipts cost more rendering, OCR time, and storage. 1440p has live startup, red-dot, two-floor Cafe, and Total Assault sweep evidence; 1080p and 2160p have offline coverage only. [validation details →](docs/engineering.md#evidence-and-its-limits)
+## run it locally
+
+use the global English game in a dedicated BlueStacks instance. **2560×1440 landscape, 640 DPI** is the recommended setup; exact 16:9 resolutions from 1280×720 through 3840×2160 are supported. screenshots and text OCR use the native pixels. templates and coordinates keep their 1280×720 reference, and taps scale to the actual screen. 20 fps has worked well on the development Mac. sharper text and receipts cost more rendering, OCR time, and storage. 1440p has live startup, red-dot, two-floor Cafe, and Total Assault sweep evidence; 1080p and 2160p have offline coverage only. [validation details →](docs/engineering.md#evidence-and-its-limits)
 
 sign in manually once. Blue Archive and Azur Lane get different ADB endpoints; they can share a compatible host ADB server. paid Google Play checkout requires its separately validated 720×1280 or 1440×2560 portrait layout. [setup and commands →](docs/getting-started.md)
 
@@ -75,24 +80,30 @@ sign in manually once. Blue Archive and Azur Lane get different ADB endpoints; t
 
 - **check the result.** taps need a recognized screen and a fresh frame. downloads, popups, and camera movement get explicit verification and bounded retries.
 - **measure the camera.** Cafe furniture is arbitrary, so room coverage follows observed motion and overlapping views. unknown movement never counts as a camera boundary.
-- **look before spending.** lessons checks the schools before choosing a room, verifies the total rank matches the survey, then plans one ticket at a time. the scoring rules run without an emulator and have their own tests.
+- **look before spending.** the lessons job surveys schools before planning its visits and rechecks each selected room. AP jobs verify the stage, cost, and floor before confirming. the planning rules run without an emulator and have their own tests.
 - **leave evidence.** important actions, before/after popup images, reward receipts, and failure reasons make a run inspectable afterward.
 - **keep it local.** the real dashboard binds to loopback. the demo cannot reach a device. event rules are researched ahead of time and stored as data.
 
 [the engineering notes](docs/engineering.md) walk through the missed-student bug and the camera fix. [the design](docs/design.md) sets the task contracts and build order; [the architecture](docs/architecture.md) describes the code that exists today.
 
-## what's next
+## events get first dibs on AP
 
-The [event farming design](docs/event-farming.md) now includes the Aquatic Showdown quest-clear job. While the reviewed event is playable, **yes, clear it** uses default Auto Formation for each uncleared quest, stops below three stars or at the AP floor/end, then pauses the queue. Event farming has a separate, off-by-default priority setting on the Spend AP page: when enabled, finish the stories first, then farm event quests before Hard/commission farming. the AP floor still applies, and unfinished stories pick up on the next visit. Quest clearing and Quest 5/9 sweeps have live evidence. **do the treasure hunt automatically** is a separate switch beside event farming. it uses saved event currency, follows exposed prizes, and picks tiles that cover the most possible hiding places. it collects prizes through round 3 and logs what came back. event shops remain future work.
+turn on **event farming** on the Spend AP page. while its farming policy is active, the order is **unfinished stories → event quests → regular AP farming**. everything keeps your AP floor. if it can't verify the event screen, it holds that AP instead of quietly spending it on Hard 13-2.
+
+Aquatic Showdown is the first event adapter. stories are cleared once, with progress saved between visits; locked guest formations use the team the game provides, including partially filled teams. for quests, **yes, clear it** uses default Auto Formation, stops at the first result below three stars, the AP floor, or the end, then pauses the queue. repeat farming uses verified three-star clears and your configured stage order.
+
+**do the treasure hunt automatically** is a separate switch. it spends saved event currency, follows exposed prizes, and otherwise picks a tile that covers the most possible hiding places. the round goal controls when event farming can hand AP back to the regular plan. uncertain spending stays on hold until its receipt is reconciled.
+
+quest clearing, Quest 5/9 sweeps, story clears, and treasure digs have live evidence. that doesn't mean every event or every prize layout works: each event needs a reviewed profile and screen fixtures. event shops and automatic support for arbitrary new events are still future work. [event design and validation →](docs/event-farming.md)
+
+## what's next
 
 Final Restriction Release, the mode with Fury of Set, has a [design proposal](docs/final-restriction-release.md): seasonal progress, a saved ten-student team, and one floor attempt at a time so AP and cafe work can keep moving. it's a plan, not an implemented job yet.
 
-capture an actual school rank-up, repeat Cafe visits after cooldown, and validate invitation selection across deeper lists and capped students. AP spending now has its own floor and rotation policy. crafting refill checks and event farming follow one verified routine at a time.
+more live coverage for school rank-ups, deeper invitation lists, crafting refills, and Windows. Joint Firing Drill still needs automatic team building and support beyond prepared Shooting Drill teams. the job docs distinguish live results from offline tests.
 
 the queue is currently in memory. schedule state and important actions survive a server restart, but queued jobs don't. durable recovery, emulator lifecycle management, and service installation are later work. see [the roadmap](docs/roadmap.md) for the live evidence and remaining limits.
 
 ## license
 
 original code, docs, and dashboard UI are [MIT licensed](LICENSE). use them, change them, build something with them. the Maid Arisu mascot is original fan artwork of a Blue Archive character; it, game recognition images, and test fixtures are outside that grant. [third-party notices](THIRD_PARTY_NOTICES.md) explain the boundary.
-
-[Joint Firing Drill](docs/joint-firing-drill.md) supports prepared Shooting Drill teams: prove all three in practice, clear once, then sweep the remaining tickets. it checks one borrowed assistant and its credit fee, logs the rewards, and saves progress before spending. automatic team building and other drill types are still future work.

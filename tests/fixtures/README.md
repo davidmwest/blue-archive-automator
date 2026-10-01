@@ -1039,3 +1039,20 @@ pixels remain outside the MIT grant.
 `treasure/entry-dialogue` preserves the entry speech bubble crossing the board;
 account currency and AP headers are masked. It guards against treating the
 bubble's translucent white panel as revealed empty stone.
+
+`event_stories/preset_five.png/.json` captures the October 1 Story 10 locked
+formation: three guest strikers, two specials, and one empty striker slot. The
+Quick Formation control is disabled and Mobilize is active. It guards against
+opening the unavailable editor just because the game supplies fewer than six
+students; active editors and formations with no recognizable striker remain
+rejected. Account currency values are masked and omitted from OCR. The guest
+characters are supplied by the event; game-derived pixels remain outside the
+MIT grant.
+
+`event_stories/reward_merged_native.png/.json` retains the October 1 Story 11
+reward overlay at 2560×1440. Native OCR joins the white continue prompt with
+the dark stage title underneath; an isolated foreground read recovers the exact
+prompt. Tests require a visible reward heading and reject incomplete or
+low-confidence prompts. Account currency values are masked and omitted from
+OCR; AP and the six earned reward cards remain visible. Game-derived pixels
+remain outside the MIT grant.

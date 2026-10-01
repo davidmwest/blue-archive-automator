@@ -1,0 +1,322 @@
+[
+  {
+    "text": "Formation",
+    "confidence": 0.94803,
+    "box": [
+      105,
+      9,
+      247,
+      38
+    ]
+  },
+  {
+    "text": "363/220",
+    "confidence": 0.99999,
+    "box": [
+      506,
+      9,
+      587,
+      37
+    ]
+  },
+  {
+    "text": "Unit 1",
+    "confidence": 0.99152,
+    "box": [
+      29,
+      172,
+      108,
+      204
+    ]
+  },
+  {
+    "text": "Quick Formation",
+    "confidence": 0.99958,
+    "box": [
+      1146,
+      216,
+      1257,
+      233
+    ]
+  },
+  {
+    "text": "Starting Skill",
+    "confidence": 0.99968,
+    "box": [
+      1143,
+      314,
+      1259,
+      338
+    ]
+  },
+  {
+    "text": "EMPTY",
+    "confidence": 0.99702,
+    "box": [
+      932,
+      363,
+      1027,
+      391
+    ]
+  },
+  {
+    "text": "\u81ea",
+    "confidence": 0.67423,
+    "box": [
+      1187,
+      360,
+      1218,
+      398
+    ]
+  },
+  {
+    "text": "RecoveryCost",
+    "confidence": 0.99998,
+    "box": [
+      929,
+      400,
+      1034,
+      422
+    ]
+  },
+  {
+    "text": "Unit Info",
+    "confidence": 0.99524,
+    "box": [
+      1160,
+      415,
+      1242,
+      436
+    ]
+  },
+  {
+    "text": "Reduced",
+    "confidence": 0.99998,
+    "box": [
+      946,
+      421,
+      1016,
+      440
+    ]
+  },
+  {
+    "text": "BACK",
+    "confidence": 0.99996,
+    "box": [
+      246,
+      496,
+      289,
+      515
+    ]
+  },
+  {
+    "text": "BACK",
+    "confidence": 0.99996,
+    "box": [
+      470,
+      496,
+      514,
+      515
+    ]
+  },
+  {
+    "text": "BACK",
+    "confidence": 0.99996,
+    "box": [
+      694,
+      496,
+      737,
+      515
+    ]
+  },
+  {
+    "text": "Yukari",
+    "confidence": 0.99996,
+    "box": [
+      291,
+      522,
+      351,
+      543
+    ]
+  },
+  {
+    "text": "Renge",
+    "confidence": 0.99997,
+    "box": [
+      514,
+      522,
+      575,
+      547
+    ]
+  },
+  {
+    "text": "Wakamo",
+    "confidence": 0.99995,
+    "box": [
+      727,
+      521,
+      809,
+      543
+    ]
+  },
+  {
+    "text": "Presets",
+    "confidence": 0.99998,
+    "box": [
+      1166,
+      517,
+      1236,
+      537
+    ]
+  },
+  {
+    "text": "STRIKER Slot",
+    "confidence": 0.99749,
+    "box": [
+      915,
+      531,
+      1031,
+      550
+    ]
+  },
+  {
+    "text": "Lv.25",
+    "confidence": 0.99994,
+    "box": [
+      208,
+      546,
+      256,
+      568
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.99993,
+    "box": [
+      273,
+      541,
+      367,
+      566
+    ]
+  },
+  {
+    "text": "Lv.25",
+    "confidence": 0.99994,
+    "box": [
+      432,
+      546,
+      480,
+      568
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.9999,
+    "box": [
+      497,
+      540,
+      591,
+      567
+    ]
+  },
+  {
+    "text": "Lv.25",
+    "confidence": 0.99993,
+    "box": [
+      656,
+      546,
+      704,
+      568
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.99991,
+    "box": [
+      722,
+      542,
+      815,
+      566
+    ]
+  },
+  {
+    "text": "STRIKER",
+    "confidence": 0.9995,
+    "box": [
+      29,
+      558,
+      150,
+      582
+    ]
+  },
+  {
+    "text": "Mobilize",
+    "confidence": 0.99998,
+    "box": [
+      1114,
+      642,
+      1240,
+      674
+    ]
+  },
+  {
+    "text": "Kikyou",
+    "confidence": 0.99993,
+    "box": [
+      489,
+      653,
+      554,
+      677
+    ]
+  },
+  {
+    "text": "Shizuko",
+    "confidence": 0.99995,
+    "box": [
+      835,
+      654,
+      906,
+      675
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.9999,
+    "box": [
+      475,
+      673,
+      568,
+      698
+    ]
+  },
+  {
+    "text": "(Swimsuit)",
+    "confidence": 0.99908,
+    "box": [
+      825,
+      673,
+      918,
+      698
+    ]
+  },
+  {
+    "text": "Lv.25",
+    "confidence": 0.99992,
+    "box": [
+      410,
+      677,
+      458,
+      699
+    ]
+  },
+  {
+    "text": "Lv.25",
+    "confidence": 0.99995,
+    "box": [
+      760,
+      678,
+      808,
+      698
+    ]
+  }
+]

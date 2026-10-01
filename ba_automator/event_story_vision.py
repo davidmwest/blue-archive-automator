@@ -7,7 +7,7 @@ import cv2
 
 from .ap_vision import ap_value
 from .crafting_vision import bright, cyan, yellow, within
-from .shop_vision import has, text_in
+from .shop_vision import has, text_in, repair_receipt_prompt
 from .vision import decode_frame, read_game_words
 
 
@@ -52,6 +52,9 @@ def classify_story(frame, words):
         return receipt
     # Story battles can supply a locked guest team. The disabled grey icon
     # differs from the active blue Quick Formation icon in ordinary quests.
+    # Guest teams need not fill every slot: Story 10 supplies five students.
+    # Use the disabled control and an occupied striker slot as evidence, not
+    # a six-student count that would send us into an unavailable editor.
     if (has(words, 'formation', (70,0,330,65))
             and has(words, 'mobilize', (1050,625,1260,705))
             and has(words, 'quick formation', (1120,175,1280,235))
@@ -60,7 +63,8 @@ def classify_story(frame, words):
         grey = ((icon[:,:,1] < 30) & (icon[:,:,2] >= 130) & (icon[:,:,2] <= 200)).mean()
         levels = [w for w in words if re.fullmatch(r'Lv\.?\s*[1-9]\d?', w.text.strip(), re.I)
                   and 500 <= w.center[1] <= 700]
-        if grey > .15 and len(levels) == 6:
+        if grey > .15 and any(200 <= w.center[0] <= 1100 and w.center[1] < 590
+                              for w in levels):
             return StoryScreen('event_formation', ap=ap, preset=True)
     if (has(words, 'summary', (540,110,740,165))
             and has(words, 'skip this story?', (530,420,770,470))
@@ -118,5 +122,7 @@ class StoryVision:
         self.startup, self.fallback = startup, fallback
 
     def analyze(self, png, *, billing=False):
-        return (classify_story(decode_frame(png),read_game_words(png,self.startup))
+        frame = decode_frame(png)
+        words = repair_receipt_prompt(frame, read_game_words(png, self.startup), self.startup)
+        return (classify_story(frame, words)
                 or self.fallback.analyze(png,billing=billing))
