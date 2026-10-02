@@ -238,14 +238,18 @@
     $("play-here").disabled = unavailable || previewBusy;
     $("play-here").textContent = playingHere ? "done playing" : "play here";
     $("play-here").setAttribute("aria-pressed", String(playingHere));
-    $("screen-stage").classList.toggle("manual-playing", canTapPreview());
+    const canTap = canTapPreview();
+    $("screen-stage").classList.toggle("manual-playing", canTap);
+    // Keep the actual input target's cursor in sync, including when an older
+    // stylesheet still contains the original crosshair rule.
+    $("game-frame").style.cursor = canTap ? "pointer" : "default";
     $("screen-stage").setAttribute("aria-busy", String(previewBusy || frameLoading));
     $("manual-play-hint").textContent = isDemo() ? "this is a read-only demo. no game is connected."
       : !playingHere ? "play here pauses the queue. then click the picture to tap the game."
       : active ? "waiting for this job to finish. then the game is yours."
-      : queuedTap ? "tap saved. finishing the screenshot, then checking your tap…"
+      : queuedTap ? "tap saved. finishing the screenshot, then sending your tap…"
       : previewBusy ? previewOperation === "/api/capture" ? "refreshing… you can still tap the picture." : "sending your tap…"
-      : previewMessage || "click to tap. refreshes every few seconds; a changed screen won’t receive your click.";
+      : previewMessage || "click to tap the game. the picture refreshes every few seconds.";
     $("pause-queue").disabled = unavailable;
     $("pause-queue").textContent = paused
       ? "resume queue"
@@ -467,7 +471,7 @@
       return;
     }
     // Use the image that was clicked, even if a newer screenshot just arrived.
-    // The server verifies it against the game; never retarget or retry a click.
+    // Forward those coordinates directly; never retarget or retry a click.
     frameToken = null;
     const result = await previewRequest("/api/manual-tap", tap);
     if (result) nextCapture = Date.now() + 3000;
@@ -487,7 +491,7 @@
         previewMessage = result.sent
           ? result.captured ? "tap sent. keep going." : "tap sent; refresh the screen to see what happened."
           : `${result.reason}. no tap sent — check the updated picture and try again.`;
-      } else previewMessage = "click to tap. refreshes every few seconds; a changed screen won’t receive your click.";
+      } else previewMessage = "click to tap the game. the picture refreshes every few seconds.";
       return result;
     } catch (error) {
       frameToken = null;

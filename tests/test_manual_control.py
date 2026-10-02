@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 
 from ba_automator.locking import InstanceLock, LockError
-from ba_automator.manual_control import compare_tap_frames
 from ba_automator.server import ApiError, DashboardController, create_server
 
 
@@ -24,49 +23,6 @@ def screen():
     cv2.rectangle(image, (150, 100), (600, 200), (25, 100, 200), -1)
     cv2.rectangle(image, (1100, 600), (1400, 840), (250, 200, 40), -1)
     return image
-
-
-def test_frame_guard_tolerates_small_animation_but_protects_target(screen):
-    animated = screen.copy()
-    cv2.circle(animated, (100, 100), 20, (0, 0, 0), -1)
-    assert compare_tap_frames(png(screen), png(animated), 620, 360).matches
-    assert not compare_tap_frames(png(screen), png(animated), 50, 50).matches
-    assert compare_tap_frames(png(screen), png(screen), 0, 0).matches
-    assert compare_tap_frames(png(screen), png(screen), 1279, 719).matches
-
-
-def test_frame_guard_rejects_modal_dimming_and_geometry_change(screen):
-    assert not compare_tap_frames(png(screen), png(screen // 2), 620, 360).matches
-    assert compare_tap_frames(png(screen), png(screen[::2, ::2]), 620, 360).reason == "display size changed"
-    modal = screen.copy()
-    modal[300:1100, 500:2000] = 250
-    assert not compare_tap_frames(png(screen), png(modal), 50, 50).matches
-
-
-def test_background_motion_allows_stationary_controls_but_not_moving_targets():
-    before = np.full((1440, 2560, 3), 180, dtype=np.uint8)
-    after = before.copy()
-    before[100:460, 500:1100] = 0
-    after[100:460, 650:1250] = 0
-    assert compare_tap_frames(png(before), png(after), 100, 620).matches
-    assert not compare_tap_frames(png(before), png(after), 280, 150).matches
-    # Widespread subtle shading still invalidates the screen.
-    assert not compare_tap_frames(png(after), png(np.maximum(after, 10) - 10), 100, 620).matches
-
-
-def test_bright_lobby_animation_does_not_block_an_unchanged_mail_button():
-    before = np.zeros((720, 1280, 3), dtype=np.uint8)
-    after = before.copy()
-    # Less than 10% of the screen changes, but bright sprites exceed the old
-    # global-mean cutoff. The mail button and surrounding top bar stay put.
-    after[100:300, 300:650] = 255
-    after[58:70, 1119:1192] = 255  # Animated scenery beneath the top bar.
-    for frame in (before, after):
-        frame[14:55, 1130:1180] = 180
-    assert compare_tap_frames(png(before), png(after), 1155, 34).matches
-    # A changed button still fails, even with the same background animation.
-    after[20:48, 1140:1170] = 0
-    assert not compare_tap_frames(png(before), png(after), 1155, 34).matches
 
 
 @pytest.fixture
@@ -114,7 +70,7 @@ def manual(tmp_path, screen):
         controller.close()
 
 
-def test_tap_uses_exact_displayed_bytes_and_token_once(manual, screen):
+def test_tap_forwards_changed_screen_and_uses_token_once(manual, screen):
     controller, device = manual
     displayed, token = controller.preview_frame()
     assert displayed == device.frame
@@ -128,8 +84,8 @@ def test_tap_uses_exact_displayed_bytes_and_token_once(manual, screen):
     device.frame = png(screen // 2)
     # The mutable screenshot path changed after the browser loaded its image.
     controller._save_capture(controller.config, device.frame)
-    assert controller.manual_tap(stale, 640, 360) == {"sent": False, "reason": "screen changed"}
-    assert len(device.calls) == 1
+    assert controller.manual_tap(stale, 640, 360) == {"sent": True, "captured": True}
+    assert device.calls == [(640, 360), (640, 360)]
     assert controller.frame_bytes() == device.frame
 
 
@@ -192,7 +148,7 @@ def test_resume_during_preflight_aborts_input_and_capture_excludes_concurrent_in
     assert not device.calls and not controller._capturing
 
 
-def test_foreground_change_during_comparison_aborts(manual):
+def test_foreground_change_during_preflight_aborts(manual):
     controller, device = manual
     _, token = controller.preview_frame()
 

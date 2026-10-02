@@ -43,7 +43,6 @@ from .actions import record_action
 from .config import Config, ConfigError
 from .crafting_state import CraftStateError, read_state, scheduled_jobs, timestamp
 from .locking import InstanceLock, LockError
-from .manual_control import compare_tap_frames
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS, task_plan
 from .home_badges import PRIORITY
 from . import packs_state
@@ -1931,11 +1930,10 @@ class DashboardController:
                     raise ApiError(409, "Open Blue Archive in BlueStacks before playing here")
                 png = device.screenshot()
                 deadline = time.monotonic() + 3
-                match = compare_tap_frames(entry[2], png, x, y)
                 self._save_capture(selected, png)
-                if not match.matches:
-                    self._daily("manual_tap_skipped", x=x, y=y, reason=match.reason)
-                    return {"sent": False, "reason": match.reason}
+                # Manual play forwards the user's chosen coordinates directly.
+                # Capture establishes native display geometry, not permission
+                # based on visual similarity: animations must not block input.
                 if device.foreground_package() != selected.package:
                     raise ApiError(409, "The foreground app changed; no tap was sent")
                 with self._condition:

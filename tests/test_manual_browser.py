@@ -10,7 +10,7 @@ import pytest
 from ba_automator.server import DashboardController, create_server
 
 
-def test_click_during_refresh_is_forwarded_once_with_original_frame(tmp_path):
+def test_click_during_refresh_forwards_once_even_when_game_changes(tmp_path):
     playwright = pytest.importorskip("playwright.sync_api")
     config = tmp_path / "local.toml"
     config.write_text('[device]\nserial="127.0.0.1:5695"\npackage="com.nexon.bluearchive"\n'
@@ -72,6 +72,8 @@ def test_click_during_refresh_is_forwarded_once_with_original_frame(tmp_path):
             page.on("request", lambda request: requests.append(request.post_data_json)
                     if request.url.endswith('/api/manual-tap') else None)
             page.goto(f'http://127.0.0.1:{server.server_port}/#screen', wait_until='networkidle')
+            # Simulate a tab retaining the old crosshair stylesheet.
+            page.add_style_tag(content='.manual-playing #game-frame {cursor:crosshair}')
             page.locator('#screen-stage').scroll_into_view_if_needed()
             page.locator('#play-here').click()
 
@@ -104,16 +106,14 @@ def test_click_during_refresh_is_forwarded_once_with_original_frame(tmp_path):
                 with page.expect_response('**/api/manual-tap') as response:
                     release.set()
                 outcome = response.value.json()
-                assert outcome['sent'] is not changed
-                assert len(device.taps) == previous + (not changed)
+                assert outcome['sent'] is True
+                assert len(device.taps) == previous + 1
                 assert len(requests) == (2 if changed else 1)
-                if changed:
-                    assert outcome['reason'] == 'screen changed'
-                else:
-                    assert abs(device.taps[-1][0] - 640) <= 2
-                    assert abs(device.taps[-1][1] - 360) <= 2
+                assert abs(device.taps[-1][0] - 640) <= 2
+                assert abs(device.taps[-1][1] - 360) <= 2
             ready()
             page.locator('#play-here').click()
+            playwright.expect(image).to_have_css('cursor', 'default')
             assert controller.status()['queue_paused']
             assert not errors
             browser.close()
