@@ -29,11 +29,14 @@ def compare_tap_frames(displayed: bytes, current: bytes, x: int, y: int) -> Fram
     before, after = [cv2.GaussianBlur(cv2.resize(frame, (1280, 720),
                        interpolation=cv2.INTER_AREA), (5, 5), 0) for frame in (before, after)]
     difference = cv2.absdiff(before, after).max(axis=2)
-    target = difference[max(0, y - 36):min(720, y + 37), max(0, x - 36):min(1280, x + 37)]
+    target = difference[max(0, y - 18):min(720, y + 19), max(0, x - 18):min(1280, x + 19)]
     # Live2D hair/halos can change a small part of the lobby quite strongly.
-    # Limit both the changed area and overall difference; the target below
-    # stays stricter than the background.
-    if float(np.mean(difference > 18)) > .10 or float(difference.mean()) > 6:
+    # Bound the changed area, not its brightness: moving white hair and rotating
+    # banners can dominate a global mean while all controls stay put. Median
+    # change still rejects widespread subtle shading from an overlay. Keep the
+    # target local to the button (home icons are only about 36px high); a larger
+    # patch includes animated scenery below even a perfectly stationary icon.
+    if float(np.mean(difference > 18)) > .10 or float(np.median(difference)) > 6:
         return FrameMatch(False, "screen changed")
     if float(np.mean(target > 18)) > .04 or float(target.mean()) > 2.5:
         return FrameMatch(False, "tap target changed")

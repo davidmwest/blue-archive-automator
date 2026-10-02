@@ -54,6 +54,21 @@ def test_background_motion_allows_stationary_controls_but_not_moving_targets():
     assert not compare_tap_frames(png(after), png(np.maximum(after, 10) - 10), 100, 620).matches
 
 
+def test_bright_lobby_animation_does_not_block_an_unchanged_mail_button():
+    before = np.zeros((720, 1280, 3), dtype=np.uint8)
+    after = before.copy()
+    # Less than 10% of the screen changes, but bright sprites exceed the old
+    # global-mean cutoff. The mail button and surrounding top bar stay put.
+    after[100:300, 300:650] = 255
+    after[58:70, 1119:1192] = 255  # Animated scenery beneath the top bar.
+    for frame in (before, after):
+        frame[14:55, 1130:1180] = 180
+    assert compare_tap_frames(png(before), png(after), 1155, 34).matches
+    # A changed button still fails, even with the same background animation.
+    after[20:48, 1140:1170] = 0
+    assert not compare_tap_frames(png(before), png(after), 1155, 34).matches
+
+
 @pytest.fixture
 def manual(tmp_path, screen):
     path = tmp_path / "local.toml"
@@ -83,9 +98,10 @@ def manual(tmp_path, screen):
                 raise RuntimeError("device disconnected after input")
             return self.frame
 
-        def tap(self, x, y, *, deadline):
+        def swipe(self, start, end, duration_ms, *, deadline):
             assert deadline > time.monotonic()
-            self.calls.append((x, y))
+            assert start == end and duration_ms == 150
+            self.calls.append(start)
             return self.tap_sent
 
     device = Device()

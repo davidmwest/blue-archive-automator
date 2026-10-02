@@ -171,6 +171,6 @@
 .screen-buttons{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .screen-buttons [aria-pressed=true]{color:#fff;background:var(--blue,#3168ed)}
 .manual-play-hint{margin:0;padding:0 22px 18px;color:#637593;font-size:12px;line-height:1.5}
-.manual-playing #game-frame{cursor:crosshair;touch-action:manipulation;user-select:none}
+.manual-playing #game-frame{cursor:pointer;touch-action:manipulation;user-select:none}
 .screen-stage[aria-busy=true]{cursor:progress}
 @media(max-width:540px){.screen-card>.card-header{flex-wrap:wrap;gap:12px}.screen-buttons{justify-content:flex-start}.manual-play-hint{padding:0 15px 15px}}

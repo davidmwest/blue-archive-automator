@@ -19,6 +19,8 @@
   let frameUrl = null;
   let playingHere = false;
   let previewBusy = false;
+  let previewOperation = null;
+  let queuedTap = null;
   let previewMessage = "";
   let nextCapture = 0;
   let mapData = null;
@@ -241,7 +243,8 @@
     $("manual-play-hint").textContent = isDemo() ? "this is a read-only demo. no game is connected."
       : !playingHere ? "play here pauses the queue. then click the picture to tap the game."
       : active ? "waiting for this job to finish. then the game is yours."
-      : previewBusy ? "checking the game…"
+      : queuedTap ? "tap saved. finishing the screenshot, then checking your tap…"
+      : previewBusy ? previewOperation === "/api/capture" ? "refreshing… you can still tap the picture." : "sending your tap…"
       : previewMessage || "click to tap. refreshes every few seconds; a changed screen won’t receive your click.";
     $("pause-queue").disabled = unavailable;
     $("pause-queue").textContent = paused
@@ -411,7 +414,6 @@
 
   async function loadPreviewFrame(version) {
     frameLoading = true;
-    frameToken = null;
     let url = null;
     try {
       const response = await fetch(`/api/frame?v=${encodeURIComponent(version)}`, {
@@ -426,7 +428,6 @@
       // Install the token only with its decoded image. A newer status response
       // must never silently change which image a user's click refers to.
       $("game-frame").src = url;
-      await $("game-frame").decode();
       frameToken = token;
       frameVersion = version;
       if (frameUrl) URL.revokeObjectURL(frameUrl);
@@ -448,13 +449,34 @@
   }
 
   function canTapPreview() {
+    // A capture is read-only. Keep accepting one click on the displayed frame
+    // while it finishes, instead of silently dropping clicks during refresh.
+    const capturingHere = previewOperation === "/api/capture";
     return playingHere && connected && !isDemo() && status?.queue_paused && !isRunning()
-      && !status?.capturing && !pending && !previewBusy && !frameLoading && frameLoaded && Boolean(frameToken);
+      && (!status?.capturing || capturingHere) && !pending && !queuedTap
+      && (!previewBusy || capturingHere) && frameLoaded && Boolean(frameToken);
+  }
+
+  async function sendQueuedTap() {
+    if (!queuedTap || previewBusy) return;
+    const tap = queuedTap;
+    queuedTap = null;
+    if (!playingHere || !connected || !status?.queue_paused || isRunning() || pending) {
+      previewMessage = "manual play stopped. no tap sent.";
+      renderControls();
+      return;
+    }
+    // Use the image that was clicked, even if a newer screenshot just arrived.
+    // The server verifies it against the game; never retarget or retry a click.
+    frameToken = null;
+    const result = await previewRequest("/api/manual-tap", tap);
+    if (result) nextCapture = Date.now() + 3000;
   }
 
   async function previewRequest(path, body) {
     if (previewBusy) return null;
     previewBusy = true;
+    previewOperation = path;
     renderControls();
     try {
       const response = await fetch(path, {method: "POST",
@@ -475,18 +497,24 @@
       // Stop background requests after a disconnected emulator, other app, or
       // lock conflict. An explicit refresh or new play session can try again.
       nextCapture = Infinity;
+      queuedTap = null;
       return null;
     } finally {
       await refreshStatus();
       previewBusy = false;
+      previewOperation = null;
       renderControls();
+      if (queuedTap) await sendQueuedTap();
     }
   }
 
   async function refreshPreview() {
     if (!connected || previewBusy) return;
+    nextCapture = 0; // An explicit refresh can recover from a previous error.
     const result = await previewRequest("/api/capture", {});
-    if (result) nextCapture = Date.now() + 3000;
+    // A queued tap runs before the capture request finishes. Preserve its
+    // stop-on-error state instead of restarting background requests here.
+    if (result && nextCapture !== Infinity) nextCapture = Date.now() + 3000;
   }
 
   $("play-here").addEventListener("click", async () => {
@@ -512,10 +540,10 @@
     const x = Math.floor((event.clientX - bounds.left - (bounds.width - 1280 * scale) / 2) / scale);
     const y = Math.floor((event.clientY - bounds.top - (bounds.height - 720 * scale) / 2) / scale);
     if (x < 0 || x >= 1280 || y < 0 || y >= 720) return;
-    const token = frameToken;
+    queuedTap = {frame_token: frameToken, x, y};
     frameToken = null;
-    const result = await previewRequest("/api/manual-tap", {frame_token: token, x, y});
-    if (result) nextCapture = Date.now() + 3000;
+    renderControls();
+    await sendQueuedTap();
   });
 
   setInterval(() => {

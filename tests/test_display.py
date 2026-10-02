@@ -54,6 +54,17 @@ def test_native_capture_remains_unchanged_and_inputs_scale_both_axes():
         assert execute.call_args.args[0][-6:] == ["swipe", "200", "400", "1200", "1000", "400"]
 
 
+def test_manual_finger_press_has_dwell_without_moving_at_native_resolution():
+    dev = device()
+    dev._frame_size = (2560, 1440)
+    with patch.object(dev, "_check_shared_server"), \
+            patch.object(dev, "current_display_size", return_value=(2560, 1440)), \
+            patch.object(dev, "_execute") as execute:
+        assert dev.swipe((1155, 36), (1155, 36), 150)
+        assert execute.call_count == 1
+        assert execute.call_args.args[0][-6:] == ["swipe", "2310", "72", "2310", "72", "150"]
+
+
 @pytest.mark.parametrize("frame,current", [(None, (2560, 1440)),
     ((1280, 720), (2560, 1440)), ((2560, 1440), (1280, 720)),
     ((1440, 2560), (2560, 1440)), ((2560, 1600), (2560, 1600))])

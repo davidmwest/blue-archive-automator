@@ -28,6 +28,16 @@ the commands use the virtual environment directly, so shell activation is option
 .venv/bin/python -m pytest tests/test_cafe_camera.py tests/test_cafe_scan.py -q
 ```
 
+the manual-preview browser regression is optional and still uses a fake device. to run it, install Playwright and Chromium:
+
+```sh
+.venv/bin/python -m pip install playwright
+.venv/bin/python -m playwright install chromium
+.venv/bin/python -m pytest tests/test_manual_browser.py -q
+```
+
+it can also use an existing Chrome installation. without Playwright or a browser, that test is skipped.
+
 ## make the behavior reviewable
 
 describe what triggered the problem, what happened before, and what should happen after. add a regression test when it protects a meaningful behavior: an expired frame must not send input, an ambiguous dialog must not become a purchase, and unknown camera movement must not prove a boundary. avoid tests that just restate an implementation detail.

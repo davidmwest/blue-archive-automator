@@ -1942,7 +1942,9 @@ class DashboardController:
                     if not self._paused or self._shutdown:
                         raise ApiError(409, "The queue resumed; no tap was sent")
                     self._daily("manual_tap_requested", x=x, y=y)
-                    sent = device.tap(x, y, deadline=deadline)
+                    # A short stationary touch spans several frames even at
+                    # 20fps. Android's instantaneous input tap has no dwell.
+                    sent = device.swipe((x, y), (x, y), 150, deadline=deadline)
                 self._daily("manual_tap" if sent else "manual_tap_skipped", x=x, y=y,
                             reason="user clicked the preview" if sent else "fresh frame expired")
                 if not sent:
