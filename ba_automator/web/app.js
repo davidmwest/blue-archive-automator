@@ -14,6 +14,13 @@
   let refreshPromise = null;
   let frameVersion = null;
   let frameLoaded = false;
+  let frameLoading = false;
+  let frameToken = null;
+  let frameUrl = null;
+  let playingHere = false;
+  let previewBusy = false;
+  let previewMessage = "";
+  let nextCapture = 0;
   let mapData = null;
   let mapLoading = false;
   let selectedButton = null;
@@ -224,7 +231,18 @@
     $("run-scrimmages").disabled = unavailable;
     $("run-lessons").disabled = unavailable;
     $("stop-run").disabled = unavailable || !active;
-    $("capture").disabled = unavailable || active;
+    $("capture").disabled = unavailable || active || previewBusy || status?.capturing;
+    if (playingHere && !paused) playingHere = false;
+    $("play-here").disabled = unavailable || previewBusy;
+    $("play-here").textContent = playingHere ? "done playing" : "play here";
+    $("play-here").setAttribute("aria-pressed", String(playingHere));
+    $("screen-stage").classList.toggle("manual-playing", canTapPreview());
+    $("screen-stage").setAttribute("aria-busy", String(previewBusy || frameLoading));
+    $("manual-play-hint").textContent = isDemo() ? "this is a read-only demo. no game is connected."
+      : !playingHere ? "play here pauses the queue. then click the picture to tap the game."
+      : active ? "waiting for this job to finish. then the game is yours."
+      : previewBusy ? "checking the game…"
+      : previewMessage || "click to tap. refreshes every few seconds; a changed screen won’t receive your click.";
     $("pause-queue").disabled = unavailable;
     $("pause-queue").textContent = paused
       ? "resume queue"
@@ -255,7 +273,7 @@
       : packs?.pending ? "a purchase needs checking. another charge won’t be attempted."
       : packEnabled ? `renewals enabled. next check: ${packs?.next_check_at ? shortTime(packs.next_check_at) : "when the queue is ready"}.`
       : "paid renewals are off. check packs + mail will only inspect ownership and collect mail.";
-    $("map-toggle").disabled = !frameLoaded || !mapData;
+    $("map-toggle").disabled = !frameLoaded || !mapData || playingHere;
     document.querySelectorAll("[data-cancel-job]").forEach((button) => { button.disabled = unavailable; });
   }
 
@@ -377,6 +395,7 @@
     if (!status.has_frame) {
       frameLoaded = false;
       frameVersion = null;
+      frameToken = null;
       $("game-frame").hidden = true;
       $("game-frame").removeAttribute("src");
       $("frame-placeholder").hidden = false;
@@ -386,10 +405,127 @@
     }
     const version = String(status.frame_version ?? "latest");
     $("frame-caption").textContent = isDemo() ? "original schematic · no game screenshot" : status.app_closed ? "last screenshot · game closed after the run" : "latest screenshot";
-    if (version === frameVersion) return;
-    frameVersion = version;
-    $("game-frame").src = `/api/frame?v=${encodeURIComponent(version)}`;
+    if (version === frameVersion || frameLoading) return;
+    void loadPreviewFrame(version);
   }
+
+  async function loadPreviewFrame(version) {
+    frameLoading = true;
+    frameToken = null;
+    let url = null;
+    try {
+      const response = await fetch(`/api/frame?v=${encodeURIComponent(version)}`, {
+        cache: "no-store", signal: AbortSignal.timeout(15000),
+      });
+      if (!response.ok) throw new Error("screenshot unavailable");
+      const token = response.headers.get("X-Game-Frame");
+      url = URL.createObjectURL(await response.blob());
+      const loaded = new Image();
+      loaded.src = url;
+      await loaded.decode();
+      // Install the token only with its decoded image. A newer status response
+      // must never silently change which image a user's click refers to.
+      $("game-frame").src = url;
+      await $("game-frame").decode();
+      frameToken = token;
+      frameVersion = version;
+      if (frameUrl) URL.revokeObjectURL(frameUrl);
+      frameUrl = url;
+      url = null;
+      frameLoaded = true;
+      $("game-frame").hidden = false;
+      $("frame-placeholder").hidden = true;
+    } catch {
+      frameToken = null;
+      frameVersion = null;
+      $("frame-caption").textContent = "screenshot unavailable · try refresh screen";
+    } finally {
+      if (url) URL.revokeObjectURL(url);
+      frameLoading = false;
+      renderControls();
+      renderMapVisibility();
+    }
+  }
+
+  function canTapPreview() {
+    return playingHere && connected && !isDemo() && status?.queue_paused && !isRunning()
+      && !status?.capturing && !pending && !previewBusy && !frameLoading && frameLoaded && Boolean(frameToken);
+  }
+
+  async function previewRequest(path, body) {
+    if (previewBusy) return null;
+    previewBusy = true;
+    renderControls();
+    try {
+      const response = await fetch(path, {method: "POST",
+        headers: {"Content-Type": "application/json", "X-CSRF-Token": status.csrf_token},
+        body: JSON.stringify(body), signal: AbortSignal.timeout(60000)});
+      const result = await readResponse(response);
+      if (path === "/api/manual-tap") {
+        previewMessage = result.sent
+          ? result.captured ? "tap sent. keep going." : "tap sent; refresh the screen to see what happened."
+          : `${result.reason}. no tap sent — check the updated picture and try again.`;
+      } else previewMessage = "click to tap. refreshes every few seconds; a changed screen won’t receive your click.";
+      return result;
+    } catch (error) {
+      frameToken = null;
+      previewMessage = error.name === "TimeoutError" || error.name === "AbortError"
+        ? "the reply took too long. refresh the screen to check what happened; the tap won’t be retried."
+        : error.message;
+      // Stop background requests after a disconnected emulator, other app, or
+      // lock conflict. An explicit refresh or new play session can try again.
+      nextCapture = Infinity;
+      return null;
+    } finally {
+      await refreshStatus();
+      previewBusy = false;
+      renderControls();
+    }
+  }
+
+  async function refreshPreview() {
+    if (!connected || previewBusy) return;
+    const result = await previewRequest("/api/capture", {});
+    if (result) nextCapture = Date.now() + 3000;
+  }
+
+  $("play-here").addEventListener("click", async () => {
+    if (playingHere) {
+      playingHere = false;
+      showNotice("done playing. the queue’s still paused; hit resume queue when you’re ready.");
+    } else {
+      if (!(await post("/api/pause", {}))) return;
+      playingHere = true;
+      previewMessage = "";
+      nextCapture = 0;
+      $("map-toggle").checked = false;
+      renderMapVisibility();
+    }
+    renderControls();
+  });
+
+  $("game-frame").addEventListener("click", async (event) => {
+    if (!canTapPreview() || event.button !== 0) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    // object-fit: contain may leave letterboxing, especially with browser zoom.
+    const scale = Math.min(bounds.width / 1280, bounds.height / 720);
+    const x = Math.floor((event.clientX - bounds.left - (bounds.width - 1280 * scale) / 2) / scale);
+    const y = Math.floor((event.clientY - bounds.top - (bounds.height - 720 * scale) / 2) / scale);
+    if (x < 0 || x >= 1280 || y < 0 || y >= 720) return;
+    const token = frameToken;
+    frameToken = null;
+    const result = await previewRequest("/api/manual-tap", {frame_token: token, x, y});
+    if (result) nextCapture = Date.now() + 3000;
+  });
+
+  setInterval(() => {
+    const bounds = $("screen-stage").getBoundingClientRect();
+    if (playingHere && connected && status?.queue_paused && !isRunning() && !pending
+        && !previewBusy && !frameLoading && !status?.capturing && !document.hidden
+        && bounds.bottom > 0 && bounds.top < innerHeight && Date.now() >= nextCapture) {
+      void refreshPreview();
+    }
+  }, 500);
 
   function renderFailures() {
     const failures = status?.failed_jobs || [];
@@ -557,7 +693,7 @@
   }
 
   function renderMapVisibility() {
-    const visible = $("map-toggle").checked && frameLoaded && Boolean(mapData);
+    const visible = $("map-toggle").checked && !playingHere && frameLoaded && Boolean(mapData);
     // SVG does not reflect HTMLElement.hidden, so update the attribute itself.
     $("map-overlay").toggleAttribute("hidden", !visible);
     $("map-hint").hidden = !visible;
@@ -968,7 +1104,7 @@
         : "queue paused. hit resume queue when you’re ready to keep going.");
     }
   });
-  $("capture").addEventListener("click", () => void post("/api/capture", {}));
+  $("capture").addEventListener("click", () => void refreshPreview());
   $("popup-show-more").addEventListener("click", () => { popupLimit += 6; renderPopups(); });
   $("clear-loot").addEventListener("click", async () => {
     if (await post("/api/clear-loot", {}, "fresh count. the history and receipts are still there.")) await loadLoot();
@@ -1022,6 +1158,8 @@
   });
   $("game-frame").addEventListener("error", () => {
     frameLoaded = false;
+    frameToken = null;
+    frameVersion = null;
     $("game-frame").hidden = true;
     $("frame-placeholder").hidden = false;
     $("frame-placeholder-title").textContent = "the screenshot didn’t load.";

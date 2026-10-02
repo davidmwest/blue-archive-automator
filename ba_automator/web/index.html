@@ -106,13 +106,14 @@
 
     <div class="workspace-grid">
       <section class="screen-card card" id="game-screen" aria-labelledby="screen-title">
-        <div class="card-header"><div><p class="section-kicker">CURRENT SCREEN</p><h2 id="screen-title">game screen</h2></div><button id="capture" class="button secondary small" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 8a8 8 0 1 0 0 8M20 3v5h-5"/></svg>refresh screen</button></div>
+        <div class="card-header"><div><p class="section-kicker">CURRENT SCREEN</p><h2 id="screen-title">game screen</h2></div><div class="screen-buttons"><button id="play-here" class="button secondary small" type="button" aria-pressed="false" disabled>play here</button><button id="capture" class="button secondary small" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 8a8 8 0 1 0 0 8M20 3v5h-5"/></svg>refresh screen</button></div></div>
         <div class="screen-stage" id="screen-stage">
-          <img id="game-frame" alt="Latest screenshot from the selected Blue Archive instance" hidden>
+          <img id="game-frame" alt="Latest screenshot from the selected Blue Archive instance" draggable="false" aria-describedby="manual-play-hint" hidden>
           <svg id="map-overlay" class="map-overlay" viewBox="0 0 1280 720" role="group" aria-label="Home screen button map" hidden></svg>
           <div id="frame-placeholder" class="frame-placeholder"><span class="screen-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8M12 18v4M7 11h10M12 7v8"/></svg></span><strong id="frame-placeholder-title">nothing to look at yet.</strong><p id="frame-placeholder-text">grab a screenshot, or hit do everything.</p><span class="frame-format">NATIVE RESOLUTION · ADB CAPTURE</span></div>
         </div>
         <div class="screen-toolbar"><span id="frame-caption" class="muted">no screenshot yet</span><label class="toggle-row map-toggle"><input id="map-toggle" type="checkbox" disabled><span class="switch" aria-hidden="true"></span><span>home button map</span></label></div>
+        <p id="manual-play-hint" class="manual-play-hint" role="status">play here pauses the queue. then click the picture to tap the game.</p>
         <div id="map-hint" class="map-hint" hidden>home screen positions. click a label to see where it goes.</div>
         <div id="map-detail" class="map-detail" role="region" aria-label="Selected button details" hidden><div class="map-detail-heading"><div><span class="section-kicker">HOME BUTTON</span><h3 id="map-detail-title"></h3></div><span id="map-detail-status" class="badge neutral"></span><button id="close-map-detail" class="icon-button" type="button" aria-label="Close button details">×</button></div><p id="map-detail-description"></p><dl class="map-metadata"><div><dt>Route</dt><dd id="map-detail-route"></dd></div><div><dt>Position</dt><dd id="map-detail-position"></dd></div><div><dt>Type</dt><dd id="map-detail-kind"></dd></div></dl><p class="microcopy">this is just the map. clicking here won’t tap the game.</p></div>
       </section>

@@ -174,6 +174,12 @@ The full-day text log is linked beside important actions and saved as `state_dir
 
 The real dashboard remains bound to loopback, with Host/Origin validation and CSRF protection for mutations. A portfolio demo uses a separate process, fictional data, and clearly labeled original illustrations. It must neither read the real configuration/history nor expose working device controls.
 
+The game preview also supports manual taps. **Play here** pauses dispatch and waits for the current job to finish. While visible, the preview captures approximately every three seconds, with only one request in flight. Each displayed image carries an opaque, single-use server token tied to its exact bytes. Before tapping, the server reserves device access, takes the instance lock, verifies the foreground package, and compares a fresh capture with that image. The overall screen and a stricter region around the target must match; geometry changes, stale/expired tokens, resumed automation, or a changed foreground app reject input. Successful and skipped inputs enter the daily log. A failed post-input capture never retries the tap.
+
+Browser coordinates account for image scaling and letterboxing, then use the existing canonical-to-native ADB mapping. Frame comparison tolerates small animation changes, so it is a conservative visual heuristic, not a guarantee that game state cannot change between capture and input. The tap has a three-second freshness deadline. Manual mode supports taps only, leaves the queue paused when closed, and is unavailable in the read-only demo.
+
+Manual play passed a live 2560×1440 BlueStacks Air check: a dashboard tap restored the hidden home controls and refreshed the preview. Live stale-frame rejection, desktop/mobile browser coordinate checks, and offline tests cover the input guards; dragging and typing are not implemented.
+
 ## 7. Delivery and validation
 
 The current foundation is implemented: restart, a serial dashboard queue, Cafe, Lessons, scheduling, idle-close, important-action history, and event-profile recognition. A full two-floor Cafe visit, automatic free invitation, and relationship-focused Lessons visit passed on the development Mac. Current-star lookup passed separately; its complete boundary-rank reselection flow, deep invitation scrolling, and the configured-name path remain offline-tested. Actual school rank-up handling, live Windows operation, and simultaneous operation with ALAS still need live verification. Cross-platform offline tests are evidence about the software, not proof of those live behaviors.

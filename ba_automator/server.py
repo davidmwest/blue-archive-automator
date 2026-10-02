@@ -43,6 +43,7 @@ from .actions import record_action
 from .config import Config, ConfigError
 from .crafting_state import CraftStateError, read_state, scheduled_jobs, timestamp
 from .locking import InstanceLock, LockError
+from .manual_control import compare_tap_frames
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS, task_plan
 from .home_badges import PRIORITY
 from . import packs_state
@@ -177,6 +178,7 @@ class DashboardController:
         self._result: dict | None = None
         self._frame_root: Path | None = None
         self._capture_frame: Path | None = None
+        self._preview_frames: deque[tuple[str, float, bytes]] = deque(maxlen=4)
         self._app_closed = False
         self._batch_has_game_job = False
         self._badge_attempted = set()
@@ -1730,6 +1732,14 @@ class DashboardController:
                 raise ApiError(404, "No frame is available for the current job")
             return frame.read_bytes()
 
+    def preview_frame(self) -> tuple[bytes, str]:
+        """Bind each displayed image to its exact bytes, not a mutable file path."""
+        with self._condition:
+            png = self.frame_bytes()
+            token = secrets.token_urlsafe(24)
+            self._preview_frames.append((token, time.monotonic(), png))
+            return png, token
+
     def _trace_root(self, job_id: str) -> Path:
         if not re.fullmatch(r"[a-f0-9]{32}", job_id):
             raise ApiError(404, "Screenshot trace unavailable")
@@ -1875,19 +1885,78 @@ class DashboardController:
                 if device.foreground_package() != selected.package:
                     raise ApiError(409, "Blue Archive must be in the foreground before capturing")
                 png = device.screenshot()
-                decode_frame(png)
-                target = selected.run_dir.parent / "dashboard-capture.png"
-                target.parent.mkdir(parents=True, exist_ok=True)
-                temporary = target.with_name(f".{target.name}.{uuid4().hex}.tmp")
-                try:
-                    temporary.write_bytes(png)
-                    temporary.replace(target)
-                finally:
-                    temporary.unlink(missing_ok=True)
-                with self._condition:
-                    self._capture_frame = target
-                    self._app_closed = False
+                self._save_capture(selected, png)
             return {"captured": True}
+        finally:
+            with self._condition:
+                self._capturing = False
+                self._condition.notify_all()
+
+    def _save_capture(self, selected: Config, png: bytes) -> None:
+        decode_frame(png)
+        target = selected.run_dir.parent / "dashboard-capture.png"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_name(f".{target.name}.{uuid4().hex}.tmp")
+        try:
+            temporary.write_bytes(png)
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
+        with self._condition:
+            self._capture_frame = target
+            self._app_closed = False
+
+    def manual_tap(self, frame_token, x, y) -> dict:
+        if (not isinstance(frame_token, str) or not 1 <= len(frame_token) <= 64
+                or type(x) is not int or type(y) is not int
+                or not 0 <= x < 1280 or not 0 <= y < 720):
+            raise ApiError(400, "A displayed frame and coordinates inside 1280×720 are required")
+        with self._condition:
+            if self._shutdown or not self._paused or self._current or self._capturing:
+                raise ApiError(409, "Pause the queue and wait for the current job before playing here")
+            entry = next((item for item in self._preview_frames if item[0] == frame_token), None)
+            if entry is None:
+                return {"sent": False, "reason": "preview expired; refresh the screen"}
+            self._preview_frames.remove(entry)  # A tap is never replayed, even after an uncertain response.
+            if time.monotonic() - entry[1] > 120:
+                return {"sent": False, "reason": "preview expired; refresh the screen"}
+            self._capturing = True  # Also excludes dispatch, idle shutdown, and other manual requests.
+            selected = self.config
+        try:
+            with InstanceLock(selected):
+                device = self._device_factory(selected)
+                device.connect()
+                device.verify_package()
+                if device.foreground_package() != selected.package:
+                    raise ApiError(409, "Open Blue Archive in BlueStacks before playing here")
+                png = device.screenshot()
+                deadline = time.monotonic() + 3
+                match = compare_tap_frames(entry[2], png, x, y)
+                self._save_capture(selected, png)
+                if not match.matches:
+                    self._daily("manual_tap_skipped", x=x, y=y, reason=match.reason)
+                    return {"sent": False, "reason": match.reason}
+                if device.foreground_package() != selected.package:
+                    raise ApiError(409, "The foreground app changed; no tap was sent")
+                with self._condition:
+                    if not self._paused or self._shutdown:
+                        raise ApiError(409, "The queue resumed; no tap was sent")
+                    self._daily("manual_tap_requested", x=x, y=y)
+                    sent = device.tap(x, y, deadline=deadline)
+                self._daily("manual_tap" if sent else "manual_tap_skipped", x=x, y=y,
+                            reason="user clicked the preview" if sent else "fresh frame expired")
+                if not sent:
+                    return {"sent": False, "reason": "fresh frame expired"}
+                # The input has succeeded. Never report a later capture failure as
+                # a failed tap that a browser might retry and spend twice.
+                try:
+                    time.sleep(.35)
+                    if device.foreground_package() == selected.package:
+                        self._save_capture(selected, device.screenshot())
+                        return {"sent": True, "captured": True}
+                except (RuntimeError, OSError) as exc:
+                    self._daily("manual_preview_refresh_failed", detail=str(exc))
+                return {"sent": True, "captured": False}
         finally:
             with self._condition:
                 self._capturing = False
@@ -1979,16 +2048,18 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
         def log_message(self, format, *args):
             LOGGER.debug("dashboard HTTP: " + format, *args)
 
-        def _send(self, status: int, payload: bytes, content_type: str, *, filename=None) -> None:
+        def _send(self, status: int, payload: bytes, content_type: str, *, filename=None, frame_token=None) -> None:
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(payload)))
             if filename:
                 self.send_header("Content-Disposition", f'inline; filename="{filename}"')
+            if frame_token:
+                self.send_header("X-Game-Frame", frame_token)
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("X-Frame-Options", "DENY")
-            self.send_header("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'")
+            self.send_header("Content-Security-Policy", "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'")
             self.end_headers()
             try:
                 self.wfile.write(payload)
@@ -2058,7 +2129,8 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                 elif target.path == "/api/frame":
                     if parse_qs(target.query).keys() - {"v"}:
                         raise ApiError(400, "Frame requests accept only a version parameter")
-                    self._send(200, controller.frame_bytes(), "image/png")
+                    png, token = controller.preview_frame()
+                    self._send(200, png, "image/png", frame_token=token)
                 elif match := re.fullmatch(r"/api/runs/([a-f0-9]{32})", target.path):
                     if target.query:
                         raise ApiError(400, "Trace requests do not accept query parameters")
@@ -2122,6 +2194,7 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                             "/api/event-choice": {"clear"},
                             "/api/dismiss-failure": {"id"}, "/api/clear-loot": set(),
                             "/api/resume": set(), "/api/stop": set(), "/api/capture": set(),
+                            "/api/manual-tap": {"frame_token", "x", "y"},
                             "/api/settings": SETTINGS}
                 if target.path not in expected:
                     raise ApiError(404, "Not found")
@@ -2150,6 +2223,8 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     controller.stop()
                 elif target.path == "/api/capture":
                     result = controller.capture()
+                elif target.path == "/api/manual-tap":
+                    result = controller.manual_tap(body.get("frame_token"), body.get("x"), body.get("y"))
                 elif target.path == "/api/clear-loot":
                     result = controller.clear_loot()
                 elif target.path == "/api/settings":

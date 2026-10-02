@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 
 _ROOT = Path(__file__).resolve().parent
 _CONTENT_POLICY = (
-    "default-src 'self'; img-src 'self' data:; style-src 'self'; "
+    "default-src 'self'; img-src 'self' data: blob:; style-src 'self'; "
     "frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
 )
 _READ_ONLY = {"error": "Read-only demo: no device is connected and no changes are allowed."}
