@@ -1024,7 +1024,8 @@ def known_name(config, icon_id):
     return None
 
 
-def save_result(config, evidence, items, complete, *, task, note=None):
+def save_result(config, evidence, items, complete, *, task, note=None,
+                login_reward_key=None, received_at=None):
     """Sidecar enriches historical receipts; receipt identity prevents double counting."""
     for item in items:
         learn(config, item.get("name"), item.get("icon_id"))
@@ -1049,6 +1050,8 @@ def save_result(config, evidence, items, complete, *, task, note=None):
         label or "Reward receipt saved for inspection",
         task=task,
         evidence=str(evidence),
+        **({"login_reward_key": login_reward_key} if login_reward_key else {}),
+        **({"time": received_at} if received_at else {}),
         **value,
     )
     return value

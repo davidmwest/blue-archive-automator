@@ -43,7 +43,7 @@ on Windows: `py -3.11 -m ba_automator.demo`. open [localhost:8766](http://127.0.
 | free_pack | claims the Free Daily Pack, verifies its receipt, then checks mail |
 | cafe | restarts first, collects available AP and credits, scans both unlocked floors for relationship icons, optionally invites a student, returns home |
 | tasks | checks the Tasks red dot, claims completed rewards and the daily bonus, saves item counts and receipts |
-| loot gathered | game icons, exact tooltip names, grouped totals, itemized receipts, and relationship level-ups with stat gains; clearing keeps the history |
+| loot gathered | game icons, exact tooltip names, grouped totals, daily login and pack grants, and relationship level-ups with stat gains; clearing keeps the history |
 | [daily logs](docs/daily-logs.md) | the full day's text log beside important actions, saved as YYYY-MM-DD.log and kept across restarts |
 | bounties and scrimmages | split tickets across three areas, rotate extras by weekday, sweep the highest three-star clears, save receipts |
 | packs and mail | five optional paid packs, including Weekly AP Pack IV and Weekly Activity Report Pack (Lite), all off by default; collects mail and logs the rewards |
@@ -61,6 +61,8 @@ cafe invitations are off by default. turn them on and leave the name blank to pi
 the daily routine covers startup, Club, free packs, mail, Cafe, Bounties, Scrimmages, Lessons, and Tasks. turn on the optional jobs for paid packs, Tactical Challenge battles, Total Assault, Joint Firing Drill, and event treasure. reward collectors check home and Campaign red dots. **Spend AP runs last**, as its own queue job, so collecting AP doesn't leave it sitting there until tomorrow.
 
 paid packs need payment set up in Google Play. each pack is opt-in with a price limit; a payment failure disables automatic purchases and shows a notice. authentication can still need your help. [packs and mail →](docs/packs-and-mail.md)
+
+the daily login stuff counts too. startup saves the attendance animation and daily pack receipt before they disappear, then adds the rewards it can actually read to the loot box. restarting won't count them twice. this has been checked against saved login screens; the next fresh daily claim still needs live verification. [how it's counted →](docs/loot.md#daily-login-rewards)
 
 turn on **run daily after reset** in settings to run that plan once per game day. it defaults to one minute after Global reset, with the next run shown in your local time in the queue. missed reset? it catches up on the current day when the server is back. if one activity fails, Daily logs it, gets back home, and carries on with the independent jobs when it can. uncertain spending stays on hold; the failed step isn't repeated. the final summary tells you what finished and what needs attention. keep the server running and the computer awake. [daily schedule →](docs/getting-started.md#daily-schedule)
 

@@ -10,6 +10,12 @@ Paid renewal is optional and **off by default**. Each supported pack has its own
 
 The subscription products grant daily benefits for their duration; this job does not buy them every day. It checks ownership once per Global game day and renews an enabled pack only when no active subscription or unclaimed purchase is visible. It waits through the entire remaining duration, including the game's early repurchase window. With all switches off, manually queuing **check packs + mail** only inspects ownership and collects mail. Weekly AP Pack IV follows the same ownership checks and is skipped when its limited offer is absent. Weekly Activity Report Pack (Lite) is a consumable: enabling its switch authorizes another purchase when its weekly stock resets. Zero stock is never purchased. Other rotating offers are unsupported.
 
+Daily benefits delivered during login are recorded by the [startup loot
+reader](loot.md#daily-login-rewards), independently of paid-renewal settings.
+It reads the displayed grants, including Pyroxenes, AP, and tickets; owning a
+pack alone does not create a loot entry. Product-mail activation rewards keep
+their separate mail receipts.
+
 ## Payment setup
 
 Configure a Google Play payment method **inside the selected emulator** before enabling renewals. Signing into Blue Archive with Apple does not configure Google Play billing. The supported checkout is the observed English, USD Google Play screen on BlueStacks Air. Its payment sheet uses the observed 720 × 1280 or 1440 × 2560 portrait layout. Payment targets use native coordinates with a fresh size and foreground check; game navigation uses canonical 1280 × 720 coordinates scaled to the configured resolution. Unknown layouts stop the job.

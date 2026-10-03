@@ -14,6 +14,7 @@ from .display import CANONICAL_SIZE, is_supported_size
 from .locking import InstanceLock
 from .runtime import Capture, FRAME_MAX_AGE, HOME_STABLE_SECONDS, TRACE_LIMIT
 from .runtime import Journal, RunResult, TaskError
+from .startup_loot import StartupLoot
 from .tactical_state import ensure_restart_safe
 from .vision import VisionError, decode_frame
 
@@ -164,6 +165,8 @@ def run_restart(
                 fail("Expected Blue Archive in the foreground; "
                      f"found {foreground or 'no identifiable app'}. No input was sent")
 
+            hold_login_reward = startup_loot.observe(png, observation, captured_at)
+
             if pending_popup is not None:
                 evidence, previous_target = pending_popup
                 after = f"popups/{evidence['id']}-after.png"
@@ -234,7 +237,7 @@ def run_restart(
             if state == "download_prompt" and not config.auto_download:
                 fail("Game-data download requires approval because auto_download is disabled")
 
-            if state in ACTION_STATES and now >= next_action_at:
+            if state in ACTION_STATES and now >= next_action_at and not hold_login_reward:
                 target = observation.target
                 if (not isinstance(target, tuple) or len(target) != 2
                         or any(type(value) is not int for value in target)
@@ -283,7 +286,9 @@ def run_restart(
     try:
         journal = _Journal(run_dir, monotonic, started)
         journal.record("started", task="restart", serial=config.serial, package=config.package)
-        with InstanceLock(config):
+        # Finalize passive receipts before releasing the instance lock, even if
+        # startup later fails. Slow item OCR cannot expire an actionable frame.
+        with InstanceLock(config), StartupLoot(config, run_dir, vision, journal) as startup_loot:
             ensure_restart_safe(config)
             from .event_state import ensure_safe as ensure_event_safe
             ensure_event_safe(config)

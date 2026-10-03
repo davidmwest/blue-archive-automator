@@ -1056,3 +1056,14 @@ prompt. Tests require a visible reward heading and reject incomplete or
 low-confidence prompts. Account currency values are masked and omitted from
 OCR; AP and the six earned reward cards remain visible. Game-derived pixels
 remain outside the MIT grant.
+
+`login-calendar-before-day{1,2,7,8}.png` and
+`login-calendar-day{1,2,7,8}.png` preserve Arona's attendance panel before and
+after one new stamp. They cover credits, Normal/Advanced Activity Reports, and
+AP without inferring rewards from unchanged stamps or future days. The five
+`ba_automator/assets/login-*.png` recognition icons come from the unobstructed
+calendar artwork. `login-daily-packs-entering.png` and `login-daily-packs.png`
+preserve the empty arrival animation and settled five-card daily grant receipt.
+These native 2560×1440 captures are also replayed at canonical resolution.
+Account content outside the panels is masked. All game-derived pixels remain
+outside the MIT grant.

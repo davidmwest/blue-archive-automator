@@ -24,6 +24,30 @@ Task-completion banners can briefly cover the receipt heading, with several noti
 
 If optional loot inspection fails after an AP, Bounty, or Scrimmage sweep, the reader may dismiss an unchanged tooltip that it opened itself, exit a recognized Full List, and return to the original confirmed sweep. It saves incomplete item details for review and requires the original reward row, sweep count, task, and controls to match. The task must then verify its normal AP, ticket, and attempt changes before clearing the pending spend. An unknown screen or unverified resource change still keeps the hold; no sweep is repeated to recover a receipt.
 
+## daily login rewards
+
+Startup also preserves the fleeting attendance and daily-pack screens. It gives
+their opening animation a short settling interval, saves a bounded sequence of
+frames, and reads them after navigation finishes while still holding the instance
+lock. It sends no tooltip taps. Receipt-reading problems stay in the log and do
+not stop startup; saved frames remain available for inspection.
+
+For Arona's ten-day attendance calendar, it requires exactly one new completed
+stamp between captured frames. Only that day's item counts. Its unstamped artwork
+must match a reviewed icon, and two quantity reads must agree. Existing stamps,
+future rewards, a changed layout, or a missing transition never supply an assumed
+reward. The daily-pack reader uses the actual names and amounts on the combined
+Reward Acquired screen, including separately displayed AP grants. It never
+calculates benefits from which subscriptions are enabled or from AP regeneration.
+
+Each attendance or combined daily-pack receipt has a persistent identity for the
+instance and Global game day (19:00 UTC reset). Repeated animation frames and
+restarts cannot duplicate it. A later complete reading can enrich an incomplete
+receipt using the original identity and time, so clearing the loot box still
+keeps that receipt cleared. Unreadable or clipped receipts retain their evidence
+and incomplete status; other login-calendar layouts need additional fixtures and
+recognition support.
+
 ## the dashboard
 
 The default order is premium currency and recruitment items, student materials, AP and tickets, shop currencies, leveling and skill materials, crafting and gifts, credits, other items, then equipment at the bottom. Within a category, recognized material tiers precede alphabetical order. These are display priorities, not prices or a claim that every item has the same value to every player.
@@ -51,6 +75,16 @@ Old receipts can gain names from an exact previously verified icon hash or reada
 - Mail balance changes can corroborate credits and Pyroxenes. Natural AP regeneration and all resource costs are excluded from loot.
 
 ## validation
+
+On October 2, 2026, saved startup captures verified four attendance transitions:
+20,000 credits, three Normal Activity Reports, one Advanced Activity Report, and
+100 AP. The October 2 combined daily-pack receipt reads 60 Pyroxenes, nine Bounty
+Tickets, nine Scrimmage Tickets, 160 AP, and 150 AP. Sanitized replays cover opening
+animations, unchanged stamps, uncertain quantities, restart deduplication, reset
+boundaries, and late enrichment after Clear. This is recorded-screen validation;
+the new integration has not yet observed another day's fresh login claim.
+The October 2 attendance and pack receipts were also recovered into the local
+loot history with their original timestamps, without another claim or device input.
 
 Sanitized game screenshots cover ordinary and wrapped item tooltips, the currency tooltip without an Owned line, a nine-card sweep summary, an expanded twelve-card Full List, labeled reward cards, and the Lesson Reward row. Offline tests cover duplicate cards, page overlap, unknown names and amounts, failed inspection, stale frames, foreground changes, clear semantics, malformed metadata, and icon-path restrictions. Total Assault captures also cover animated headings, delayed tooltips, scroll rebound, and clipped cards at the viewport edges. These checks retain exact observed item names and quantities; they do not use fuzzy matching to fill missing loot.
 
