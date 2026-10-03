@@ -1067,3 +1067,22 @@ preserve the empty arrival animation and settled five-card daily grant receipt.
 These native 2560×1440 captures are also replayed at canonical resolution.
 Account content outside the panels is masked. All game-derived pixels remain
 outside the MIT grant.
+
+## Account and area rank-ups, moving Quick Craft panel (October 2026)
+
+`ap-account-level-up.png` is a native 1440p capture of the October 3 account
+level-up celebration over a successful event sweep. The account name and
+currency bar are masked. It verifies safe dismissal of the celebration both
+before and during receipt inspection; it does not alone prove spending.
+
+`crafting-native-panel-opening.png` captures the September 29 Quick Craft
+entrance animation. The keystone is shifted below its settled crop even though
+the preset labels are readable. The currency bar is masked. Recognition must
+wait for the panel, preserve the preset, and never authorize a craft from this
+moving frame.
+
+`lesson-area-rank-up.png` retains the October 2 native celebration with
+Area Rank Up, Rank 7, its reward message, and Touch to Continue. The account
+header is masked. Native and canonical replays require the complete dismissal
+evidence and reject missing anchors. All three fixtures retain game-derived
+pixels outside the MIT grant.

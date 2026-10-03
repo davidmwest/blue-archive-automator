@@ -1092,6 +1092,23 @@ def test_changed_school_xp_since_survey_blocks_start(harness, monkeypatch):
     assert not harness.device.taps
 
 
+def test_display_name_spacing_does_not_change_school_identity(harness, monkeypatch):
+    runner, decision = prepare_execution(harness, monkeypatch)
+    name, school_id = "D.U. Shiratori City", "dushiratoricity"
+    decision = replace(decision, location=replace(
+        decision.location, id=school_id, name="D.U. Shir atori City"),
+        room=replace(decision.room, location_id=school_id))
+    monkeypatch.setattr(runner, "navigate", lambda _: harness.frame(map_screen(name)))
+    harness.screens[-1] = map_screen(name, xp=200, tickets=1)
+
+    runner.execute(decision)
+
+    assert runner.confirmed == 1
+    assert runner.expected_tickets == 1
+    assert runner.completed_rooms == {(school_id, "0")}
+    assert harness.device.taps.count((640, 550)) == 1
+
+
 def test_changed_selected_room_blocks_preview_and_start(harness, monkeypatch):
     runner, decision = prepare_execution(harness, monkeypatch)
     changed = RoomCard(0, "Library", 1, True, (250, 250), (LessonStudent("0", True, 90),))
@@ -1254,3 +1271,26 @@ def test_relationship_native_pace_has_only_one_survey(harness):
     assert runner.confirmed == 7 and runner.expected_tickets == 0
     assert runner.survey_calls == 1
     assert result.duration == 20 + 287 + 7 * 75 + 15
+
+
+@pytest.mark.parametrize('changed_field', [None, 'students', 'available', 'level', 'name'])
+def test_grid_settles_despite_completed_room_checkmark_ocr(harness, changed_field):
+    runner = harness.make()
+    runner.expected_tickets = 2
+    card = RoomCard(0, 'Library', 1, True, (250, 250), (LessonStudent('0', True, 10),))
+    completed = RoomCard(1, 'Dining Hall', 3, False, (642, 402))
+    changes = dict(students=(LessonStudent('0', True, 11),), available=False,
+                   level=2, name='Gymnasium')
+    other = replace(card, **{changed_field: changes[changed_field]}) if changed_field else card
+    harness.screens[:] = [
+        LessonScreen('rooms', tickets=2, room_cards=(card, completed)),
+        LessonScreen('rooms', tickets=2, room_cards=(other, replace(completed, name='Dining Hall Y'))),
+        LessonScreen('rooms', tickets=2, room_cards=(card, completed)),
+        LessonScreen('rooms', tickets=2, room_cards=(other, replace(completed, name='Dining Hall Y'))),
+    ]
+    if changed_field:
+        with pytest.raises(TaskError, match='observations did not stabilize'):
+            runner.room_grid(harness.frame(map_screen()))
+    else:
+        assert runner.room_grid(harness.frame(map_screen())).screen.room_cards[0] == card
+    assert harness.device.taps == [(1156, 663)]

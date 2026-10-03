@@ -46,6 +46,14 @@ def test_native_loading_material_waits_without_disabling_saved_preset(vision):
     assert (ready.kind, ready.owned, ready.required) == ('quick', 0, 1)
 
 
+def test_panel_entrance_keystone_is_not_an_unsupported_material(vision):
+    pending = vision.analyze((FIXTURES / 'crafting-native-panel-opening.png').read_bytes())
+    assert pending.kind == 'unknown' and pending.target is None
+    assert 'still loading' in pending.reason
+    ready = vision.analyze((FIXTURES / 'crafting-quick.png').read_bytes())
+    assert ready.kind == 'quick'
+
+
 def test_no_node_setup_and_use_off_disable_without_editing_preset(vision):
     frame=decode_frame((FIXTURES/'crafting-quick.png').read_bytes())
     words=vision.startup.read(frame)

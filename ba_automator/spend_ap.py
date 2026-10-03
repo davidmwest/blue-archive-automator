@@ -1,6 +1,7 @@
 """Survey sweepable stages and spend existing AP without crossing its floor."""
 
 from datetime import timedelta
+from .account_level import read_sweep_level_up
 from .actions import record_action
 from .loot_receipts import REWARD_RECEIPT_TIMEOUT, inspect_receipt
 from .ap_policy import choose_hard, default_order, sweep_count, sweep_refill
@@ -9,7 +10,7 @@ from .ap_vision import APVision
 from .event_priority import active_event
 from .locking import InstanceLock
 from .runtime import TaskError
-from .shop_runtime import ShopRunner
+from .shop_runtime import ShopFrame, ShopRunner
 
 
 VISIT_SECONDS = 1800
@@ -43,6 +44,43 @@ class APRunner(ShopRunner):
         self.startup = startup
         self.allow_retry = allow_retry
         self.state = None
+        self.level_up_dismissals = 0
+
+    def handle_receipt_overlay(self, capture):
+        """Dismiss only a verified celebration for an outstanding AP spend.
+
+        ReceiptReader also calls this hook: the animation can arrive after
+        the first Sweep Complete frame, while individual loot is being read.
+        Dismissing it does not resolve the pending spend or prove any reward.
+        """
+        if not self.state or not self.state.get("pending") or self.startup is None:
+            return False
+        level = read_sweep_level_up(capture.png, self.startup)
+        if level is None:
+            return False
+        self.budget()
+        if not capture.is_fresh(self.clock()):
+            self.journal.record("account_level_up_stale", account_level=level)
+            return True  # Reobserve; stale pixels never authorize input.
+        if capture.foreground != self.config.package:
+            self.fail("Account level-up was not captured in Blue Archive")
+        if self.level_up_dismissals >= 3:
+            self.fail("Account level-up did not clear after three taps; receipt saved")
+        self.level_up_dismissals += 1
+        evidence = f"account-level-up-{self.level_up_dismissals:02d}.png"
+        self.journal.save_image(evidence, capture.png)
+        self.journal.record("account_level_up_dismissed", account_level=level, frame=evidence)
+        # The center of the celebration is away from the receipt's Confirm
+        # and Full List controls, including while its exit animation plays.
+        self.tap(ShopFrame(capture, None), (640, 360), "Dismiss account level-up")
+        self.sleep(.8)
+        return True
+
+    def capture(self):
+        while True:
+            frame = super().capture()
+            if not self.handle_receipt_overlay(frame.capture):
+                return frame
 
     def budget(self):
         if self.clock() - self.started > VISIT_SECONDS or self.actions >= VISIT_INPUTS:

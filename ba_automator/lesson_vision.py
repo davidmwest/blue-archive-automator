@@ -458,15 +458,29 @@ class LessonVision:
                        if word.normalized in {"area rank up", "location rank up"}
                        and word.confidence >= .9]
         if area_titles:
-            # This conservative variant has synthetic coverage only. Do not
-            # invent a dismissal point for an unknown tap-anywhere animation.
+            # The observed global-client celebration uses Touch to Continue,
+            # not a Confirm button. Require its rank and reward message too;
+            # the title alone can appear before the animation is ready.
+            prompts = [word for word in _within(words, (450, 600, 830, 665))
+                       if word.normalized.replace(" ", "") == "touchtocontinue"
+                       and word.confidence >= .9]
+            ranks = [word for word in _within(words, (570, 340, 710, 405))
+                     if re.fullmatch(r"rank\s*[1-9]\d?", word.normalized)
+                     and word.confidence >= .9]
+            reward_message = any(
+                word.normalized == "increased chance to gain more rewards"
+                and word.confidence >= .9
+                for word in _within(words, (380, 400, 900, 465)))
+            if len(area_titles) == len(prompts) == len(ranks) == 1 and reward_message:
+                return LessonScreen("area_rank_up", dismiss_target=prompts[0].center,
+                                    words=words, detail="Area rank, reward message, and Continue verified")
             controls = [word for word in _within(words, (360, 350, 920, 685))
                         if word.normalized == "confirm" and word.confidence >= .9]
             if len(area_titles) == 1 and len(controls) == 1 and _active_confirmation(frame, controls[0]):
                 return LessonScreen("area_rank_up", dismiss_target=controls[0].center,
                                     words=words, detail="Area rank-up title and active Confirm verified")
             return LessonScreen("unknown", words=words, inspection_complete=False,
-                                detail="Area rank-up needs a unique visible active Confirm control")
+                                detail="Area rank-up is waiting for a verified Continue or Confirm control")
         if _has(words, "lesson report", (470, 110, 820, 169)):
             labels_present = (
                 _has(words, "lesson location", (430, 175, 850, 219))

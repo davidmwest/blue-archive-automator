@@ -683,3 +683,29 @@ def test_native_trinity_confirmation_preserves_rank_one_profile():
     screen = LessonVision(StartupVision()).analyze(png)
     assert screen.kind == "confirm" and screen.inspection_complete
     assert [(s.owned, s.bond) for s in screen.students] == [(True, 1), (True, 23), (False, None)]
+
+
+@pytest.mark.parametrize('native', [True, False])
+def test_real_area_rank_up_observes_touch_to_continue(native):
+    from ba_automator.vision import StartupVision, decode_frame
+    png = (FIXTURES / 'lesson-area-rank-up.png').read_bytes()
+    if not native:
+        png = cv2.imencode('.png', decode_frame(png))[1].tobytes()
+    screen = LessonVision(StartupVision()).analyze(png)
+    assert screen.kind == 'area_rank_up'
+    x, y = screen.dismiss_target
+    assert 490 < x < 790 and 618 <= y <= 645
+
+
+@pytest.mark.parametrize('missing', ['area rank up', 'rank 7',
+                                     'increased chance to gain more rewards',
+                                     'touch to continue'])
+def test_area_continue_requires_complete_celebration(monkeypatch, missing):
+    from ba_automator import lesson_vision
+    from ba_automator.vision import StartupVision, read_game_words
+    png = (FIXTURES / 'lesson-area-rank-up.png').read_bytes()
+    vision = StartupVision()
+    words = read_game_words(png, vision)
+    monkeypatch.setattr(lesson_vision, 'read_game_words',
+                        lambda *_: [w for w in words if w.normalized != missing])
+    assert LessonVision(vision).analyze(png).kind != 'area_rank_up'

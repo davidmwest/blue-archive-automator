@@ -41,6 +41,17 @@ def counter_visible(screen: LessonScreen) -> bool:
     return type(screen.tickets) is int
 
 
+def room_grid_signature(cards):
+    """Compare planning evidence without OCR noise on completed-room names.
+
+    Completed rooms are never candidates. Their animated checkmarks can read
+    as trailing letters in the title; retain their slot, availability, and
+    every other observed field so an actual room change still invalidates it.
+    """
+    return tuple(replace(card, name='' if card.available is False else identity(card.name))
+                 for card in cards)
+
+
 def compatible_survey_students(surveyed, observed, completed_lessons: int) -> bool:
     """Keep room slots/ownership fixed while allowing gains from earlier lessons.
 
@@ -280,7 +291,7 @@ class LessonsRunner:
         for _ in range(3):
             self.sleep(.7)
             following = self.wait('rooms', lambda s: bool(s.room_cards) and counter_visible(s))
-            if following.screen.room_cards == result.screen.room_cards:
+            if room_grid_signature(following.screen.room_cards) == room_grid_signature(result.screen.room_cards):
                 result = following
                 break
             result = following
@@ -470,7 +481,9 @@ class LessonsRunner:
             self.fail('Planner selected an already completed room; refusing a duplicate lesson')
         frame = self.navigate(location.id)
         observed = self.map_location(frame)
-        if observed != location:
+        # The normalized ID is authoritative; OCR can insert a space inside
+        # a display name. Rank, XP, unlock state, and ID must still agree.
+        if replace(observed, name=location.name) != location:
             self.fail('Selected school progress changed since the survey; no ticket was spent')
         grid = self.room_grid(frame)
         candidates = [c for c in grid.screen.room_cards if str(c.index) == room.id]

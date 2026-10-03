@@ -44,6 +44,10 @@ Pause holds dispatch. Stop interrupts the current job and pauses the queue. canc
 
 Quick Craft being unavailable, switched off, unconfigured, or requiring unsupported materials disables its schedule persistently. the reason appears in important actions and beside the saved timers. fix the preset in game and manually queue Crafting to recheck it. Resume alone doesn't override a setup disable.
 
+The Quick Craft panel can show readable labels while it is still sliding into
+place. A recognized keystone outside its settled position makes the runner
+wait; it does not disable the preset or authorize spending from that frame.
+
 a pending spend or collection is saved before its irreversible tap. an interrupted craft start is reconciled only if the expected occupied slots can be observed. an uncertain collection receipt stops for inspection rather than claiming a reward or repeating the operation. this is recovery with evidence, not an exactly-once guarantee. account switching on one endpoint requires separate state/configuration.
 
 ## validation status
@@ -53,6 +57,12 @@ the September 24, 2026 live inspection verified the existing Node 1 preset and a
 an evening live check exposed the Max behavior: with three vacant slots and two keystones, it selected three crafts and displayed a red **2/3** material counter and a 6,000-credit fee. The runner stopped before confirmation. That screen is now a sanitized recognition fixture. At 18:18 Pacific, the replacement runner started from quantity one, selected two crafts, verified the confirmation, and spent two keystones and 4,000 credits. It verified two three-hour timers, left the third slot empty, persisted their collection schedule, and returned home. The preset was unchanged. Offline tests also cover resetting an initial quantity of three with Min, changed costs, unexpected quantities, and collection followed immediately by refill within the same visit; those variants still need live coverage.
 
 sanitized fixtures preserve the relevant UI controls and omit the account resource bar. raw traces and receipts stay in the ignored runtime directories.
+
+On October 3, recovery from a false unsupported-material hold completed a
+fresh live visit at 1440p and 20 FPS. It used the unchanged preset to start
+three crafts, verified two three-hour timers and one six-hour timer, saved
+their collection schedule, and returned home. A sanitized capture of the
+panel entrance animation guards against disabling the preset before it settles.
 
 three September 26 UTC visits failed before opening Crafting: their screenshots
 remained on home after taps on the Crafting illustration. They attempted no

@@ -163,6 +163,13 @@ class CraftVision:
         error = cv2.minMaxLoc(cv2.matchTemplate(sample, self.keystone, cv2.TM_SQDIFF_NORMED))[0]
         pending_error = cv2.minMaxLoc(cv2.matchTemplate(
             sample, self.material_pending, cv2.TM_SQDIFF_NORMED))[0]
+        # On entrance the entire panel slides upward. Its labels become
+        # readable before the keystone fits inside the settled icon crop.
+        # A known icon outside that crop is transition evidence, never
+        # permission to spend or a reason to disable the user's preset.
+        moving_keystone = error >= .025 and cv2.minMaxLoc(cv2.matchTemplate(
+            frame[185:322, 800:950], self.keystone, cv2.TM_SQDIFF_NORMED
+        ))[0] < .025
         if error < .025:
             # Zero inventory is red and may vanish in full-frame OCR. Read the
             # same fixed inventory counter at 2x without assuming missing means 0.
@@ -177,4 +184,5 @@ class CraftVision:
                         words.append(Word(word.text, word.confidence, box))
         home = {'home_left', 'home_right'} <= self.startup.matches(frame).keys()
         return classify_crafting(frame, words, keystone=error < .025,
-                                 material_pending=pending_error < .001, home=home)
+                                 material_pending=pending_error < .001 or moving_keystone,
+                                 home=home)

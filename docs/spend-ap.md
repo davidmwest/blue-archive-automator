@@ -48,6 +48,8 @@ An unresolved spending intent blocks even an explicit retry. Inspect the actual 
 
 A single account level-up can refill AP during a sweep. The runner recognizes it only when the AP capacity increases by two, the receipt balance equals the projected balance plus the new capacity (allowing one regeneration tick), and the receipt count matches the requested sweeps. After closing the receipt, it verifies the capacity, balance, stage, and remaining Hard attempts before clearing the intent. The refill gets its own important action and the Hard rotation continues with the new balance. An unexplained increase or multiple level-ups still needs inspection.
 
+The account level-up celebration can appear over Sweep Complete, including after loot inspection has started. With an outstanding spend, the runner recognizes its blue band, sweep heading, level, and Continue prompt, saves the frame, and dismisses it using the normal freshness and foreground guards. It then resumes reading the original receipt. Dismissal alone never clears a pending spend or proves rewards, and at most three dismissal inputs are allowed per visit.
+
 Natural AP regeneration can update the top balance while Mission Info still shows its previous sweep projection. That screen remains readable for result verification, but cannot authorize another sweep until its projection matches the current balance. Item inspection runs before the receipt is dismissed; [Loot Gathered](loot.md) records the exact names, quantities, and icons independently of the final spending check.
 
 A navigation tap can briefly obscure a Hard-area arrow with its blue highlight. If the arrow is missing, the runner takes at most two additional observations of the same area before stopping. A changed page or area still stops input; a recognized arrow must pass the usual freshness and foreground checks. This recovered the September 25 route from area 14 through area 5 to area 1, where the previous run had stopped during the highlight.
@@ -71,6 +73,21 @@ Commission Max, Min, plus, and minus controls were also checked live, including 
 A September 26 Hard 11-1 sweep leveled the account from 79 to 80: 156/218 AP projected 136, then became 356/220 after the 220 AP refill. Sanitized before/receipt fixtures cover that recognition. Runtime regressions verify that the refill cannot advance the cursor until the receipt count and post-sweep capacity, AP, and attempts all verify. This is replay coverage of the captured level-up, not a second live level-up under the new code.
 
 The old intent was reconciled separately against its saved receipt and the live Hard 11-1 counter (three attempts before, two afterward), then returned to verified Home without repeating the sweep. The normal queue resumed at Hard 10-3 and verified fresh sweeps with the 100 AP floor intact. The original receipt remains available as evidence; recovery did not invent identities for drops that had not been inspected.
+
+On October 3, a saved four-sweep event Quest 9 receipt established an 80 AP
+spend and a level-81 refill: 185 − 80 + 222 = 327 AP. The unresolved intent
+was reconciled from that receipt and its journal without repeating the sweep.
+The next visit rereads the current balance; the old 327 AP observation is not
+reused as current state. The blocking level-up animation now has native and
+720p replay coverage, including its arrival during loot inspection. This is
+captured regression coverage, not a new live level-up under the fix. The
+original incomplete loot receipt stays incomplete rather than inventing drops.
+
+The fresh recovery visit then completed 41 event Quest 9 sweeps, verified an
+820 AP debit from 922 to 102, cleared its pending intent, and returned home
+with the 100 AP floor intact. The local run is
+`spend_ap-20261003T213941-6d6dba2a`. This verifies resumed event spending;
+it did not trigger another account level-up.
 
 
 When event priority is enabled, supported event Stories run before repeatable

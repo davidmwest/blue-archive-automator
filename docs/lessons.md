@@ -64,9 +64,11 @@ The room grid must finish its opening animation before the fixed portrait coordi
 
 Completed rooms retain white headings while every portrait's standard border becomes dim. The detector checks that consistent dimming, rather than student artwork or green check marks alone. Lesson Report recognition requires the loaded location, relationship, and reward sections with one visible Confirm control. Its blank loading state is not a receipt.
 
-The relationship rank-up screen was captured during the first live lesson and has a replay fixture. A separate school/area rank-up can occur when location XP crosses a threshold. The conservative `area_rank_up` handler requires an exact **Area Rank Up** or **Location Rank Up** heading and one visibly active cyan **Confirm** control inside the modal. It never invents a tap-anywhere dismissal.
+The relationship rank-up screen was captured during the first live lesson and has a replay fixture. A separate school/area rank-up can occur when location XP crosses a threshold. The October 2 English client showed **Area Rank Up**, the new rank, **Increased chance to gain more rewards**, and **Touch to Continue**. Recognition requires all four anchors in their observed regions before tapping Continue. The earlier active cyan **Confirm** variant retains synthetic coverage. A title without either verified dismissal control stops with evidence.
 
-That school-rank handler has **synthetic contract tests only**. A current English screenshot and localization entry establishing its actual title/layout were not found, and the development account has not yet triggered it live. An unrecognized heading or tap-anywhere variant stops with evidence. [BAAS's lesson flow](https://github.com/pur1fying/blue_archive_auto_script/blob/4d9e25ff8cce018dee7ffec44e564fdc9f149b60/module/lesson.py) confirms a separate area-rank interruption exists; its implementation and assets are not imported. A captured live rank-up remains a required validation case for unattended progression through rank changes.
+The captured area-rank celebration has sanitized native and 720p replay coverage. This establishes recognition of the actual interruption; live dismissal under the corrected handler is still unverified. [BAAS's lesson flow](https://github.com/pur1fying/blue_archive_auto_script/blob/4d9e25ff8cce018dee7ffec44e564fdc9f149b60/module/lesson.py) also describes a separate area-rank interruption; its implementation and assets are not imported.
+
+Repeated room grids compare normalized names and all planning fields. Names of already completed rooms are excluded from that stability comparison because their animated checkmarks can be read as trailing letters. Their slot, completion status, students, and other fields must still agree. School progress checks likewise compare normalized identity, rank, XP, and unlock state without treating whitespace changes in a display name as new progress.
 
 ## Configuration and scheduling
 
@@ -112,7 +114,7 @@ The subsequent 1440p visits at 20 FPS verified all seven starting tickets across
 
 On September 28, the relationship policy's single-survey plan passed live at 1440p and 20 FPS. It inspected 94 rooms across 12 schools once, selected three rooms, then completed Rikkagaku in Shanhaijing followed by Abydos Library and Abydos Playing Field in one Abydos visit. All three receipts and ticket decrements were verified, including updated XP between the two Abydos rooms, before returning home at zero tickets. The complete Lessons visit took 569.1 seconds; the survey event arrived at 291.9 seconds. The journal records one `lesson_survey`, one `lesson_visit_plan`, and three `lesson_confirmed` events. This verifies the three remaining tickets, not an uninterrupted seven-ticket batch. The local run is `lessons-20260928T232309-1a276f73`.
 
-All live spending used the relationship policy. The school-rank policy is covered by observed-data and multi-ticket rank/XP tests, including switching schools after each ticket, but a real school rank-up popup remains unverified as described above. Live Windows execution and broader account/layout coverage remain future checks.
+All live spending used the relationship policy. The school-rank policy is covered by observed-data and multi-ticket rank/XP tests, including switching schools after each ticket. Its area-rank interruption now has captured replay coverage, but live dismissal remains unverified as described above. Live Windows execution and broader account/layout coverage remain future checks.
 
 On October 1, recovery visits verified all seven available tickets across two
 runs. The first completed four lessons, then stopped before Start when the
@@ -141,3 +143,10 @@ the popup crop correction, the second visit surveyed all 94 rooms, verified that
 same room and confirmation, used the final ticket, observed the balance fall
 from one to zero, and returned home. The final run is
 `lessons-20260929T230909-99fe7c2c`; no ticket was spent on an unverified preview.
+
+On October 3, the corrected recognition completed the three remaining tickets
+from one survey of 12 schools and 94 rooms. It verified Abydos Gym, Millennium
+Library, and Shiratori Neighborhood Park, including all three receipts and
+ticket decrements from three to zero. This live run exercised the completed-room
+checkmark and school-name spacing fixes; it did not trigger a new area rank-up.
+The local run is `lessons-20261003T212250-328652a0`.

@@ -1082,6 +1082,10 @@ class ReceiptReader:
                 r.fail("Foreground changed during reward inspection")
             at = r.clock()
             cap = Capture(r.device.screenshot(), at, r.config.package)
+            overlay = getattr(r, "handle_receipt_overlay", None)
+            if overlay is not None and overlay(cap):
+                clear_heading, clear_since = None, None
+                continue
             # Timestamp must precede capture: the caller's freshness rules still apply.
             image = decode_frame(cap.png)
             notice, shadow = task_notice_visible(image), sweep_notice_shadow(image)
