@@ -40,6 +40,8 @@ the development setup uses `127.0.0.1:5695` for Blue Archive and `127.0.0.1:5675
 
 on Windows with BlueStacks 5, point `adb_path` at BlueStacks' own `C:\Program Files\BlueStacks_nxt\HD-Adb.exe` (use a single-quoted TOML string for the backslashes) so every controller shares one compatible ADB server. each instance's port is `bst.instance.<name>.adb_port` in `C:\ProgramData\BlueStacks_nxt\bluestacks.conf`. if another local tool already uses port 8765, start the dashboard with `serve --port 8767`.
 
+a frame can only authorize input for five seconds, and reading a 1440p screenshot with the default two OCR threads took about three seconds on a Threadripper PRO 3995WX. with capture time added, every task reached Home and then reported that it had not. set `BA_OCR_THREADS` (1–64) before starting `serve` or a CLI task; 16 brought one read down to about 1.4 seconds there. `scripts/serve-windows.ps1 -Port 8767 -OcrThreads 16` starts the dashboard detached with that setting, UTF-8 mode, and logs under `data/logs`.
+
 controllers targeting the same game instance must share the same `lock_dir`. leave the example storage paths alone unless you need to move the runtime data.
 
 ## start the dashboard

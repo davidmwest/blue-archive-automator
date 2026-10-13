@@ -136,6 +136,19 @@ def read_game_region(png: bytes, reader, box: tuple[int, int, int, int]) -> list
                             native_origin=(left, top), canonical_origin=box[:2])
 
 
+def ocr_threads() -> int:
+    """CPU threads for local OCR: 2 unless BA_OCR_THREADS asks for 1 to 64.
+
+    A frame is only actionable for a few seconds. Hosts with slower cores need
+    more threads to read a native-resolution screenshot inside that window.
+    """
+    try:
+        requested = int(os.environ.get("BA_OCR_THREADS", "2"))
+    except ValueError:
+        return 2
+    return requested if 1 <= requested <= 64 else 2
+
+
 class StartupVision:
     """Keep OCR local and CPU-bounded; no cloud model calls during a run."""
 
@@ -149,14 +162,15 @@ class StartupVision:
         onnxruntime.disable_telemetry_events()
         from rapidocr import RapidOCR
 
-        cv2.setNumThreads(2)
+        threads = ocr_threads()
+        cv2.setNumThreads(threads)
         self.ocr = RapidOCR(params={
             "Global.log_level": "error",
             # RapidOCR's default 2000px limit shrinks a 2560px screenshot before
             # reading it. Game frames are already bounded to 3840×2160 here.
             "Global.max_side_len": 3840,
             "Det.limit_type": "min",
-            "EngineConfig.onnxruntime.intra_op_num_threads": 2,
+            "EngineConfig.onnxruntime.intra_op_num_threads": threads,
             "EngineConfig.onnxruntime.inter_op_num_threads": 1,
         })
         self._ocr_cache = OrderedDict()
