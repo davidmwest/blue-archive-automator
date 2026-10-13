@@ -194,7 +194,7 @@ class StartupLoot:
                 frames.append(path.name)
             # Manifest permits offline recovery after an interrupted startup.
             temporary = self.root / "frames.tmp"
-            temporary.write_text(json.dumps(self.sequences, indent=2))
+            temporary.write_text(json.dumps(self.sequences, indent=2), encoding="utf-8")
             temporary.replace(self.root / "frames.json")
             return captured_at - sequence["since"] < SETTLE_SECONDS
         except Exception:
@@ -205,7 +205,7 @@ class StartupLoot:
         records = {}
         path = self.config.state_dir / "important-actions.jsonl"
         if path.exists():
-            for line in path.read_text().splitlines():
+            for line in path.read_text(encoding="utf-8").splitlines():
                 try:
                     item = json.loads(line)
                 except ValueError:

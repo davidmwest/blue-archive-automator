@@ -93,7 +93,7 @@ def validate(s):
 
 def read_state(config):
     try:
-        s = json.loads(state_path(config).read_text())
+        s = json.loads(state_path(config).read_text(encoding="utf-8"))
         if isinstance(s, dict):
             s.setdefault('plan', None)
         return validate(s)
@@ -110,7 +110,7 @@ def write_state(config, state):
     state['updated_at'] = datetime.now(timezone.utc).isoformat()
     temp = path.with_name(f'.{path.name}.{uuid4().hex}.tmp')
     try:
-        with temp.open('w') as f:
+        with temp.open('w', encoding='utf-8') as f:
             json.dump(state, f, indent=2)
             f.write('\n')
             f.flush()

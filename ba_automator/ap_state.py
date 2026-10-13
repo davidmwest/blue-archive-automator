@@ -33,7 +33,7 @@ def empty_state():
 
 def read_state(config):
     try:
-        value = json.loads(state_path(config).read_text())
+        value = json.loads(state_path(config).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return empty_state()
     except (OSError, ValueError) as exc:

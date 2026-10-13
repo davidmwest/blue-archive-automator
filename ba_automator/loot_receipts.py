@@ -1011,14 +1011,14 @@ def save_icon(config, png):
 def learn(config, name, icon_id):
     root = config.state_dir / "loot-icons"
     if name:
-        (root / (icon_id + ".json")).write_text(json.dumps({"name": name}))
+        (root / (icon_id + ".json")).write_text(json.dumps({"name": name}), encoding="utf-8")
 
 
 def known_name(config, icon_id):
     path = config.state_dir / "loot-icons" / (icon_id + ".json")
     if path.is_file() and not path.is_symlink():
         try:
-            return json.loads(path.read_text()).get("name")
+            return json.loads(path.read_text(encoding="utf-8")).get("name")
         except (ValueError, OSError):
             pass
     return None
@@ -1037,7 +1037,7 @@ def save_result(config, evidence, items, complete, *, task, note=None,
     }
     target = Path(evidence).with_suffix(".loot.json")
     temporary = target.with_suffix(".tmp")
-    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2))
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
     temporary.replace(target)
     label = ", ".join(
         f"+{i['quantity']:,} {i.get('name') or 'unidentified item'}"

@@ -45,7 +45,8 @@ class RedDotsRunner(ShopRunner):
         # The parent consumes this only after a successful child exit, below
         # that child's private run root; it never accepts arbitrary job names.
         (self.run_dir / "requests.json").write_text(
-            json.dumps({"version": 1, "tasks": tasks, "ap": ap})
+            json.dumps({"version": 1, "tasks": tasks, "ap": ap}),
+            encoding="utf-8",
         )
         self.phase("Home and Campaign notifications: " + (", ".join(tasks) or "none"))
         return self.finish()

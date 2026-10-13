@@ -164,7 +164,7 @@ class StartupVision:
         root = files("ba_automator").joinpath("assets")
         manifest = root.joinpath("startup.json")
         if manifest.is_file():
-            for spec in json.loads(manifest.read_text()):
+            for spec in json.loads(manifest.read_text(encoding="utf-8")):
                 template = cv2.imdecode(
                     np.frombuffer(root.joinpath(spec["file"]).read_bytes(), dtype=np.uint8),
                     cv2.IMREAD_COLOR,

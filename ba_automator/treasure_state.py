@@ -14,7 +14,7 @@ def state_path(config):
 
 def read_state(config):
     try:
-        state = json.loads(state_path(config).read_text())
+        state = json.loads(state_path(config).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return dict(version=1, event_id=None, round=None, completed=[], pending=None)
     if (not isinstance(state, dict) or state.get('version') != 1
@@ -39,7 +39,7 @@ def write_state(config, state):
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(f'.{path.name}.{uuid4().hex}.tmp')
     try:
-        with temp.open('w') as stream:
+        with temp.open('w', encoding='utf-8') as stream:
             json.dump(state, stream, indent=2)
             stream.flush()
             os.fsync(stream.fileno())

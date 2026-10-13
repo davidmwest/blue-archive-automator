@@ -53,7 +53,7 @@ def _source(config):
 def _cursor(config):
     path = config.state_dir / "loot-view.json"
     try:
-        value = json.loads(path.read_text())
+        value = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {"offset": 0, "cleared_at": None}
     if (

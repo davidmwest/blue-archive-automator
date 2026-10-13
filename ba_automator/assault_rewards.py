@@ -132,7 +132,7 @@ class AssaultRewardsRunner(ShopRunner):
             self.journal.save_image(evidence.name, result.capture.png)
             result = inspect_receipt(self, result, evidence)
             sidecar = evidence.with_suffix(".loot.json")
-            loot = json.loads(sidecar.read_text()) if sidecar.is_file() else {}
+            loot = json.loads(sidecar.read_text(encoding="utf-8")) if sidecar.is_file() else {}
             if loot.get("items_complete") is not True:
                 self.fail(
                     "Total Assault reward receipt is incomplete; left open for inspection"

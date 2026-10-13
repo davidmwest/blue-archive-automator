@@ -22,6 +22,8 @@ py -3.11 -m venv .venv
 .venv/Scripts/python.exe -m pytest -q
 ```
 
+on a Windows install whose system code page is not UTF-8 (Japanese cp932, for example), run the tests in Python's UTF-8 mode: `.venv/Scripts/python.exe -X utf8 -m pytest -q`. the automator itself reads and writes its state as UTF-8 regardless of locale; several tests read those files with the platform default.
+
 the commands use the virtual environment directly, so shell activation is optional. for a focused camera change, for example:
 
 ```sh

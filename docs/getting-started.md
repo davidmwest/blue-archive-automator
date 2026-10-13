@@ -38,6 +38,8 @@ edit `config/local.toml` with the ADB endpoint for the Blue Archive instance and
 
 the development setup uses `127.0.0.1:5695` for Blue Archive and `127.0.0.1:5675` for Azur Lane. these are examples, not universal BlueStacks ports. they share the host ADB server on `5037`, with every game command targeting its own instance. use a compatible ADB executable for both. simultaneous operation and Windows still need live smoke tests.
 
+on Windows with BlueStacks 5, point `adb_path` at BlueStacks' own `C:\Program Files\BlueStacks_nxt\HD-Adb.exe` (use a single-quoted TOML string for the backslashes) so every controller shares one compatible ADB server. each instance's port is `bst.instance.<name>.adb_port` in `C:\ProgramData\BlueStacks_nxt\bluestacks.conf`. if another local tool already uses port 8765, start the dashboard with `serve --port 8767`.
+
 controllers targeting the same game instance must share the same `lock_dir`. leave the example storage paths alone unless you need to move the runtime data.
 
 ## start the dashboard

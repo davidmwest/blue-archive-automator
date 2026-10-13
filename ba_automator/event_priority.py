@@ -7,7 +7,7 @@ import json
 def available_event(now):
     if now.tzinfo is None:
         raise ValueError('Event availability requires an aware timestamp')
-    value = json.loads(files('ba_automator').joinpath('assets/aquatic-showdown.json').read_text())
+    value = json.loads(files('ba_automator').joinpath('assets/aquatic-showdown.json').read_text(encoding="utf-8"))
     start = datetime.fromisoformat(value['starts_at'])
     end = datetime.fromisoformat(value['playable_until'])
     return value if start <= now.astimezone(timezone.utc) < end else None
