@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
+from .fileops import replace_file
 from .tasks import TASKS
 
 
@@ -119,7 +120,7 @@ def write_state(config, state: dict) -> None:
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
-        temporary.replace(path)
+        replace_file(temporary, path)
     except (OSError, TypeError, ValueError) as exc:
         raise DailyScheduleError("Daily schedule state could not be saved; the occurrence was not safely recorded") from exc
     finally:

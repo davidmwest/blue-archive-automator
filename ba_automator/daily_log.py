@@ -22,6 +22,8 @@ import threading
 import traceback
 from uuid import uuid4
 
+from .fileops import replace_file
+
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}", re.ASCII)
 _RUN = re.compile(r"^(?P<task>[a-z_]+)-(?P<stamp>\d{8}T\d{6})-[a-zA-Z0-9]+$", re.ASCII)
 _SENSITIVE = re.compile(
@@ -499,7 +501,7 @@ def backfill_history(state_dir: Path, run_dir: Path, *, day: str | None = None) 
                 stream.writelines(lines)
                 stream.flush()
                 os.fsync(stream.fileno())
-            temporary.replace(path)
+            replace_file(temporary, path)
         finally:
             temporary.unlink(missing_ok=True)
     return len(additions)

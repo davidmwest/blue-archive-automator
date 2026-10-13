@@ -18,6 +18,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from .club import game_day
+from .fileops import replace_file
 from .tactical_battles import Opponent
 from .tactical_search import SearchState
 from . import tactical_state
@@ -202,7 +203,7 @@ def _write(config, value, now):
             stream.write(encoded)
             stream.flush()
             os.fsync(stream.fileno())
-        temporary.replace(path)
+        replace_file(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 

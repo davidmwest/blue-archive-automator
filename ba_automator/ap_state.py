@@ -7,6 +7,7 @@ import os
 import re
 from uuid import uuid4
 from .ap_policy import stage_key
+from .fileops import replace_file
 
 
 def state_path(config):
@@ -107,6 +108,6 @@ def write_state(config, state):
             json.dump(state, stream, indent=2)
             stream.flush()
             os.fsync(stream.fileno())
-        temp.replace(path)
+        replace_file(temp, path)
     finally:
         temp.unlink(missing_ok=True)

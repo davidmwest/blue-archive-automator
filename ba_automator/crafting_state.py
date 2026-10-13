@@ -7,6 +7,8 @@ import json
 import os
 from uuid import uuid4
 
+from .fileops import replace_file
+
 
 class CraftStateError(RuntimeError):
     pass
@@ -70,7 +72,7 @@ def write_state(config, value):
             stream.write('\n')
             stream.flush()
             os.fsync(stream.fileno())
-        temporary.replace(path)
+        replace_file(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 

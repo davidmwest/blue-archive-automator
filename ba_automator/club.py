@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from .actions import record_action
 from .crafting_vision import bright, cyan, has
+from .fileops import replace_file
 from .home_badges import badges
 from .locking import InstanceLock
 from .shop_runtime import ShopRunner
@@ -65,7 +66,7 @@ def save_visit(config, day, reward_seen):
             )
             stream.flush()
             os.fsync(stream.fileno())
-        temporary.replace(path)
+        replace_file(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 

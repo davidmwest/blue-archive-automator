@@ -13,6 +13,8 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
+from .fileops import replace_file
+
 
 class CheckinScheduleError(RuntimeError):
     """Only the periodic check-in timer must stop until its state is repaired."""
@@ -85,7 +87,7 @@ def write_state(config, state: dict) -> None:
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
-        temporary.replace(path)
+        replace_file(temporary, path)
     except (OSError, TypeError, ValueError) as exc:
         raise CheckinScheduleError("Check-in schedule could not be saved; its timer is held until settings are saved") from exc
     finally:

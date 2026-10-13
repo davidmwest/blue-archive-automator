@@ -10,6 +10,7 @@ import os
 import struct
 from uuid import uuid4
 
+from .fileops import replace_file
 from .gifts import is_gift
 
 RECEIVED = {
@@ -76,7 +77,7 @@ def clear(config):
             json.dump(value, stream)
             stream.flush()
             os.fsync(stream.fileno())
-        temp.replace(path)
+        replace_file(temp, path)
     finally:
         temp.unlink(missing_ok=True)
     return value

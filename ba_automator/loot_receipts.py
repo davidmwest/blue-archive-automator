@@ -14,6 +14,7 @@ import cv2
 import numpy as np
 
 from .actions import record_action
+from .fileops import replace_file
 from .loot_icon_mask import isolate_compact_card
 from .runtime import Capture, TaskError
 from .vision import (
@@ -1038,7 +1039,7 @@ def save_result(config, evidence, items, complete, *, task, note=None,
     target = Path(evidence).with_suffix(".loot.json")
     temporary = target.with_suffix(".tmp")
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
-    temporary.replace(target)
+    replace_file(temporary, target)
     label = ", ".join(
         f"+{i['quantity']:,} {i.get('name') or 'unidentified item'}"
         for i in items

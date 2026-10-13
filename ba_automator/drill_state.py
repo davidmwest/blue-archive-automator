@@ -7,6 +7,7 @@ import re
 from uuid import uuid4
 
 from .drill_policy import PRACTICE_LIMIT
+from .fileops import replace_file
 
 
 class DrillStateError(RuntimeError):
@@ -115,7 +116,7 @@ def write_state(config, state):
             f.write('\n')
             f.flush()
             os.fsync(f.fileno())
-        temp.replace(path)
+        replace_file(temp, path)
     finally:
         temp.unlink(missing_ok=True)
     return state

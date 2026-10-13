@@ -14,6 +14,7 @@ from uuid import uuid4
 
 from .club import game_day
 from . import tactical_state
+from .fileops import replace_file
 
 
 MAX_DAILY_RETRIES = 3
@@ -80,7 +81,7 @@ def _write(config, value):
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary, path)
+        replace_file(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 
