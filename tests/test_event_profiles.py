@@ -87,17 +87,23 @@ def test_first_quest_mission_info_is_a_numbered_event_stage():
 
 
 class Campaign:
-    """A Campaign whose event card alternates between another season and this one."""
+    """A Campaign whose event card shows the scripted screenshots in order."""
 
     def __init__(self, cards, destinations, *, capture_seconds=1.0):
         self.cards, self.destinations = list(cards), list(destinations)
         self.card_taps, self.taps, self.saved, self.time = [], [], [], 0.0
+        self.swipes, self.tapped_at = [], []
         self.capture_seconds, self.actions = capture_seconds, 0
         self.config = SimpleNamespace(package='game')
         self.device = SimpleNamespace(screenshot=self.screenshot, tap=self.device_tap,
-                                      foreground_package=lambda: 'game')
+                                      swipe=self.device_swipe, foreground_package=lambda: 'game')
         self.journal = SimpleNamespace(record=lambda *a, **k: None,
                                        save_image=lambda *args: self.saved.append(args))
+
+    def device_swipe(self, start, end, *, duration_ms, deadline, monotonic):
+        assert (start, end) == ((140, 165), (40, 165)) and monotonic() <= deadline
+        self.swipes.append(self.time)
+        return True
 
     def clock(self):
         return self.time
@@ -113,8 +119,10 @@ class Campaign:
         return self.cards.pop(0) if len(self.cards) > 1 else self.cards[0]
 
     def device_tap(self, x, y, *, deadline, monotonic):
-        assert monotonic() <= deadline
+        if monotonic() > deadline:
+            return False
         self.card_taps.append((x, y))
+        self.tapped_at.append(self.time)
         return True
 
     def wait(self, kinds):
@@ -157,41 +165,60 @@ def test_card_template_is_packaged_and_matches_only_itself(cards):
     assert not card_settled(decode_frame('other'), profile())
 
 
-def test_only_a_fresh_arrival_of_this_events_card_is_tapped(cards):
-    # A card already on screen may be about to leave; wait for it to come back.
-    runner = Campaign(['calm', 'other', 'sliding', 'calm'], [('event_page', CALM)])
+def test_tap_is_timed_from_a_swipe_that_leaves_another_season_resting(cards):
+    # Live, taps sent on seeing this season's card arrive landed after it left.
+    runner = Campaign(['other', 'other'], [('event_page', CALM)])
     frame = enter_from_campaign(runner, None, profile())
     assert frame.screen.kind == 'event_page'
-    assert runner.card_taps == [(100, 165)] and runner.taps == []
-    assert runner.saved == [('event-card-1.png', 'calm')]
+    assert len(runner.swipes) == 1 and runner.card_taps == [(100, 165)] and runner.taps == []
+    assert runner.tapped_at[0] - runner.swipes[0] == pytest.approx(5.2)
+    assert runner.saved == [('event-card-1.png', 'other')]
+
+
+@pytest.mark.parametrize('shown, swipes', [
+    (['calm', 'calm', 'other', 'other'], 2),        # this season resting: turn it away first
+    (['sliding', 'other', 'other', 'other'], 2),    # still moving: swipe again
+])
+def test_card_is_swiped_until_another_season_rests_there(cards, shown, swipes):
+    runner = Campaign(shown, [('event_page', CALM)])
+    enter_from_campaign(runner, None, profile())
+    assert len(runner.swipes) == swipes and runner.card_taps == [(100, 165)]
+    assert runner.tapped_at[0] - runner.swipes[-1] == pytest.approx(5.2)
+
+
+def test_card_without_rotation_is_tapped_once_two_swipes_leave_it_resting(cards):
+    # After the other season's reward period ends, the card may hold this one alone.
+    runner = Campaign(['calm'], [('event_page', CALM)])
+    enter_from_campaign(runner, None, profile())
+    assert len(runner.swipes) == 2 and runner.card_taps == [(100, 165)]
+    assert runner.tapped_at[0] - runner.swipes[-1] < 5
 
 
 def test_slow_capture_is_not_trusted(cards):
-    runner = Campaign(['other', 'calm'], [], capture_seconds=2.4)
-    with pytest.raises(AssertionError, match='was not found on Campaign'):
+    runner = Campaign(['other'], [], capture_seconds=4)
+    with pytest.raises(AssertionError, match='kept opening another event'):
         enter_from_campaign(runner, None, profile())
     assert runner.card_taps == []
 
 
 def test_another_seasons_page_is_left_without_spending(cards):
-    runner = Campaign(['other', 'calm', 'other', 'calm'],
-                      [('other_event', None), ('event_page', CALM)])
+    runner = Campaign(['other'], [('other_event', None), ('event_page', CALM)])
     enter_from_campaign(runner, None, profile())
     assert runner.card_taps == [(100, 165), (100, 165)]
     assert runner.taps == [(1237, 24)]
 
 
 def test_first_visit_play_guide_is_closed_before_verifying_the_page(cards):
-    runner = Campaign(['other', 'calm'], [('event_guide', None), ('event_page', CALM)])
+    runner = Campaign(['other'], [('event_guide', None), ('event_page', CALM)])
     enter_from_campaign(runner, None, profile())
     assert runner.taps == [(1185, 155)]
 
 
-def test_missing_card_stops_before_any_tap(cards):
-    runner = Campaign(['other'], [])
+def test_card_that_never_rests_stops_before_any_tap(cards):
+    runner = Campaign(['calm', 'other'] * 10, [])
     with pytest.raises(AssertionError, match='was not found on Campaign'):
         enter_from_campaign(runner, None, profile())
-    assert runner.card_taps == [] and runner.taps == []
+    assert runner.card_taps == [] and runner.taps == [] and len(runner.swipes) == 5
 
 
 def test_play_guide_overlay_is_its_own_screen():

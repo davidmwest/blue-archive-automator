@@ -102,41 +102,70 @@ def card_settled(frame, profile):
             and float(np.abs(title.astype(float) - reference).mean()) < 5)
 
 
-# Live, one visit missed this season five times in a row while eight later
-# trials all succeeded; a missed entry costs only a page load and a return.
-CAMPAIGN_ENTRIES = 10
+CAMPAIGN_ENTRIES = 6
+CARD_SWIPE = ((140, 165), (40, 165))
+CARD_SWIPES = 5
+# Live at 1440p (2026-10-13) this season rests on the card for only 1.8-2.3 s
+# of a 6 s rotation, while a screenshot takes 1.2 s and a freshly launched game
+# acts on input late: taps sent on seeing it arrive opened the other season in
+# 10 of 10 tries. A swipe turns the card and restarts the rotation, and after
+# one the next card rested from 4.1 to 6.4 s. Both inputs share the same lag,
+# so a tap timed from the swipe lands mid-rest (8 of 8 from a fresh launch).
+TAP_AFTER_SWIPE = 5.2
+
+
+def card_resting(first, second, profile):
+    x1, y1, x2, y2 = profile['identity']['card_box']
+    return float(np.abs(first[y1:y2, x1:x2].astype(float) - second[y1:y2, x1:x2]).mean()) < 3
 
 
 def enter_from_campaign(runner, startup, profile):
     """Open the event from Campaign's rotating card, then verify its own page.
 
-    The card alternates with other seasons about every three seconds, including
-    ones whose play period has ended. Reading it with OCR outlasts that dwell,
-    so match the reviewed title crop instead, tap only a fresh arrival, and
-    still verify the destination: a late tap opens the other season, which is
-    left without spending before another try.
+    The card alternates with other seasons, including ones whose play period
+    has ended. Swipe it until another season rests there, then tap at the time
+    this season's card is due, and still verify the destination: a mistimed tap
+    opens the other season, which is left without spending before another try.
+    A card that keeps resting on this season after two swipes has no rotation.
     """
     from .event_state import observe
     for attempt in range(CAMPAIGN_ENTRIES):
         runner.navigate('home', 'campaign', (1200, 641))
-        end = runner.clock() + 45
-        previous_match = True
-        while True:
-            at = runner.clock()
+        ours_in_a_row = 0
+        for _ in range(CARD_SWIPES):
+            if runner.device.foreground_package() != runner.config.package:
+                runner.fail('Foreground changed during event entrance inspection')
+            swiped = runner.clock()
+            runner.journal.record('intent', operation='swipe', points=CARD_SWIPE,
+                                  detail='Turn the Campaign event card and restart its rotation')
+            if not runner.device.swipe(*CARD_SWIPE, duration_ms=300, deadline=swiped + 2,
+                                       monotonic=runner.clock):
+                runner.fail('Campaign event card swipe expired before it was sent')
+            runner.actions += 1
+            runner.sleep(1.2)
+            first = decode_frame(runner.device.screenshot())
             png = runner.device.screenshot()
-            matched = card_settled(decode_frame(png), profile)
-            if matched and not previous_match and runner.clock() - at < 2:
-                if runner.device.foreground_package() != runner.config.package:
-                    runner.fail('Foreground changed during event entrance inspection')
-                runner.journal.record('intent', operation='tap', target=(100, 165),
-                                      detail=f"Open {profile['title']} from Campaign")
-                if runner.device.tap(100, 165, deadline=at + 2.5, monotonic=runner.clock):
-                    runner.journal.save_image(f'event-card-{attempt + 1}.png', png)
-                    break
-            previous_match = matched
-            if runner.clock() >= end:
-                runner.fail(f"{profile['title']} was not found on Campaign; event AP remains reserved")
-            runner.sleep(.05)
+            second = decode_frame(png)
+            if not card_resting(first, second, profile):
+                ours_in_a_row = 0
+                continue
+            if not card_settled(second, profile):
+                due = swiped + TAP_AFTER_SWIPE
+                break
+            ours_in_a_row += 1
+            if ours_in_a_row == 2:
+                due = runner.clock()
+                break
+        else:
+            runner.fail(f"{profile['title']} was not found on Campaign; event AP remains reserved")
+        runner.sleep(max(0, due - runner.clock()))
+        if runner.device.foreground_package() != runner.config.package:
+            runner.fail('Foreground changed during event entrance inspection')
+        runner.journal.record('intent', operation='tap', target=(100, 165),
+                              detail=f"Open {profile['title']} from Campaign")
+        if not runner.device.tap(100, 165, deadline=due + 1, monotonic=runner.clock):
+            continue
+        runner.journal.save_image(f'event-card-{attempt + 1}.png', png)
         runner.actions += 1
         frame = runner.wait({'event_page', 'other_event', 'event_guide'})
         if frame.screen.kind == 'event_guide':
