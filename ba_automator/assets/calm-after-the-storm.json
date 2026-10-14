@@ -7,9 +7,12 @@
   "entrance": "campaign",
   "identity": {
     "title": "thecalmafterthestorm",
-    "card": [
-      "thecalmafter",
-      "thestorm"
+    "card_template": "calm-after-the-storm-card.png",
+    "card_box": [
+      58,
+      180,
+      152,
+      213
     ],
     "first_quest": "commercial street",
     "first_quest_title": "commercialstreetsouthtrail",

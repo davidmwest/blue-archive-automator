@@ -87,12 +87,17 @@ def test_first_quest_mission_info_is_a_numbered_event_stage():
 
 
 class Campaign:
-    """A Campaign whose event card rotates between another season and this one."""
+    """A Campaign whose event card alternates between another season and this one."""
 
-    def __init__(self, cards, destinations):
+    def __init__(self, cards, destinations, *, capture_seconds=1.0):
         self.cards, self.destinations = list(cards), list(destinations)
-        self.taps, self.time, self.observed = [], 0.0, []
+        self.card_taps, self.taps, self.saved, self.time = [], [], [], 0.0
+        self.capture_seconds, self.actions = capture_seconds, 0
         self.config = SimpleNamespace(package='game')
+        self.device = SimpleNamespace(screenshot=self.screenshot, tap=self.device_tap,
+                                      foreground_package=lambda: 'game')
+        self.journal = SimpleNamespace(record=lambda *a, **k: None,
+                                       save_image=lambda *args: self.saved.append(args))
 
     def clock(self):
         return self.time
@@ -103,51 +108,96 @@ class Campaign:
     def navigate(self, source, destination, target):
         assert (source, destination, target) == ('home', 'campaign', (1200, 641))
 
+    def screenshot(self):
+        self.time += self.capture_seconds
+        return self.cards.pop(0) if len(self.cards) > 1 else self.cards[0]
+
+    def device_tap(self, x, y, *, deadline, monotonic):
+        assert monotonic() <= deadline
+        self.card_taps.append((x, y))
+        return True
+
     def wait(self, kinds):
-        self.time += 2
-        if kinds == 'campaign':
-            return SimpleNamespace(screen=SimpleNamespace(kind='campaign'),
-                                   capture=SimpleNamespace(png=self.cards.pop(0)))
         kind, event = self.destinations.pop(0)
         return SimpleNamespace(screen=SimpleNamespace(kind=kind, event=event), capture=None)
 
     def tap(self, frame, target, detail):
-        self.taps.append((target, detail))
+        self.taps.append(target)
 
     def fail(self, message):
         raise AssertionError(message)
-
-
-@pytest.fixture
-def campaign_words(monkeypatch):
-    card = words('calm-campaign')
-    other = [w for w in card if 'calm' not in w.normalized and 'storm' not in w.normalized]
-    other.append(Word('A Flower Blooms', .99, (60, 183, 170, 197)))
-    monkeypatch.setattr('ba_automator.event_inspection.read_game_words',
-                        lambda png, startup: {'calm': card, 'other': other}[png])
-    monkeypatch.setattr('ba_automator.event_state.observe',
-                        lambda config, profile: None)
 
 
 def profile():
     return available_event(datetime(2026, 10, 14, tzinfo=timezone.utc))
 
 
-def test_campaign_card_is_tapped_only_while_it_names_this_event(campaign_words):
-    runner = Campaign(['other', 'other', 'calm'], [('event_page', CALM)])
+@pytest.fixture
+def cards(monkeypatch):
+    from ba_automator.event_inspection import card_template
+    identity = profile()['identity']
+    x1, y1, x2, y2 = identity['card_box']
+
+    def decode(name):
+        frame = np.zeros((720, 1280, 3), np.uint8)
+        if name == 'calm':
+            frame[y1:y2, x1:x2] = card_template(identity['card_template'])
+        elif name == 'sliding':
+            frame[y1:y2, x1 + 30:x2] = card_template(identity['card_template'])[:, :-30]
+        return frame
+
+    monkeypatch.setattr('ba_automator.event_inspection.decode_frame', decode)
+    monkeypatch.setattr('ba_automator.event_state.observe', lambda config, profile: None)
+
+
+def test_card_template_is_packaged_and_matches_only_itself(cards):
+    from ba_automator.event_inspection import card_settled, decode_frame
+    assert card_settled(decode_frame('calm'), profile())
+    assert not card_settled(decode_frame('sliding'), profile())
+    assert not card_settled(decode_frame('other'), profile())
+
+
+def test_only_a_fresh_arrival_of_this_events_card_is_tapped(cards):
+    # A card already on screen may be about to leave; wait for it to come back.
+    runner = Campaign(['calm', 'other', 'sliding', 'calm'], [('event_page', CALM)])
     frame = enter_from_campaign(runner, None, profile())
     assert frame.screen.kind == 'event_page'
-    assert [target for target, _ in runner.taps] == [(100, 165)]
+    assert runner.card_taps == [(100, 165)] and runner.taps == []
+    assert runner.saved == [('event-card-1.png', 'calm')]
 
 
-def test_another_seasons_page_is_left_without_spending(campaign_words):
-    runner = Campaign(['calm', 'calm'], [('other_event', None), ('event_page', CALM)])
-    enter_from_campaign(runner, None, profile())
-    assert [target for target, _ in runner.taps] == [(100, 165), (1237, 24), (100, 165)]
-
-
-def test_missing_card_stops_before_any_tap(campaign_words):
-    runner = Campaign(['other'] * 60, [])
+def test_slow_capture_is_not_trusted(cards):
+    runner = Campaign(['other', 'calm'], [], capture_seconds=2.4)
     with pytest.raises(AssertionError, match='was not found on Campaign'):
         enter_from_campaign(runner, None, profile())
-    assert runner.taps == []
+    assert runner.card_taps == []
+
+
+def test_another_seasons_page_is_left_without_spending(cards):
+    runner = Campaign(['other', 'calm', 'other', 'calm'],
+                      [('other_event', None), ('event_page', CALM)])
+    enter_from_campaign(runner, None, profile())
+    assert runner.card_taps == [(100, 165), (100, 165)]
+    assert runner.taps == [(1237, 24)]
+
+
+def test_first_visit_play_guide_is_closed_before_verifying_the_page(cards):
+    runner = Campaign(['other', 'calm'], [('event_guide', None), ('event_page', CALM)])
+    enter_from_campaign(runner, None, profile())
+    assert runner.taps == [(1185, 155)]
+
+
+def test_missing_card_stops_before_any_tap(cards):
+    runner = Campaign(['other'], [])
+    with pytest.raises(AssertionError, match='was not found on Campaign'):
+        enter_from_campaign(runner, None, profile())
+    assert runner.card_taps == [] and runner.taps == []
+
+
+def test_play_guide_overlay_is_its_own_screen():
+    guide = [Word('Event', .99, (104, 9, 185, 39)),
+             Word('Play Guide(1/7)', .99, (535, 135, 759, 174)),
+             Word('This screen is a sample image.', .99, (743, 605, 984, 631))]
+    assert classify_event(page(), guide).kind == 'event_guide'
+    assert classify_event(page(), guide[:2]) is None
+    assert classify_event(page(), [guide[0], Word('Play Guide', .99, (92, 90, 200, 116)), guide[2]]) is None

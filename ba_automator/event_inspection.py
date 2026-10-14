@@ -33,6 +33,11 @@ def classify_event(frame, words):
         matches = re.findall(r'currentroundround(\d+)', text((650, 120, 1100, 170)))
         if len(matches) == 1:
             return EventScreen('event_board', ap=ap, round=int(matches[0]))
+    # The Play Guide covers an event page the first time it is opened on an install.
+    if (has(words, 'event', (80, 0, 260, 60))
+            and re.fullmatch(r'playguide\d\d', text((520, 125, 780, 180)))
+            and 'thisscreenisasampleimage' in text((700, 595, 1020, 640))):
+        return EventScreen('event_guide', ap=ap)
     for profile in profiles():
         identity = profile['identity']
         if (has(words, 'mission info', (430, 110, 870, 170))
@@ -83,35 +88,65 @@ def event_banner_centered(crop):
             and float(np.abs(title.astype(float) - reference).mean()) < 5)
 
 
+@lru_cache(maxsize=4)
+def card_template(name):
+    return cv2.imread(str(Path(__file__).parent / 'assets' / name))
+
+
+def card_settled(frame, profile):
+    """True while Campaign's event card shows this season's title at rest."""
+    x1, y1, x2, y2 = profile['identity']['card_box']
+    reference = card_template(profile['identity']['card_template'])
+    title = frame[y1:y2, x1:x2]
+    return (reference is not None and title.shape == reference.shape
+            and float(np.abs(title.astype(float) - reference).mean()) < 5)
+
+
+CAMPAIGN_ENTRIES = 5
+
+
 def enter_from_campaign(runner, startup, profile):
     """Open the event from Campaign's rotating card, then verify its own page.
 
-    The card shares its slot with other seasons, including ones whose play
-    period has ended. Tap only while the card's text names this event, and
-    leave without spending if another event's page opens.
+    The card alternates with other seasons about every three seconds, including
+    ones whose play period has ended. Reading it with OCR outlasts that dwell,
+    so match the reviewed title crop instead, tap only a fresh arrival, and
+    still verify the destination: a late tap opens the other season, which is
+    left without spending before another try.
     """
     from .event_state import observe
-    card = profile['identity']['card']
-    for _ in range(3):
+    for attempt in range(CAMPAIGN_ENTRIES):
         runner.navigate('home', 'campaign', (1200, 641))
         end = runner.clock() + 45
+        previous_match = True
         while True:
-            frame = runner.wait('campaign')
-            words = [w for w in read_game_words(frame.capture.png, startup) if w.confidence >= .9]
-            label = ''.join(w.normalized for w in within(words, (20, 80, 240, 265))).replace(' ', '')
-            if all(token in label for token in card):
-                runner.tap(frame, (100, 165), f"Open {profile['title']} from Campaign")
-                break
+            at = runner.clock()
+            png = runner.device.screenshot()
+            matched = card_settled(decode_frame(png), profile)
+            if matched and not previous_match and runner.clock() - at < 2:
+                if runner.device.foreground_package() != runner.config.package:
+                    runner.fail('Foreground changed during event entrance inspection')
+                runner.journal.record('intent', operation='tap', target=(100, 165),
+                                      detail=f"Open {profile['title']} from Campaign")
+                if runner.device.tap(100, 165, deadline=at + 2.5, monotonic=runner.clock):
+                    runner.journal.save_image(f'event-card-{attempt + 1}.png', png)
+                    break
+            previous_match = matched
             if runner.clock() >= end:
                 runner.fail(f"{profile['title']} was not found on Campaign; event AP remains reserved")
-            runner.sleep(.3)
-        frame = runner.wait({'event_page', 'other_event'})
+            runner.sleep(.05)
+        runner.actions += 1
+        frame = runner.wait({'event_page', 'other_event', 'event_guide'})
+        if frame.screen.kind == 'event_guide':
+            # A season explains itself once per install; the overlay has no choices.
+            runner.tap(frame, (1185, 155), 'Close the event Play Guide')
+            frame = runner.wait({'event_page', 'other_event'})
         if (frame.screen.kind == 'event_page'
                 and getattr(frame.screen, 'event', profile['id']) == profile['id']):
             observe(runner.config, profile)
             return frame
         runner.tap(frame, (1237, 24), 'Leave concurrent event without spending')
-    runner.fail('Campaign opened another event; no resources spent')
+    runner.fail('Campaign kept opening another event; no resources spent')
 
 
 def enter_event(runner, startup):
