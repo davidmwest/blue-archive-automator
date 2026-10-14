@@ -27,10 +27,11 @@ TASK_LABELS = {
     "spend_ap": "AP spending complete",
     "scan_ap": "Three-star stages scanned",
     "lessons": "Lessons complete",
+    "students": "Student roster inventoried",
     "daily": "Daily tasks complete",
 }
 TASKS = frozenset(TASK_LABELS)
-RUN_PREFIXES = ("event_treasure-", "clear_event-","joint_firing_drill-", "total_assault-", "assault_rewards-", "tactical_rewards-", "tactical_battles-", "red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
+RUN_PREFIXES = ("students-", "event_treasure-", "clear_event-","joint_firing_drill-", "total_assault-", "assault_rewards-", "tactical_rewards-", "tactical_battles-", "red_dots-", "free_pack-", "tasks-", "bounties-", "scrimmages-", "restart-", "club-", "cafe-", "crafting-", "lessons-", "packs-", "mail-", "spend_ap-", "scan_ap-")
 
 
 def _task_plan(command: str, config: Config) -> tuple[str, ...]:
@@ -87,7 +88,7 @@ def _task_plan(command: str, config: Config) -> tuple[str, ...]:
         return ("restart", "total_assault", "assault_rewards")
     if command == "spend_ap" and config.ap_event_treasure_enabled:
         return ("restart", "spend_ap", "event_treasure")
-    if command in {"event_treasure", "assault_rewards", "tactical_rewards", "tasks", "bounties", "scrimmages", "lessons", "crafting", "spend_ap", "scan_ap"}:
+    if command in {"students", "event_treasure", "assault_rewards", "tactical_rewards", "tasks", "bounties", "scrimmages", "lessons", "crafting", "spend_ap", "scan_ap"}:
         return ("restart", command)
     if command == "restart":
         return ("restart",)
