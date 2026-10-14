@@ -1714,7 +1714,8 @@ class DashboardController:
         students = [{key: value for key, value in student.items() if key not in private}
                     for student in document.get("students", []) if isinstance(student, dict)]
         export = {"exported_at": self._wall_clock().isoformat(), "captured_at": document.get("captured_at"),
-                  "complete": document.get("complete"), "count": len(students), "students": students}
+                  "complete": document.get("complete"), "count": len(students),
+                  "owned": sum(1 for student in students if student.get("owned") is True), "students": students}
         day = str(document.get("captured_at") or self._wall_clock().isoformat())[:10]
         return (json.dumps(export, indent=2, ensure_ascii=False) + "\n").encode("utf-8"), f"students-{day}.json"
 

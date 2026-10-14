@@ -79,6 +79,7 @@ open [the dashboard](http://127.0.0.1:8765). `serve --port 8767` selects a diffe
 | `daily` | runs restart → Club → free pack → enabled paid packs → mail → Cafe → enabled Bounties → enabled Scrimmages → enabled Tactical battles → Tactical rewards → enabled Lessons → enabled Total Assault → raid rewards → enabled Spend AP → Tasks |
 | `scan_ap` | surveys three-star Hard stages and commissions without spending AP |
 | `spend_ap` | sweeps the chosen stages without crossing the configured AP floor |
+| `students` | runs restart, then steps through every student's page with its next arrow and changes nothing: each owned student's level, stars, bond, skills, weapon, gear, and stats, and eleph progress for students not yet recruited. it saves `students-<id>.json` and `.csv` in the state folder; **export students (JSON)** on the dashboard downloads the data without screenshot paths or raw text |
 | `probe` | checks the selected device, game, display size, and foreground app |
 | `capture --output data/capture.png` | saves a screenshot without game input |
 | `inspect --image data/capture.png` | classifies a saved screenshot without an emulator connection |
@@ -89,6 +90,8 @@ Club checks the Social and Club notification badges, saves a verified visit for 
 for example, `.venv/bin/python -m ba_automator --config config/local.toml restart` runs without the dashboard. the installed `ba` command is also available.
 
 required game-data downloads are accepted automatically. add `--no-downloads` to `restart`, `cafe`, `lessons`, or `daily` to stop at a download prompt, or turn off automatic downloads in settings. external sign-in, passwords, 2FA, maintenance, and store app updates stop for attention. after handling the screen, run the task again.
+
+if the game reports a duplicate login because you signed in on another device, no job starts the game again for two hours, and queued jobs wait. a scheduled Daily cut short by it runs again when the wait ends.
 
 ## daily schedule
 

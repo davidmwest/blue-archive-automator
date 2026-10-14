@@ -1,13 +1,14 @@
-"""Inventory every owned student: roster card, Basic Info, and evidence.
+"""Inventory every student: each owned student's Basic Info, and eleph progress for the rest.
 
-Read-only: from home it opens Students, shows All, and walks the roster from
-its first card to its last. Each card gives a name and level; each student's
-Basic Info adds the star rarity, a screenshot, and the page's text for later
-reading. It never opens an upgrade control, and returns home at the end.
+Read-only: from home it opens Students, shows All, opens the first card, and
+steps through the list with the page's next arrow. An owned student's Basic
+Info is read into fields (see ``student_profile``); a student not yet
+recruited is recorded with its eleph count. Every page is kept as a screenshot
+with its text, no upgrade control is ever opened, and it returns home at the end.
 
 The result is written to the state directory as ``students-<id>.json`` and a
-``.csv`` beside it, replacing the previous inventory only when a whole pass
-finished.
+``.csv`` beside it. A walk that stops early keeps what it read only when no
+complete inventory would be replaced.
 """
 from __future__ import annotations
 
@@ -35,9 +36,12 @@ LOGGER = logging.getLogger(__name__)
 VISIT_SECONDS = 5400
 VISIT_INPUTS = 2000
 MAX_PAGES = 60
+MAX_STUDENTS = 400
+NEXT = (1253, 384)          # the arrow at the right edge of every student's page
+NEXT_ATTEMPTS = 3
+FIRST_CARD_X = 140
 STUDENTS_BUTTON = (323, 659)
 ALL_TAB = (445, 115)
-BACK = (55, 25)
 HOME = (1237, 24)
 
 
@@ -87,16 +91,60 @@ def profile_settled(words):
                and abs(word.center[1] - 141) <= 4 for word in words)
 
 
-COLUMNS = ("name", "level", "stars", "bond", "role", "class", "attack", "position", "armor",
+def owned_identity(words):
+    """An owned student's settled Basic Info, by the name beside the bond heart."""
+    identity = profile_identity(words)
+    return identity if identity and profile_settled(words) else None
+
+
+def unowned_page(words):
+    """A student not yet recruited: Basic Info and Profile tabs and an eleph count.
+
+    Live, the All list holds every student in the game; the ones not owned show
+    as dimmed Lv.1 cards and open this page, its name large at the bottom left
+    under a "School | ROLE" line.
+    """
+    if not any(word.normalized == "basic info" and abs(word.center[0] - 800) <= 4
+               and abs(word.center[1] - 150) <= 4 for word in words):
+        return None
+    if not any(word.normalized == "profile" and 1000 <= word.center[0] <= 1150
+               and 130 <= word.center[1] <= 170 for word in words):
+        return None
+    parts = _name_parts(words, (40, 640, 420, 690))
+    if not parts:
+        return None
+    count = re.fullmatch(r"(\d+)\s*/\s*(\d+)", " ".join(word.text.strip() for word in _words(words, (740, 575, 900, 615))))
+    role = re.search(r"(STRIKER|SPECIAL)$", " ".join(word.text.strip() for word in _words(words, (30, 592, 430, 622))), re.I)
+    return {"name": " ".join(word.text.strip() for word in parts),
+            "identity": " ".join(word.normalized for word in parts),
+            "role": role[1].upper() if role else None,
+            "elephs": [int(count[1]), int(count[2])] if count else None}
+
+
+def shown_student(words):
+    """The student whose page is at rest, owned or not yet recruited, else None."""
+    identity = owned_identity(words)
+    if identity:
+        # The bond heart beside the name is sometimes read as a stray symbol.
+        name = re.sub(r"^[^A-Za-z]+", "", " ".join(word.text.strip()
+                                                   for word in _name_parts(words, (70, 545, 255, 592))))
+        return {"owned": True, "identity": identity, "name": name or identity}
+    unowned = unowned_page(words)
+    return {"owned": False, **unowned} if unowned else None
+
+
+COLUMNS = ("name", "owned", "level", "stars", "bond", "role", "class", "attack", "position", "armor",
            "ex", "basic", "enhanced", "sub", "weapon_type", "weapon_level", "weapon_stars",
            "gear1_tier", "gear1_level", "gear2_tier", "gear2_level", "gear3_tier", "gear3_level",
-           "exclusive_gear_tier", "hp", "atk", "def", "healing", "exp", "profile")
+           "exclusive_gear_tier", "hp", "atk", "def", "healing", "exp", "elephs", "profile")
 
 
 def flat(student):
-    row = {key: student.get(key) for key in ("name", "level", "stars", "bond", "role", "class",
+    row = {key: student.get(key) for key in ("name", "owned", "level", "stars", "bond", "role", "class",
                                               "attack", "position", "armor", "exclusive_gear_tier",
                                               "profile")}
+    elephs = student.get("elephs")
+    row["elephs"] = f"{elephs[0]}/{elephs[1]}" if elephs else None
     row.update((student.get("skills") or {}))
     row.update((student.get("stats") or {}))
     weapon = student.get("weapon") or {}
@@ -130,6 +178,28 @@ def write_inventory(config, students, *, captured_at, complete):
         finally:
             temp.unlink(missing_ok=True)
     return path
+
+
+def reparse_inventory(config, startup):
+    """Re-read every saved Basic Info screenshot with the current parser.
+
+    Sends no game input: it only updates the saved inventory, so reading
+    improvements reach an existing inventory without another roster walk.
+    """
+    from pathlib import Path
+    path = state_path(config)
+    document = json.loads(path.read_text(encoding="utf-8"))
+    for student in document["students"]:
+        profile = student.get("profile")
+        if student.get("owned") is False or not profile or not Path(profile).is_file():
+            continue
+        fields = parse_basic_info(Path(profile).read_bytes(), startup)
+        roster_level = student.get("level")
+        student.update({key: value for key, value in fields.items() if key != "name"})
+        student["level"] = fields["level"] or roster_level
+    return write_inventory(config, document["students"],
+                           captured_at=datetime.fromisoformat(document["captured_at"]),
+                           complete=document["complete"])
 
 
 class StudentInventoryRunner:
@@ -186,82 +256,136 @@ class StudentInventoryRunner:
                 return cap
         self.fail("Student roster beginning was not reached within the bounded scan")
 
-    def page_with(self, identity):
-        """Return to the roster page showing ``identity`` after a profile visit."""
-        cap = self.roster()
-        if any(entry["identity"] == identity for entry in roster_entries(cap[3])):
-            return cap
-        self.journal.record("student_roster_position_lost", student=identity)
-        cap = self.top_of_roster(cap)
-        stationary = 0
-        for _ in range(MAX_PAGES):
-            if any(entry["identity"] == identity for entry in roster_entries(cap[3])):
-                return cap
-            after = _scroll(self, cap, down=True)
-            stationary = stationary + 1 if _stationary(cap, after) else 0
-            cap = after
-            if stationary >= 2:
-                break
-        self.fail(f"{identity} could not be found again in the roster")
+    def student_page(self, previous, timeout=20):
+        """The settled page of a student other than ``previous``, read alike twice running.
 
-    def inspect(self, cap, entry, index):
-        """Open one Basic Info, keep its evidence and stars, and come back."""
-        record = {"name": entry["name"], "identity": entry["identity"], "level": entry["level"],
-                  "stars": None, "profile": None, "text": []}
-        self.tap(cap, entry["target"], f"Open {entry['name']}'s Basic Info")
-        try:
-            profile = _wait(self, lambda value: (profile_identity(value[3]) == entry["identity"]
-                                                 and profile_settled(value[3])),
-                            f"{entry['name']}'s Basic Info did not open", 20)
-        except TaskError as error:
-            record["error"] = str(error)
-        else:
-            fields = parse_basic_info(profile[1], self.startup, profile[3])
-            record.update({key: value for key, value in fields.items() if key != "name"})
-            record["level"] = fields["level"] or entry["level"]
+        Two matching reads keep a page caught mid-transition, or a name misread
+        once, from being taken for another student.
+        """
+        end, last = self.clock() + timeout, None
+        while self.clock() < end:
+            cap = self.capture(ocr=True)
+            page = shown_student(cap[3]) if self.clock() - cap[0] < FRAME_MAX_AGE - 1 else None
+            if page and page["identity"] != previous:
+                if last == page["identity"]:
+                    return page, cap
+                last = page["identity"]
+            else:
+                last = None
+            self.sleep(.4)
+        return None, None
+
+    def showing(self, identity, timeout=12):
+        """A fresh frame of ``identity``'s page to tap from, or a failure if it is gone."""
+        end = self.clock() + timeout
+        while self.clock() < end:
+            cap = self.capture(ocr=True)
+            page = shown_student(cap[3])
+            if page and page["identity"] == identity and self.clock() - cap[0] < FRAME_MAX_AGE - 1.5:
+                return cap
+            self.sleep(.4)
+        self.fail(f"{identity}'s page was no longer showing before the next student")
+
+    def record(self, page, cap, index):
+        image = f"students/{index:03d}-{re.sub(r'[^a-z0-9]+', '-', page['identity']).strip('-')}.png"
+        self.journal.save_image(image, cap[1])
+        if page["owned"]:
+            fields = parse_basic_info(cap[1], self.startup, cap[3])
+            record = {"identity": page["identity"], "owned": True, **fields}
+            record["name"] = fields["name"] or page["identity"]
             if record["stars"] is None:
-                record["stars"] = profile_rarity(profile[2], profile[3], entry["identity"])
-            name = f"students/{index:03d}-{re.sub(r'[^a-z0-9]+', '-', entry['identity']).strip('-')}.png"
-            self.journal.save_image(name, profile[1])
-            record["profile"] = str(self.run_dir / name)
-            record["text"] = page_text(profile[3])
-        back = self.capture()
-        self.tap(back, BACK, "Return to the student roster")
-        return record, self.page_with(entry["identity"])
+                record["stars"] = profile_rarity(cap[2], cap[3], page["identity"])
+        else:
+            record = {"name": page["name"], "identity": page["identity"], "owned": False,
+                      "role": page["role"], "elephs": page["elephs"]}
+        record["profile"] = str(self.run_dir / image)
+        record["text"] = page_text(cap[3])
+        return record
+
+    def next_student(self, cap, previous):
+        """Tap the page's next arrow; None when the arrow no longer moves on.
+
+        The tap is sent from a frame that still shows ``previous``: the one just
+        read when it is fresh enough, otherwise a new one.
+        """
+        for attempt in range(NEXT_ATTEMPTS):
+            if cap is None or self.clock() - cap[0] >= FRAME_MAX_AGE - 1.5:
+                cap = self.showing(previous)
+            self.tap(cap, NEXT, "Show the next student")
+            page, after = self.student_page(previous)
+            if page is not None:
+                return page, after
+            cap = None
+            self.journal.record("student_next_unchanged", student=previous, attempt=attempt + 1)
+        self.showing(previous)
+        return None, None
+
+    def keep_partial(self, students):
+        """Save what a stopped walk read, without replacing a complete inventory."""
+        if not students:
+            return
+        try:
+            kept = json.loads(state_path(self.config).read_text(encoding="utf-8")).get("complete")
+        except (OSError, ValueError, AttributeError):
+            kept = False
+        if kept:
+            self.journal.record("student_inventory_partial_not_saved", count=len(students))
+            return
+        write_inventory(self.config, students, captured_at=self.wall_clock(), complete=False)
+        self.journal.record("student_inventory_partial_saved", count=len(students))
 
     def run(self):
         cap = _wait(self, lambda value: _home(self, value), "Student inventory requires an unobstructed home screen")
         self.phase("Open Students")
         self.tap(cap, STUDENTS_BUTTON, "Open Students from verified home")
         cap = self.roster()
-        self.tap(cap, ALL_TAB, "Show All owned students")
+        self.tap(cap, ALL_TAB, "Show All students")
         cap = _wait(self, lambda value: roster_screen(value[2], value[3]) and _all_selected(value[2]),
                     "The All students tab could not be verified")
         cap = self.top_of_roster(cap)
-        students, seen, stationary = [], set(), 0
-        for _ in range(MAX_PAGES):
-            for entry in roster_entries(cap[3]):
-                if entry["identity"] in seen:
-                    continue
-                seen.add(entry["identity"])
-                self.phase(f"Student {len(students) + 1}: {entry['name']}, Lv.{entry['level']}")
-                record, cap = self.inspect(cap, entry, len(students) + 1)
-                students.append(record)
-            after = _scroll(self, cap, down=True)
-            stationary = stationary + 1 if _stationary(cap, after) else 0
-            cap = after
-            if stationary >= 2:
-                break
-        else:
-            self.fail("Student roster end was not reached within the bounded scan")
-        if not students:
-            self.fail("No owned students were read from the roster")
-        path = write_inventory(self.config, students, captured_at=self.wall_clock(), complete=True)
-        stars = sum(1 for student in students if student["stars"])
+        entries = roster_entries(cap[3])
+        if not entries:
+            self.fail("No student card could be read at the top of the roster")
+        # The first card is the top row's leftmost, even when its own level is misread.
+        first = (FIRST_CARD_X, min(entry["target"][1] for entry in entries))
+        self.tap(cap, first, "Open the first student in the All list")
+        page, cap = self.student_page(None)
+        if page is None:
+            self.fail("The first student's page did not open")
+        self.phase(f"Student 1: {page['name']}" + ("" if page["owned"] else " (not recruited)"))
+        # The page's arrows step through the All list in its order, so the walk
+        # never scrolls or returns to the list. It ends back at the first student
+        # or where the arrow stops moving on.
+        students, seen, complete = [self.record(page, cap, 1)], {page["identity"]}, False
+        try:
+            for _ in range(MAX_STUDENTS):
+                page, after = self.next_student(cap, students[-1]["identity"])
+                if page is None:
+                    complete = True
+                    self.journal.record("student_list_end", student=students[-1]["identity"])
+                    break
+                if page["identity"] in seen:
+                    complete = page["identity"] == students[0]["identity"]
+                    if not complete:
+                        self.journal.record("student_order_repeated", student=page["identity"])
+                    break
+                seen.add(page["identity"])
+                self.phase(f"Student {len(students) + 1}: {page['name']}"
+                           + ("" if page["owned"] else " (not recruited)"))
+                students.append(self.record(page, after, len(students) + 1))
+                cap = after
+        except Exception:
+            try:
+                self.keep_partial(students)
+            except Exception:
+                LOGGER.exception("The partial student inventory could not be saved")
+            raise
+        owned = sum(1 for student in students if student["owned"])
+        path = write_inventory(self.config, students, captured_at=self.wall_clock(), complete=complete)
         record_action(self.config, "students_inventoried",
-                      f"Inventoried {len(students)} students; star rarity read for {stars}.",
-                      task=self.task, count=len(students), path=str(path))
-        self.phase(f"Inventoried {len(students)} students")
+                      f"Inventoried {owned} owned students and {len(students) - owned} not yet recruited.",
+                      task=self.task, count=len(students), owned=owned, complete=complete, path=str(path))
+        self.phase(f"Inventoried {owned} owned students and {len(students) - owned} not yet recruited")
         self.tap(self.capture(), HOME, "Return home after the student inventory")
         end, since, count = self.clock() + 45, None, 0
         while self.clock() < end:

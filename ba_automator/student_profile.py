@@ -60,15 +60,20 @@ def bond_rank(png, startup):
 
 @lru_cache(maxsize=1)
 def tier_templates():
-    """White digit masks cut from badges of known tier; the T is left out."""
+    """White digit masks cut from badges of known tier (T7.png, T7-b.png, ...).
+
+    The T itself is left out. Italic digits render a little differently over
+    each item, so a tier may keep several examples.
+    """
     folder = files("ba_automator").joinpath("assets", "gear_tiers")
     templates = {}
-    for tier in range(1, 11):
-        resource = folder.joinpath(f"T{tier}.png")
-        if resource.is_file():
-            image = cv2.imdecode(np.frombuffer(resource.read_bytes(), np.uint8), cv2.IMREAD_GRAYSCALE)
-            if image is not None:
-                templates[tier] = image
+    for resource in folder.iterdir():
+        match = re.fullmatch(r"T(\d{1,2})(?:-\w+)?\.png", resource.name)
+        if not match or not 1 <= int(match[1]) <= 10:
+            continue
+        image = cv2.imdecode(np.frombuffer(resource.read_bytes(), np.uint8), cv2.IMREAD_GRAYSCALE)
+        if image is not None:
+            templates.setdefault(int(match[1]), []).append(image)
     return templates
 
 
@@ -76,9 +81,11 @@ def _tier_by_template(png, x):
     """The digit's template must clearly win; 3 and 8 are close otherwise."""
     crop = native_game_region(decode_native_frame(png), (x - 20, 610, x + 20, 640))
     mask = (cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) > 200).astype(np.uint8) * 255
-    scores = sorted(((float(cv2.matchTemplate(mask, template, cv2.TM_CCOEFF_NORMED).max()), tier)
-                     for tier, template in tier_templates().items()
-                     if template.shape[0] <= mask.shape[0] and template.shape[1] <= mask.shape[1]),
+    scores = sorted(((max((float(cv2.matchTemplate(mask, template, cv2.TM_CCOEFF_NORMED).max())
+                           for template in examples
+                           if template.shape[0] <= mask.shape[0] and template.shape[1] <= mask.shape[1]),
+                          default=-1.0), tier)
+                     for tier, examples in tier_templates().items()),
                     reverse=True)
     if len(scores) >= 2 and scores[0][0] >= .75 and scores[0][0] - scores[1][0] >= .08:
         return scores[0][1]

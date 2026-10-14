@@ -1,4 +1,4 @@
-"""The student inventory reads each roster card and Basic Info once, and only reads."""
+"""The student inventory reads each student's page once, steps with the next arrow, and only reads."""
 
 from datetime import datetime, timezone
 import csv
@@ -59,49 +59,60 @@ def test_inventory_is_saved_as_json_and_csv(config):
 
 
 class Game:
-    """Home, a roster of pages of up to six cards, and Basic Info pages."""
+    """Home, the All list's top row, and student pages stepped through with the next arrow.
 
-    def __init__(self, names, *, per_page=6, keeps_position=True):
-        self.names, self.per_page, self.keeps_position = names, per_page, keeps_position
-        self.screen, self.page, self.profile, self.all = "home", 0, None, False
+    After each arrow tap the next ``lag`` captures show no settled page, as
+    while the page slides in; ``misread`` names are read wrongly once.
+    """
+
+    def __init__(self, students, *, wraps=True, lag=1, misread=(), popup_at=None):
+        self.students, self.wraps, self.lag = students, wraps, lag
+        self.misread, self.popup_at = set(misread), popup_at
+        self.screen, self.index, self.all, self.pending = "home", None, False, 0
         self.taps, self.scrolls = [], 0
 
     def entries(self):
-        start = self.page * 3                     # each drag moves half a page: overlap
-        shown = self.names[start:start + self.per_page]
-        return [{"identity": name.lower(), "name": name, "level": 80 + index,
-                 "target": (140 + 196 * (index % 6), 300)} for index, name in enumerate(shown, start)]
-
-    def last_page(self):
-        return max(0, (len(self.names) - self.per_page + 2) // 3)
+        return [{"identity": name.lower(), "name": name, "level": 1, "target": (140 + 196 * column, 300)}
+                for column, (name, owned) in enumerate(self.students[:6])]
 
     def tap(self, x, y, **kwargs):
         target = (x, y)
         self.taps.append(target)
         if target == inventory.HOME:
-            self.screen = "home"
+            self.screen, self.index = "home", None
         elif self.screen == "home" and target == inventory.STUDENTS_BUTTON:
             self.screen = "roster"
         elif self.screen == "roster" and target == inventory.ALL_TAB:
             self.all = True
-        elif self.screen == "roster":
-            entry = next(e for e in self.entries() if e["target"] == target)
-            self.screen, self.profile = "profile", entry["identity"]
-        elif self.screen == "profile" and target == inventory.BACK:
-            self.screen, self.profile = "roster", None
-            if not self.keeps_position:
-                self.page = 0
+        elif self.screen == "roster" and target == (140, 300):
+            self.screen, self.index, self.pending = "page", 0, self.lag
+        elif self.screen == "page" and target == inventory.NEXT:
+            if self.index + 1 < len(self.students) or self.wraps:
+                self.index, self.pending = (self.index + 1) % len(self.students), self.lag
+                if self.index == self.popup_at:
+                    self.screen = "popup"
         else:
             raise AssertionError((self.screen, target))
         return True
 
     def swipe(self, start, end, **kwargs):
         self.scrolls += 1
-        if end[1] < start[1]:
-            self.page = min(self.last_page(), self.page + 1)
-        else:
-            self.page = max(0, self.page - 1)
         return True
+
+    def shown(self):
+        if self.screen == "roster":
+            return self.entries()
+        if self.screen != "page":
+            return None
+        if self.pending:
+            self.pending -= 1
+            return None
+        name, owned = self.students[self.index]
+        if name in self.misread:
+            self.misread.discard(name)
+            name = name[:-1] + "x"
+        page = {"owned": owned, "identity": name.lower(), "name": name}
+        return page if owned else {**page, "role": "STRIKER", "elephs": [5, 120]}
 
 
 def runner_for(game, config, monkeypatch):
@@ -114,58 +125,90 @@ def runner_for(game, config, monkeypatch):
     runner.started = 0.0
 
     def capture(*, ocr=False):
-        return (now[0], b"png", {"screen": game.screen, "page": game.page, "profile": game.profile},
-                game.entries() if game.screen == "roster" else [])
+        now[0] += .2
+        return now[0], b"png", {"screen": game.screen}, game.shown()
     runner.capture = capture
     runner.journal.save_image = lambda name, png: None
     monkeypatch.setattr(inventory, "roster_screen", lambda frame, words: frame["screen"] == "roster")
     monkeypatch.setattr(inventory, "_all_selected", lambda frame: game.all)
     monkeypatch.setattr(inventory, "_home", lambda runner, cap: cap[2]["screen"] == "home")
     monkeypatch.setattr(inventory, "roster_entries", lambda words: words)
-    monkeypatch.setattr(inventory, "profile_identity", lambda words: game.profile)
+    monkeypatch.setattr(inventory, "shown_student", lambda words: words if isinstance(words, dict) else None)
     monkeypatch.setattr(inventory, "profile_rarity", lambda frame, words, student: 3)
     monkeypatch.setattr(inventory, "page_text", lambda words: ["Basic Info"])
-    monkeypatch.setattr(inventory, "profile_settled", lambda words: True)
     monkeypatch.setattr(inventory, "parse_basic_info", lambda png, startup, words: {
-        "name": game.profile, "stars": 3, "level": None, "bond": 20, "skills": {"ex": "MAX"}})
-    monkeypatch.setattr(inventory, "_stationary", lambda before, after: before[2]["page"] == after[2]["page"])
-
-    def scroll(runner, cap, *, down):
-        game.swipe((630, 595) if down else (630, 290), (630, 335) if down else (630, 600))
-        return runner.capture(ocr=True)
-    monkeypatch.setattr(inventory, "_scroll", scroll)
-    monkeypatch.setattr(inventory, "_wait", lambda runner, predicate, message, timeout=30: _wait(runner, predicate, message))
+        "name": words["name"], "stars": None, "level": 80, "bond": 20, "skills": {"ex": "MAX"}})
+    monkeypatch.setattr(inventory, "_stationary", lambda before, after: True)
+    monkeypatch.setattr(inventory, "_scroll", lambda runner, cap, *, down: runner.capture(ocr=True))
+    monkeypatch.setattr(inventory, "HOME_STABLE_SECONDS", 0)
     return runner
 
 
-def _wait(runner, predicate, message):
-    for _ in range(5):
-        cap = runner.capture(ocr=True)
-        if predicate(cap):
-            return cap
-    runner.fail(message)
-
-
-NAMES = [f"Student{n:02d}" for n in range(1, 15)]
-
-
-@pytest.mark.parametrize("keeps_position", [True, False])
-def test_every_student_is_read_once_and_the_job_returns_home(config, monkeypatch, keeps_position):
-    game = Game(NAMES, keeps_position=keeps_position)
-    runner = runner_for(game, config, monkeypatch)
-    monkeypatch.setattr(inventory, "HOME_STABLE_SECONDS", 0)
+def run(runner):
     try:
-        result = runner.run()
+        return runner.run()
     finally:
         runner.journal.close()
+
+
+STUDENTS = [(f"Student{n:02d}", n <= 9) for n in range(1, 15)]     # five not yet recruited
+
+
+@pytest.mark.parametrize("wraps", [True, False])
+def test_every_student_is_read_once_and_the_job_returns_home(config, monkeypatch, wraps):
+    game = Game(STUDENTS, wraps=wraps, lag=2, misread={"Student05", "Student12"})
+    result = run(runner_for(game, config, monkeypatch))
     assert result.status == "success" and game.screen == "home"
     document = json.loads(inventory.state_path(config).read_text(encoding="utf-8"))
-    assert [student["name"] for student in document["students"]] == NAMES
-    assert all(student["stars"] == 3 for student in document["students"])
-    assert document["students"][0]["level"] == 80
-    # Read only: Students, All, each card, back, and finally home. Nothing else.
-    allowed = {inventory.STUDENTS_BUTTON, inventory.ALL_TAB, inventory.BACK, inventory.HOME}
-    assert all(target in allowed or target[1] == 300 for target in game.taps)
+    # A name misread once is never taken for another student.
+    assert [student["name"] for student in document["students"]] == [name for name, _ in STUDENTS]
+    assert document["complete"] is True
+    owned = [student for student in document["students"] if student["owned"]]
+    assert len(owned) == 9 and all(student["stars"] == 3 and student["bond"] == 20 for student in owned)
+    assert document["students"][-1] == {
+        "name": "Student14", "identity": "student14", "owned": False, "role": "STRIKER", "elephs": [5, 120],
+        "profile": document["students"][-1]["profile"], "text": ["Basic Info"]}
+    # Read only: Students, All, the first card, the next arrow, and home. Nothing else.
+    allowed = {inventory.STUDENTS_BUTTON, inventory.ALL_TAB, (140, 300), inventory.NEXT, inventory.HOME}
+    assert set(game.taps) <= allowed and game.taps.count((140, 300)) == 1
+
+
+def test_a_walk_that_stops_keeps_what_it_read_unless_a_complete_inventory_exists(config, monkeypatch):
+    game = Game(STUDENTS, popup_at=6)
+    with pytest.raises(inventory.TaskError, match="no longer showing"):
+        run(runner_for(game, config, monkeypatch))
+    document = json.loads(inventory.state_path(config).read_text(encoding="utf-8"))
+    assert document["complete"] is False and [s["name"] for s in document["students"]] == [
+        name for name, _ in STUDENTS[:6]]
+
+    inventory.write_inventory(config, [{"name": "Kept", "owned": True}], captured_at=NOW, complete=True)
+    with pytest.raises(inventory.TaskError):
+        run(runner_for(Game(STUDENTS, popup_at=3), config, monkeypatch))
+    document = json.loads(inventory.state_path(config).read_text(encoding="utf-8"))
+    assert document["complete"] is True and document["students"] == [{"name": "Kept", "owned": True}]
+
+
+# Words as read live from Saki (Swimsuit)'s page (2026-10-14), not yet recruited.
+SAKI = [Word("Basic Info", 1.0, (748, 138, 854, 162)), Word("Profile", 1.0, (1037, 136, 1113, 163)),
+        Word("Stats", 1.0, (687, 203, 741, 228)), Word("View MAX Level Info", .98, (1020, 204, 1189, 226)),
+        Word("0/120", .92, (759, 575, 843, 614)), Word("Exchange Eleph", 1.0, (977, 576, 1176, 611)),
+        Word("SRT Academy | STRIKER", .95, (34, 595, 263, 620)),
+        Word("Saki (Swimsuit)", 1.0, (44, 637, 310, 686))]
+
+
+def test_a_student_not_yet_recruited_is_read_from_its_own_page():
+    assert inventory.shown_student(SAKI) == {
+        "owned": False, "name": "Saki (Swimsuit)", "identity": "saki swimsuit", "role": "STRIKER",
+        "elephs": [0, 120]}
+    sliding = [Word(w.text, w.confidence, (w.box[0] + 30, w.box[1], w.box[2] + 30, w.box[3]))
+               if w.text == "Basic Info" else w for w in SAKI]
+    assert inventory.shown_student(sliding) is None
+
+
+def test_an_owned_student_is_read_by_the_name_beside_the_bond_heart():
+    words = [Word("Student", 1.0, (130, 12, 215, 40)), Word("Basic Info", 1.0, (700, 129, 810, 153)),
+             Word("Stats", 1.0, (690, 190, 745, 212)), Word("⑩Aris (Maid)", 1.0, (70, 556, 215, 592))]
+    assert inventory.shown_student(words) == {"owned": True, "identity": "aris maid", "name": "Aris (Maid)"}
 
 
 def test_manager_exports_the_inventory_as_a_json_download(tmp_path):
@@ -181,13 +224,17 @@ def test_manager_exports_the_inventory_as_a_json_download(tmp_path):
         with pytest.raises(ApiError, match="No student inventory yet"):
             controller.students_export()
         inventory.write_inventory(Config.from_file(path), [
-            {"name": "Aris (Maid)", "identity": "aris maid", "level": 85, "stars": 3,
-             "profile": "C:/private/aris.png", "text": ["Basic Info"]}], captured_at=NOW, complete=True)
+            {"name": "Aris (Maid)", "identity": "aris maid", "owned": True, "level": 85, "stars": 3,
+             "profile": "C:/private/aris.png", "text": ["Basic Info"]},
+            {"name": "Saki", "identity": "saki", "owned": False, "role": "SPECIAL", "elephs": [22, 120],
+             "profile": "C:/private/saki.png", "text": ["Basic Info"]}], captured_at=NOW, complete=True)
         payload, filename = controller.students_export()
     finally:
         controller.close()
     export = json.loads(payload)
     assert filename == "students-2026-10-14.json"
-    assert (export["count"], export["complete"], export["captured_at"]) == (1, True, NOW.isoformat())
+    assert (export["count"], export["owned"], export["complete"], export["captured_at"]) == (
+        2, 1, True, NOW.isoformat())
     # The download carries each student's data, never private paths or raw OCR.
-    assert export["students"] == [{"name": "Aris (Maid)", "level": 85, "stars": 3}]
+    assert export["students"] == [{"name": "Aris (Maid)", "owned": True, "level": 85, "stars": 3},
+                                  {"name": "Saki", "owned": False, "role": "SPECIAL", "elephs": [22, 120]}]

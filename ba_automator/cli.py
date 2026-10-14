@@ -61,7 +61,7 @@ def main(argv=None) -> int:
         "spend_ap": "Sweep selected Hard missions or commissions down to the AP floor",
         "scan_ap": "Survey three-star Hard missions and commissions without spending AP",
         "lessons": "Restart and use lesson tickets with the configured strategy",
-        "students": "Inventory every owned student's level, star rarity and Basic Info without upgrading anything",
+        "students": "Inventory every owned student's Basic Info, and eleph progress for the rest, without upgrading anything",
         "daily": "Run restart, free package, Club, enabled packs, mail, cafe, enabled ticket sweeps, enabled Tactical Challenge battles and rewards, lessons, optional Total Assault, raid rewards, AP spending and task rewards",
     }
     for name, description in descriptions.items():

@@ -5,9 +5,9 @@ example when the player picks up their phone. Logging straight back in would
 end that session in turn, so after the game shows that notice no job starts the
 game again for two hours. The manager keeps queued jobs waiting until then.
 
-End a hold early with ``end_early`` (or the dashboard API), not by deleting its
-record: the notice is usually still on screen, and the record is what marks it
-as already handled. A successful login clears the record.
+End a hold early with ``end_early``, not by deleting its record: the notice is
+usually still on screen, and the record is what marks it as already handled.
+A successful login clears the record.
 """
 from __future__ import annotations
 
