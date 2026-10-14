@@ -216,7 +216,8 @@ def challenge_runner(tmp_path, monkeypatch, details, battles, *, challenge_count
     monkeypatch.setattr('ba_automator.event_quests.battle_cost', lambda *args: 5)
     monkeypatch.setattr('ba_automator.event_quests.close_detail', lambda *args: frame('event_list'))
     monkeypatch.setattr('ba_automator.event_quests.event_home', lambda *args: None)
-    r.wait = lambda kinds, **kw: frame(kinds if isinstance(kinds, str) else 'event_list')
+    r.wait = lambda kinds, **kw: frame(kinds if isinstance(kinds, str) else (
+        'event_quick' if 'event_quick' in kinds else 'event_list'))
     r.journal.save_image = lambda *args: None
     r.finish = lambda: 'finished'
     r.inputs, r.fought, r.opened = [], [], opened
@@ -381,5 +382,40 @@ def test_a_recorded_star_shortfall_is_not_replayed(tmp_path, monkeypatch):
         saved = event_state.read_state(c)
         assert saved['clears'] == {'1': 3, '2': 2}
         assert saved['summary'] == 'Event Quests below three stars: 2 (2/3); replay them by hand'
+    finally:
+        r.journal.close()
+
+
+def test_a_challenges_fixed_team_is_kept_when_quick_formation_does_not_open(tmp_path, monkeypatch):
+    # Live, Challenge 1 fielded four event-provided Lv.50 students; Quick
+    # Formation did nothing, and the job failed waiting for its dialog.
+    from ba_automator import event_quests
+    r, c = challenge_runner(tmp_path, monkeypatch, details=[0, 3], battles=[3, 3])
+    now = [0.0]
+    r.clock = lambda: now[0]
+    r.sleep = lambda seconds: now.__setitem__(0, now[0] + seconds)
+    formation = SimpleNamespace(screen=SimpleNamespace(kind='event_formation', stars=0, ap=220),
+                                capture=SimpleNamespace(png=b''))
+    plain = r.wait
+    r.wait = lambda kinds, **kw: formation if 'event_quick' in kinds else plain(kinds, **kw)
+    team = [Word('Lv.50', .99, (x - 30, 545, x + 30, 570)) for x in (232, 456, 680, 904)]
+    monkeypatch.setattr(event_quests, 'read_game_words', lambda png, startup: team)
+    try:
+        assert r.run() == 'finished'
+        assert r.fought == [('challenge', 1)]
+        assert 'Use default Auto Formation' not in r.inputs
+        assert 'Mobilize event Challenge 1' in r.inputs
+    finally:
+        r.journal.close()
+    monkeypatch.setattr(event_quests, 'read_game_words', lambda png, startup: team[:3])
+    r, c = challenge_runner(tmp_path / 'partial', monkeypatch, details=[0, 3], battles=[3, 3])
+    r.clock = lambda: now[0]
+    r.sleep = lambda seconds: now.__setitem__(0, now[0] + seconds)
+    plain = r.wait
+    r.wait = lambda kinds, **kw: formation if 'event_quick' in kinds else plain(kinds, **kw)
+    try:
+        with pytest.raises(Exception, match='no full team is placed'):
+            r.run()
+        assert r.fought == [] and event_state.read_state(c)['pending'] is None
     finally:
         r.journal.close()

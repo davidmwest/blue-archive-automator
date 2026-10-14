@@ -183,18 +183,47 @@ class EventClearRunner(APRunner):
             self.wait(LISTS)
         return self.stage_detail(stage,tab)
 
+    def challenge_formation(self, frame, stage):
+        """Default Auto Formation, or the fixed team a Challenge may provide.
+
+        Live, Challenge 1 fielded four event-provided Lv.50 students, and its
+        Quick Formation button did nothing. That team is kept as shown.
+        """
+        self.tap(frame,(1200,205),'Open Quick Formation for this challenge')
+        end = self.clock()+8
+        while True:
+            frame = self.wait({'event_quick','event_formation'})
+            if frame.screen.kind == 'event_quick':
+                break
+            if self.clock() >= end:
+                words = read_game_words(frame.capture.png,self.startup)
+                strikers = [w for w in within(words,(150,530,960,590))
+                            if re.fullmatch(r'Lv\.?\s*\d{1,2}',w.text.strip())]
+                if len(strikers) != 4:
+                    self.fail('Quick Formation did not open and no full team is placed; no battle started')
+                self.journal.record('event_fixed_team',stage=str(stage))
+                return frame
+            self.sleep(1)
+        self.tap(frame,(623,593),'Use default Auto Formation')
+        frame = self.wait('event_quick')
+        self.tap(frame,(1168,593),'Confirm Auto Formation')
+        return self.wait('event_formation')
+
     def fight(self, state, frame, stage, cost, tab='quest'):
         """Default Auto Formation, a durable intent, then exactly one battle."""
         name = tab.title()
         before = frame.screen.ap
         self.tap(frame,(936,534),f'Set up event {name} {stage}')
         frame = self.wait('event_formation')
-        self.tap(frame,(1200,205),f'Open Quick Formation for this {tab}')
-        frame = self.wait('event_quick')
-        self.tap(frame,(623,593),'Use default Auto Formation')
-        frame = self.wait('event_quick')
-        self.tap(frame,(1168,593),'Confirm Auto Formation')
-        frame = self.wait('event_formation')
+        if tab == 'challenge':
+            frame = self.challenge_formation(frame,stage)
+        else:
+            self.tap(frame,(1200,205),f'Open Quick Formation for this {tab}')
+            frame = self.wait('event_quick')
+            self.tap(frame,(623,593),'Use default Auto Formation')
+            frame = self.wait('event_quick')
+            self.tap(frame,(1168,593),'Confirm Auto Formation')
+            frame = self.wait('event_formation')
         if frame.screen.ap is None or frame.screen.ap < before or frame.screen.ap-cost < self.config.ap_floor:
             self.fail('AP changed during event formation; no battle started')
         self.journal.save_image(f'{tab}-{stage}-auto-formation.png',frame.capture.png)
