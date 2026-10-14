@@ -104,12 +104,13 @@ class ShopRunner:
 
     def dismiss_help(self, frame):
         """Close a first-visit FAQ overlay covering the awaited screen."""
-        if frame.capture.foreground != self.config.package or not hasattr(self.startup, 'read'):
+        startup = getattr(self, 'startup', None)
+        if frame.capture.foreground != self.config.package or not hasattr(startup, 'read'):
             return False
         try:
             # The task's own analysis already read this frame; the reader caches it.
             target = faq_close(decode_frame(frame.capture.png),
-                               read_game_words(frame.capture.png, self.startup))
+                               read_game_words(frame.capture.png, startup))
         except VisionError:
             return False
         if target is None or frame.capture.deadline - self.clock() < 1:
