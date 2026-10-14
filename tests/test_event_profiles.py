@@ -186,12 +186,20 @@ def test_card_is_swiped_until_another_season_rests_there(cards, shown, swipes):
     assert runner.tapped_at[0] - runner.swipes[-1] == pytest.approx(5.2)
 
 
-def test_card_without_rotation_is_tapped_once_two_swipes_leave_it_resting(cards):
+def test_card_without_rotation_is_tapped_after_no_other_season_ever_rests(cards):
     # After the other season's reward period ends, the card may hold this one alone.
     runner = Campaign(['calm'], [('event_page', CALM)])
     enter_from_campaign(runner, None, profile())
-    assert len(runner.swipes) == 2 and runner.card_taps == [(100, 165)]
+    assert len(runner.swipes) == 5 and runner.card_taps == [(100, 165)]
     assert runner.tapped_at[0] - runner.swipes[-1] < 5
+
+
+def test_a_swipe_that_was_not_taken_does_not_look_like_a_card_without_rotation(cards):
+    # Live, two swipes in a row left this season resting; tapping then missed.
+    runner = Campaign(['calm', 'calm', 'calm', 'calm', 'other', 'other'], [('event_page', CALM)])
+    enter_from_campaign(runner, None, profile())
+    assert len(runner.swipes) == 3
+    assert runner.tapped_at[0] - runner.swipes[-1] == pytest.approx(5.2)
 
 
 def test_slow_capture_is_not_trusted(cards):

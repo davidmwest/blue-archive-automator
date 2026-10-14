@@ -112,6 +112,9 @@ CARD_SWIPES = 5
 # one the next card rested from 4.1 to 6.4 s. Both inputs share the same lag,
 # so a tap timed from the swipe lands mid-rest (8 of 8 from a fresh launch).
 TAP_AFTER_SWIPE = 5.2
+# Right after a launch, swipes were not always taken; trials that began a few
+# seconds later were not affected. Let Campaign settle before the first swipe.
+CAMPAIGN_SETTLE = 8
 
 
 def card_resting(first, second, profile):
@@ -126,12 +129,13 @@ def enter_from_campaign(runner, startup, profile):
     has ended. Swipe it until another season rests there, then tap at the time
     this season's card is due, and still verify the destination: a mistimed tap
     opens the other season, which is left without spending before another try.
-    A card that keeps resting on this season after two swipes has no rotation.
     """
     from .event_state import observe
     for attempt in range(CAMPAIGN_ENTRIES):
         runner.navigate('home', 'campaign', (1200, 641))
-        ours_in_a_row = 0
+        if attempt == 0:
+            runner.sleep(CAMPAIGN_SETTLE)
+        ours_resting = 0
         for _ in range(CARD_SWIPES):
             if runner.device.foreground_package() != runner.config.package:
                 runner.fail('Foreground changed during event entrance inspection')
@@ -147,17 +151,18 @@ def enter_from_campaign(runner, startup, profile):
             png = runner.device.screenshot()
             second = decode_frame(png)
             if not card_resting(first, second, profile):
-                ours_in_a_row = 0
                 continue
             if not card_settled(second, profile):
                 due = swiped + TAP_AFTER_SWIPE
                 break
-            ours_in_a_row += 1
-            if ours_in_a_row == 2:
-                due = runner.clock()
-                break
+            ours_resting += 1
         else:
-            runner.fail(f"{profile['title']} was not found on Campaign; event AP remains reserved")
+            # A swipe is sometimes not taken, so this season resting twice
+            # running proved nothing live. Over five swipes (several rotations)
+            # no other season ever rested here: the card holds only this one.
+            if ours_resting < 3:
+                runner.fail(f"{profile['title']} was not found on Campaign; event AP remains reserved")
+            due = runner.clock()
         runner.sleep(max(0, due - runner.clock()))
         if runner.device.foreground_package() != runner.config.package:
             runner.fail('Foreground changed during event entrance inspection')
