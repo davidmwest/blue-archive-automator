@@ -42,6 +42,8 @@ on Windows with BlueStacks 5, point `adb_path` at BlueStacks' own `C:\Program Fi
 
 a frame can only authorize input for five seconds, and reading a 1440p screenshot with the default two OCR threads took about three seconds on a Threadripper PRO 3995WX. with capture time added, every task reached Home and then reported that it had not. set `BA_OCR_THREADS` (1–64) before starting `serve` or a CLI task; 16 brought one read down to about 1.4 seconds there. `scripts/serve-windows.ps1 -Port 8767 -OcrThreads 16` starts the dashboard detached with that setting, UTF-8 mode, and logs under `data/logs`.
 
+to bring it back after a reboot, `scripts/register-startup-windows.ps1 -Port 8767 -OcrThreads 16 -Instance Pie64_4` registers a Task Scheduler entry for your account. one minute after sign-in it starts that BlueStacks instance if it is not running, then runs the dashboard in the foreground so the scheduler can restart it if it exits. it needs no elevation, and `-Remove` deletes it. this only helps when Windows signs you in automatically; queued jobs still do not survive a restart, but schedules do.
+
 controllers targeting the same game instance must share the same `lock_dir`. leave the example storage paths alone unless you need to move the runtime data.
 
 ## start the dashboard
