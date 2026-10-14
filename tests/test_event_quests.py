@@ -431,3 +431,23 @@ def test_battle_cost_reads_a_split_projection_left_to_right(monkeypatch):
     assert battle_cost(frame, None) == 5
     frame.screen.ap = 632
     assert battle_cost(frame, None) is None
+
+
+def test_a_refused_mobilize_leaves_no_pending_battle(tmp_path, monkeypatch):
+    # Live, Mobilize was refused on a stale frame after the intent was saved,
+    # which held all event spending although no battle had started.
+    from ba_automator.runtime import TaskError
+    r, c = challenge_runner(tmp_path, monkeypatch, details=[0, 3], battles=[3, 3])
+    tap = r.tap
+
+    def refuse(frame, target, detail):
+        if detail.startswith('Mobilize'):
+            raise TaskError('No fresh recognized input target', tmp_path)
+        tap(frame, target, detail)
+    r.tap = refuse
+    try:
+        with pytest.raises(TaskError):
+            r.run()
+        assert event_state.read_state(c)['pending'] is None
+    finally:
+        r.journal.close()

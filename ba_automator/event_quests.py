@@ -236,7 +236,18 @@ class EventClearRunner(APRunner):
             state['pending']['mode'] = tab
         event_state.write_state(self.config,state)
         self.important('event_battle_requested',f'Event {name} {stage}: {team}; {cost} AP',stage=str(stage),ap_cost=cost)
-        self.tap(frame,(1180,660),f'Mobilize event {name} {stage}')
+        try:
+            # Live, saving the native image and the intent outlasted the
+            # formation frame's input window, and Mobilize was refused. Act on
+            # a fresh formation that still shows at least that AP.
+            frame = self.wait('event_formation', predicate=lambda s: (
+                s.ap is not None and s.ap >= state['pending']['ap_before']))
+            self.tap(frame,(1180,660),f'Mobilize event {name} {stage}')
+        except TaskError:
+            # Every refusal before Mobilize is sent; no battle can have started.
+            state['pending'] = None
+            event_state.write_state(self.config,state)
+            raise
         frame = self.finish_battle(stage) if tab == 'quest' else self.finish_battle(stage,tab)
         if frame.screen.ap is None or frame.screen.ap < before-cost:
             self.fail('Event result AP did not verify; inspect the receipt')
