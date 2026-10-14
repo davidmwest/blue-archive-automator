@@ -263,3 +263,43 @@ def test_diagnostics_distinguish_missing_features_from_stationary_evidence():
     assert measure_camera_displacement(stationary, stationary, diagnostics=diagnostics) == (0, 0)
     assert diagnostics["reason"] == "accepted"
     assert diagnostics["method"] == "translation"
+
+def bare_room(*, shift=(0, 0)):
+    # An unfurnished floor seen from a camera edge: flat backdrop, one long floor edge.
+    frame = np.full((720, 1280, 3), (238, 214, 190), dtype=np.uint8)
+    dx, dy = shift
+    floor = np.array([[640 + dx, 135 + dy], [1280 + dx, 135 + dy], [1280 + dx, 330 + dy]], dtype=np.int32)
+    cv2.fillPoly(frame, [floor], (214, 221, 226))
+    cv2.line(frame, (640 + dx, 135 + dy), (1280 + dx, 330 + dy), (96, 92, 98), 9)
+    return frame
+
+
+def test_unchanged_bare_room_edge_proves_the_camera_stopped():
+    # Live Cafe 2 had no furniture: twelve drags at its edge returned identical
+    # frames, yet 21 localized features could never certify a stop.
+    diagnostics = {}
+    view = hud(bare_room())
+    assert measure_camera_displacement(view, view, diagnostics=diagnostics) == (0, 0)
+    assert diagnostics["method"] == "identical"
+
+
+@pytest.mark.parametrize("shift", [(60, 0), (0, 40), (-35, 25)])
+def test_moved_bare_room_is_still_unknown(shift):
+    assert measure_camera_displacement(hud(bare_room()), hud(bare_room(shift=shift))) is None
+
+
+def test_one_small_animated_sprite_does_not_hide_a_stopped_bare_room():
+    before, after = bare_room(), bare_room()
+    cv2.circle(before, (420, 430), 26, (60, 90, 200), -1)
+    cv2.circle(after, (428, 424), 26, (60, 90, 200), -1)
+    assert measure_camera_displacement(hud(before), hud(after)) == (0, 0)
+
+
+def test_wide_change_or_single_axis_edges_prove_nothing():
+    before, after = bare_room(), bare_room()
+    cv2.rectangle(after, (200, 200), (900, 520), (120, 130, 140), -1)
+    assert measure_camera_displacement(hud(before), hud(after)) is None
+    # A pan along a lone horizontal edge would leave every pixel in place.
+    level = np.full((720, 1280, 3), (238, 214, 190), dtype=np.uint8)
+    cv2.line(level, (0, 300), (1280, 300), (96, 92, 98), 9)
+    assert measure_camera_displacement(hud(level), hud(level)) is None
