@@ -183,3 +183,149 @@ def test_readable_reward_list_is_returned_unchanged(monkeypatch, tmp_path):
     inspected = object()
     monkeypatch.setattr(event_quests, 'inspect_receipt', lambda runner, frame, evidence: inspected)
     assert event_quests.itemize_or_keep(object(), object(), tmp_path / 'r.png', 'Event Quest 2') is inspected
+
+
+# Challenges -------------------------------------------------------------------
+
+CALM_NOW = datetime(2026, 10, 14, tzinfo=timezone.utc)
+
+
+def challenge_runner(tmp_path, monkeypatch, details, battles, *, challenge_count=2, ap_floor=100):
+    """All quests are three-starred; ``details`` scripts each Challenge inspection."""
+    from ba_automator.event_quests import EventClearRunner
+    c = Config(serial='localhost:5695', package='com.nexon.bluearchive', ap_floor=ap_floor,
+               state_dir=tmp_path/'state', run_dir=tmp_path/'runs')
+    r = EventClearRunner(c, None, None, vision=object(), wall_clock=lambda: CALM_NOW)
+    profile = dict(available_event(CALM_NOW), quest_count=2, challenge_count=challenge_count)
+    monkeypatch.setattr('ba_automator.event_quests.available_event', lambda _: profile)
+    monkeypatch.setattr('ba_automator.event_quests.enter_event', lambda *args: None)
+
+    def frame(kind='detail', stars=3, ap=220):
+        return SimpleNamespace(screen=SimpleNamespace(kind=kind, stars=stars, ap=ap),
+                               capture=SimpleNamespace(png=b''))
+    opened = []
+
+    def detail(runner, stage, *, allow_unavailable=False, tab='quest'):
+        opened.append((tab, stage))
+        if tab == 'quest':
+            return frame()
+        stars = details[stage - 1]
+        return None if stars is None else frame(stars=stars)
+    monkeypatch.setattr('ba_automator.event_quests.quest_detail', detail)
+    monkeypatch.setattr('ba_automator.event_quests.battle_cost', lambda *args: 5)
+    monkeypatch.setattr('ba_automator.event_quests.close_detail', lambda *args: frame('event_list'))
+    monkeypatch.setattr('ba_automator.event_quests.event_home', lambda *args: None)
+    r.wait = lambda kinds, **kw: frame(kinds if isinstance(kinds, str) else 'event_list')
+    r.journal.save_image = lambda *args: None
+    r.finish = lambda: 'finished'
+    r.inputs, r.fought, r.opened = [], [], opened
+
+    def tap(f, target, detail):
+        r.inputs.append(detail)
+        if detail.startswith('Mobilize'):
+            pending = event_state.read_state(c)['pending']
+            assert pending['mode'] == 'challenge' and pending['cost'] == 5
+    r.tap = tap
+
+    def finish_battle(stage, tab='quest'):
+        r.fought.append((tab, stage))
+        return frame(stars=battles[stage - 1], ap=215)
+    r.finish_battle = finish_battle
+    return r, c
+
+
+def test_challenges_follow_three_star_quests_and_stop_at_the_first_shortfall(tmp_path, monkeypatch):
+    r, c = challenge_runner(tmp_path, monkeypatch, details=[0, 0, 0], battles=[3, 1, 3], challenge_count=3)
+    try:
+        assert r.run() == 'finished'
+        assert r.fought == [('challenge', 1), ('challenge', 2)]
+        assert r.inputs.count('Use default Auto Formation') == 2
+        assert 'Mobilize event Challenge 2' in r.inputs
+        saved = event_state.read_state(c)
+        assert saved['challenges'] == {'1': 3, '2': 1} and saved['pending'] is None
+        assert saved['summary'] == 'Stopped at event Challenge 2: 1/3 stars'
+    finally:
+        r.journal.close()
+
+
+def test_cleared_challenges_are_not_replayed_and_a_recorded_shortfall_is_left_to_the_player(tmp_path, monkeypatch):
+    r, c = challenge_runner(tmp_path, monkeypatch, details=[3, 1], battles=[3, 3])
+    state = event_state.observe(c, available_event(CALM_NOW))
+    state['challenges'] = {'2': 1}
+    event_state.write_state(c, state)
+    try:
+        assert r.run() == 'finished'
+        assert r.fought == [] and not any(d.startswith('Mobilize') for d in r.inputs)
+        saved = event_state.read_state(c)
+        assert saved['challenges'] == {'1': 3, '2': 1}
+        assert 'Challenge 2 stays at 1/3 stars' in saved['summary']
+    finally:
+        r.journal.close()
+
+
+def test_all_challenges_cleared_and_locked_challenge_summaries(tmp_path, monkeypatch):
+    r, c = challenge_runner(tmp_path, monkeypatch, details=[0, 0], battles=[3, 3])
+    try:
+        r.run()
+        assert event_state.read_state(c)['summary'] == 'All event quests and challenges have three-star clears'
+    finally:
+        r.journal.close()
+    r, c = challenge_runner(tmp_path / 'locked', monkeypatch, details=[3, None], battles=[3, 3])
+    try:
+        r.run()
+        assert r.fought == [] and event_state.read_state(c)['summary'] == 'Event Challenge 2 is not open yet'
+    finally:
+        r.journal.close()
+
+
+def test_challenge_keeps_the_ap_floor(tmp_path, monkeypatch):
+    r, c = challenge_runner(tmp_path, monkeypatch, details=[0, 0], battles=[3, 3], ap_floor=216)
+    try:
+        r.run()
+        assert r.fought == []
+        assert 'before Challenge 1: keeping 216 AP' in event_state.read_state(c)['summary']
+    finally:
+        r.journal.close()
+
+
+def test_lost_battle_is_confirmed_and_read_back_from_the_stage(tmp_path, monkeypatch):
+    from ba_automator import event_quests
+    c = Config(serial='localhost:5695', package='com.nexon.bluearchive',
+               state_dir=tmp_path/'state', run_dir=tmp_path/'runs')
+    r = event_quests.EventClearRunner(c, None, None, vision=object(), wall_clock=lambda: CALM_NOW)
+    lost = SimpleNamespace(screen=SimpleNamespace(kind='event_defeat', target=(640, 659)),
+                           capture=SimpleNamespace(png=b''))
+    r.capture = lambda: lost
+    r.journal.save_image = lambda *args: None
+    taps, notes, read_back = [], [], []
+    r.tap = lambda frame, target, detail: taps.append((target, detail))
+    r.important = lambda action, detail, **fields: notes.append(action)
+    monkeypatch.setattr(event_quests, 'quest_detail',
+                        lambda runner, stage, **kw: read_back.append((stage, kw)) or 'detail')
+    try:
+        assert r.finish_battle(2, 'challenge') == 'detail'
+        assert taps == [((640, 659), 'Confirm lost event battle')]
+        assert notes == ['event_battle_lost'] and read_back == [(2, {'tab': 'challenge'})]
+    finally:
+        r.journal.close()
+
+
+def test_defeat_page_and_open_tab_are_recognized():
+    import numpy as np
+    from ba_automator import event_quests
+    frame = np.full((720, 1280, 3), 60, np.uint8)
+    words = [Word('DEFEAT', .99, (470, 150, 810, 250)), Word('Confirm', .99, (590, 640, 690, 678))]
+    assert classify_quest(frame, words) is None            # Confirm is not lit
+    frame[635:680, 540:735] = (40, 200, 250)
+    screen = classify_quest(frame, words)
+    assert (screen.kind, screen.target) == ('event_defeat', (640, 659))
+    assert classify_quest(frame, words[1:]) is None
+
+    page = np.full((720, 1280, 3), 243, np.uint8)
+    page[82:138, 1030:1210] = 60                            # Challenge is the open tab
+    original = event_quests.decode_frame
+    event_quests.decode_frame = lambda png: page
+    try:
+        assert event_quests.tab_selected(b'', 'challenge') and not event_quests.tab_selected(b'', 'quest')
+    finally:
+        event_quests.decode_frame = original

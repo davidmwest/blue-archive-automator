@@ -54,7 +54,8 @@ def observe(config, profile):
     if state['event_id'] != profile['id']:
         if state['pending']:
             raise RuntimeError('An earlier event battle has an unresolved result')
-        state.update(event_id=profile['id'], declined=False, clears={}, stories={}, summary=None)
+        state.update(event_id=profile['id'], declined=False, clears={}, stories={}, challenges={},
+                     summary=None)
     state['detected'] = True
     write_state(config, state)
     return state
