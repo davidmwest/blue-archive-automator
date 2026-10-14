@@ -19,6 +19,20 @@
     "mechanic": "drawacard"
   },
   "farm_goal": "until_event_ends",
+  "extras": {
+    "tasks": true,
+    "cards": {
+      "cost": 200,
+      "visit_limit": 40
+    },
+    "shop": {
+      "tabs": [
+        {},
+        {},
+        {}
+      ]
+    }
+  },
   "quest_count": 12,
   "farm_order": [
     12,
