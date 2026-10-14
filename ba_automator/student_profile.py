@@ -6,6 +6,7 @@ Anything not read with confidence is left as None rather than guessed.
 """
 from __future__ import annotations
 
+from collections import Counter
 from functools import lru_cache
 from importlib.resources import files
 import re
@@ -53,9 +54,41 @@ def _enlarged(png, startup, bounds, scale=3):
                     if w.confidence >= .8)
 
 
+BOND = (28, 552, 80, 600)
+BOND_READS = ((68, 2), (68, 3), (66, 2))   # (where the name begins, scale of the native crop)
+
+
+def _bond_read(png, startup, edge, scale):
+    """The heart at native resolution, the name's first letter painted over."""
+    x1, y1, x2, y2 = BOND
+    crop = native_game_region(decode_native_frame(png), BOND).copy()
+    cut = (edge - x1) * crop.shape[1] // (x2 - x1)
+    strip = crop[:, cut:]
+    dark = strip[cv2.cvtColor(strip, cv2.COLOR_BGR2GRAY) < 150]
+    crop[:, cut:] = np.median(dark, axis=0).astype(np.uint8) if len(dark) else 0
+    crop = cv2.resize(crop, (crop.shape[1] * scale, crop.shape[0] * scale), interpolation=cv2.INTER_CUBIC)
+    words = sorted(startup.read(crop), key=lambda w: w.box[0])
+    return "".join(w.text.strip() for w in words), min((w.confidence for w in words), default=0.0)
+
+
 def bond_rank(png, startup):
-    """The number in the heart beside the name; full-page OCR misses it."""
-    return _number(r"(\d{1,3})", _enlarged(png, startup, (28, 552, 80, 600)))
+    """The number in the heart beside the name; full-page OCR misses it.
+
+    Live, the name's first letter beside a 7 was read as a trailing 1 (71),
+    so it is painted over, and a lone 7 is often read weakly at one size: a
+    confident read is taken, otherwise two weaker reads must agree.
+    """
+    weak = Counter()
+    for edge, scale in BOND_READS:
+        text, confidence = _bond_read(png, startup, edge, scale)
+        if not text.isdigit() or not 1 <= int(text) <= 100:
+            continue
+        if confidence >= .8:
+            return int(text)
+        if confidence >= .7:
+            weak[int(text)] += 1
+    agreed = [value for value, count in weak.items() if count >= 2]
+    return agreed[0] if len(agreed) == 1 else None
 
 
 @lru_cache(maxsize=1)

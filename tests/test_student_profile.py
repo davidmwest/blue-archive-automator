@@ -57,7 +57,36 @@ def test_weapon_stars_are_counted_by_area_because_they_touch():
 
 
 def test_tier_templates_are_packaged():
-    assert {2, 3, 4, 5, 6, 7, 8} <= student_profile.tier_templates().keys()
+    templates = student_profile.tier_templates()
+    assert {1, 2, 3, 4, 5, 6, 7, 8} <= templates.keys()
+    assert len(templates[7]) >= 2                          # italic 7s differ from item to item
+
+
+def png_of(frame):
+    ok, png = cv2.imencode(".png", frame)
+    return png.tobytes()
+
+
+def test_the_bond_heart_is_read_without_the_name_beside_it():
+    frame = np.full((720, 1280, 3), 240, np.uint8)
+    frame[552:600, 28:80] = (120, 60, 20)                  # the name panel's dark blue
+    frame[560:590, 70:74] = 255                            # the first letter of the name
+    seen = []
+    startup = SimpleNamespace(read=lambda image: seen.append(image) or [])
+    assert student_profile.bond_rank(png_of(frame), startup) is None
+    first = seen[0]                                        # 2x crop, letter from x=68 on
+    assert (first[:, (68 - 28) * 2:] == (120, 60, 20)).all()
+
+
+def test_a_weak_bond_read_counts_only_when_another_agrees():
+    def startup(*reads):
+        queue = list(reads)
+        return SimpleNamespace(read=lambda image: [Word(text, conf, (0, 0, 10, 10)) for text, conf in queue.pop(0)])
+    png = blank_png()
+    assert student_profile.bond_rank(png, startup([("7", .95)])) == 7
+    assert student_profile.bond_rank(png, startup([("7", .72)], [], [("7", .76)])) == 7
+    assert student_profile.bond_rank(png, startup([("7", .72)], [("1", .74)], [])) is None
+    assert student_profile.bond_rank(png, startup([("71", .6)], [], [])) is None
 
 
 def test_a_profile_is_read_only_once_its_tab_is_at_rest():

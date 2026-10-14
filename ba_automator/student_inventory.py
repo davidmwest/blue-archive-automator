@@ -1,10 +1,12 @@
-"""Inventory every student: each owned student's Basic Info, and eleph progress for the rest.
+"""Inventory every owned student's Basic Info.
 
 Read-only: from home it opens Students, shows All, opens the first card, and
-steps through the list with the page's next arrow. An owned student's Basic
-Info is read into fields (see ``student_profile``); a student not yet
-recruited is recorded with its eleph count. Every page is kept as a screenshot
-with its text, no upgrade control is ever opened, and it returns home at the end.
+steps through the students with the page's next arrow. Live, the arrow visits
+owned students only, in the list's order, and wraps from the last back to the
+first, which ends the walk. Each Basic Info is read into fields (see
+``student_profile``); should a student not yet recruited be shown, it is
+recorded with its eleph count. Every page is kept as a screenshot with its
+text, no upgrade control is ever opened, and it returns home at the end.
 
 The result is written to the state directory as ``students-<id>.json`` and a
 ``.csv`` beside it. A walk that stops early keeps what it read only when no
@@ -353,9 +355,9 @@ class StudentInventoryRunner:
         if page is None:
             self.fail("The first student's page did not open")
         self.phase(f"Student 1: {page['name']}" + ("" if page["owned"] else " (not recruited)"))
-        # The page's arrows step through the All list in its order, so the walk
-        # never scrolls or returns to the list. It ends back at the first student
-        # or where the arrow stops moving on.
+        # The page's arrow steps through the students in the list's order, so the
+        # walk never scrolls or returns to the list. It ends back at the first
+        # student (live, 96 owned students in 16 minutes) or where it stops moving on.
         students, seen, complete = [self.record(page, cap, 1)], {page["identity"]}, False
         try:
             for _ in range(MAX_STUDENTS):
@@ -382,10 +384,11 @@ class StudentInventoryRunner:
             raise
         owned = sum(1 for student in students if student["owned"])
         path = write_inventory(self.config, students, captured_at=self.wall_clock(), complete=complete)
-        record_action(self.config, "students_inventoried",
-                      f"Inventoried {owned} owned students and {len(students) - owned} not yet recruited.",
+        summary = f"Inventoried {owned} owned students" + (
+            f" and {len(students) - owned} not yet recruited" if owned < len(students) else "")
+        record_action(self.config, "students_inventoried", summary + ".",
                       task=self.task, count=len(students), owned=owned, complete=complete, path=str(path))
-        self.phase(f"Inventoried {owned} owned students and {len(students) - owned} not yet recruited")
+        self.phase(summary)
         self.tap(self.capture(), HOME, "Return home after the student inventory")
         end, since, count = self.clock() + 45, None, 0
         while self.clock() < end:
