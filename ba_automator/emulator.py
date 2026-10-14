@@ -29,6 +29,11 @@ DEFAULT_INSTALL = r"C:\Program Files\BlueStacks_nxt"
 DEFAULT_CONF = r"C:\ProgramData\BlueStacks_nxt\bluestacks.conf"
 STOP_SECONDS = 60
 BOOT_SECONDS = 300
+# After a reboot the sign-in task starts the instance and the manager
+# together, so a job can find the player window up but Android still booting.
+BOOTING_SECONDS = 240
+READ_ONLY = "Android storage is read-only"
+BOOTING = "Android has not finished booting"
 
 
 def configured_instance() -> str | None:
@@ -98,34 +103,49 @@ def _problem(device) -> str | None:
         return f"emulator is unreachable: {str(exc)[:200]}"
     writable = getattr(device, "storage_writable", None)
     if writable is not None and not writable():
-        return "Android storage is read-only"
+        return READ_ONLY
     return None
 
 
+def _ready(device) -> str | None:
+    problem = _problem(device)
+    if problem is None and not getattr(device, "boot_completed", lambda: True)():
+        return BOOTING
+    return problem
+
+
 def ensure_ready(device, record=lambda *args, **fields: None, *, restart=restart_instance,
-                 monotonic=time.monotonic, sleep=time.sleep) -> bool:
+                 running=player_pids, monotonic=time.monotonic, sleep=time.sleep) -> bool:
     """Connect to the configured device; recover its instance once when allowed.
 
     Returns True when the instance had to be restarted.
     """
-    problem = _problem(device)
+    name = configured_instance()
+    problem = _ready(device) if name else _problem(device)
     if problem is None:
         return False
-    name = configured_instance()
     if name is None:
         raise DeviceError(f"The {problem}. Restart the emulator instance and run the task again")
+    if problem != READ_ONLY and running(name):
+        # Its window is up: let it finish starting before deciding it is stuck.
+        record("emulator_booting", instance=name, reason=problem)
+        deadline = monotonic() + BOOTING_SECONDS
+        while monotonic() < deadline and problem != READ_ONLY:
+            sleep(6)
+            problem = _ready(device)
+            if problem is None:
+                record("emulator_booted", instance=name)
+                return False
     LOGGER.warning("emulator: %s; restarting BlueStacks instance %s", problem, name)
     record("emulator_recovery", instance=name, reason=problem)
     restart(name)
     deadline = monotonic() + BOOT_SECONDS
     while True:
         sleep(6)
-        problem = _problem(device)
-        booted = getattr(device, "boot_completed", lambda: True)
-        if problem is None and booted():
+        problem = _ready(device)
+        if problem is None:
             record("emulator_recovered", instance=name)
             LOGGER.warning("emulator: BlueStacks instance %s is ready again", name)
             return True
         if monotonic() >= deadline:
-            raise DeviceError(f"BlueStacks instance {name} did not recover after a restart: "
-                              f"{problem or 'Android has not finished booting'}")
+            raise DeviceError(f"BlueStacks instance {name} did not recover after a restart: {problem}")

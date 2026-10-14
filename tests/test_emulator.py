@@ -51,7 +51,7 @@ def test_instance_name_must_be_a_plain_identifier(monkeypatch, value, expected):
 def test_healthy_device_needs_no_recovery(monkeypatch):
     monkeypatch.setenv('BA_BLUESTACKS_INSTANCE', 'Pie64_4')
     restarts = []
-    assert ensure_ready(Device(), restart=restarts.append) is False
+    assert ensure_ready(Device(), restart=restarts.append, running=lambda name: [4242]) is False
     assert restarts == []
 
 
@@ -72,7 +72,8 @@ def test_read_only_storage_restarts_the_named_instance_once(monkeypatch):
     clock, restarts, events = Clock(), [], []
     device = Device(connects=(True, False, True), writable=(False, True), booted=(False, True))
     recovered = ensure_ready(device, lambda event, **fields: events.append((event, fields)),
-                             restart=restarts.append, monotonic=clock.monotonic, sleep=clock.sleep)
+                             restart=restarts.append, running=lambda name: [4242],
+                             monotonic=clock.monotonic, sleep=clock.sleep)
     assert recovered is True and restarts == ['Pie64_4']
     assert [event for event, _ in events] == ['emulator_recovery', 'emulator_recovered']
     assert events[0][1] == {'instance': 'Pie64_4', 'reason': 'Android storage is read-only'}
@@ -82,7 +83,7 @@ def test_recovery_that_never_boots_is_bounded(monkeypatch):
     monkeypatch.setenv('BA_BLUESTACKS_INSTANCE', 'Pie64_4')
     clock, restarts = Clock(), []
     with pytest.raises(DeviceError, match='did not recover after a restart'):
-        ensure_ready(Device(connects=(False,)), restart=restarts.append,
+        ensure_ready(Device(connects=(False,)), restart=restarts.append, running=lambda name: [],
                      monotonic=clock.monotonic, sleep=clock.sleep)
     assert restarts == ['Pie64_4']
     assert emulator.BOOT_SECONDS <= clock.now <= emulator.BOOT_SECONDS + 12
@@ -115,3 +116,33 @@ def test_only_the_named_instances_player_is_matched(tmp_path, monkeypatch):
     assert player_pids('Pie64_4', run) == [4242]
     assert player_pids('Pie64_2', run) == [39024]
     assert player_pids('Pie64_9', run) == []          # unknown instance: nothing to stop
+
+
+def test_a_booting_instance_is_given_time_before_any_restart(monkeypatch):
+    # After a reboot the sign-in task starts the instance and the manager
+    # together; the first job can find the window up and Android still booting.
+    monkeypatch.setenv('BA_BLUESTACKS_INSTANCE', 'Pie64_4')
+    clock, restarts, events = Clock(), [], []
+    device = Device(connects=(False, False, True), booted=(False, True))
+    assert ensure_ready(device, lambda event, **fields: events.append(event), restart=restarts.append,
+                        running=lambda name: [4242], monotonic=clock.monotonic, sleep=clock.sleep) is False
+    assert restarts == [] and events == ['emulator_booting', 'emulator_booted']
+
+
+def test_an_instance_that_never_finishes_booting_is_restarted_once(monkeypatch):
+    monkeypatch.setenv('BA_BLUESTACKS_INSTANCE', 'Pie64_4')
+    clock, restarts, events = Clock(), [], []
+    device = Device(connects=(False,) * 45 + (True,), booted=(True,))
+    assert ensure_ready(device, lambda event, **fields: events.append(event), restart=restarts.append,
+                        running=lambda name: [4242], monotonic=clock.monotonic, sleep=clock.sleep) is True
+    assert restarts == ['Pie64_4']
+    assert events == ['emulator_booting', 'emulator_recovery', 'emulator_recovered']
+
+
+def test_a_stopped_instance_is_started_without_waiting(monkeypatch):
+    monkeypatch.setenv('BA_BLUESTACKS_INSTANCE', 'Pie64_4')
+    clock, restarts = Clock(), []
+    device = Device(connects=(False, True))
+    assert ensure_ready(device, restart=restarts.append, running=lambda name: [],
+                        monotonic=clock.monotonic, sleep=clock.sleep) is True
+    assert restarts == ['Pie64_4'] and clock.now == 6
