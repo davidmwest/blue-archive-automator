@@ -195,7 +195,14 @@ def main(argv=None) -> int:
                 append_event(
                     config.state_dir, "task_dispatched", task=task, command=args.command
                 )
-                result = runner(config, device, vision, **options)
+                try:
+                    result = runner(config, device, vision, **options)
+                except Exception as exc:
+                    # Another device taking the account over usually surfaces as
+                    # a failed step; look before anything relaunches the game.
+                    from .login_hold import inspect_after_failure
+                    inspect_after_failure(config, device, vision, getattr(exc, "run_dir", None))
+                    raise
                 append_event(
                     config.state_dir,
                     "task_result",

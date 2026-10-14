@@ -49,6 +49,7 @@ from .home_badges import PRIORITY
 from . import packs_state
 from .failure_notices import required_actions
 from . import ap_state, loot, daily_log, daily_schedule, checkin_schedule, tactical_survey, tactical_retry, tactical_state
+from . import login_hold
 from .club import game_day
 from .tactical_state import TacticalStateError, ensure_restart_safe
 from .drill_state import DrillStateError
@@ -180,6 +181,7 @@ class DashboardController:
         self._capture_frame: Path | None = None
         self._preview_frames: deque[tuple[str, float, bytes]] = deque(maxlen=4)
         self._app_closed = False
+        self._login_hold_until = None
         self._batch_has_game_job = False
         self._badge_attempted = set()
         self._ap_batch_observed = None
@@ -1094,12 +1096,49 @@ class DashboardController:
 
         threading.Thread(target=escalate, name="blue-archive-stop", daemon=True).start()
 
+    def _login_held(self) -> bool:
+        """True while the account is left to another device (see login_hold).
+
+        Called under the condition lock. Queued and scheduled jobs simply wait;
+        when the hold ends, a Daily it cut short today is run again.
+        """
+        until = login_hold.held_until(self.config, self._wall_clock())
+        if until is not None:
+            if until != self._login_hold_until:
+                self._login_hold_until = until
+                self._phase = login_hold.message(until)
+                self._log(login_hold.message(until))
+            return True
+        if self._login_hold_until is not None:
+            self._login_hold_until = None
+            self._log("Login hold ended; queued work continues")
+            self._phase = "Login hold ended; queued work continues"
+            self._resume_daily_after_hold()
+        return False
+
+    def _resume_daily_after_hold(self) -> None:
+        try:
+            state = daily_schedule.read_state(self.config)
+        except (RuntimeError, OSError) as exc:
+            self._log(f"Could not check Daily after the login hold: {exc}", "error")
+            return
+        if (not self.config.daily_schedule_enabled
+                or state.get("game_day") != game_day(self._wall_clock()) or state.get("status") != "failed"
+                or (self._current and self._current["task"] == "daily")
+                or any(job["task"] == "daily" for job in self._queue)):
+            return
+        job = {"id": uuid4().hex, "task": "daily", "created_at": _timestamp(), "source": "login_hold"}
+        self._queue.append(job)
+        self._queued(job)
+        self._log("Queued Daily again: it stopped when the account was signed in elsewhere")
+
     def _work(self) -> None:
         while True:
             with self._condition:
                 while not self._shutdown:
                     self._enqueue_scheduled()
-                    if self._queue and not self._paused and not self._capturing:
+                    held = self._login_held()
+                    if self._queue and not self._paused and not self._capturing and not held:
                         break
                     self._condition.wait(timeout=15)
                 if self._shutdown:

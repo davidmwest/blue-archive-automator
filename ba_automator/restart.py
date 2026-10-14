@@ -8,6 +8,7 @@ import time
 from typing import Callable
 from uuid import uuid4
 
+from . import login_hold
 from .actions import record_action
 from .config import Config
 from .display import CANONICAL_SIZE, is_supported_size
@@ -16,7 +17,7 @@ from .runtime import Capture, FRAME_MAX_AGE, HOME_STABLE_SECONDS, TRACE_LIMIT
 from .runtime import Journal, RunResult, TaskError
 from .startup_loot import StartupLoot
 from .tactical_state import ensure_restart_safe
-from .vision import VisionError, decode_frame
+from .vision import VisionError, decode_frame, read_game_words
 
 # Compatibility for existing task callers and saved integrations.
 _Journal = Journal
@@ -143,10 +144,24 @@ def run_restart(
         journal.record("outcome", operation=name, result="skipped_stale" if result is False else "ok")
         return result
 
+    def hold_login(detail: str, png: bytes) -> None:
+        """The account was signed in elsewhere: stand aside, sending no input."""
+        assert journal is not None
+        journal.save_image("signed-in-elsewhere.png", png)
+        until = login_hold.begin(config, detail=detail,
+                                 evidence=str(run_dir / "signed-in-elsewhere.png"))
+        fail(login_hold.message(until))
+
     def reach_home() -> RunResult:
         nonlocal actions, last_frame
         assert journal is not None
         check_deadlines()
+        # Relaunching would hide a sign-out notice left on screen and log straight
+        # back in, ending the other device's session. Offline doubles have no OCR.
+        if hasattr(vision, "read") and device.foreground_package() == config.package:
+            png = device.screenshot()
+            if login_hold.signed_in_elsewhere(" ".join(word.text for word in read_game_words(png, vision))):
+                hold_login("The account was signed in on another device", png)
         operation("force_stop", device.force_stop)
         check_deadlines()
         operation("launch", device.launch)
@@ -212,6 +227,8 @@ def run_restart(
                 previous_state = state
 
             if state == "blocked":
+                if getattr(observation, "detector", None) == login_hold.DETECTOR:
+                    hold_login(observation.detail, png)
                 fail(f"Blue Archive needs attention: {observation.detail}")
 
             if state == "unknown":
@@ -301,6 +318,10 @@ def run_restart(
         # Finalize passive receipts before releasing the instance lock, even if
         # startup later fails. Slow item OCR cannot expire an actionable frame.
         with InstanceLock(config), StartupLoot(config, run_dir, vision, journal) as startup_loot:
+            until = login_hold.held_until(config)
+            if until is not None:
+                # The manager waits out a hold; this stops a direct run too.
+                fail(login_hold.message(until))
             ensure_restart_safe(config)
             from .event_state import ensure_safe as ensure_event_safe
             ensure_event_safe(config)

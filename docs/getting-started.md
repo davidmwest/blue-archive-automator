@@ -48,6 +48,10 @@ with `-Instance` set (or `BA_BLUESTACKS_INSTANCE` in the environment), every job
 
 controllers targeting the same game instance must share the same `lock_dir`. leave the example storage paths alone unless you need to move the runtime data.
 
+### playing on another device
+
+Blue Archive allows one session per account. when you sign in on your phone, the game in the emulator shows a sign-out notice; logging straight back in would end your phone session in turn. when a job sees that notice, whether while starting the game, before relaunching it, or right after a step fails, it sends no input and starts a **two-hour login hold**. the dashboard keeps queued and scheduled work waiting until the hold ends and shows the time it ends. a Daily that the notice cut short runs again afterwards. to end a hold early, delete `login-hold-*.json` from the state directory (`data/state`).
+
 ## start the dashboard
 
 ```sh
