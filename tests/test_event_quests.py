@@ -412,14 +412,14 @@ def test_a_challenges_fixed_team_is_kept_when_quick_formation_does_not_open(tmp_
         assert 'Mobilize event Challenge 1' in r.inputs
     finally:
         r.journal.close()
-    monkeypatch.setattr(event_quests, 'read_game_words', lambda png, startup: team[:3])
+    monkeypatch.setattr(event_quests, 'read_game_words', lambda png, startup: [])
     r, c = challenge_runner(tmp_path / 'partial', monkeypatch, details=[0, 3], battles=[3, 3])
     r.clock = lambda: now[0]
     r.sleep = lambda seconds: now.__setitem__(0, now[0] + seconds)
     plain = r.wait
     r.wait = lambda kinds, **kw: formation if 'event_quick' in kinds else plain(kinds, **kw)
     try:
-        with pytest.raises(Exception, match='no full team is placed'):
+        with pytest.raises(Exception, match='no team is placed'):
             r.run()
         assert r.fought == [] and event_state.read_state(c)['pending'] is None
     finally:
@@ -468,3 +468,24 @@ def test_tip_after_a_loss_is_recognized():
     screen = classify_quest(frame, words)
     assert (screen.kind, screen.target) == ('event_tip', (772, 656))
     assert classify_quest(frame, words[1:]) is None
+
+
+def test_a_story_battles_partial_provided_team_is_kept(tmp_path, monkeypatch):
+    # Live, Story 9's battle placed two Lv.25 students and Quick Formation did nothing.
+    from ba_automator import event_quests
+    now = [0.0]
+    formation = SimpleNamespace(screen=SimpleNamespace(kind='event_formation', ap=721),
+                                capture=SimpleNamespace(png=b''))
+    taps, notes = [], []
+    runner = SimpleNamespace(
+        clock=lambda: now[0], sleep=lambda seconds: now.__setitem__(0, now[0] + seconds),
+        wait=lambda kinds, **kw: formation, startup=None,
+        tap=lambda frame, target, detail: taps.append(detail),
+        journal=SimpleNamespace(record=lambda event, **fields: notes.append((event, fields))),
+        fail=lambda message: (_ for _ in ()).throw(RuntimeError(message)))
+    team = [Word('Lv.25', .99, (x - 30, 545, x + 30, 570)) for x in (232, 456)]
+    monkeypatch.setattr(event_quests, 'read_game_words', lambda png, startup: team)
+    frame, used = event_quests.provided_or_auto_formation(runner, formation, 'event Story', 9)
+    assert frame is formation and used == 'the provided team'
+    assert taps == ['Open Quick Formation for event Story']
+    assert notes == [('event_fixed_team', {'stage': '9', 'strikers': 2})]

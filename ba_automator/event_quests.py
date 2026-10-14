@@ -118,6 +118,35 @@ def itemize_or_keep(runner, frame, evidence, label):
         return runner.wait('receipt', timeout=90)
 
 
+def provided_or_auto_formation(runner, frame, label, stage):
+    """Default Auto Formation, or the team a Challenge or story battle provides.
+
+    Live, Challenge 1 fielded four event-provided Lv.50 students and Story 9 two
+    Lv.25 ones, and Quick Formation did nothing for either. After eight seconds
+    without its dialog, a placed team is kept as shown.
+    """
+    runner.tap(frame,(1200,205),f'Open Quick Formation for {label}')
+    end, looks = runner.clock()+8, 0
+    while True:
+        frame = runner.wait({'event_quick','event_formation'})
+        if frame.screen.kind == 'event_quick':
+            break
+        looks += 1
+        if runner.clock() >= end or looks >= 8:
+            words = read_game_words(frame.capture.png,runner.startup)
+            strikers = [w for w in within(words,(150,530,960,590))
+                        if re.fullmatch(r'Lv\.?\s*\d{1,2}',w.text.strip())]
+            if not strikers:
+                runner.fail('Quick Formation did not open and no team is placed; no battle started')
+            runner.journal.record('event_fixed_team',stage=str(stage),strikers=len(strikers))
+            return frame, 'the provided team'
+        runner.sleep(1)
+    runner.tap(frame,(623,593),'Use default Auto Formation')
+    frame = runner.wait('event_quick')
+    runner.tap(frame,(1168,593),'Confirm Auto Formation')
+    return runner.wait('event_formation'), 'default Auto Formation'
+
+
 def battle_cost(frame, startup):
     words = read_game_words(frame.capture.png,startup)
     # One line: live, "631" and "→626" came back a pixel apart vertically, and
@@ -190,30 +219,7 @@ class EventClearRunner(APRunner):
         return self.stage_detail(stage,tab)
 
     def challenge_formation(self, frame, stage):
-        """Default Auto Formation, or the fixed team a Challenge may provide.
-
-        Live, Challenge 1 fielded four event-provided Lv.50 students, and its
-        Quick Formation button did nothing. That team is kept as shown.
-        """
-        self.tap(frame,(1200,205),'Open Quick Formation for this challenge')
-        end = self.clock()+8
-        while True:
-            frame = self.wait({'event_quick','event_formation'})
-            if frame.screen.kind == 'event_quick':
-                break
-            if self.clock() >= end:
-                words = read_game_words(frame.capture.png,self.startup)
-                strikers = [w for w in within(words,(150,530,960,590))
-                            if re.fullmatch(r'Lv\.?\s*\d{1,2}',w.text.strip())]
-                if len(strikers) != 4:
-                    self.fail('Quick Formation did not open and no full team is placed; no battle started')
-                self.journal.record('event_fixed_team',stage=str(stage))
-                return frame, 'the provided team'
-            self.sleep(1)
-        self.tap(frame,(623,593),'Use default Auto Formation')
-        frame = self.wait('event_quick')
-        self.tap(frame,(1168,593),'Confirm Auto Formation')
-        return self.wait('event_formation'), 'default Auto Formation'
+        return provided_or_auto_formation(self, frame, 'this challenge', stage)
 
     def fight(self, state, frame, stage, cost, tab='quest'):
         """Default Auto Formation, a durable intent, then exactly one battle."""
