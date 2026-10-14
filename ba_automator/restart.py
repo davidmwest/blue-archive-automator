@@ -294,7 +294,10 @@ def run_restart(
             ensure_event_safe(config)
             from .treasure_state import ensure_safe as ensure_treasure_safe
             ensure_treasure_safe(config, recover_logged_receipt=recover_logged_treasure)
-            device.connect()
+            from .emulator import ensure_ready
+            if ensure_ready(device, journal.record, monotonic=monotonic, sleep=sleep):
+                # Restarting the emulator is not game startup time.
+                budget = _Budget(config, monotonic())
             device.verify_package()
             size = device.display_size()
             if not is_supported_size(size):

@@ -44,6 +44,8 @@ a frame can only authorize input for five seconds, and reading a 1440p screensho
 
 to bring it back after a reboot, `scripts/register-startup-windows.ps1 -Port 8767 -OcrThreads 16 -Instance Pie64_4` registers a Task Scheduler entry for your account. one minute after sign-in it starts that BlueStacks instance if it is not running, then runs the dashboard in the foreground so the scheduler can restart it if it exits. it needs no elevation, and `-Remove` deletes it. this only helps when Windows signs you in automatically; queued jobs still do not survive a restart, but schedules do.
 
+with `-Instance` set (or `BA_BLUESTACKS_INSTANCE` in the environment), every job also checks the emulator before launching the game. if ADB cannot reach it, or Android has remounted its data partition read-only, the job closes that one instance's window, starts it again, and waits up to five minutes for Android to boot. other instances are never touched. the instance is matched by its display name in `bluestacks.conf`, which should be plain ASCII. this was added after a live failure: Windows' scheduled drive optimization finished a defragment and retrim pass on the SSD holding the instance's virtual disk, the guest logged write errors one second later, and Android stayed read-only until the instance was restarted. the game could not start and nothing on screen said why.
+
 controllers targeting the same game instance must share the same `lock_dir`. leave the example storage paths alone unless you need to move the runtime data.
 
 ## start the dashboard

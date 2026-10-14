@@ -6,7 +6,9 @@
 # -Foreground keeps it in this process instead, which is what a logon task needs
 # so Task Scheduler can see it running and restart it; see
 # scripts/register-startup-windows.ps1. -Instance names a BlueStacks 5 instance
-# (for example Pie64_4) to start first when it is not already running.
+# (for example Pie64_4) to start first when it is not already running. Jobs may
+# then also restart that one instance if it becomes unreachable or its Android
+# storage turns read-only.
 #
 # Python runs in UTF-8 mode so a non-UTF-8 system code page cannot affect file I/O.
 # Raise -OcrThreads when tasks reach a screen and then report that they did not:
@@ -48,6 +50,11 @@ $out = Join-Path $logs "serve-$stamp.out.log"
 $err = Join-Path $logs "serve-$stamp.err.log"
 $env:PYTHONUTF8 = "1"
 $env:BA_OCR_THREADS = "$OcrThreads"
+if ($Instance) {
+    # Lets a job restart this one instance when it is unreachable or read-only.
+    $env:BA_BLUESTACKS_INSTANCE = $Instance
+    $env:BA_BLUESTACKS_DIR = $BlueStacks
+}
 $arguments = "-X", "utf8", "-m", "ba_automator", "--config", $Config, "serve", "--port", $Port
 
 if ($Foreground) {
