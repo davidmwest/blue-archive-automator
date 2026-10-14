@@ -419,3 +419,15 @@ def test_a_challenges_fixed_team_is_kept_when_quick_formation_does_not_open(tmp_
         assert r.fought == [] and event_state.read_state(c)['pending'] is None
     finally:
         r.journal.close()
+
+
+def test_battle_cost_reads_a_split_projection_left_to_right(monkeypatch):
+    # Live, Challenge 2's "631→626" came back as two words, the arrow part a
+    # pixel higher; top-to-bottom order made "→626631" and no cost.
+    from ba_automator import event_quests
+    words = [Word('→626', 1.0, (1045, 477, 1109, 500)), Word('631', 1.0, (1014, 478, 1055, 500))]
+    monkeypatch.setattr(event_quests, 'read_game_words', lambda png, startup: words)
+    frame = SimpleNamespace(screen=SimpleNamespace(ap=631), capture=SimpleNamespace(png=b''))
+    assert battle_cost(frame, None) == 5
+    frame.screen.ap = 632
+    assert battle_cost(frame, None) is None

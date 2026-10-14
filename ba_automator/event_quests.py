@@ -120,7 +120,10 @@ def itemize_or_keep(runner, frame, evidence, label):
 
 def battle_cost(frame, startup):
     words = read_game_words(frame.capture.png,startup)
-    value = text_in(words,(970,460,1130,512)).replace(' ','')
+    # One line: live, "631" and "→626" came back a pixel apart vertically, and
+    # top-to-bottom order read "→626631". Read left to right instead.
+    value = ''.join(w.text for w in sorted(within(words,(970,460,1130,512)),
+                                           key=lambda w: w.box[0])).replace(' ','')
     match = re.fullmatch(r'(\d+)[→➜](\d+)', value)
     if not match or int(match[1]) != frame.screen.ap:
         return None
@@ -202,12 +205,12 @@ class EventClearRunner(APRunner):
                 if len(strikers) != 4:
                     self.fail('Quick Formation did not open and no full team is placed; no battle started')
                 self.journal.record('event_fixed_team',stage=str(stage))
-                return frame
+                return frame, 'the provided team'
             self.sleep(1)
         self.tap(frame,(623,593),'Use default Auto Formation')
         frame = self.wait('event_quick')
         self.tap(frame,(1168,593),'Confirm Auto Formation')
-        return self.wait('event_formation')
+        return self.wait('event_formation'), 'default Auto Formation'
 
     def fight(self, state, frame, stage, cost, tab='quest'):
         """Default Auto Formation, a durable intent, then exactly one battle."""
@@ -215,8 +218,9 @@ class EventClearRunner(APRunner):
         before = frame.screen.ap
         self.tap(frame,(936,534),f'Set up event {name} {stage}')
         frame = self.wait('event_formation')
+        team = 'default Auto Formation'
         if tab == 'challenge':
-            frame = self.challenge_formation(frame,stage)
+            frame, team = self.challenge_formation(frame,stage)
         else:
             self.tap(frame,(1200,205),f'Open Quick Formation for this {tab}')
             frame = self.wait('event_quick')
@@ -231,7 +235,7 @@ class EventClearRunner(APRunner):
         if tab != 'quest':
             state['pending']['mode'] = tab
         event_state.write_state(self.config,state)
-        self.important('event_battle_requested',f'Event {name} {stage}: default Auto Formation; {cost} AP',stage=str(stage),ap_cost=cost)
+        self.important('event_battle_requested',f'Event {name} {stage}: {team}; {cost} AP',stage=str(stage),ap_cost=cost)
         self.tap(frame,(1180,660),f'Mobilize event {name} {stage}')
         frame = self.finish_battle(stage) if tab == 'quest' else self.finish_battle(stage,tab)
         if frame.screen.ap is None or frame.screen.ap < before-cost:
