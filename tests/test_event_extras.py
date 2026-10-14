@@ -356,3 +356,21 @@ def test_packaged_profile_enables_every_side_reward():
     extras = profile()['extras']
     assert extras['tasks'] is True and extras['cards']['cost'] == 200
     assert len(extras['shop']['tabs']) == 3
+
+
+def test_unread_balance_skips_its_tab_and_a_small_remainder_may_go_unread(entered):
+    # OCR does not find a lone "1" balance, even enlarged.
+    skipped = run(Game(shops=[SHOP], balances=[None]), {'shop': {'tabs': [{}]}})
+    assert not hasattr(skipped, 'bought') and 'Scroll' not in ' '.join(skipped.log)
+    game = Game(shops=[SHOP[:4]], balances=[95])
+    real = game.screen
+
+    def small_unread():
+        screen = real()
+        if screen.kind == 'event_shop' and screen.balance is not None and screen.balance < 10:
+            return ExtrasScreen('event_shop', tab=screen.tab, items=screen.items)
+        return screen
+    game.screen = small_unread
+    run(game, {'shop': {'tabs': [{}]}})
+    assert game.bought == [('Novice Activity Report', 90), ('Normal Activity Report', 1)]
+    assert game.balances == [1]
