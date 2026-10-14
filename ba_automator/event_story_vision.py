@@ -84,7 +84,8 @@ def classify_story(frame, words):
             and has(words, 'enter episode', (470,485,820,550))
             and yellow(frame,(560,503,720,535))):
         title = text_in(words,(345,199,915,248))
-        stage = re.match(r'^(0[1-9]|1[0-2]|[1-9])\s', title)
+        # OCR can join the number to the title across the thin divider ("01Genryumon").
+        stage = re.match(r'^(0[1-9]|1[0-2]|[1-9])(?=[^0-9])', title)
         projection = re.fullmatch(r'(\d+)[→➜](\d+)',
                                   text_in(words,(660,449,780,490)).replace(' ',''))
         cost = int(projection[1])-int(projection[2]) if projection else None

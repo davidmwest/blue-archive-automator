@@ -201,3 +201,19 @@ def test_play_guide_overlay_is_its_own_screen():
     assert classify_event(page(), guide).kind == 'event_guide'
     assert classify_event(page(), guide[:2]) is None
     assert classify_event(page(), [guide[0], Word('Play Guide', .99, (92, 90, 200, 116)), guide[2]]) is None
+
+def test_episode_info_accepts_a_number_joined_to_its_title():
+    # Live at 1440p the divider between "01" and the title was not read as a space.
+    frame = page()
+    frame[503:535, 560:720] = (40, 200, 250)  # yellow Enter Episode button
+    detail = [Word('Event', .99, (104, 9, 185, 39)), Word('500/224', 1.0, (508, 9, 588, 37)),
+              Word('Episode Info', .99, (544, 140, 737, 186)),
+              Word('01Genryumon Main Room', 1.0, (348, 201, 742, 244)),
+              Word('Expected Rewards', 1.0, (548, 271, 733, 298)),
+              Word('500→490', 1.0, (665, 459, 761, 482)),
+              Word('Enter Episode', 1.0, (534, 498, 746, 540))]
+    screen = classify_story(frame, detail)
+    assert (screen.kind, screen.stage, screen.cost, screen.after) == ('story_detail', 1, 10, 490)
+    assert screen.target == (640, 520)
+    twelve = [Word('12The Last Day', 1.0, w.box) if w.text.startswith('01') else w for w in detail]
+    assert classify_story(frame, twelve).stage == 12
