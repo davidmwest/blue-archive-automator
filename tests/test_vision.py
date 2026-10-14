@@ -297,3 +297,13 @@ def test_ocr_threads_default_and_bounds(monkeypatch, value, expected):
     else:
         monkeypatch.setenv("BA_OCR_THREADS", value)
     assert ocr_threads() == expected
+
+
+def test_data_update_progress_waits_as_a_download():
+    # Live, an accepted 314 MB update showed this; unknown timed out at 100%.
+    observation = classify([
+        word("Update in progress. [2/2] 100.00 %", center=(430, 1080 * 720 // 1440)),
+        word("[314.45MB / 314.45MB]", center=(1100, 1080 * 720 // 1440)),
+    ], {})
+    assert observation.state == "downloading"
+    assert observation.target is None

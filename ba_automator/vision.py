@@ -563,8 +563,9 @@ def classify(words: list[Word], matches: dict[str, tuple[int, int]]) -> Observat
         if target:
             return result("popup", "Dismiss recognized login reward or expired-item notice", target)
 
+    # Live, an accepted 314 MB data update showed "Update in progress. [2/2] 100.00 %".
     if any(phrase in text for phrase in ("downloading", "extracting", "decompressing", "applying patch",
-                                         "verifying downloaded")):
+                                         "verifying downloaded", "update in progress")):
         return result("downloading", "Waiting for game-data download or installation")
 
     if button({"confirm", "yes", "no", "ok", "cancel", "close", "purchase", "buy"}, min_y=220):
