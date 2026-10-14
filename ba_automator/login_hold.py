@@ -22,8 +22,9 @@ from .fileops import replace_file
 LOGGER = logging.getLogger(__name__)
 HOLD = timedelta(hours=2)
 DETECTOR = "signed_in_elsewhere"
-# The Global wording has not been captured yet; every phrasing seen in Nexon's
-# games names the other device, which no screen the automation visits does.
+# Live on Global (2026-10-14) the notice read "Duplicate login detected.
+# Returning to title." over the Event Shop. Other phrasings name the other
+# device, which no screen the automation visits does.
 PHRASES = (
     "another device", "other device", "different device", "another terminal",
     "logged in elsewhere", "signed in elsewhere", "duplicate login", "duplicate log in",

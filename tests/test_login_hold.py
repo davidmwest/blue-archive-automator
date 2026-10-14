@@ -58,6 +58,16 @@ def test_unreadable_hold_record_holds_nothing(config):
     assert login_hold.held_until(config, NOW) is None
 
 
+def test_the_live_global_notice_is_recognized_over_the_page_behind_it():
+    # Captured 2026-10-14 over the Event Shop, with Notice and Confirm.
+    words = [Word("Event Shop", .99, (104, 9, 255, 41)), Word("Notice", .99, (590, 150, 690, 185)),
+             Word("Duplicate login detected.", .99, (492, 300, 785, 340)),
+             Word("Returning to title.", .99, (535, 335, 742, 368)),
+             Word("Confirm", .99, (580, 485, 700, 520))]
+    observation = classify(words, {})
+    assert (observation.state, observation.detector, observation.target) == ("blocked", login_hold.DETECTOR, None)
+
+
 def test_startup_recognizes_the_notice_before_its_button():
     words = [Word("You have been logged out because this account", .99, (330, 300, 950, 330)),
              Word("signed in on another device.", .99, (440, 340, 840, 370)),
