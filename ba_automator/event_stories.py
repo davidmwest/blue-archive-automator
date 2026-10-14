@@ -71,7 +71,8 @@ def finish_story(runner, stage):
         if kind == 'receipt':
             evidence = runner.run_dir / f'story-{stage}-receipt.png'
             runner.journal.save_image(evidence.name, frame.capture.png)
-            frame = inspect_receipt(runner, frame, evidence)
+            from .event_quests import itemize_or_keep
+            frame = itemize_or_keep(runner, frame, evidence, f'Event Story {stage}')
             runner.tap(frame, frame.screen.target, 'Return after recording event Story rewards')
             return return_to_stories(runner)
         if kind in {'story_dialogue','story_menu','story_skip','event_complete','event_bonus'}:

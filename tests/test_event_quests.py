@@ -153,3 +153,33 @@ def test_sweep_quantity_crop_rejects_uncertain_reads(reads):
     results = iter(reads)
     assert reread_sweep_count(decode_native_frame(png),
                              SimpleNamespace(read=lambda crop: next(results))) is None
+
+def test_unreadable_reward_list_is_recorded_without_stranding_the_battle(monkeypatch, tmp_path):
+    # Live, Quest 1's first-clear rewards filled a scrolling row the loot reader
+    # could not page through. The win was real, but the job failed and left the
+    # paid entry pending, which holds every later event spend.
+    from types import SimpleNamespace
+    from ba_automator import event_quests
+    from ba_automator.runtime import TaskError
+
+    def unreadable(runner, frame, evidence):
+        raise TaskError('Reward receipt pages did not overlap; totals need review', tmp_path)
+
+    monkeypatch.setattr(event_quests, 'inspect_receipt', unreadable)
+    events, notes = [], []
+    fresh = SimpleNamespace(screen=SimpleNamespace(kind='receipt', target=(775, 660)))
+    runner = SimpleNamespace(
+        journal=SimpleNamespace(record=lambda event, **fields: events.append((event, fields))),
+        important=lambda action, detail, **fields: notes.append((action, detail)),
+        wait=lambda kinds, timeout=40: fresh)
+    result = event_quests.itemize_or_keep(runner, object(), tmp_path / 'quest-1-receipt.png', 'Event Quest 1')
+    assert result is fresh
+    assert events[0][0] == 'loot_receipt_incomplete' and 'did not overlap' in events[0][1]['detail']
+    assert notes[0][0] == 'event_loot_incomplete' and notes[0][1].startswith('Event Quest 1:')
+
+
+def test_readable_reward_list_is_returned_unchanged(monkeypatch, tmp_path):
+    from ba_automator import event_quests
+    inspected = object()
+    monkeypatch.setattr(event_quests, 'inspect_receipt', lambda runner, frame, evidence: inspected)
+    assert event_quests.itemize_or_keep(object(), object(), tmp_path / 'r.png', 'Event Quest 2') is inspected

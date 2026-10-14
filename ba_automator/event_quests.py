@@ -15,6 +15,7 @@ from .spend_ap import APRunner, SweepDeferred
 from .ap_policy import sweep_count
 from .locking import InstanceLock
 from .loot_receipts import inspect_receipt
+from .runtime import TaskError
 
 LISTS = {'event_page', 'event_list'}
 
@@ -82,6 +83,24 @@ def event_home(runner, frame):
     runner.home()
 
 
+def itemize_or_keep(runner, frame, evidence, label):
+    """Record a battle's drops; an unreadable list must not strand the result.
+
+    A first clear can award a long scrolling row of cards whose pages the loot
+    reader cannot prove overlap. That is a gap in the record only: the battle is
+    over, and its stars and AP are verified from the stage afterwards. Leaving
+    the paid entry pending instead would hold all event spending for review.
+    """
+    try:
+        return inspect_receipt(runner, frame, evidence)
+    except TaskError as error:
+        runner.journal.record('loot_receipt_incomplete', label=label, detail=str(error)[:300])
+        runner.important('event_loot_incomplete',
+                         f'{label}: rewards could not be fully itemized; the receipt is saved for review',
+                         evidence=str(evidence))
+        return runner.wait('receipt', timeout=90)
+
+
 def battle_cost(frame, startup):
     words = read_game_words(frame.capture.png,startup)
     value = text_in(words,(970,460,1130,512)).replace(' ','')
@@ -122,9 +141,13 @@ class EventClearRunner(APRunner):
             frame = self.wait('receipt',timeout=90)
         path = self.run_dir / f'quest-{stage}-receipt.png'
         self.journal.save_image(path.name,frame.capture.png)
-        frame = inspect_receipt(self,frame,path)
+        frame = itemize_or_keep(self, frame, path, f'Event Quest {stage}')
         self.tap(frame,frame.screen.target,'Return to event after recording drops')
-        self.wait(LISTS)
+        frame = self.wait(LISTS | {'receipt'})
+        if frame.screen.kind == 'receipt':
+            # The first tap can be spent closing an item tooltip left open.
+            self.tap(frame,frame.screen.target,'Return to event after recording drops')
+            self.wait(LISTS)
         return quest_detail(self,stage)
 
     def run(self):
