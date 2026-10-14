@@ -5,6 +5,15 @@
   "playable_until": "2026-10-13T01:59:00+00:00",
   "target_round": 3,
   "implementation": "quest_clear_sweep_and_treasure",
+  "entrance": "home_banner",
+  "identity": {
+    "title": "fairandsquareaquaticshowdown",
+    "series": "aflowerbloomsamongthehundred",
+    "first_quest": "sun kissed beach",
+    "first_quest_title": "sunkissedbeach",
+    "mechanic": "treasurehunt"
+  },
+  "farm_goal": "treasure_round",
   "board": {
     "rows": 5,
     "columns": 9,

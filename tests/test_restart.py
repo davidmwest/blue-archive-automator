@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+
+import pytest
 from unittest.mock import patch
 
 import cv2
@@ -610,3 +612,45 @@ class RestartTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+def _crash_harness(tmp_path, foregrounds):
+    clock, device = FakeClock(), FakeDevice()
+    remaining = iter(foregrounds)
+
+    def foreground():
+        device.calls.append("foreground_package")
+        return next(remaining, device.package)
+
+    device.foreground_package = foreground
+    config = Config(serial="127.0.0.1:5695", package=device.package, poll_interval=1.0,
+                    action_cooldown=0.1, startup_timeout=30.0, download_timeout=60.0,
+                    unknown_timeout=5.0, run_dir=tmp_path / "runs", lock_dir=tmp_path / "locks",
+                    state_dir=tmp_path / "state")
+    return clock, device, config
+
+
+def test_game_that_crashes_to_the_launcher_is_relaunched_once(tmp_path):
+    # Live on BlueStacks 5 the game hit a native crash while loading and dropped to
+    # the emulator launcher; the job failed although nothing had been tapped.
+    clock, device, config = _crash_harness(tmp_path, ["com.uncube.launcher3"])
+    result = run_restart(config, device, FakeVision([Observation("loading"), Observation("home")], clock),
+                         monotonic=clock.monotonic, sleep=clock.sleep)
+    assert result.status == "success"
+    assert device.calls.count("force_stop") == 2 and device.calls.count("launch") == 2
+    assert device.taps == []
+
+
+def test_game_that_keeps_crashing_stops_after_one_relaunch(tmp_path):
+    clock, device, config = _crash_harness(tmp_path, ["com.uncube.launcher3"] * 50)
+    with pytest.raises(RestartError, match="still stuck after one automatic force restart"):
+        run_restart(config, device, FakeVision([Observation("loading")], clock),
+                    monotonic=clock.monotonic, sleep=clock.sleep)
+    assert device.calls.count("launch") == 2 and device.taps == []
+
+
+def test_another_app_in_front_still_stops_at_once(tmp_path):
+    clock, device, config = _crash_harness(tmp_path, ["com.android.vending"] * 50)
+    with pytest.raises(RestartError, match="found com.android.vending"):
+        run_restart(config, device, FakeVision([Observation("loading")], clock),
+                    monotonic=clock.monotonic, sleep=clock.sleep)
+    assert device.calls.count("launch") == 1

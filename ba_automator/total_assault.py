@@ -182,7 +182,7 @@ class TotalAssaultRunner(AssaultAssistantMixin, AssaultBattleMixin, ShopRunner):
             # screen classifier deliberately reads no individual item names.
             sidecar = evidence.with_suffix(".loot.json")
             if sidecar.is_file():
-                items = json.loads(sidecar.read_text())["items"]
+                items = json.loads(sidecar.read_text(encoding="utf-8"))["items"]
             label = ", ".join(f'+{item["quantity"]:,} {item["name"]}' for item in items
                               if item.get("name") and type(item.get("quantity")) is int)
             self.important("total_assault_rewards_received",

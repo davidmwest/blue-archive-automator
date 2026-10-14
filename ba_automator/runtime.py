@@ -11,6 +11,7 @@ from typing import Callable
 from uuid import uuid4
 
 from .daily_log import infer_task, journal_event, reset_context, set_context
+from .fileops import replace_file
 
 HOME_STABLE_SECONDS = 5.0
 FRAME_MAX_AGE = 5.0
@@ -119,7 +120,7 @@ class Journal:
         destination.parent.mkdir(parents=True, exist_ok=True)
         temporary = destination.with_name(f".{destination.name}.tmp")
         temporary.write_bytes(png)
-        temporary.replace(destination)
+        replace_file(temporary, destination)
 
     def close(self) -> None:
         self.stream.close()

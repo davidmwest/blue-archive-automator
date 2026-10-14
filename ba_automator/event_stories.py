@@ -6,6 +6,7 @@ season-specific; a durable pending intent prevents replay after uncertain input.
 from . import event_state
 from .event_story_vision import StoryVision
 from .loot_receipts import REWARD_RECEIPT_TIMEOUT, inspect_receipt
+from .runtime import TaskError
 from .spend_ap import VISIT_SECONDS, VISIT_INPUTS
 
 
@@ -71,7 +72,8 @@ def finish_story(runner, stage):
         if kind == 'receipt':
             evidence = runner.run_dir / f'story-{stage}-receipt.png'
             runner.journal.save_image(evidence.name, frame.capture.png)
-            frame = inspect_receipt(runner, frame, evidence)
+            from .event_quests import itemize_or_keep
+            frame = itemize_or_keep(runner, frame, evidence, f'Event Story {stage}')
             runner.tap(frame, frame.screen.target, 'Return after recording event Story rewards')
             return return_to_stories(runner)
         if kind in {'story_dialogue','story_menu','story_skip','event_complete','event_bonus'}:
@@ -82,12 +84,8 @@ def finish_story(runner, stage):
             # Battle stories show their narrative before formation. AP is
             # charged at Mobilize, so verify the floor again after Auto setup.
             if not getattr(frame.screen, 'preset', False):
-                runner.tap(frame, (1200,205), 'Open Quick Formation for event Story')
-                frame = runner.wait('event_quick')
-                runner.tap(frame, (623,593), 'Use default Auto Formation for event Story')
-                frame = runner.wait('event_quick')
-                runner.tap(frame, (1168,593), 'Confirm event Story Auto Formation')
-                frame = runner.wait('event_formation')
+                from .event_quests import provided_or_auto_formation
+                frame, _ = provided_or_auto_formation(runner, frame, 'event Story', stage)
             state = event_state.read_state(runner.config)
             pending = state['pending']
             if (not pending or pending.get('mode') != 'story' or pending['stage'] != str(stage)
@@ -97,7 +95,16 @@ def finish_story(runner, stage):
             pending['ap_before'] = frame.screen.ap
             event_state.write_state(runner.config, state)
             runner.journal.save_image(f'story-{stage}-formation.png', frame.capture.png)
-            runner.tap(frame, (1180,660), f'Mobilize event Story {stage}')
+            try:
+                # Act on a fresh formation; writing the image can outlast a frame.
+                frame = runner.wait('event_formation', predicate=lambda s: (
+                    s.ap is not None and s.ap >= pending['ap_before']))
+                runner.tap(frame, (1180,660), f'Mobilize event Story {stage}')
+            except TaskError:
+                # AP is charged at Mobilize, which was not sent: nothing to reconcile.
+                state['pending'] = None
+                event_state.write_state(runner.config, state)
+                raise
             mobilized = True
         elif kind == 'event_battle' and frame.screen.auto is False:
             runner.tap(frame, (1213,677), 'Enable Auto for event Story battle')

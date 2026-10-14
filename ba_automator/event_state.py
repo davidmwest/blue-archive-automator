@@ -1,5 +1,6 @@
 """Durable, per-instance event progress and unreplayed battle intent."""
 from .ap_state import state_path as ap_path
+from .fileops import replace_file
 import json
 import os
 from uuid import uuid4
@@ -11,7 +12,7 @@ def state_path(config):
 
 def read_state(config):
     try:
-        value = json.loads(state_path(config).read_text())
+        value = json.loads(state_path(config).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return dict(version=1, event_id=None, detected=False, declined=False,
                     pending=None, clears={}, stories={}, summary=None)
@@ -39,11 +40,11 @@ def write_state(config, state):
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(f'.{path.name}.{uuid4().hex}.tmp')
     try:
-        with temp.open('w') as stream:
+        with temp.open('w', encoding='utf-8') as stream:
             json.dump(state, stream, indent=2)
             stream.flush()
             os.fsync(stream.fileno())
-        temp.replace(path)
+        replace_file(temp, path)
     finally:
         temp.unlink(missing_ok=True)
 
@@ -53,7 +54,8 @@ def observe(config, profile):
     if state['event_id'] != profile['id']:
         if state['pending']:
             raise RuntimeError('An earlier event battle has an unresolved result')
-        state.update(event_id=profile['id'], declined=False, clears={}, stories={}, summary=None)
+        state.update(event_id=profile['id'], declined=False, clears={}, stories={}, challenges={},
+                     summary=None)
     state['detected'] = True
     write_state(config, state)
     return state

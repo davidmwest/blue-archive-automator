@@ -12,6 +12,7 @@ import os
 from uuid import uuid4
 
 from .club import game_day
+from .fileops import replace_file
 from .tactical_battles import (
     BattleState,
     DEFAULT_PRESERVE_TICKETS,
@@ -236,7 +237,7 @@ def write_state(config, state):
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
-        temporary.replace(path)
+        replace_file(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 

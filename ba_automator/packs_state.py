@@ -5,6 +5,8 @@ import json
 import os
 from uuid import uuid4
 
+from .fileops import replace_file
+
 
 PACKS = {
     'monthly': ('Monthly Pyroxene Pack', 699),
@@ -29,7 +31,7 @@ def state_path(config):
 
 def read_state(config):
     try:
-        value = json.loads(state_path(config).read_text())
+        value = json.loads(state_path(config).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {'version': 1, 'pending': None, 'blocked_reason': None, 'next_check_at': None, 'observed': {}}
     except (OSError, ValueError) as exc:
@@ -58,11 +60,11 @@ def write_state(config, state):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f'.{path.name}.{uuid4().hex}.tmp')
     try:
-        with temporary.open('w') as stream:
+        with temporary.open('w', encoding='utf-8') as stream:
             json.dump(state, stream, indent=2)
             stream.flush()
             os.fsync(stream.fileno())
-        temporary.replace(path)
+        replace_file(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 

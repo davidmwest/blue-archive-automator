@@ -552,7 +552,7 @@ class DrillRunner(AssaultAssistantMixin, ShopRunner):
         self.journal.save_image(evidence.name, frame.capture.png)
         frame = inspect_receipt(self, frame, evidence)
         sidecar = evidence.with_suffix('.loot.json')
-        items = (json.loads(sidecar.read_text())['items'] if sidecar.is_file()
+        items = (json.loads(sidecar.read_text(encoding="utf-8"))['items'] if sidecar.is_file()
                  else list(frame.screen.items))
         self.important('drill_rewards_received', 'Joint Firing Drill rewards received',
                        items=items, evidence=str(evidence))

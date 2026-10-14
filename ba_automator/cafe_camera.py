@@ -77,6 +77,40 @@ def _spread(points: np.ndarray, displacement: np.ndarray, *, destination: bool =
     return cv2.contourArea(hull) >= width * height * 0.045
 
 
+def _unchanged_scene(first: np.ndarray, second: np.ndarray) -> bool:
+    """Pixel identity proves a stopped camera when the still part has edges on both axes.
+
+    An unfurnished room can show one bare floor edge: too few features to track,
+    yet any pan would shift that edge. One small animated sprite may differ;
+    wider change, a flat view, or edges along a single axis prove nothing.
+    """
+    difference = cv2.absdiff(first, second)
+    changed = difference > 10
+    still = np.ones(first.shape, dtype=bool)
+    if changed.any():
+        rows, columns = np.nonzero(changed)
+        top, bottom = int(rows.min()), int(rows.max()) + 1
+        left, right = int(columns.min()), int(columns.max()) + 1
+        if (bottom - top) * (right - left) > first.size * 0.12:
+            return False
+        still[max(0, top - 8):bottom + 8, max(0, left - 8):right + 8] = False
+    if float(difference[still].mean()) > 0.5:
+        return False
+    across = cv2.Sobel(first, cv2.CV_32F, 1, 0, ksize=3)
+    down = cv2.Sobel(first, cv2.CV_32F, 0, 1, ksize=3)
+    strong = still & ((across * across + down * down) > 60 * 60)
+    if int(strong.sum()) < 600:
+        return False
+    # One sprite or patch could be fixed to the screen while a flat room slides
+    # behind it; evidence must span the scene the way tracked features must.
+    rows, columns = np.nonzero(strong)
+    if np.ptp(columns) < first.shape[1] * 0.28 or np.ptp(rows) < first.shape[0] * 0.22:
+        return False
+    horizontal = float((across * across)[strong].sum())
+    vertical = float((down * down)[strong].sum())
+    return min(horizontal, vertical) >= 0.08 * (horizontal + vertical)
+
+
 def _affine_motion(source: np.ndarray, destination: np.ndarray, models: list,
                    diagnostics: dict) -> tuple[float, float] | None:
     """Recover a coherent pan whose small perspective change defeats translation.
@@ -155,6 +189,14 @@ def measure_camera_displacement(
     first, second = _scene_gray(before), _scene_gray(after)
     if first is None or second is None:
         return None
+    def unchanged():
+        # Feature tracking decides first. Only when it cannot say whether the
+        # camera stopped may an unchanged, room-wide still scene say so.
+        if not _unchanged_scene(first, second):
+            return None
+        diagnostics.update(method="identical", reason="accepted", displacement=[0.0, 0.0])
+        return 0.0, 0.0
+
     detector = cv2.ORB_create(nfeatures=MAX_FEATURES, scaleFactor=1.2, nlevels=8,
                              edgeThreshold=19, fastThreshold=12)
     first_points, first_descriptors = detector.detectAndCompute(first, None)
@@ -163,7 +205,7 @@ def measure_camera_displacement(
     if (first_descriptors is None or second_descriptors is None
             or len(first_points) < MIN_MATCHES or len(second_points) < MIN_MATCHES):
         diagnostics["reason"] = "too_few_features"
-        return None
+        return unchanged()
     matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
     forward = _distinct_matches(matcher.knnMatch(first_descriptors, second_descriptors, k=2))
     backward = _distinct_matches(matcher.knnMatch(second_descriptors, first_descriptors, k=2))
@@ -172,7 +214,7 @@ def measure_camera_displacement(
     diagnostics["matches"] = len(matches)
     if len(matches) < MIN_MATCHES:
         diagnostics["reason"] = "too_few_distinct_matches"
-        return None
+        return unchanged()
     source = np.array([first_points[match.queryIdx].pt for match in matches], dtype=np.float32)
     destination = np.array([second_points[match.trainIdx].pt for match in matches], dtype=np.float32)
     deltas = destination - source
@@ -222,7 +264,7 @@ def measure_camera_displacement(
     if rejection:
         diagnostics.update(reason=rejection, translation_rejection=rejection)
         if stationary:
-            return None
+            return unchanged()
         return _affine_motion(source, destination, models, diagnostics)
     diagnostics.update(method="translation", reason="accepted", inliers=count,
                        ratio=round(count / len(matches), 3),

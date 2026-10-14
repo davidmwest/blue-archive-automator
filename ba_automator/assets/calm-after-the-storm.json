@@ -1,0 +1,74 @@
+{
+  "id": "calm-after-the-storm-global-2026",
+  "title": "The Calm After the Storm",
+  "starts_at": "2026-10-13T02:00:00+00:00",
+  "playable_until": "2026-10-27T01:59:00+00:00",
+  "implementation": "story_quest_clear_and_sweep",
+  "entrance": "campaign",
+  "identity": {
+    "title": "thecalmafterthestorm",
+    "card_template": "calm-after-the-storm-card.png",
+    "card_box": [
+      58,
+      180,
+      152,
+      213
+    ],
+    "first_quest": "commercial street",
+    "first_quest_title": "commercialstreetsouthtrail",
+    "mechanic": "drawacard"
+  },
+  "farm_goal": "until_event_ends",
+  "extras": {
+    "tasks": true,
+    "cards": {
+      "cost": 200,
+      "visit_limit": 40
+    },
+    "shop": {
+      "tabs": [
+        {
+          "currency": "Audit Plans",
+          "priority": [
+            "superior tactical training",
+            "advanced tactical training",
+            "aether essence",
+            "intact istanbul rocket",
+            "aether shard",
+            "repaired istanbul rocket"
+          ]
+        },
+        {
+          "currency": "Facility Admission Tickets",
+          "priority": [
+            "superior tech notes",
+            "advanced tech notes",
+            "intact okiku doll",
+            "intact rohonc codex",
+            "repaired okiku doll",
+            "annotated rohonc codex"
+          ]
+        },
+        {
+          "currency": "Specialty Osmanthus Cakes",
+          "priority": [
+            "pyroxenes",
+            "eligma",
+            "secret tech notes"
+          ]
+        }
+      ]
+    }
+  },
+  "quest_count": 12,
+  "challenge_count": 3,
+  "farm_order": [
+    12,
+    9,
+    8,
+    4,
+    1
+  ],
+  "story_count": 12,
+  "story_ap_cost": 10
+}

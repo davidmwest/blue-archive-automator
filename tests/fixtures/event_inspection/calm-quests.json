@@ -1,0 +1,332 @@
+[
+ {
+  "text": "Event",
+  "confidence": 1.0,
+  "box": [
+   104,
+   9,
+   186,
+   40
+  ]
+ },
+ {
+  "text": "500/224",
+  "confidence": 1.0,
+  "box": [
+   507,
+   9,
+   588,
+   37
+  ]
+ },
+ {
+  "text": "1,000,000",
+  "confidence": 1.0,
+  "box": [
+   717,
+   12,
+   826,
+   34
+  ]
+ },
+ {
+  "text": "1,200",
+  "confidence": 1.0,
+  "box": [
+   933,
+   11,
+   999,
+   36
+  ]
+ },
+ {
+  "text": "Specialized",
+  "confidence": 1.0,
+  "box": [
+   261,
+   83,
+   358,
+   104
+  ]
+ },
+ {
+  "text": "Play Guide",
+  "confidence": 0.9997,
+  "box": [
+   91,
+   88,
+   201,
+   118
+  ]
+ },
+ {
+  "text": "Story",
+  "confidence": 0.9999,
+  "box": [
+   733,
+   95,
+   799,
+   127
+  ]
+ },
+ {
+  "text": "Quest",
+  "confidence": 0.9999,
+  "box": [
+   909,
+   97,
+   980,
+   124
+  ]
+ },
+ {
+  "text": "Challenge",
+  "confidence": 1.0,
+  "box": [
+   1063,
+   94,
+   1175,
+   126
+  ]
+ },
+ {
+  "text": "Śtudents",
+  "confidence": 0.9509,
+  "box": [
+   261,
+   102,
+   340,
+   119
+  ]
+ },
+ {
+  "text": "01",
+  "confidence": 1.0,
+  "box": [
+   713,
+   173,
+   747,
+   203
+  ]
+ },
+ {
+  "text": "Commercial Street",
+  "confidence": 0.9992,
+  "box": [
+   779,
+   170,
+   1004,
+   197
+  ]
+ },
+ {
+  "text": "Enter",
+  "confidence": 0.9999,
+  "box": [
+   1093,
+   185,
+   1167,
+   215
+  ]
+ },
+ {
+  "text": "South Trail",
+  "confidence": 0.9988,
+  "box": [
+   778,
+   200,
+   911,
+   228
+  ]
+ },
+ {
+  "text": "02",
+  "confidence": 1.0,
+  "box": [
+   713,
+   288,
+   750,
+   317
+  ]
+ },
+ {
+  "text": "Forest Trail Park",
+  "confidence": 0.9998,
+  "box": [
+   779,
+   284,
+   978,
+   311
+  ]
+ },
+ {
+  "text": "Entrance 1",
+  "confidence": 0.9966,
+  "box": [
+   779,
+   315,
+   907,
+   342
+  ]
+ },
+ {
+  "text": "03",
+  "confidence": 1.0,
+  "box": [
+   713,
+   402,
+   750,
+   431
+  ]
+ },
+ {
+  "text": "Forest Trail Park",
+  "confidence": 0.9998,
+  "box": [
+   779,
+   398,
+   977,
+   425
+  ]
+ },
+ {
+  "text": "Entrance 3",
+  "confidence": 0.9839,
+  "box": [
+   779,
+   429,
+   908,
+   456
+  ]
+ },
+ {
+  "text": "The Calm After",
+  "confidence": 0.9929,
+  "box": [
+   204,
+   462,
+   460,
+   508
+  ]
+ },
+ {
+  "text": "the Storm",
+  "confidence": 0.9574,
+  "box": [
+   243,
+   502,
+   419,
+   548
+  ]
+ },
+ {
+  "text": "04",
+  "confidence": 1.0,
+  "box": [
+   714,
+   517,
+   749,
+   545
+  ]
+ },
+ {
+  "text": "Water Buffalo Rock",
+  "confidence": 0.9744,
+  "box": [
+   779,
+   513,
+   1010,
+   538
+  ]
+ },
+ {
+  "text": "Creek",
+  "confidence": 1.0,
+  "box": [
+   779,
+   542,
+   855,
+   571
+  ]
+ },
+ {
+  "text": "Schedule: 10/12/2026 19:00 - 10/26/2026 18:59",
+  "confidence": 0.9689,
+  "box": [
+   133,
+   568,
+   533,
+   593
+  ]
+ },
+ {
+  "text": "05",
+  "confidence": 1.0,
+  "box": [
+   713,
+   630,
+   749,
+   660
+  ]
+ },
+ {
+  "text": "Commercial Street",
+  "confidence": 0.9957,
+  "box": [
+   780,
+   628,
+   1004,
+   653
+  ]
+ },
+ {
+  "text": "Story",
+  "confidence": 0.9999,
+  "box": [
+   126,
+   658,
+   185,
+   689
+  ]
+ },
+ {
+  "text": "Shop",
+  "confidence": 0.9999,
+  "box": [
+   249,
+   658,
+   305,
+   689
+  ]
+ },
+ {
+  "text": "Tasks",
+  "confidence": 0.9999,
+  "box": [
+   369,
+   660,
+   428,
+   683
+  ]
+ },
+ {
+  "text": "Draw a Card",
+  "confidence": 0.9759,
+  "box": [
+   464,
+   661,
+   576,
+   682
+  ]
+ },
+ {
+  "text": "Central Road",
+  "confidence": 0.9986,
+  "box": [
+   779,
+   657,
+   936,
+   684
+  ]
+ }
+]

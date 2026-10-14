@@ -13,6 +13,39 @@ The current event is **A Flower Blooms Among the Hundred: Fair and Square Aquati
 
 The [rerun farming guide](https://www.reddit.com/r/BlueArchive/comments/1wt161e/comment/pcqb1ga/) recommends stages 10–12 for their artifact mix, despite stage 9's slightly better currency efficiency. It recommends three treasure rounds for pyroxene/eligma, or six for broader rewards; round 7 onward has poor value. This is advice, not a universal optimum. Actual bonuses and chosen rewards determine our plan.
 
+### The Calm After the Storm (October 2026)
+
+**Researched:** October 13, 2026 · global English · surveyed in the client at 2560×1440
+
+Play runs **October 13, 02:00 UTC to October 27, 01:59 UTC**; the client shows the same window in local time. Reward exchange stays open another week. The season has 12 Stories at 10 AP, 12 Quests at 10, 15 and 20 AP, three Challenges plus an EX stage, three exchange shops, and a card draw. Details come from the [event wiki page](https://bluearchive.wiki/wiki/Clear_Skies_After_the_Storm), [Inven Global's coverage](https://www.invenglobal.com/articles/27092/blue-archive-updates-new-event-story-storm-passes-clear-sky), and the in-game Play Guide.
+
+| Currency (Global name) | Source | Used for |
+| --- | --- | --- |
+| Souvenir Photo Cards | stages | Draw a Card: 200 per card, 800 for four |
+| Audit Plans | stages | first shop tab |
+| Facility Admission Tickets | stages | second shop tab |
+| Specialty Osmanthus Cakes | every drawn card | third shop tab |
+
+The season profile is `ba_automator/assets/calm-after-the-storm.json`. Each profile now carries its own identity: the page title, the first quest, the label of its bottom-row mechanic, and how to enter it. This season is opened from Campaign's event card, which shares its slot with the previous event's reward period; the card is tapped only while its text names this event, and the destination page is verified before anything else. It has no round goal to observe, so `farm_goal` is `until_event_ends`: with `[ap].event_priority` on, AP above the floor goes to Stories first, then to the first three-star quest in `farm_order` (12, 9, 8, 4, 1: the Souvenir Photo Card stages), until the play period ends or the setting is turned off.
+
+Reused unchanged: Story clearing, one-time quest clears with Auto Formation, and three-star sweeps.
+
+The season's other rewards are listed under `extras` in its profile and run through the existing `event_treasure` job (`ba_automator/event_extras.py`), which the manager queues after each AP visit and in the daily plan while `[ap].event_treasure_enabled` is on:
+
+- **Tasks.** Claim All is tapped only while it is lit. Task rewards are free, so they are collected even when event spending is off.
+- **Draw a Card.** One card at a time while the balance covers the 200-card cost, and the balance is read back after every draw. A draw's receipt lists about 18 random rewards over several pages; reading every tooltip took over seven minutes per draw, so card receipts are kept as images rather than itemized (about 18 seconds per draw). A set of four holds one high-grade card; once a revealed card shows a gold or rainbow frame, or all four are face up, the free shuffle deals a new set. Only Normal (pale frame) cards were seen during the survey, so the frame check is a colour heuristic; a wrong answer changes only when the free shuffle happens. `visit_limit` caps draws per visit.
+- **Shops.** Each of the three tabs is scrolled once to list its stock, then limited stock is bought strictly in the tab's `priority` order (unlisted items follow in shop order; `skip` entries are never bought). While a wanted item is still in stock and cannot be cleared, nothing below it is bought, so the currency keeps accumulating for it; in the last 36 hours of the play period that rule is dropped and whatever is affordable is bought. Unlimited conversions (no stock line) are never bought. Before Confirm, the notice's item name, unit cost, quantity and total must agree with the card and the balance; afterwards the balance must have dropped by exactly the total. OCR does not find a lone "1" balance even enlarged, so an unread balance skips that tab for the visit.
+
+  This season's priorities, set in the profile from the surveyed stock: Audit Plans buy Superior, then Advanced Tactical Training Blu-rays, then the top Aether and Istanbul Rocket artifacts; Facility Admission Tickets buy Superior, then Advanced Tech Notes, then the top Okiku Doll and Rohonc Codex artifacts; cakes buy Pyroxenes, Eligma and Secret Tech Notes. Everything else limited follows in shop order (reports, stones, lower artifacts, gifts, the one furniture item, limited credits). The unlimited Facility Admission Ticket and Credit Points conversions are never bought.
+
+Every claim, draw and purchase feeds the shared loot reader and is recorded as an important action with its receipt image. These flows keep no pending intent: a draw or purchase interrupted after Confirm leaves nothing to reconcile, because the next visit re-reads balances and stock and simply continues.
+
+**Quests and Challenges.** `clear_event` gives every quest without three stars one default Auto Formation attempt, since a first clear's rewards come once while a star shortfall would likely repeat. A shortfall is recorded in the event state, not replayed, and listed in the job's summary for the player; only a loss (the next quest stays locked) or the AP floor ends the run early. It then continues to the Challenge tab (`challenge_count` in the profile): each unfinished Challenge gets one attempt behind the same durable intent (Challenges field a fixed team of four event-provided Lv.50 students, which is kept when Quick Formation does not open), and, as with quests, a shortfall is recorded and left to the player without holding back the other Challenges. A lost battle is recognized, confirmed (with the strengthening tip that follows it) and read back from the stage rather than left pending.
+
+**Entering from Campaign.** At 1440p this season rests on Campaign's rotating card for only about two seconds of each six-second rotation, while a screenshot takes 1.2 s and a freshly launched game acts on input late; tapping on seeing the card arrive opened the other season ten times in a row. Screen recordings showed that a swipe turns the card and restarts the rotation, after which the next card rests from about 4.1 to 6.4 s. The entry therefore swipes until another season rests on the card and taps 5.2 s after that swipe: both inputs share the same lag. The destination is still verified, and the other season's page is left without spending.
+
+The first entry shows an opening story and a seven-page Play Guide. The Play Guide is closed automatically; the opening story was dismissed by hand during the survey.
+
 ### Proposed starting preset
 
 - Use already three-starred event quests. Prefer stages 10–12 when available; consider other verified stages when their observed yields better serve the selected goals.

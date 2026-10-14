@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from .actions import record_action
 from .crafting_vision import bright, cyan, has
+from .fileops import replace_file
 from .home_badges import badges
 from .locking import InstanceLock
 from .shop_runtime import ShopRunner
@@ -39,7 +40,7 @@ def state_path(config):
 
 def last_visit(config):
     try:
-        value = json.loads(state_path(config).read_text())
+        value = json.loads(state_path(config).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return None
     if (
@@ -58,14 +59,14 @@ def save_visit(config, day, reward_seen):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
     try:
-        with temporary.open("w") as stream:
+        with temporary.open("w", encoding="utf-8") as stream:
             json.dump(
                 {"version": 1, "game_day": day, "reward_notice_seen": reward_seen},
                 stream,
             )
             stream.flush()
             os.fsync(stream.fileno())
-        temporary.replace(path)
+        replace_file(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 

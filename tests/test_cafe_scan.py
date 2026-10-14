@@ -197,3 +197,23 @@ def test_pan_recaptures_expired_unsent_input_with_bounded_retries(monkeypatch, s
             runner.pan(PAN_LEFT)
         assert len(deadlines) == 3
         assert comparisons == []
+
+
+def test_a_floor_whose_camera_cannot_be_tracked_ends_its_scan_without_failing(monkeypatch):
+    # Live, unfurnished Cafe 2 showed only its backdrop at the camera edge;
+    # twelve unmeasurable drags failed the whole Cafe job after Cafe 1 was done.
+    runner = runner_with_motion([None] * 12)
+    runner.floor, runner.config = 2, SimpleNamespace()
+    runner.phase = lambda message: None
+    recorded = []
+    monkeypatch.setattr(cafe_module, 'record_action', lambda config, action, detail, **fields: recorded.append((action, fields)))
+    runner.sweep()
+    assert runner.scanned_after == [0] + list(range(1, 13)) + [12]
+    assert recorded == [('cafe_scan_unverified', {'cafe': 2})]
+
+
+def test_partly_measured_drags_still_fail_without_coverage():
+    runner = runner_with_motion([None] * 11 + [(-120, 0)])
+    with pytest.raises(RuntimeError, match="could not be verified after twelve drags") as raised:
+        runner.pan_region(PAN_LEFT, to_edge=True)
+    assert not isinstance(raised.value, cafe_module.CameraUntrackable)

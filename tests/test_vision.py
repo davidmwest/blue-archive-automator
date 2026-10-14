@@ -285,3 +285,25 @@ def test_native_screenshot_preserves_coordinate_grid():
     frame = decode_frame(png(1280, 720))
     assert frame.shape == (720, 1280, 3)
     assert frame.dtype == np.uint8
+
+@pytest.mark.parametrize("value, expected", [
+    (None, 2), ("16", 16), ("1", 1), ("64", 64), ("0", 2), ("65", 2), ("many", 2), ("", 2),
+])
+def test_ocr_threads_default_and_bounds(monkeypatch, value, expected):
+    from ba_automator.vision import ocr_threads
+
+    if value is None:
+        monkeypatch.delenv("BA_OCR_THREADS", raising=False)
+    else:
+        monkeypatch.setenv("BA_OCR_THREADS", value)
+    assert ocr_threads() == expected
+
+
+def test_data_update_progress_waits_as_a_download():
+    # Live, an accepted 314 MB update showed this; unknown timed out at 100%.
+    observation = classify([
+        word("Update in progress. [2/2] 100.00 %", center=(430, 1080 * 720 // 1440)),
+        word("[314.45MB / 314.45MB]", center=(1100, 1080 * 720 // 1440)),
+    ], {})
+    assert observation.state == "downloading"
+    assert observation.target is None

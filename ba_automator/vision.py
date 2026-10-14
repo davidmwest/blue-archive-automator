@@ -136,6 +136,19 @@ def read_game_region(png: bytes, reader, box: tuple[int, int, int, int]) -> list
                             native_origin=(left, top), canonical_origin=box[:2])
 
 
+def ocr_threads() -> int:
+    """CPU threads for local OCR: 2 unless BA_OCR_THREADS asks for 1 to 64.
+
+    A frame is only actionable for a few seconds. Hosts with slower cores need
+    more threads to read a native-resolution screenshot inside that window.
+    """
+    try:
+        requested = int(os.environ.get("BA_OCR_THREADS", "2"))
+    except ValueError:
+        return 2
+    return requested if 1 <= requested <= 64 else 2
+
+
 class StartupVision:
     """Keep OCR local and CPU-bounded; no cloud model calls during a run."""
 
@@ -149,14 +162,15 @@ class StartupVision:
         onnxruntime.disable_telemetry_events()
         from rapidocr import RapidOCR
 
-        cv2.setNumThreads(2)
+        threads = ocr_threads()
+        cv2.setNumThreads(threads)
         self.ocr = RapidOCR(params={
             "Global.log_level": "error",
             # RapidOCR's default 2000px limit shrinks a 2560px screenshot before
             # reading it. Game frames are already bounded to 3840×2160 here.
             "Global.max_side_len": 3840,
             "Det.limit_type": "min",
-            "EngineConfig.onnxruntime.intra_op_num_threads": 2,
+            "EngineConfig.onnxruntime.intra_op_num_threads": threads,
             "EngineConfig.onnxruntime.inter_op_num_threads": 1,
         })
         self._ocr_cache = OrderedDict()
@@ -164,7 +178,7 @@ class StartupVision:
         root = files("ba_automator").joinpath("assets")
         manifest = root.joinpath("startup.json")
         if manifest.is_file():
-            for spec in json.loads(manifest.read_text()):
+            for spec in json.loads(manifest.read_text(encoding="utf-8")):
                 template = cv2.imdecode(
                     np.frombuffer(root.joinpath(spec["file"]).read_bytes(), dtype=np.uint8),
                     cv2.IMREAD_COLOR,
@@ -237,6 +251,12 @@ class StartupVision:
                 return Observation(
                     "loading", "Waiting for the recognized publisher-logo startup splash", None,
                     observation.text, detector="publisher_splash",
+                )
+            target = startup_promo_close(frame, words, self.assets)
+            if target is not None:
+                return Observation(
+                    "popup", "Dismiss a full-screen startup promotion with its verified corner X",
+                    target, observation.text, detector="startup_promo",
                 )
             target = shaded_overlay_close(frame, words, self.assets)
             if target is not None:
@@ -414,6 +434,51 @@ def shaded_overlay_close(
     return candidates[0]
 
 
+def startup_promo_close(
+    frame: np.ndarray,
+    words: list[Word],
+    assets: list[tuple[dict, np.ndarray]],
+) -> tuple[int, int] | None:
+    """Recognize a full-screen startup promotion whose corner X changes color.
+
+    The game tints the X to contrast with each banner, so the white-mask asset
+    misses bright artwork. Require the fixed bottom-left "Don't show again
+    today" label and the same X outline in its usual corner. The label alone
+    never authorizes a tap.
+    """
+    if frame.shape != (720, 1280, 3):
+        return None
+    labels = [word for word in words
+              if word.normalized in {"don t show again today", "dont show again today",
+                                     "do not show again today"}
+              and word.confidence >= 0.85 and word.box[2] <= 330 and word.box[1] >= 640]
+    if len(labels) != 1:
+        return None
+    anchors = [(spec, template) for spec, template in assets if spec.get("name") == "startup_close"]
+    if len(anchors) != 1:
+        return None
+    spec, template = anchors[0]
+    x1, y1, x2, y2 = spec["region"]
+    crop = frame[y1:y2, x1:x2]
+    if crop.shape[0] < template.shape[0] or crop.shape[1] < template.shape[1]:
+        return None
+
+    def outline(image):
+        edges = cv2.Canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 40, 120)
+        return cv2.dilate(edges, np.ones((2, 2), dtype=np.uint8))
+
+    reference = outline(template)
+    if not reference.any():
+        return None
+    # Outlines agree for a light X on dark artwork and a dark X on light artwork.
+    scores = cv2.matchTemplate(outline(crop), reference, cv2.TM_CCOEFF_NORMED)
+    _, correlation, _, location = cv2.minMaxLoc(scores)
+    if correlation < 0.6:
+        return None
+    return (x1 + location[0] + template.shape[1] // 2,
+            y1 + location[1] + template.shape[0] // 2)
+
+
 def classify(words: list[Word], matches: dict[str, tuple[int, int]]) -> Observation:
     """Only explicit startup contexts authorize a tap; never accept a bare Yes/OK."""
     visible = tuple(word.text for word in words)
@@ -498,8 +563,9 @@ def classify(words: list[Word], matches: dict[str, tuple[int, int]]) -> Observat
         if target:
             return result("popup", "Dismiss recognized login reward or expired-item notice", target)
 
+    # Live, an accepted 314 MB data update showed "Update in progress. [2/2] 100.00 %".
     if any(phrase in text for phrase in ("downloading", "extracting", "decompressing", "applying patch",
-                                         "verifying downloaded")):
+                                         "verifying downloaded", "update in progress")):
         return result("downloading", "Waiting for game-data download or installation")
 
     if button({"confirm", "yes", "no", "ok", "cancel", "close", "purchase", "buy"}, min_y=220):

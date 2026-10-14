@@ -238,3 +238,29 @@ def test_ticket_row_reads_left_to_right_despite_baseline_offset(startup):
                   Word("1/5", .99995, (212, 478, 245, 500))))
     result = classify_tactical(frame, words)
     assert result.kind == "tactical" and result.tickets == 1
+
+def test_reward_receipt_survives_an_accented_continue_prompt():
+    # Live at 1440p the sparkle animation made OCR read "TOÚCH TO CONTINUE"; the
+    # claimed receipt then went unrecognized until the wait expired.
+    import cv2
+    import numpy as np
+    from ba_automator.tactical_rewards import TacticalVision
+    from ba_automator.vision import Word
+
+    frame = np.full((720, 1280, 3), 60, np.uint8)
+    frame[134:182, 375:901] = (40, 220, 250)
+
+    class Reader:
+        def read(self, image):
+            if image.shape[:2] == (70, 375):
+                return [Word("TOUCH TO", 1.0, (36, 14, 194, 58)), Word("CONTINUE", 1.0, (182, 13, 343, 59))]
+            return [Word("REWARD ACQUIRED!", 1.0, (358, 118, 920, 201)),
+                    Word("TOÚCH TO CONTINUE", 0.98, (488, 611, 789, 650))]
+
+        def matches(self, image):
+            return {}
+
+    ok, png = cv2.imencode(".png", frame)
+    assert ok
+    screen = TacticalVision(Reader()).analyze(png.tobytes())
+    assert (screen.kind, screen.target) == ("receipt", (640, 631))

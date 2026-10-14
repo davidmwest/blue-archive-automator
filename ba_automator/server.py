@@ -42,6 +42,7 @@ from .adb import AdbDevice
 from .actions import record_action
 from .config import Config, ConfigError
 from .crafting_state import CraftStateError, read_state, scheduled_jobs, timestamp
+from .fileops import replace_file
 from .locking import InstanceLock, LockError
 from .tasks import RUN_PREFIXES, TASK_LABELS, TASKS, task_plan
 from .home_badges import PRIORITY
@@ -112,7 +113,7 @@ def _write_atomic(path: Path, text: str) -> None:
             stream.write(text)
             stream.flush()
             os.fsync(stream.fileno())
-        temporary.replace(path)
+        replace_file(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 
@@ -253,7 +254,7 @@ class DashboardController:
 
     def _load_failures(self):
         try:
-            records = json.loads(self._failures_path().read_text())
+            records = json.loads(self._failures_path().read_text(encoding="utf-8"))
             if isinstance(records, list):
                 return [item for item in records[-50:] if isinstance(item, dict)
                         and all(isinstance(item.get(key), str) for key in ('id', 'task', 'time', 'detail'))]
@@ -1334,7 +1335,7 @@ class DashboardController:
                     or not path.resolve().is_relative_to(run_root.resolve())
                     or path.stat().st_size > 4096):
                 raise ValueError('Invalid badge request path')
-            value = json.loads(path.read_text())
+            value = json.loads(path.read_text(encoding="utf-8"))
             tasks = value['tasks']
             if (value.get('version') != 1 or not isinstance(tasks, list)
                     or any(not isinstance(task, str) or task not in PRIORITY for task in tasks)):
@@ -1898,7 +1899,7 @@ class DashboardController:
         temporary = target.with_name(f".{target.name}.{uuid4().hex}.tmp")
         try:
             temporary.write_bytes(png)
-            temporary.replace(target)
+            replace_file(temporary, target)
         finally:
             temporary.unlink(missing_ok=True)
         with self._condition:

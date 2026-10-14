@@ -1,0 +1,252 @@
+[
+ {
+  "text": "Campaign",
+  "confidence": 1.0,
+  "box": [
+   103,
+   8,
+   245,
+   43
+  ]
+ },
+ {
+  "text": "500/224",
+  "confidence": 1.0,
+  "box": [
+   508,
+   9,
+   588,
+   37
+  ]
+ },
+ {
+  "text": "1,000,000",
+  "confidence": 1.0,
+  "box": [
+   718,
+   12,
+   826,
+   35
+  ]
+ },
+ {
+  "text": "1,200",
+  "confidence": 1.0,
+  "box": [
+   933,
+   10,
+   999,
+   36
+  ]
+ },
+ {
+  "text": "13 day(s) remaining",
+  "confidence": 0.9607,
+  "box": [
+   36,
+   97,
+   170,
+   120
+  ]
+ },
+ {
+  "text": "先生w",
+  "confidence": 0.9569,
+  "box": [
+   1124,
+   129,
+   1165,
+   149
+  ]
+ },
+ {
+  "text": "8:32",
+  "confidence": 0.9999,
+  "box": [
+   1204,
+   169,
+   1241,
+   202
+  ]
+ },
+ {
+  "text": "TheCalm After",
+  "confidence": 0.9754,
+  "box": [
+   60,
+   183,
+   148,
+   197
+  ]
+ },
+ {
+  "text": "theStorm",
+  "confidence": 0.999,
+  "box": [
+   77,
+   195,
+   131,
+   210
+  ]
+ },
+ {
+  "text": "Mission",
+  "confidence": 1.0,
+  "box": [
+   706,
+   215,
+   823,
+   251
+  ]
+ },
+ {
+  "text": "Story",
+  "confidence": 0.9999,
+  "box": [
+   986,
+   215,
+   1079,
+   259
+  ]
+ },
+ {
+  "text": "Area 14 14th Mission",
+  "confidence": 0.9933,
+  "box": [
+   707,
+   256,
+   858,
+   275
+  ]
+ },
+ {
+  "text": "Tales of Youth and School Days",
+  "confidence": 0.9969,
+  "box": [
+   988,
+   255,
+   1184,
+   276
+  ]
+ },
+ {
+  "text": "In Progress",
+  "confidence": 0.9998,
+  "box": [
+   750,
+   333,
+   829,
+   353
+  ]
+ },
+ {
+  "text": "Bounty",
+  "confidence": 1.0,
+  "box": [
+   676,
+   399,
+   737,
+   422
+  ]
+ },
+ {
+  "text": "Total Assault",
+  "confidence": 0.9992,
+  "box": [
+   844,
+   448,
+   953,
+   467
+  ]
+ },
+ {
+  "text": "Joint Firing Drill",
+  "confidence": 0.9878,
+  "box": [
+   974,
+   448,
+   1086,
+   469
+  ]
+ },
+ {
+  "text": "Grand Assault",
+  "confidence": 0.9998,
+  "box": [
+   1111,
+   449,
+   1217,
+   466
+  ]
+ },
+ {
+  "text": "Zzz. Strawberry milk... Heeheehee.",
+  "confidence": 0.9954,
+  "box": [
+   96,
+   481,
+   394,
+   506
+  ]
+ },
+ {
+  "text": "Commissions",
+  "confidence": 1.0,
+  "box": [
+   659,
+   501,
+   764,
+   521
+  ]
+ },
+ {
+  "text": "Tacli",
+  "confidence": 0.8645,
+  "box": [
+   938,
+   508,
+   957,
+   525
+  ]
+ },
+ {
+  "text": "Final Restriction",
+  "confidence": 0.9998,
+  "box": [
+   948,
+   597,
+   1057,
+   616
+  ]
+ },
+ {
+  "text": "Scrimmage",
+  "confidence": 1.0,
+  "box": [
+   639,
+   604,
+   732,
+   629
+  ]
+ },
+ {
+  "text": "Tactical Challenge",
+  "confidence": 0.9999,
+  "box": [
+   816,
+   605,
+   925,
+   624
+  ]
+ },
+ {
+  "text": "Release",
+  "confidence": 1.0,
+  "box": [
+   948,
+   612,
+   1004,
+   631
+  ]
+ }
+]

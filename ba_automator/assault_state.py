@@ -14,6 +14,7 @@ import re
 from uuid import uuid4
 
 from .assault_policy import AssaultContext, comfortable_win, team_fingerprint
+from .fileops import replace_file
 
 
 PROOF_LIFETIME_SECONDS = 15 * 60
@@ -137,7 +138,7 @@ def write_state(config, state):
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
-        temporary.replace(path)
+        replace_file(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
 

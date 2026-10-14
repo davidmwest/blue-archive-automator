@@ -1,0 +1,522 @@
+[
+ {
+  "text": "Event Shop",
+  "confidence": 0.999,
+  "box": [
+   105,
+   9,
+   255,
+   40
+  ]
+ },
+ {
+  "text": "500/224",
+  "confidence": 1.0,
+  "box": [
+   507,
+   9,
+   588,
+   37
+  ]
+ },
+ {
+  "text": "98",
+  "confidence": 1.0,
+  "box": [
+   1106,
+   71,
+   1138,
+   97
+  ]
+ },
+ {
+  "text": "Currency",
+  "confidence": 1.0,
+  "box": [
+   43,
+   127,
+   141,
+   155
+  ]
+ },
+ {
+  "text": "Notice",
+  "confidence": 1.0,
+  "box": [
+   580,
+   138,
+   684,
+   173
+  ]
+ },
+ {
+  "text": "Advanced",
+  "confidence": 1.0,
+  "box": [
+   965,
+   136,
+   1053,
+   157
+  ]
+ },
+ {
+  "text": "Superior",
+  "confidence": 1.0,
+  "box": [
+   1121,
+   136,
+   1199,
+   159
+  ]
+ },
+ {
+  "text": "ctivity Report",
+  "confidence": 0.99,
+  "box": [
+   960,
+   154,
+   1075,
+   180
+  ]
+ },
+ {
+  "text": "Activity Report",
+  "confidence": 0.983,
+  "box": [
+   1095,
+   155,
+   1224,
+   178
+  ]
+ },
+ {
+  "text": "Currency",
+  "confidence": 1.0,
+  "box": [
+   40,
+   204,
+   137,
+   233
+  ]
+ },
+ {
+  "text": "Would you like to purchase the selected product?",
+  "confidence": 1.0,
+  "box": [
+   324,
+   210,
+   955,
+   249
+  ]
+ },
+ {
+  "text": "REPORT",
+  "confidence": 1.0,
+  "box": [
+   993,
+   213,
+   1035,
+   235
+  ]
+ },
+ {
+  "text": "REPORT",
+  "confidence": 1.0,
+  "box": [
+   1143,
+   213,
+   1185,
+   235
+  ]
+ },
+ {
+  "text": "Currency",
+  "confidence": 1.0,
+  "box": [
+   40,
+   282,
+   137,
+   311
+  ]
+ },
+ {
+  "text": "Normal Activity Report",
+  "confidence": 0.977,
+  "box": [
+   490,
+   280,
+   747,
+   311
+  ]
+ },
+ {
+  "text": "|Owned 425",
+  "confidence": 0.934,
+  "box": [
+   810,
+   284,
+   920,
+   308
+  ]
+ },
+ {
+  "text": "purchase 45 time(s)",
+  "confidence": 1.0,
+  "box": [
+   963,
+   283,
+   1078,
+   300
+  ]
+ },
+ {
+  "text": "Can purchase 18 time(s)",
+  "confidence": 1.0,
+  "box": [
+   1090,
+   283,
+   1228,
+   300
+  ]
+ },
+ {
+  "text": "REPORT",
+  "confidence": 1.0,
+  "box": [
+   401,
+   299,
+   446,
+   323
+  ]
+ },
+ {
+  "text": "8",
+  "confidence": 1.0,
+  "box": [
+   1016,
+   311,
+   1031,
+   330
+  ]
+ },
+ {
+  "text": "40",
+  "confidence": 1.0,
+  "box": [
+   1162,
+   310,
+   1187,
+   331
+  ]
+ },
+ {
+  "text": "MIN",
+  "confidence": 1.0,
+  "box": [
+   492,
+   336,
+   548,
+   364
+  ]
+ },
+ {
+  "text": "1",
+  "confidence": 0.893,
+  "box": [
+   692,
+   339,
+   709,
+   366
+  ]
+ },
+ {
+  "text": "MAX",
+  "confidence": 1.0,
+  "box": [
+   852,
+   335,
+   914,
+   364
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 1.0,
+  "box": [
+   965,
+   337,
+   1055,
+   358
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 1.0,
+  "box": [
+   1116,
+   337,
+   1206,
+   358
+  ]
+ },
+ {
+  "text": "x2",
+  "confidence": 0.91,
+  "box": [
+   426,
+   354,
+   463,
+   380
+  ]
+ },
+ {
+  "text": "Advanced Tactical",
+  "confidence": 0.989,
+  "box": [
+   963,
+   389,
+   1062,
+   404
+  ]
+ },
+ {
+  "text": "Superior Tactical",
+  "confidence": 0.989,
+  "box": [
+   1111,
+   389,
+   1209,
+   404
+  ]
+ },
+ {
+  "text": "Training Blu-ray",
+  "confidence": 0.999,
+  "box": [
+   962,
+   401,
+   1057,
+   419
+  ]
+ },
+ {
+  "text": "Training Blu-ray",
+  "confidence": 1.0,
+  "box": [
+   1111,
+   401,
+   1208,
+   418
+  ]
+ },
+ {
+  "text": "Unit Cost",
+  "confidence": 1.0,
+  "box": [
+   345,
+   412,
+   449,
+   439
+  ]
+ },
+ {
+  "text": "4",
+  "confidence": 1.0,
+  "box": [
+   529,
+   416,
+   545,
+   438
+  ]
+ },
+ {
+  "text": "Total Cost",
+  "confidence": 1.0,
+  "box": [
+   618,
+   411,
+   730,
+   438
+  ]
+ },
+ {
+  "text": "4",
+  "confidence": 1.0,
+  "box": [
+   839,
+   415,
+   856,
+   437
+  ]
+ },
+ {
+  "text": "(Shanhaijing)",
+  "confidence": 0.972,
+  "box": [
+   969,
+   414,
+   1049,
+   432
+  ]
+ },
+ {
+  "text": "(Shanhaijing)",
+  "confidence": 1.0,
+  "box": [
+   1119,
+   413,
+   1200,
+   432
+  ]
+ },
+ {
+  "text": "Cancel",
+  "confidence": 1.0,
+  "box": [
+   463,
+   502,
+   566,
+   537
+  ]
+ },
+ {
+  "text": "Confirm",
+  "confidence": 1.0,
+  "box": [
+   703,
+   504,
+   827,
+   538
+  ]
+ },
+ {
+  "text": "SHANHAIJINO",
+  "confidence": 0.938,
+  "box": [
+   1153,
+   501,
+   1182,
+   508
+  ]
+ },
+ {
+  "text": "purchase 12 time(s)",
+  "confidence": 1.0,
+  "box": [
+   962,
+   534,
+   1078,
+   553
+  ]
+ },
+ {
+  "text": "Can purchase 4 time(s)",
+  "confidence": 1.0,
+  "box": [
+   1088,
+   534,
+   1229,
+   553
+  ]
+ },
+ {
+  "text": "100",
+  "confidence": 1.0,
+  "box": [
+   1006,
+   562,
+   1042,
+   585
+  ]
+ },
+ {
+  "text": "300",
+  "confidence": 1.0,
+  "box": [
+   1156,
+   563,
+   1192,
+   584
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 0.971,
+  "box": [
+   665,
+   592,
+   752,
+   611
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 0.975,
+  "box": [
+   815,
+   592,
+   903,
+   611
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 1.0,
+  "box": [
+   965,
+   589,
+   1055,
+   611
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 1.0,
+  "box": [
+   1116,
+   589,
+   1206,
+   612
+  ]
+ },
+ {
+  "text": "Aether Dust",
+  "confidence": 1.0,
+  "box": [
+   651,
+   651,
+   766,
+   672
+  ]
+ },
+ {
+  "text": "Aether Piece",
+  "confidence": 0.999,
+  "box": [
+   798,
+   649,
+   918,
+   673
+  ]
+ },
+ {
+  "text": "Aether Shard",
+  "confidence": 0.959,
+  "box": [
+   946,
+   650,
+   1071,
+   672
+  ]
+ },
+ {
+  "text": "Aether Essence",
+  "confidence": 0.999,
+  "box": [
+   1091,
+   651,
+   1229,
+   672
+  ]
+ }
+]

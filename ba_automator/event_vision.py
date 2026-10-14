@@ -35,6 +35,17 @@ def classify_quest(frame, words):
             and has(words,'confirm',(1090,625,1260,705))
             and cyan(frame,(1120,640,1220,688))):
         return BattleScreen('event_complete',target=(1170,661))
+    if (has(words,'defeat',(350,100,950,310))
+            and has(words,'confirm',(550,625,730,695))
+            and yellow(frame,(540,635,735,680))):
+        # The loss page shared with other battle modes.
+        return BattleScreen('event_defeat',target=(640,659))
+    if (has(words,'tip',(250,60,450,180))
+            and has(words,'go to lobby',(390,620,630,700))
+            and has(words,'confirm',(690,620,860,700))
+            and yellow(frame,(700,640,840,675))):
+        # Live, a lost event Challenge was followed by this strengthening tip.
+        return BattleScreen('event_tip',target=(772,656))
     if (has(words, 'mission info' , (430,110,870,170))
             and has(words, 'start mission', (760,495,1120,570))
             and bright(frame,(500,180,600,200))):
@@ -64,13 +75,17 @@ def classify_quest(frame, words):
         return BattleScreen('event_formation',ap)
     if (has(words, 'event', (80,0,260,60))
             and has(words, 'quest', (860,80,1020,140))
-            and has(words, 'treasure hunt', (430,610,605,710))
-            and has(words, 'a flower blooms among the hundred', (0,120,670,600))
             and bright(frame, (700,150,740,170))
             and classify_event(frame,words) is None):
         # This layout can be shared by reruns. Only enter_event's unique
         # destination check can establish identity before quest navigation.
-        return BattleScreen('event_list', ap=ap)
+        from .event_priority import profiles
+        title = ''.join(w.normalized for w in within(words,(0,120,670,600))).replace(' ','')
+        entrance = ''.join(w.normalized for w in within(words,(430,610,605,710))).replace(' ','')
+        if any(p['identity']['mechanic'] in entrance
+               and p['identity'].get('series', p['identity']['title']) in title
+               for p in profiles()):
+            return BattleScreen('event_list', ap=ap)
     auto = auto_state(frame,words)
     if auto is not None:
         return BattleScreen('event_battle', auto=auto)

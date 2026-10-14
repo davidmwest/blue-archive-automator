@@ -3,6 +3,7 @@
 from datetime import date
 import json
 from .ap_state import state_path as ap_path
+from .fileops import replace_file
 import os
 from uuid import uuid4
 
@@ -38,7 +39,7 @@ def empty_state():
 
 def read_state(config, task):
     try:
-        state = json.loads(state_path(config, task).read_text())
+        state = json.loads(state_path(config, task).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return empty_state()
     except (OSError, ValueError) as exc:
@@ -92,6 +93,6 @@ def write_state(config, task, state):
             json.dump(state, stream, indent=2)
             stream.flush()
             os.fsync(stream.fileno())
-        temp.replace(path)
+        replace_file(temp, path)
     finally:
         temp.unlink(missing_ok=True)

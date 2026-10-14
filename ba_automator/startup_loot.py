@@ -15,6 +15,7 @@ import re
 import cv2
 
 from .daily_schedule import due_day
+from .fileops import replace_file
 from .loot_receipts import encode, page, read_crop, save_icon, save_result
 from .vision import decode_frame, decode_native_frame, native_game_region, read_game_words
 
@@ -194,8 +195,8 @@ class StartupLoot:
                 frames.append(path.name)
             # Manifest permits offline recovery after an interrupted startup.
             temporary = self.root / "frames.tmp"
-            temporary.write_text(json.dumps(self.sequences, indent=2))
-            temporary.replace(self.root / "frames.json")
+            temporary.write_text(json.dumps(self.sequences, indent=2), encoding="utf-8")
+            replace_file(temporary, self.root / "frames.json")
             return captured_at - sequence["since"] < SETTLE_SECONDS
         except Exception:
             LOGGER.exception("Could not preserve optional login reward evidence")
@@ -205,7 +206,7 @@ class StartupLoot:
         records = {}
         path = self.config.state_dir / "important-actions.jsonl"
         if path.exists():
-            for line in path.read_text().splitlines():
+            for line in path.read_text(encoding="utf-8").splitlines():
                 try:
                     item = json.loads(line)
                 except ValueError:

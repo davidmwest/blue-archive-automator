@@ -146,7 +146,7 @@ class TreasureRunner(ShopRunner):
             self.phase('Automatic event treasure is off')
             return self.finish()
         profile = available_event(self.wall_clock())
-        if profile is None:
+        if profile is None or 'board' not in profile:
             if pending:
                 self.fail('Pending treasure belongs to an inactive event; inspect its saved receipt')
             self.phase('No supported Treasure Hunt is active')
@@ -277,6 +277,11 @@ def run_event_treasure(config, device, startup, **kwargs):
     # owns its own lock and rechecks the durable guard before any input. Release
     # this inspection lock first; the runner re-reads state under a new lock.
     relaunch = False
+    profile = available_event(kwargs.get('wall_clock', lambda: datetime.now(timezone.utc))())
+    if profile and profile.get('extras') and not treasure_state.read_state(config)['pending']:
+        # This season spends its currency on other mechanics, not a treasure board.
+        from .event_extras import run_event_extras
+        return run_event_extras(config, device, startup, profile, **kwargs)
     with InstanceLock(config):
         saved = treasure_state.read_state(config)
         profile = available_event(kwargs.get('wall_clock', lambda: datetime.now(timezone.utc))())

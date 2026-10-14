@@ -1,0 +1,752 @@
+[
+ {
+  "text": "Event Shop",
+  "confidence": 1.0,
+  "box": [
+   104,
+   8,
+   255,
+   41
+  ]
+ },
+ {
+  "text": "500/224",
+  "confidence": 1.0,
+  "box": [
+   507,
+   9,
+   587,
+   37
+  ]
+ },
+ {
+  "text": "94",
+  "confidence": 1.0,
+  "box": [
+   1105,
+   71,
+   1138,
+   98
+  ]
+ },
+ {
+  "text": "Currency",
+  "confidence": 1.0,
+  "box": [
+   43,
+   126,
+   141,
+   155
+  ]
+ },
+ {
+  "text": "Novice Activity",
+  "confidence": 1.0,
+  "box": [
+   642,
+   135,
+   772,
+   160
+  ]
+ },
+ {
+  "text": "Normal Activity",
+  "confidence": 0.998,
+  "box": [
+   789,
+   135,
+   926,
+   161
+  ]
+ },
+ {
+  "text": "Advanced",
+  "confidence": 1.0,
+  "box": [
+   965,
+   136,
+   1053,
+   158
+  ]
+ },
+ {
+  "text": "Superior",
+  "confidence": 1.0,
+  "box": [
+   1121,
+   137,
+   1199,
+   159
+  ]
+ },
+ {
+  "text": "Report",
+  "confidence": 1.0,
+  "box": [
+   675,
+   156,
+   739,
+   177
+  ]
+ },
+ {
+  "text": "Report",
+  "confidence": 1.0,
+  "box": [
+   827,
+   156,
+   891,
+   179
+  ]
+ },
+ {
+  "text": "Activity Report",
+  "confidence": 0.997,
+  "box": [
+   944,
+   155,
+   1074,
+   179
+  ]
+ },
+ {
+  "text": "Activity Report",
+  "confidence": 0.994,
+  "box": [
+   1095,
+   156,
+   1224,
+   178
+  ]
+ },
+ {
+  "text": "Currency",
+  "confidence": 1.0,
+  "box": [
+   41,
+   204,
+   137,
+   233
+  ]
+ },
+ {
+  "text": "REPORT",
+  "confidence": 1.0,
+  "box": [
+   692,
+   214,
+   733,
+   234
+  ]
+ },
+ {
+  "text": "REPORT",
+  "confidence": 0.999,
+  "box": [
+   844,
+   214,
+   883,
+   234
+  ]
+ },
+ {
+  "text": "REPORT",
+  "confidence": 1.0,
+  "box": [
+   994,
+   214,
+   1034,
+   234
+  ]
+ },
+ {
+  "text": "REPORT",
+  "confidence": 1.0,
+  "box": [
+   1144,
+   214,
+   1185,
+   234
+  ]
+ },
+ {
+  "text": "F山",
+  "confidence": 0.691,
+  "box": [
+   686,
+   250,
+   726,
+   274
+  ]
+ },
+ {
+  "text": "山",
+  "confidence": 0.682,
+  "box": [
+   1000,
+   255,
+   1026,
+   273
+  ]
+ },
+ {
+  "text": "x5",
+  "confidence": 0.981,
+  "box": [
+   719,
+   263,
+   750,
+   285
+  ]
+ },
+ {
+  "text": "x2",
+  "confidence": 0.958,
+  "box": [
+   870,
+   263,
+   900,
+   285
+  ]
+ },
+ {
+  "text": "Currency",
+  "confidence": 1.0,
+  "box": [
+   41,
+   282,
+   137,
+   311
+  ]
+ },
+ {
+  "text": "Can purchase 90 time(s)",
+  "confidence": 0.999,
+  "box": [
+   636,
+   282,
+   777,
+   301
+  ]
+ },
+ {
+  "text": "Can purchase 69 time(s)",
+  "confidence": 1.0,
+  "box": [
+   787,
+   282,
+   927,
+   301
+  ]
+ },
+ {
+  "text": "Can purchase 45 time(s)",
+  "confidence": 1.0,
+  "box": [
+   938,
+   282,
+   1078,
+   301
+  ]
+ },
+ {
+  "text": "Can purchase 18 time(s)",
+  "confidence": 1.0,
+  "box": [
+   1089,
+   282,
+   1228,
+   301
+  ]
+ },
+ {
+  "text": "1",
+  "confidence": 0.998,
+  "box": [
+   716,
+   312,
+   727,
+   330
+  ]
+ },
+ {
+  "text": "4",
+  "confidence": 1.0,
+  "box": [
+   865,
+   312,
+   879,
+   331
+  ]
+ },
+ {
+  "text": "8",
+  "confidence": 1.0,
+  "box": [
+   1016,
+   311,
+   1031,
+   330
+  ]
+ },
+ {
+  "text": "40",
+  "confidence": 1.0,
+  "box": [
+   1162,
+   310,
+   1187,
+   332
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 1.0,
+  "box": [
+   664,
+   337,
+   753,
+   358
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 1.0,
+  "box": [
+   815,
+   337,
+   904,
+   358
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 1.0,
+  "box": [
+   966,
+   337,
+   1054,
+   358
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 1.0,
+  "box": [
+   1116,
+   337,
+   1205,
+   358
+  ]
+ },
+ {
+  "text": "Beginner Tactical",
+  "confidence": 0.993,
+  "box": [
+   657,
+   388,
+   759,
+   405
+  ]
+ },
+ {
+  "text": "Normal Tactical",
+  "confidence": 1.0,
+  "box": [
+   811,
+   389,
+   905,
+   404
+  ]
+ },
+ {
+  "text": "Advanced Tactical",
+  "confidence": 1.0,
+  "box": [
+   957,
+   389,
+   1062,
+   404
+  ]
+ },
+ {
+  "text": "Superior Tactical",
+  "confidence": 0.996,
+  "box": [
+   1111,
+   389,
+   1209,
+   404
+  ]
+ },
+ {
+  "text": "Training Blu-ray",
+  "confidence": 0.999,
+  "box": [
+   659,
+   401,
+   755,
+   418
+  ]
+ },
+ {
+  "text": "Training Blu-ray",
+  "confidence": 0.982,
+  "box": [
+   810,
+   401,
+   906,
+   419
+  ]
+ },
+ {
+  "text": "Training Blu-ray",
+  "confidence": 1.0,
+  "box": [
+   961,
+   401,
+   1057,
+   418
+  ]
+ },
+ {
+  "text": "Training Blu-ray",
+  "confidence": 0.974,
+  "box": [
+   1111,
+   401,
+   1208,
+   419
+  ]
+ },
+ {
+  "text": "(Shanhaijing)",
+  "confidence": 0.984,
+  "box": [
+   667,
+   414,
+   748,
+   432
+  ]
+ },
+ {
+  "text": "(Shanhaijing)",
+  "confidence": 0.988,
+  "box": [
+   818,
+   414,
+   899,
+   432
+  ]
+ },
+ {
+  "text": "(Shanhaijing)",
+  "confidence": 0.998,
+  "box": [
+   968,
+   413,
+   1050,
+   432
+  ]
+ },
+ {
+  "text": "(Shanhaijing)",
+  "confidence": 0.991,
+  "box": [
+   1119,
+   414,
+   1200,
+   432
+  ]
+ },
+ {
+  "text": "山海",
+  "confidence": 1.0,
+  "box": [
+   703,
+   468,
+   730,
+   483
+  ]
+ },
+ {
+  "text": "山海",
+  "confidence": 1.0,
+  "box": [
+   853,
+   466,
+   881,
+   484
+  ]
+ },
+ {
+  "text": "山海",
+  "confidence": 1.0,
+  "box": [
+   1004,
+   468,
+   1031,
+   483
+  ]
+ },
+ {
+  "text": "山海",
+  "confidence": 1.0,
+  "box": [
+   1152,
+   465,
+   1183,
+   484
+  ]
+ },
+ {
+  "text": "经",
+  "confidence": 0.868,
+  "box": [
+   707,
+   477,
+   732,
+   492
+  ]
+ },
+ {
+  "text": "经",
+  "confidence": 0.836,
+  "box": [
+   858,
+   478,
+   881,
+   492
+  ]
+ },
+ {
+  "text": "EX",
+  "confidence": 0.998,
+  "box": [
+   696,
+   492,
+   713,
+   504
+  ]
+ },
+ {
+  "text": "EX",
+  "confidence": 0.997,
+  "box": [
+   847,
+   492,
+   864,
+   504
+  ]
+ },
+ {
+  "text": "EX",
+  "confidence": 0.997,
+  "box": [
+   1150,
+   493,
+   1167,
+   504
+  ]
+ },
+ {
+  "text": "SHANHALING",
+  "confidence": 0.906,
+  "box": [
+   699,
+   501,
+   730,
+   508
+  ]
+ },
+ {
+  "text": "SHANHALINO",
+  "confidence": 0.938,
+  "box": [
+   850,
+   501,
+   881,
+   508
+  ]
+ },
+ {
+  "text": "SHANHALJINO",
+  "confidence": 0.962,
+  "box": [
+   1002,
+   501,
+   1031,
+   508
+  ]
+ },
+ {
+  "text": "SHANHAIJING",
+  "confidence": 0.941,
+  "box": [
+   1152,
+   501,
+   1182,
+   508
+  ]
+ },
+ {
+  "text": "Can purchase 30 time(s)",
+  "confidence": 0.998,
+  "box": [
+   637,
+   535,
+   775,
+   552
+  ]
+ },
+ {
+  "text": "Can purchase 18 time(s)",
+  "confidence": 1.0,
+  "box": [
+   787,
+   535,
+   927,
+   553
+  ]
+ },
+ {
+  "text": "Can purchase 12 time(s)",
+  "confidence": 0.999,
+  "box": [
+   939,
+   535,
+   1077,
+   552
+  ]
+ },
+ {
+  "text": "Can purchase 4 time(s)",
+  "confidence": 0.99,
+  "box": [
+   1089,
+   534,
+   1229,
+   553
+  ]
+ },
+ {
+  "text": "10",
+  "confidence": 1.0,
+  "box": [
+   709,
+   563,
+   735,
+   584
+  ]
+ },
+ {
+  "text": "30",
+  "confidence": 1.0,
+  "box": [
+   859,
+   563,
+   885,
+   584
+  ]
+ },
+ {
+  "text": "100",
+  "confidence": 1.0,
+  "box": [
+   1007,
+   563,
+   1041,
+   584
+  ]
+ },
+ {
+  "text": "300",
+  "confidence": 1.0,
+  "box": [
+   1157,
+   563,
+   1192,
+   584
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 1.0,
+  "box": [
+   664,
+   590,
+   753,
+   611
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 1.0,
+  "box": [
+   814,
+   589,
+   904,
+   612
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 0.999,
+  "box": [
+   965,
+   590,
+   1054,
+   611
+  ]
+ },
+ {
+  "text": "Purchase",
+  "confidence": 1.0,
+  "box": [
+   1115,
+   588,
+   1206,
+   612
+  ]
+ },
+ {
+  "text": "Aether Dust",
+  "confidence": 0.999,
+  "box": [
+   650,
+   650,
+   765,
+   672
+  ]
+ },
+ {
+  "text": "Aether Piece",
+  "confidence": 0.984,
+  "box": [
+   799,
+   651,
+   918,
+   673
+  ]
+ },
+ {
+  "text": "Aether Shard",
+  "confidence": 0.981,
+  "box": [
+   946,
+   650,
+   1071,
+   672
+  ]
+ },
+ {
+  "text": "Aether Essence",
+  "confidence": 1.0,
+  "box": [
+   1091,
+   651,
+   1229,
+   673
+  ]
+ }
+]

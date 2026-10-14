@@ -29,6 +29,10 @@ PAN_DOWN = ((750, 250), (750, 500))
 PAN_UP = ((750, 500), (750, 250))
 
 
+class CameraUntrackable(RuntimeError):
+    """No drag in a bounded run could be measured: the view has too little detail."""
+
+
 def text_of(words):
     return " ".join(word.normalized for word in words)
 
@@ -516,6 +520,7 @@ class CafeRunner:
         distance = 0.0
         stationary = 0
         edge_corrections = 0
+        unmeasured = 0
         # Scene interior is 1010 by 440 pixels; these steps overlap generously.
         step = 450 if axis == 0 else 220
         for _ in range(12):
@@ -526,6 +531,7 @@ class CafeRunner:
                 self.pet_visible()
                 distance = 0.0
                 stationary = 0
+                unmeasured += 1
                 continue
             movement = motion[axis] * direction
             if abs(motion[1-axis]) > max(12, abs(movement) * .3) or movement < -5:
@@ -554,6 +560,8 @@ class CafeRunner:
                 distance += movement
                 if not to_edge and distance >= step:
                     return False
+        if unmeasured == 12:
+            raise CameraUntrackable("Cafe camera coverage could not be verified after twelve drags")
         self.fail("Cafe camera coverage could not be verified after twelve drags")
 
     def clear_relationship_popup(self, *, student=None, student_evidence=None, _initial=None):
@@ -659,6 +667,19 @@ class CafeRunner:
             self.fail("Cafe markers remained after twelve attempts in one view")
 
     def sweep(self):
+        try:
+            self.cover_floor()
+        except CameraUntrackable:
+            # Live, unfurnished Cafe 2 showed only its backdrop at the camera
+            # edge: no drag could be measured, so coverage cannot be proven.
+            # Every view reached was already checked for students.
+            self.pet_visible()
+            self.journal.record("cafe_scan_unverified", cafe=self.floor, frame=self.last_frame)
+            record_action(self.config, "cafe_scan_unverified",
+                          "This Cafe floor shows too little detail to track the camera; "
+                          "students in the views reached were checked.", cafe=self.floor)
+
+    def cover_floor(self):
         self.phase(f"Checking student icons in Cafe {self.floor}")
         self.pet_visible()
         self.pan_region(PAN_RIGHT, to_edge=True)

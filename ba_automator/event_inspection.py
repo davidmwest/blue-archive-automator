@@ -18,9 +18,12 @@ class EventScreen:
     ap: int | None = None
     stars: int | None = None
     round: int | None = None
+    event: str | None = None
 
 
 def classify_event(frame, words):
+    """Recognize a reviewed season by its own title, first quest and mechanic."""
+    from .event_priority import profiles
     words = [w for w in words if w.confidence >= .9]
     def text(bounds):
         return ''.join(w.normalized for w in within(words, bounds)).replace(' ', '')
@@ -30,19 +33,28 @@ def classify_event(frame, words):
         matches = re.findall(r'currentroundround(\d+)', text((650, 120, 1100, 170)))
         if len(matches) == 1:
             return EventScreen('event_board', ap=ap, round=int(matches[0]))
-    if (has(words, 'mission info', (430, 110, 870, 170))
-            and 'sunkissedbeach' in text((130, 180, 650, 250))
-            and has(words, 'start mission', (760, 495, 1120, 560))
-            and bright(frame, (500, 180, 600, 200))):
-        return EventScreen('event_detail', ap=ap, stars=mission_stars(frame))
+    # The Play Guide covers an event page the first time it is opened on an install.
     if (has(words, 'event', (80, 0, 260, 60))
-            and ('fairandsquareaquaticshowdown' in text((0, 120, 670, 600))
-                 or ('aflowerbloomsamongthehundred' in text((0, 120, 670, 600))
-                     and has(words, 'sun-kissed beach', (770, 160, 1040, 235))))
-            and has(words, 'quest', (860, 80, 1020, 140))
-            and 'treasurehunt' in text((430, 610, 605, 710))
-            and bright(frame, (700, 150, 740, 170))):
-        return EventScreen('event_page', ap=ap)
+            and re.fullmatch(r'playguide\d\d', text((520, 125, 780, 180)))
+            and 'thisscreenisasampleimage' in text((700, 595, 1020, 640))):
+        return EventScreen('event_guide', ap=ap)
+    for profile in profiles():
+        identity = profile['identity']
+        if (has(words, 'mission info', (430, 110, 870, 170))
+                and identity['first_quest_title'] in text((130, 180, 650, 250))
+                and has(words, 'start mission', (760, 495, 1120, 560))
+                and bright(frame, (500, 180, 600, 200))):
+            return EventScreen('event_detail', ap=ap, stars=mission_stars(frame), event=profile['id'])
+        title = text((0, 120, 670, 600))
+        # A rerun can share its series title; then the first quest must also match.
+        named = identity['title'] in title or (
+            'series' in identity and identity['series'] in title
+            and has(words, identity['first_quest'], (770, 160, 1040, 235)))
+        if (has(words, 'event', (80, 0, 260, 60)) and named
+                and has(words, 'quest', (860, 80, 1020, 140))
+                and identity['mechanic'] in text((430, 610, 605, 710))
+                and bright(frame, (700, 150, 740, 170))):
+            return EventScreen('event_page', ap=ap, event=profile['id'])
     if has(words, 'recruitment', (70, 0, 350, 65)) or (has(words, 'event', (80, 0, 260, 60)) and 'eventperiodconcluded' in text((650, 80, 1200, 550))):
         return EventScreen('other_event', ap=ap)
     return None
@@ -76,8 +88,109 @@ def event_banner_centered(crop):
             and float(np.abs(title.astype(float) - reference).mean()) < 5)
 
 
+@lru_cache(maxsize=4)
+def card_template(name):
+    return cv2.imread(str(Path(__file__).parent / 'assets' / name))
+
+
+def card_settled(frame, profile):
+    """True while Campaign's event card shows this season's title at rest."""
+    x1, y1, x2, y2 = profile['identity']['card_box']
+    reference = card_template(profile['identity']['card_template'])
+    title = frame[y1:y2, x1:x2]
+    return (reference is not None and title.shape == reference.shape
+            and float(np.abs(title.astype(float) - reference).mean()) < 5)
+
+
+CAMPAIGN_ENTRIES = 6
+CARD_SWIPE = ((140, 165), (40, 165))
+CARD_SWIPES = 5
+# Live at 1440p (2026-10-13) this season rests on the card for only 1.8-2.3 s
+# of a 6 s rotation, while a screenshot takes 1.2 s and a freshly launched game
+# acts on input late: taps sent on seeing it arrive opened the other season in
+# 10 of 10 tries. A swipe turns the card and restarts the rotation, and after
+# one the next card rested from 4.1 to 6.4 s. Both inputs share the same lag,
+# so a tap timed from the swipe lands mid-rest (8 of 8 from a fresh launch).
+TAP_AFTER_SWIPE = 5.2
+# Right after a launch, swipes were not always taken; trials that began a few
+# seconds later were not affected. Let Campaign settle before the first swipe.
+CAMPAIGN_SETTLE = 8
+
+
+def card_resting(first, second, profile):
+    x1, y1, x2, y2 = profile['identity']['card_box']
+    return float(np.abs(first[y1:y2, x1:x2].astype(float) - second[y1:y2, x1:x2]).mean()) < 3
+
+
+def enter_from_campaign(runner, startup, profile):
+    """Open the event from Campaign's rotating card, then verify its own page.
+
+    The card alternates with other seasons, including ones whose play period
+    has ended. Swipe it until another season rests there, then tap at the time
+    this season's card is due, and still verify the destination: a mistimed tap
+    opens the other season, which is left without spending before another try.
+    """
+    from .event_state import observe
+    for attempt in range(CAMPAIGN_ENTRIES):
+        runner.navigate('home', 'campaign', (1200, 641))
+        if attempt == 0:
+            runner.sleep(CAMPAIGN_SETTLE)
+        ours_resting = 0
+        for _ in range(CARD_SWIPES):
+            if runner.device.foreground_package() != runner.config.package:
+                runner.fail('Foreground changed during event entrance inspection')
+            swiped = runner.clock()
+            runner.journal.record('intent', operation='swipe', points=CARD_SWIPE,
+                                  detail='Turn the Campaign event card and restart its rotation')
+            if not runner.device.swipe(*CARD_SWIPE, duration_ms=300, deadline=swiped + 2,
+                                       monotonic=runner.clock):
+                runner.fail('Campaign event card swipe expired before it was sent')
+            runner.actions += 1
+            runner.sleep(1.2)
+            first = decode_frame(runner.device.screenshot())
+            png = runner.device.screenshot()
+            second = decode_frame(png)
+            if not card_resting(first, second, profile):
+                continue
+            if not card_settled(second, profile):
+                due = swiped + TAP_AFTER_SWIPE
+                break
+            ours_resting += 1
+        else:
+            # A swipe is sometimes not taken, so this season resting twice
+            # running proved nothing live. Over five swipes (several rotations)
+            # no other season ever rested here: the card holds only this one.
+            if ours_resting < 3:
+                runner.fail(f"{profile['title']} was not found on Campaign; event AP remains reserved")
+            due = runner.clock()
+        runner.sleep(max(0, due - runner.clock()))
+        if runner.device.foreground_package() != runner.config.package:
+            runner.fail('Foreground changed during event entrance inspection')
+        runner.journal.record('intent', operation='tap', target=(100, 165),
+                              detail=f"Open {profile['title']} from Campaign")
+        if not runner.device.tap(100, 165, deadline=due + 1, monotonic=runner.clock):
+            continue
+        runner.journal.save_image(f'event-card-{attempt + 1}.png', png)
+        runner.actions += 1
+        frame = runner.wait({'event_page', 'other_event', 'event_guide'})
+        if frame.screen.kind == 'event_guide':
+            # A season explains itself once per install; the overlay has no choices.
+            runner.tap(frame, (1185, 155), 'Close the event Play Guide')
+            frame = runner.wait({'event_page', 'other_event'})
+        if (frame.screen.kind == 'event_page'
+                and getattr(frame.screen, 'event', profile['id']) == profile['id']):
+            observe(runner.config, profile)
+            return frame
+        runner.tap(frame, (1237, 24), 'Leave concurrent event without spending')
+    runner.fail('Campaign kept opening another event; no resources spent')
+
+
 def enter_event(runner, startup):
     """Verify the unique playable event before returning its quest page."""
+    from .event_priority import available_event
+    profile = available_event(runner.wall_clock())
+    if profile and profile.get('entrance') == 'campaign':
+        return enter_from_campaign(runner, startup, profile)
     for entrance_attempt in range(3):
         runner.wait('home')
         # The Campaign carousel contains concurrent and expired events. Use

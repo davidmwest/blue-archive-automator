@@ -10,6 +10,7 @@ import os
 import struct
 from uuid import uuid4
 
+from .fileops import replace_file
 from .gifts import is_gift
 
 RECEIVED = {
@@ -53,7 +54,7 @@ def _source(config):
 def _cursor(config):
     path = config.state_dir / "loot-view.json"
     try:
-        value = json.loads(path.read_text())
+        value = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {"offset": 0, "cleared_at": None}
     if (
@@ -76,7 +77,7 @@ def clear(config):
             json.dump(value, stream)
             stream.flush()
             os.fsync(stream.fileno())
-        temp.replace(path)
+        replace_file(temp, path)
     finally:
         temp.unlink(missing_ok=True)
     return value

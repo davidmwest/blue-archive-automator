@@ -111,6 +111,24 @@ class AdbDevice:
         if state != "device":
             raise DeviceError(f"Configured Blue Archive device is not ready: {state}")
 
+    def storage_writable(self) -> bool:
+        """False when Android has remounted its data partition read-only."""
+        try:
+            output = self._run("shell", "touch /data/local/tmp/.ba-write-probe && echo writable",
+                               timeout=15)
+        except DeviceError as exc:
+            if "read-only file system" in str(exc).lower():
+                return False
+            raise
+        text = output.decode("utf-8", errors="replace").lower()
+        if "read-only file system" in text:
+            return False
+        return "writable" in text
+
+    def boot_completed(self) -> bool:
+        output = self._run("shell", "getprop", "sys.boot_completed", timeout=15)
+        return output.decode("utf-8", errors="replace").strip() == "1"
+
     def verify_package(self) -> None:
         output = self._run("shell", "pm", "path", self.config.package).decode("utf-8", errors="replace")
         if not any(line.startswith("package:") for line in output.splitlines()):

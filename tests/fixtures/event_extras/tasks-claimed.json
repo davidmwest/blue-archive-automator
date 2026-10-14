@@ -1,0 +1,242 @@
+[
+ {
+  "text": "Event Task",
+  "confidence": 0.994,
+  "box": [
+   105,
+   9,
+   252,
+   38
+  ]
+ },
+ {
+  "text": "500/224",
+  "confidence": 1.0,
+  "box": [
+   507,
+   9,
+   588,
+   37
+  ]
+ },
+ {
+  "text": "Achievement",
+  "confidence": 1.0,
+  "box": [
+   510,
+   98,
+   658,
+   125
+  ]
+ },
+ {
+  "text": "Until End ofEvent: 12day(s)",
+  "confidence": 0.939,
+  "box": [
+   739,
+   151,
+   1013,
+   183
+  ]
+ },
+ {
+  "text": "Achievement No.1",
+  "confidence": 0.968,
+  "box": [
+   541,
+   203,
+   698,
+   225
+  ]
+ },
+ {
+  "text": "Clear all Stories, Quests, and Challenges",
+  "confidence": 1.0,
+  "box": [
+   716,
+   200,
+   1140,
+   231
+  ]
+ },
+ {
+  "text": "1+1",
+  "confidence": 0.719,
+  "box": [
+   1028,
+   247,
+   1065,
+   276
+  ]
+ },
+ {
+  "text": "Count",
+  "confidence": 1.0,
+  "box": [
+   528,
+   265,
+   584,
+   285
+  ]
+ },
+ {
+  "text": "5/27",
+  "confidence": 0.994,
+  "box": [
+   602,
+   263,
+   651,
+   288
+  ]
+ },
+ {
+  "text": "Shortcut",
+  "confidence": 1.0,
+  "box": [
+   1090,
+   263,
+   1210,
+   292
+  ]
+ },
+ {
+  "text": "Achievement No.3",
+  "confidence": 0.983,
+  "box": [
+   542,
+   341,
+   699,
+   360
+  ]
+ },
+ {
+  "text": "Clear Stage 02 in Quest within 75 second(s)",
+  "confidence": 0.996,
+  "box": [
+   716,
+   337,
+   1169,
+   367
+  ]
+ },
+ {
+  "text": "Count",
+  "confidence": 0.999,
+  "box": [
+   528,
+   401,
+   584,
+   421
+  ]
+ },
+ {
+  "text": "0/1",
+  "confidence": 0.997,
+  "box": [
+   601,
+   399,
+   642,
+   425
+  ]
+ },
+ {
+  "text": "Shortcut",
+  "confidence": 1.0,
+  "box": [
+   1091,
+   400,
+   1210,
+   428
+  ]
+ },
+ {
+  "text": "福",
+  "confidence": 0.668,
+  "box": [
+   1016,
+   406,
+   1034,
+   424
+  ]
+ },
+ {
+  "text": "x350K",
+  "confidence": 0.966,
+  "box": [
+   1017,
+   425,
+   1067,
+   445
+  ]
+ },
+ {
+  "text": "Achievement No.4",
+  "confidence": 0.99,
+  "box": [
+   541,
+   476,
+   701,
+   497
+  ]
+ },
+ {
+  "text": "Clear Stage 03 in Quest within 75 second(s)",
+  "confidence": 0.996,
+  "box": [
+   716,
+   473,
+   1169,
+   503
+  ]
+ },
+ {
+  "text": "Count",
+  "confidence": 1.0,
+  "box": [
+   528,
+   537,
+   584,
+   557
+  ]
+ },
+ {
+  "text": "0/1",
+  "confidence": 0.997,
+  "box": [
+   601,
+   535,
+   642,
+   561
+  ]
+ },
+ {
+  "text": "Shortcut",
+  "confidence": 1.0,
+  "box": [
+   1090,
+   536,
+   1210,
+   564
+  ]
+ },
+ {
+  "text": "x350K",
+  "confidence": 0.965,
+  "box": [
+   1017,
+   561,
+   1067,
+   582
+  ]
+ },
+ {
+  "text": "Claim All",
+  "confidence": 0.999,
+  "box": [
+   1091,
+   656,
+   1209,
+   683
+  ]
+ }
+]

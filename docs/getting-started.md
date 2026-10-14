@@ -38,6 +38,14 @@ edit `config/local.toml` with the ADB endpoint for the Blue Archive instance and
 
 the development setup uses `127.0.0.1:5695` for Blue Archive and `127.0.0.1:5675` for Azur Lane. these are examples, not universal BlueStacks ports. they share the host ADB server on `5037`, with every game command targeting its own instance. use a compatible ADB executable for both. simultaneous operation and Windows still need live smoke tests.
 
+on Windows with BlueStacks 5, point `adb_path` at BlueStacks' own `C:\Program Files\BlueStacks_nxt\HD-Adb.exe` (use a single-quoted TOML string for the backslashes) so every controller shares one compatible ADB server. each instance's port is `bst.instance.<name>.adb_port` in `C:\ProgramData\BlueStacks_nxt\bluestacks.conf`. if another local tool already uses port 8765, start the dashboard with `serve --port 8767`.
+
+a frame can only authorize input for five seconds, and reading a 1440p screenshot with the default two OCR threads took about three seconds on a Threadripper PRO 3995WX. with capture time added, every task reached Home and then reported that it had not. set `BA_OCR_THREADS` (1–64) before starting `serve` or a CLI task; 16 brought one read down to about 1.4 seconds there. `scripts/serve-windows.ps1 -Port 8767 -OcrThreads 16` starts the dashboard detached with that setting, UTF-8 mode, and logs under `data/logs`.
+
+to bring it back after a reboot, `scripts/register-startup-windows.ps1 -Port 8767 -OcrThreads 16 -Instance Pie64_4` registers a Task Scheduler entry for your account. one minute after sign-in it starts that BlueStacks instance if it is not running, then runs the dashboard in the foreground so the scheduler can restart it if it exits. it needs no elevation, and `-Remove` deletes it. this only helps when Windows signs you in automatically; queued jobs still do not survive a restart, but schedules do.
+
+with `-Instance` set (or `BA_BLUESTACKS_INSTANCE` in the environment), every job also checks the emulator before launching the game. if ADB cannot reach it, or Android has remounted its data partition read-only, the job closes that one instance's window, starts it again, and waits up to five minutes for Android to boot. an instance whose window is already up but still booting, as right after a reboot, first gets up to four minutes to finish. other instances are never touched. the instance is matched by its display name in `bluestacks.conf`, which should be plain ASCII. this was added after a live failure: Windows' scheduled drive optimization finished a defragment and retrim pass on the SSD holding the instance's virtual disk, the guest logged write errors one second later, and Android stayed read-only until the instance was restarted. the game could not start and nothing on screen said why.
+
 controllers targeting the same game instance must share the same `lock_dir`. leave the example storage paths alone unless you need to move the runtime data.
 
 ## start the dashboard

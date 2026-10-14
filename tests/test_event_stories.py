@@ -223,7 +223,8 @@ def test_battle_story_handles_dialogue_then_formation_before_rewards(tmp_path, m
                    frame('receipt',target=(640,631))])
     r.capture=lambda:next(frames)
     r.sleep=lambda _:None
-    r.wait=lambda kind,**_:frame('story_list' if isinstance(kind,set) else kind,ap=131)
+    r.wait=lambda kind,**_:frame(('event_quick' if 'event_quick' in kind else 'story_list')
+                                 if isinstance(kind,set) else kind,ap=131)
     r.tap=lambda f,t,detail:taps.append(detail)
     monkeypatch.setattr(event_stories,'inspect_receipt',lambda r,f,p:f)
     # setup replaces finish_story to test the outer sequence; restore the real

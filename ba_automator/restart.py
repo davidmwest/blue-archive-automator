@@ -41,6 +41,13 @@ class _BlackScreenTimeout(RestartError):
     """Fresh unknown frames stayed entirely black for the unknown-screen budget."""
 
 
+class _GameExited(RestartError):
+    """The game crashed back to the emulator's launcher before reaching home."""
+
+
+LAUNCHERS = frozenset({"com.uncube.launcher3", "com.android.launcher3", "com.bluestacks.launcher"})
+
+
 def _is_blank_black(png: bytes) -> bool:
     try:
         frame = decode_frame(png)
@@ -162,8 +169,13 @@ def run_restart(
             capture = Capture(png, captured_at, foreground)
             now = check_deadlines()
             if foreground != config.package:
-                fail("Expected Blue Archive in the foreground; "
-                     f"found {foreground or 'no identifiable app'}. No input was sent")
+                message = ("Expected Blue Archive in the foreground; "
+                           f"found {foreground or 'no identifiable app'}. No input was sent")
+                if foreground in LAUNCHERS:
+                    # A native crash during loading drops to the launcher. Nothing
+                    # was tapped, so one relaunch is as safe as the timeout recovery.
+                    raise _GameExited(message, run_dir)
+                fail(message)
 
             hold_login_reward = startup_loot.observe(png, observation, captured_at)
 
@@ -294,7 +306,10 @@ def run_restart(
             ensure_event_safe(config)
             from .treasure_state import ensure_safe as ensure_treasure_safe
             ensure_treasure_safe(config, recover_logged_receipt=recover_logged_treasure)
-            device.connect()
+            from .emulator import ensure_ready
+            if ensure_ready(device, journal.record, monotonic=monotonic, sleep=sleep):
+                # Restarting the emulator is not game startup time.
+                budget = _Budget(config, monotonic())
             device.verify_package()
             size = device.display_size()
             if not is_supported_size(size):
@@ -305,7 +320,7 @@ def run_restart(
             for attempt in range(MAX_STARTUP_RECOVERIES + 1):
                 try:
                     result = reach_home()
-                except (_StartupTimeout, _BlackScreenTimeout) as exc:
+                except (_StartupTimeout, _BlackScreenTimeout, _GameExited) as exc:
                     if attempt == MAX_STARTUP_RECOVERIES:
                         fail(f"{exc}; still stuck after one automatic force restart")
                     # Keep the same instance lock, journal, total input limit, and original
@@ -317,6 +332,7 @@ def run_restart(
                     journal.record("startup_recovery", reason=str(exc), frame=evidence,
                                    attempt=attempt + 1, limit=MAX_STARTUP_RECOVERIES)
                     recovery_reason = ("startup stayed black" if isinstance(exc, _BlackScreenTimeout)
+                                       else "the game closed during startup" if isinstance(exc, _GameExited)
                                        else "startup timed out")
                     record_action(config, "startup_recovery",
                                   f"{recovery_reason}. force-restarting Blue Archive once.",

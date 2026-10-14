@@ -58,7 +58,7 @@
       1240,
       95
     ],
-    "max_error": 0.08,
+    "max_error": 0.12,
     "max_mae": 12,
     "mode": "white_mask",
     "white_threshold": 120

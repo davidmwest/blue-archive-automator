@@ -1,0 +1,212 @@
+[
+ {
+  "text": "Draw a Card",
+  "confidence": 0.995,
+  "box": [
+   105,
+   8,
+   273,
+   39
+  ]
+ },
+ {
+  "text": "500/224",
+  "confidence": 1.0,
+  "box": [
+   508,
+   9,
+   588,
+   37
+  ]
+ },
+ {
+  "text": "All Rewards",
+  "confidence": 1.0,
+  "box": [
+   91,
+   91,
+   211,
+   113
+  ]
+ },
+ {
+  "text": "Reward History",
+  "confidence": 1.0,
+  "box": [
+   277,
+   90,
+   430,
+   116
+  ]
+ },
+ {
+  "text": "用",
+  "confidence": 0.89,
+  "box": [
+   0,
+   173,
+   93,
+   252
+  ]
+ },
+ {
+  "text": "74",
+  "confidence": 1.0,
+  "box": [
+   712,
+   175,
+   743,
+   200
+  ]
+ },
+ {
+  "text": "The Calm After",
+  "confidence": 0.994,
+  "box": [
+   870,
+   170,
+   1021,
+   199
+  ]
+ },
+ {
+  "text": "Shuffle Cards",
+  "confidence": 1.0,
+  "box": [
+   1081,
+   173,
+   1219,
+   198
+  ]
+ },
+ {
+  "text": "the Storm",
+  "confidence": 0.965,
+  "box": [
+   893,
+   194,
+   996,
+   222
+  ]
+ },
+ {
+  "text": "Select a card of your choice.",
+  "confidence": 0.978,
+  "box": [
+   807,
+   248,
+   1092,
+   275
+  ]
+ },
+ {
+  "text": "What is it? What is it? I'm",
+  "confidence": 0.996,
+  "box": [
+   422,
+   335,
+   671,
+   358
+  ]
+ },
+ {
+  "text": "sure it's something",
+  "confidence": 1.0,
+  "box": [
+   419,
+   362,
+   615,
+   392
+  ]
+ },
+ {
+  "text": "山海",
+  "confidence": 1.0,
+  "box": [
+   845,
+   368,
+   901,
+   402
+  ]
+ },
+ {
+  "text": "山海",
+  "confidence": 1.0,
+  "box": [
+   987,
+   367,
+   1044,
+   403
+  ]
+ },
+ {
+  "text": "山海",
+  "confidence": 1.0,
+  "box": [
+   1130,
+   367,
+   1187,
+   403
+  ]
+ },
+ {
+  "text": "incredible!",
+  "confidence": 1.0,
+  "box": [
+   421,
+   393,
+   530,
+   418
+  ]
+ },
+ {
+  "text": "經",
+  "confidence": 0.666,
+  "box": [
+   1129,
+   389,
+   1185,
+   424
+  ]
+ },
+ {
+  "text": "200",
+  "confidence": 1.0,
+  "box": [
+   818,
+   531,
+   859,
+   556
+  ]
+ },
+ {
+  "text": "800",
+  "confidence": 1.0,
+  "box": [
+   1056,
+   531,
+   1097,
+   556
+  ]
+ },
+ {
+  "text": "Draw a Card",
+  "confidence": 0.988,
+  "box": [
+   742,
+   567,
+   914,
+   599
+  ]
+ },
+ {
+  "text": "Draw 4 Cards",
+  "confidence": 0.972,
+  "box": [
+   974,
+   568,
+   1157,
+   598
+  ]
+ }
+]
