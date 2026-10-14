@@ -217,13 +217,16 @@ def farm_event(runner, profile):
         if story_summary is not None:
             event_home(runner, frame)
             return story_summary
-        runner.tap(frame,(515,663),'Check event farming goal')
-        board = runner.wait('event_board')
-        if board.screen.round > profile['target_round']:
-            event_home(runner,board)
-            return None
-        runner.tap(board,(55,25),'Return to event quests')
-        runner.wait(LISTS)
+        if profile.get('farm_goal', 'treasure_round') == 'treasure_round':
+            runner.tap(frame,(515,663),'Check event farming goal')
+            board = runner.wait('event_board')
+            if board.screen.round > profile['target_round']:
+                event_home(runner,board)
+                return None
+            runner.tap(board,(55,25),'Return to event quests')
+            runner.wait(LISTS)
+        # Otherwise the season has no in-game goal to observe: keep farming its
+        # quests until the play period ends or event priority is turned off.
         for stage in profile['farm_order']:
             frame = quest_detail(runner,stage,allow_unavailable=True)
             if frame is None:

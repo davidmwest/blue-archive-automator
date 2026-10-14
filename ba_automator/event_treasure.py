@@ -146,7 +146,7 @@ class TreasureRunner(ShopRunner):
             self.phase('Automatic event treasure is off')
             return self.finish()
         profile = available_event(self.wall_clock())
-        if profile is None:
+        if profile is None or 'board' not in profile:
             if pending:
                 self.fail('Pending treasure belongs to an inactive event; inspect its saved receipt')
             self.phase('No supported Treasure Hunt is active')

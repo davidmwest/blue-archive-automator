@@ -13,6 +13,25 @@ The current event is **A Flower Blooms Among the Hundred: Fair and Square Aquati
 
 The [rerun farming guide](https://www.reddit.com/r/BlueArchive/comments/1wt161e/comment/pcqb1ga/) recommends stages 10–12 for their artifact mix, despite stage 9's slightly better currency efficiency. It recommends three treasure rounds for pyroxene/eligma, or six for broader rewards; round 7 onward has poor value. This is advice, not a universal optimum. Actual bonuses and chosen rewards determine our plan.
 
+### The Calm After the Storm (October 2026)
+
+**Researched:** October 13, 2026 · global English · surveyed in the client at 2560×1440
+
+Play runs **October 13, 02:00 UTC to October 27, 01:59 UTC**; the client shows the same window in local time. Reward exchange stays open another week. The season has 12 Stories at 10 AP, 12 Quests at 10, 15 and 20 AP, three Challenges plus an EX stage, three exchange shops, and a card draw. Details come from the [event wiki page](https://bluearchive.wiki/wiki/Clear_Skies_After_the_Storm), [Inven Global's coverage](https://www.invenglobal.com/articles/27092/blue-archive-updates-new-event-story-storm-passes-clear-sky), and the in-game Play Guide.
+
+| Currency (Global name) | Source | Used for |
+| --- | --- | --- |
+| Souvenir Photo Cards | stages | Draw a Card: 200 per card, 800 for four |
+| Audit Plans | stages | first shop tab |
+| Facility Admission Tickets | stages | second shop tab |
+| Specialty Osmanthus Cakes | every drawn card | third shop tab |
+
+The season profile is `ba_automator/assets/calm-after-the-storm.json`. Each profile now carries its own identity: the page title, the first quest, the label of its bottom-row mechanic, and how to enter it. This season is opened from Campaign's event card, which shares its slot with the previous event's reward period; the card is tapped only while its text names this event, and the destination page is verified before anything else. It has no round goal to observe, so `farm_goal` is `until_event_ends`: with `[ap].event_priority` on, AP above the floor goes to Stories first, then to the first three-star quest in `farm_order` (12, 9, 8, 4, 1: the Souvenir Photo Card stages), until the play period ends or the setting is turned off.
+
+Reused unchanged: Story clearing, one-time quest clears with Auto Formation, and three-star sweeps. **Not automated:** Draw a Card, the three shops, the Challenge stages, and event Task claims. Those need their own adapters and are left for manual play.
+
+The first entry shows an opening story and a seven-page Play Guide. Both were dismissed by hand during the survey; the runner does not handle them.
+
 ### Proposed starting preset
 
 - Use already three-starred event quests. Prefer stages 10–12 when available; consider other verified stages when their observed yields better serve the selected goals.

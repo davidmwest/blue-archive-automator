@@ -18,9 +18,12 @@ class EventScreen:
     ap: int | None = None
     stars: int | None = None
     round: int | None = None
+    event: str | None = None
 
 
 def classify_event(frame, words):
+    """Recognize a reviewed season by its own title, first quest and mechanic."""
+    from .event_priority import profiles
     words = [w for w in words if w.confidence >= .9]
     def text(bounds):
         return ''.join(w.normalized for w in within(words, bounds)).replace(' ', '')
@@ -30,19 +33,23 @@ def classify_event(frame, words):
         matches = re.findall(r'currentroundround(\d+)', text((650, 120, 1100, 170)))
         if len(matches) == 1:
             return EventScreen('event_board', ap=ap, round=int(matches[0]))
-    if (has(words, 'mission info', (430, 110, 870, 170))
-            and 'sunkissedbeach' in text((130, 180, 650, 250))
-            and has(words, 'start mission', (760, 495, 1120, 560))
-            and bright(frame, (500, 180, 600, 200))):
-        return EventScreen('event_detail', ap=ap, stars=mission_stars(frame))
-    if (has(words, 'event', (80, 0, 260, 60))
-            and ('fairandsquareaquaticshowdown' in text((0, 120, 670, 600))
-                 or ('aflowerbloomsamongthehundred' in text((0, 120, 670, 600))
-                     and has(words, 'sun-kissed beach', (770, 160, 1040, 235))))
-            and has(words, 'quest', (860, 80, 1020, 140))
-            and 'treasurehunt' in text((430, 610, 605, 710))
-            and bright(frame, (700, 150, 740, 170))):
-        return EventScreen('event_page', ap=ap)
+    for profile in profiles():
+        identity = profile['identity']
+        if (has(words, 'mission info', (430, 110, 870, 170))
+                and identity['first_quest_title'] in text((130, 180, 650, 250))
+                and has(words, 'start mission', (760, 495, 1120, 560))
+                and bright(frame, (500, 180, 600, 200))):
+            return EventScreen('event_detail', ap=ap, stars=mission_stars(frame), event=profile['id'])
+        title = text((0, 120, 670, 600))
+        # A rerun can share its series title; then the first quest must also match.
+        named = identity['title'] in title or (
+            'series' in identity and identity['series'] in title
+            and has(words, identity['first_quest'], (770, 160, 1040, 235)))
+        if (has(words, 'event', (80, 0, 260, 60)) and named
+                and has(words, 'quest', (860, 80, 1020, 140))
+                and identity['mechanic'] in text((430, 610, 605, 710))
+                and bright(frame, (700, 150, 740, 170))):
+            return EventScreen('event_page', ap=ap, event=profile['id'])
     if has(words, 'recruitment', (70, 0, 350, 65)) or (has(words, 'event', (80, 0, 260, 60)) and 'eventperiodconcluded' in text((650, 80, 1200, 550))):
         return EventScreen('other_event', ap=ap)
     return None
@@ -76,8 +83,43 @@ def event_banner_centered(crop):
             and float(np.abs(title.astype(float) - reference).mean()) < 5)
 
 
+def enter_from_campaign(runner, startup, profile):
+    """Open the event from Campaign's rotating card, then verify its own page.
+
+    The card shares its slot with other seasons, including ones whose play
+    period has ended. Tap only while the card's text names this event, and
+    leave without spending if another event's page opens.
+    """
+    from .event_state import observe
+    card = profile['identity']['card']
+    for _ in range(3):
+        runner.navigate('home', 'campaign', (1200, 641))
+        end = runner.clock() + 45
+        while True:
+            frame = runner.wait('campaign')
+            words = [w for w in read_game_words(frame.capture.png, startup) if w.confidence >= .9]
+            label = ''.join(w.normalized for w in within(words, (20, 80, 240, 265))).replace(' ', '')
+            if all(token in label for token in card):
+                runner.tap(frame, (100, 165), f"Open {profile['title']} from Campaign")
+                break
+            if runner.clock() >= end:
+                runner.fail(f"{profile['title']} was not found on Campaign; event AP remains reserved")
+            runner.sleep(.3)
+        frame = runner.wait({'event_page', 'other_event'})
+        if (frame.screen.kind == 'event_page'
+                and getattr(frame.screen, 'event', profile['id']) == profile['id']):
+            observe(runner.config, profile)
+            return frame
+        runner.tap(frame, (1237, 24), 'Leave concurrent event without spending')
+    runner.fail('Campaign opened another event; no resources spent')
+
+
 def enter_event(runner, startup):
     """Verify the unique playable event before returning its quest page."""
+    from .event_priority import available_event
+    profile = available_event(runner.wall_clock())
+    if profile and profile.get('entrance') == 'campaign':
+        return enter_from_campaign(runner, startup, profile)
     for entrance_attempt in range(3):
         runner.wait('home')
         # The Campaign carousel contains concurrent and expired events. Use

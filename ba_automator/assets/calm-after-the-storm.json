@@ -1,0 +1,29 @@
+{
+  "id": "calm-after-the-storm-global-2026",
+  "title": "The Calm After the Storm",
+  "starts_at": "2026-10-13T02:00:00+00:00",
+  "playable_until": "2026-10-27T01:59:00+00:00",
+  "implementation": "story_quest_clear_and_sweep",
+  "entrance": "campaign",
+  "identity": {
+    "title": "thecalmafterthestorm",
+    "card": [
+      "thecalmafter",
+      "thestorm"
+    ],
+    "first_quest": "commercial street",
+    "first_quest_title": "commercialstreetsouthtrail",
+    "mechanic": "drawacard"
+  },
+  "farm_goal": "until_event_ends",
+  "quest_count": 12,
+  "farm_order": [
+    12,
+    9,
+    8,
+    4,
+    1
+  ],
+  "story_count": 12,
+  "story_ap_cost": 10
+}

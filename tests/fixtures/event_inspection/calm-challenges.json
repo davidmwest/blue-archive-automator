@@ -1,0 +1,262 @@
+[
+ {
+  "text": "Event",
+  "confidence": 1.0,
+  "box": [
+   103,
+   8,
+   186,
+   39
+  ]
+ },
+ {
+  "text": "500/224",
+  "confidence": 1.0,
+  "box": [
+   508,
+   9,
+   588,
+   37
+  ]
+ },
+ {
+  "text": "1,000,000",
+  "confidence": 1.0,
+  "box": [
+   717,
+   11,
+   827,
+   35
+  ]
+ },
+ {
+  "text": "1,200",
+  "confidence": 1.0,
+  "box": [
+   933,
+   11,
+   999,
+   36
+  ]
+ },
+ {
+  "text": "Specialized",
+  "confidence": 1.0,
+  "box": [
+   261,
+   83,
+   358,
+   104
+  ]
+ },
+ {
+  "text": "Play Guide",
+  "confidence": 0.9992,
+  "box": [
+   92,
+   89,
+   201,
+   117
+  ]
+ },
+ {
+  "text": "Story",
+  "confidence": 0.9999,
+  "box": [
+   733,
+   95,
+   799,
+   127
+  ]
+ },
+ {
+  "text": "Quest",
+  "confidence": 0.9999,
+  "box": [
+   908,
+   96,
+   981,
+   125
+  ]
+ },
+ {
+  "text": "Challenge",
+  "confidence": 1.0,
+  "box": [
+   1063,
+   95,
+   1176,
+   125
+  ]
+ },
+ {
+  "text": "Študents",
+  "confidence": 0.9506,
+  "box": [
+   260,
+   101,
+   341,
+   120
+  ]
+ },
+ {
+  "text": "01",
+  "confidence": 1.0,
+  "box": [
+   712,
+   165,
+   748,
+   197
+  ]
+ },
+ {
+  "text": "Commercial Street Alle...",
+  "confidence": 0.9982,
+  "box": [
+   781,
+   180,
+   1061,
+   206
+  ]
+ },
+ {
+  "text": "Enter",
+  "confidence": 0.9999,
+  "box": [
+   1092,
+   176,
+   1168,
+   206
+  ]
+ },
+ {
+  "text": "02",
+  "confidence": 1.0,
+  "box": [
+   712,
+   264,
+   751,
+   295
+  ]
+ },
+ {
+  "text": "Streambank",
+  "confidence": 1.0,
+  "box": [
+   780,
+   278,
+   930,
+   304
+  ]
+ },
+ {
+  "text": "Enter",
+  "confidence": 0.9999,
+  "box": [
+   1093,
+   276,
+   1167,
+   305
+  ]
+ },
+ {
+  "text": "03",
+  "confidence": 1.0,
+  "box": [
+   711,
+   361,
+   751,
+   394
+  ]
+ },
+ {
+  "text": "Tourist Cable Car Drop-.",
+  "confidence": 0.9877,
+  "box": [
+   779,
+   374,
+   1068,
+   408
+  ]
+ },
+ {
+  "text": "Enter",
+  "confidence": 0.9999,
+  "box": [
+   1092,
+   374,
+   1168,
+   403
+  ]
+ },
+ {
+  "text": "The Calm After",
+  "confidence": 0.9906,
+  "box": [
+   204,
+   461,
+   460,
+   507
+  ]
+ },
+ {
+  "text": "the Storm",
+  "confidence": 0.9705,
+  "box": [
+   244,
+   503,
+   418,
+   548
+  ]
+ },
+ {
+  "text": "Schedule: 10/12/2026 19:00 - 10/26/2026 18:59",
+  "confidence": 0.969,
+  "box": [
+   133,
+   568,
+   533,
+   593
+  ]
+ },
+ {
+  "text": "Story",
+  "confidence": 0.9999,
+  "box": [
+   126,
+   659,
+   185,
+   689
+  ]
+ },
+ {
+  "text": "Shop",
+  "confidence": 0.9999,
+  "box": [
+   249,
+   658,
+   305,
+   689
+  ]
+ },
+ {
+  "text": "Tasks",
+  "confidence": 0.9999,
+  "box": [
+   368,
+   659,
+   428,
+   684
+  ]
+ },
+ {
+  "text": "Draw a Card",
+  "confidence": 0.9637,
+  "box": [
+   464,
+   662,
+   576,
+   682
+  ]
+ }
+]

@@ -1,0 +1,352 @@
+[
+ {
+  "text": "Event",
+  "confidence": 1.0,
+  "box": [
+   104,
+   9,
+   186,
+   39
+  ]
+ },
+ {
+  "text": "500/224",
+  "confidence": 1.0,
+  "box": [
+   507,
+   9,
+   588,
+   37
+  ]
+ },
+ {
+  "text": "1,000,000",
+  "confidence": 1.0,
+  "box": [
+   718,
+   12,
+   826,
+   35
+  ]
+ },
+ {
+  "text": "1,200",
+  "confidence": 1.0,
+  "box": [
+   933,
+   10,
+   999,
+   35
+  ]
+ },
+ {
+  "text": "Specialized",
+  "confidence": 1.0,
+  "box": [
+   261,
+   83,
+   358,
+   104
+  ]
+ },
+ {
+  "text": "Play Guide",
+  "confidence": 0.9997,
+  "box": [
+   91,
+   88,
+   201,
+   118
+  ]
+ },
+ {
+  "text": "Śtudents",
+  "confidence": 0.9333,
+  "box": [
+   260,
+   100,
+   340,
+   120
+  ]
+ },
+ {
+  "text": "Story",
+  "confidence": 0.9999,
+  "box": [
+   733,
+   95,
+   798,
+   127
+  ]
+ },
+ {
+  "text": "Quest",
+  "confidence": 0.9999,
+  "box": [
+   909,
+   97,
+   980,
+   124
+  ]
+ },
+ {
+  "text": "Challenge",
+  "confidence": 1.0,
+  "box": [
+   1064,
+   94,
+   1175,
+   126
+  ]
+ },
+ {
+  "text": "01",
+  "confidence": 1.0,
+  "box": [
+   712,
+   164,
+   748,
+   197
+  ]
+ },
+ {
+  "text": "Genryumon Main Roo.",
+  "confidence": 0.9947,
+  "box": [
+   781,
+   165,
+   1040,
+   195
+  ]
+ },
+ {
+  "text": "Enter",
+  "confidence": 0.9999,
+  "box": [
+   1093,
+   177,
+   1167,
+   206
+  ]
+ },
+ {
+  "text": " Story",
+  "confidence": 0.9655,
+  "box": [
+   800,
+   195,
+   855,
+   222
+  ]
+ },
+ {
+  "text": "02",
+  "confidence": 1.0,
+  "box": [
+   714,
+   265,
+   750,
+   294
+  ]
+ },
+ {
+  "text": "Rikkagaku Reception",
+  "confidence": 0.9998,
+  "box": [
+   780,
+   261,
+   1031,
+   296
+  ]
+ },
+ {
+  "text": "Story",
+  "confidence": 0.9998,
+  "box": [
+   803,
+   294,
+   854,
+   320
+  ]
+ },
+ {
+  "text": "03",
+  "confidence": 1.0,
+  "box": [
+   714,
+   364,
+   748,
+   391
+  ]
+ },
+ {
+  "text": "Streambank",
+  "confidence": 1.0,
+  "box": [
+   780,
+   362,
+   929,
+   389
+  ]
+ },
+ {
+  "text": "Story",
+  "confidence": 0.9996,
+  "box": [
+   803,
+   392,
+   854,
+   419
+  ]
+ },
+ {
+  "text": "The Calm After",
+  "confidence": 0.9744,
+  "box": [
+   205,
+   462,
+   460,
+   508
+  ]
+ },
+ {
+  "text": "04",
+  "confidence": 1.0,
+  "box": [
+   714,
+   463,
+   749,
+   490
+  ]
+ },
+ {
+  "text": "Streambank",
+  "confidence": 1.0,
+  "box": [
+   781,
+   461,
+   929,
+   488
+  ]
+ },
+ {
+  "text": "Story",
+  "confidence": 0.9998,
+  "box": [
+   802,
+   490,
+   855,
+   518
+  ]
+ },
+ {
+  "text": "the Storm",
+  "confidence": 0.9484,
+  "box": [
+   243,
+   502,
+   419,
+   549
+  ]
+ },
+ {
+  "text": "05",
+  "confidence": 1.0,
+  "box": [
+   713,
+   560,
+   749,
+   590
+  ]
+ },
+ {
+  "text": "Valley Commercial Stre...",
+  "confidence": 0.984,
+  "box": [
+   780,
+   558,
+   1067,
+   590
+  ]
+ },
+ {
+  "text": "Schedule: 10/12/2026 19:00 - 10/26/2026 18:59",
+  "confidence": 0.9696,
+  "box": [
+   133,
+   568,
+   533,
+   593
+  ]
+ },
+ {
+  "text": "Story",
+  "confidence": 0.9998,
+  "box": [
+   803,
+   590,
+   854,
+   616
+  ]
+ },
+ {
+  "text": "Story",
+  "confidence": 0.9999,
+  "box": [
+   126,
+   659,
+   185,
+   689
+  ]
+ },
+ {
+  "text": "Shop",
+  "confidence": 0.9998,
+  "box": [
+   249,
+   658,
+   305,
+   689
+  ]
+ },
+ {
+  "text": "Tasks",
+  "confidence": 0.9999,
+  "box": [
+   368,
+   660,
+   428,
+   683
+  ]
+ },
+ {
+  "text": "Draw a Card",
+  "confidence": 0.9992,
+  "box": [
+   464,
+   661,
+   576,
+   683
+  ]
+ },
+ {
+  "text": "06",
+  "confidence": 0.9999,
+  "box": [
+   712,
+   658,
+   749,
+   687
+  ]
+ },
+ {
+  "text": "Valley Hotel Lobby",
+  "confidence": 0.9931,
+  "box": [
+   778,
+   656,
+   999,
+   691
+  ]
+ }
+]
