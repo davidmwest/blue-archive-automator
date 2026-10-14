@@ -6,7 +6,8 @@ import time
 from uuid import uuid4
 
 from .runtime import Capture, Journal, RunResult, TaskError
-from .shop_vision import ShopVision
+from .shop_vision import ShopVision, faq_close
+from .vision import VisionError, decode_frame, read_game_words
 
 LOGGER = logging.getLogger(__name__)
 BILLING_PACKAGE = 'com.android.vending'
@@ -24,7 +25,7 @@ class ShopRunner:
 
     def __init__(self, config, device, startup, *, vision=None, monotonic=time.monotonic,
                  sleep=time.sleep, wall_clock=lambda: datetime.now(timezone.utc)):
-        self.config, self.device = config, device
+        self.config, self.device, self.startup = config, device, startup
         self.vision = vision or ShopVision(startup)
         self.clock, self.sleep, self.wall_clock = monotonic, sleep, wall_clock
         self.started, self.actions, self.last_frame = monotonic(), 0, None
@@ -88,14 +89,34 @@ class ShopRunner:
         kinds = {kinds} if isinstance(kinds, str) else kinds
         end = self.clock() + timeout
         billing_settle_until = self.clock() + billing_grace
+        help_dismissals = 0
         while self.clock() < end:
             frame = self.capture()
             if frame.screen.kind in kinds and predicate(frame.screen) and frame.capture.deadline - self.clock() >= 1:
                 return frame
             if frame.screen.kind == 'billing_attention' and self.clock() >= billing_settle_until:
                 self.fail('Google Play needs attention. Set up payment in this emulator and complete any verification manually')
+            if frame.screen.kind not in kinds and help_dismissals < 3 and self.dismiss_help(frame):
+                help_dismissals += 1
+                continue
             self.sleep(.7)
         self.fail(f'{self.task} did not reach {", ".join(sorted(kinds))}; inspect the local trace')
+
+    def dismiss_help(self, frame):
+        """Close a first-visit FAQ overlay covering the awaited screen."""
+        if frame.capture.foreground != self.config.package or not hasattr(self.startup, 'read'):
+            return False
+        try:
+            # The task's own analysis already read this frame; the reader caches it.
+            target = faq_close(decode_frame(frame.capture.png),
+                               read_game_words(frame.capture.png, self.startup))
+        except VisionError:
+            return False
+        if target is None or frame.capture.deadline - self.clock() < 1:
+            return False
+        self.phase('Closing the first-visit FAQ overlay')
+        self.tap(frame, target, 'Close first-visit FAQ overlay')
+        return True
 
     def tap(self, frame, target, detail):
         self.budget()

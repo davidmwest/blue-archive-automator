@@ -141,6 +141,23 @@ def weekly_cards(frame, words):
     return cards
 
 
+def faq_close(frame, words):
+    """Target the X of the first-visit FAQ overlay, which offers no choices.
+
+    A fresh install explains each mode with sample images the first time it is
+    opened. Require the centered heading and the white panel header on both
+    sides of it; a mode's own FAQ button label elsewhere does not match.
+    """
+    if frame.shape[:2] != (720, 1280):
+        return None
+    heading = [w for w in within(words, (560, 100, 720, 165))
+               if w.confidence >= .9 and w.normalized == 'faq']
+    if (len(heading) != 1 or not bright(frame, (300, 112, 540, 150))
+            or not bright(frame, (760, 112, 960, 150))):
+        return None
+    return (1017, 133)
+
+
 def classify_shop(frame, words, *, home=False, billing=False):
     height, width = frame.shape[:2]
     if billing:
