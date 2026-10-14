@@ -256,35 +256,43 @@ class EventClearRunner(APRunner):
             self.fail('No supported event is currently playable')
         enter_event(self,self.startup)
         state = event_state.observe(self.config,profile)
-        summary = 'All event quests have three-star clears'
+        # One default Auto Formation attempt per quest: a first clear's rewards
+        # come once, while a star shortfall would likely repeat. Shortfalls are
+        # recorded and left to the player; only a loss (the next quest stays
+        # locked) or the AP floor ends the run early.
+        stopped, short = None, []
         for stage in range(1,profile['quest_count']+1):
             frame = quest_detail(self,stage)
-            if frame.screen.stars == 3:
-                state['clears'][str(stage)] = 3
-                event_state.write_state(self.config,state)
-                close_detail(self,frame)
-                continue
-            cost = battle_cost(frame,self.startup)
-            if cost is None:
-                self.fail('Could not verify event battle AP cost; no battle started')
-            if frame.screen.ap-cost < self.config.ap_floor:
-                summary = f'Event clear stopped before Quest {stage}: keeping {self.config.ap_floor} AP'
-                break
-            frame = self.fight(state,frame,stage,cost)
             stars = frame.screen.stars
+            if stars != 3 and state['clears'].get(str(stage)) is None:
+                cost = battle_cost(frame,self.startup)
+                if cost is None:
+                    self.fail('Could not verify event battle AP cost; no battle started')
+                if frame.screen.ap-cost < self.config.ap_floor:
+                    stopped = f'Event clear stopped before Quest {stage}: keeping {self.config.ap_floor} AP'
+                    break
+                frame = self.fight(state,frame,stage,cost)
+                stars = frame.screen.stars
+                state['pending'] = None
+                self.important('event_quest_cleared',f'Event Quest {stage}: {stars}/3 stars; rewards recorded',stage=str(stage),stars=stars)
             state['clears'][str(stage)] = stars
-            state['pending'] = None
             event_state.write_state(self.config,state)
-            self.important('event_quest_cleared',f'Event Quest {stage}: {stars}/3 stars; rewards recorded',stage=str(stage),stars=stars)
-            if stars != 3:
-                summary = f'Stopped at event Quest {stage}: {stars}/3 stars'
+            if not stars:
+                stopped = f'Stopped at event Quest {stage}: not cleared'
                 break
+            if stars != 3:
+                short.append(f'{stage} ({stars}/3)')
             close_detail(self,frame)
         else:
             frame = self.wait(LISTS)
             if profile.get('challenge_count'):
                 frame, stopped = self.clear_challenges(profile,state)
-                summary = stopped or 'All event quests and challenges have three-star clears'
+        if stopped is None and not short:
+            summary = ('All event quests and challenges have three-star clears'
+                       if profile.get('challenge_count') else 'All event quests have three-star clears')
+        else:
+            summary = '; '.join(filter(None, (
+                stopped, short and f"Event Quests below three stars: {', '.join(short)}; replay them by hand")))
         state['summary'] = summary
         state['declined'] = True  # one prompt per detected event; manual run can continue
         event_state.write_state(self.config,state)

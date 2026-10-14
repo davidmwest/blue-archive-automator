@@ -64,10 +64,11 @@ def test_clear_does_not_schedule_other_game_work(tmp_path):
 
 
 @pytest.mark.parametrize('results,expected,summary', [
-    ([3, 2, 3], [1, 2], '2/3 stars'),
+    ([3, 2, 3], [1, 2, 3], 'below three stars: 2 (2/3); replay them by hand'),
+    ([3, 0, 3], [1, 2], 'Stopped at event Quest 2: not cleared'),
     ([3, 3, 3], [1, 2, 3], 'All event quests'),
 ])
-def test_clear_uses_auto_each_time_and_stops_below_three_stars(tmp_path, monkeypatch, results, expected, summary):
+def test_clear_tries_each_quest_once_and_stops_only_when_one_is_not_cleared(tmp_path, monkeypatch, results, expected, summary):
     from ba_automator.event_quests import EventClearRunner
     c = Config(serial='localhost:5695', package='com.nexon.bluearchive',
                state_dir=tmp_path/'state', run_dir=tmp_path/'runs')
@@ -360,5 +361,25 @@ def test_a_won_battle_is_confirmed_from_a_fresh_frame(tmp_path, monkeypatch):
     try:
         assert r.finish_battle(10) == 'detail'
         assert taps[0] == 4.0 and saved[0] == 'quest-10-result.png'
+    finally:
+        r.journal.close()
+
+
+def test_a_recorded_star_shortfall_is_not_replayed(tmp_path, monkeypatch):
+    # Live, Quest 11 cleared at 2/3 stars with default Auto Formation.
+    r, c = challenge_runner(tmp_path, monkeypatch, details=[3, 3], battles=[3, 3])
+    state = event_state.observe(c, available_event(CALM_NOW))
+    state['clears'] = {'1': 3, '2': 2}
+    event_state.write_state(c, state)
+    monkeypatch.setattr('ba_automator.event_quests.quest_detail',
+                        lambda runner, stage, **kw: SimpleNamespace(
+                            screen=SimpleNamespace(kind='detail', stars=2 if (kw.get('tab', 'quest'), stage) == ('quest', 2) else 3, ap=220),
+                            capture=SimpleNamespace(png=b'')))
+    try:
+        assert r.run() == 'finished'
+        assert r.fought == [] and not any(d.startswith('Mobilize') for d in r.inputs)
+        saved = event_state.read_state(c)
+        assert saved['clears'] == {'1': 3, '2': 2}
+        assert saved['summary'] == 'Event Quests below three stars: 2 (2/3); replay them by hand'
     finally:
         r.journal.close()
