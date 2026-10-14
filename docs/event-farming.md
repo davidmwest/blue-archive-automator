@@ -28,9 +28,19 @@ Play runs **October 13, 02:00 UTC to October 27, 01:59 UTC**; the client shows t
 
 The season profile is `ba_automator/assets/calm-after-the-storm.json`. Each profile now carries its own identity: the page title, the first quest, the label of its bottom-row mechanic, and how to enter it. This season is opened from Campaign's event card, which shares its slot with the previous event's reward period; the card is tapped only while its text names this event, and the destination page is verified before anything else. It has no round goal to observe, so `farm_goal` is `until_event_ends`: with `[ap].event_priority` on, AP above the floor goes to Stories first, then to the first three-star quest in `farm_order` (12, 9, 8, 4, 1: the Souvenir Photo Card stages), until the play period ends or the setting is turned off.
 
-Reused unchanged: Story clearing, one-time quest clears with Auto Formation, and three-star sweeps. **Not automated:** Draw a Card, the three shops, the Challenge stages, and event Task claims. Those need their own adapters and are left for manual play.
+Reused unchanged: Story clearing, one-time quest clears with Auto Formation, and three-star sweeps.
 
-The first entry shows an opening story and a seven-page Play Guide. Both were dismissed by hand during the survey; the runner does not handle them.
+The season's other rewards are listed under `extras` in its profile and run through the existing `event_treasure` job (`ba_automator/event_extras.py`), which the manager queues after each AP visit and in the daily plan while `[ap].event_treasure_enabled` is on:
+
+- **Tasks.** Claim All is tapped only while it is lit. Task rewards are free, so they are collected even when event spending is off.
+- **Draw a Card.** One card at a time while the balance covers the 200-card cost, and the balance is read back after every draw. A set of four holds one high-grade card; once a revealed card shows a gold or rainbow frame, or all four are face up, the free shuffle deals a new set. Only Normal (pale frame) cards were seen during the survey, so the frame check is a colour heuristic; a wrong answer changes only when the free shuffle happens. `visit_limit` caps draws per visit.
+- **Shops.** Each of the three tabs is scrolled once to list its stock, then limited stock is bought strictly in the tab's `priority` order (unlisted items follow in shop order; `skip` entries are never bought). While a wanted item is still in stock and cannot be cleared, nothing below it is bought, so the currency keeps accumulating for it; in the last 36 hours of the play period that rule is dropped and whatever is affordable is bought. Unlimited conversions (no stock line) are never bought. Before Confirm, the notice's item name, unit cost, quantity and total must agree with the card and the balance; afterwards the balance must have dropped by exactly the total.
+
+Every claim, draw and purchase feeds the shared loot reader and is recorded as an important action with its receipt image. These flows keep no pending intent: a draw or purchase interrupted after Confirm leaves nothing to reconcile, because the next visit re-reads balances and stock and simply continues.
+
+**Challenges.** `clear_event` continues to the Challenge tab once every quest has three stars (`challenge_count` in the profile). Each unfinished Challenge gets one default Auto Formation attempt behind the same durable intent as a quest. A Challenge left below three stars is recorded in the event state and not retried; later Challenges are not attempted. Play those by hand.
+
+The first entry shows an opening story and a seven-page Play Guide. The Play Guide is closed automatically; the opening story was dismissed by hand during the survey.
 
 ### Proposed starting preset
 
