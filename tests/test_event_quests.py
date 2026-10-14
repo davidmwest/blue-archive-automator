@@ -294,7 +294,7 @@ def test_lost_battle_is_confirmed_and_read_back_from_the_stage(tmp_path, monkeyp
                state_dir=tmp_path/'state', run_dir=tmp_path/'runs')
     r = event_quests.EventClearRunner(c, None, None, vision=object(), wall_clock=lambda: CALM_NOW)
     lost = SimpleNamespace(screen=SimpleNamespace(kind='event_defeat', target=(640, 659)),
-                           capture=SimpleNamespace(png=b''))
+                           capture=SimpleNamespace(png=b'', deadline=float('inf')))
     r.capture = lambda: lost
     r.journal.save_image = lambda *args: None
     taps, notes, read_back = [], [], []
@@ -329,3 +329,36 @@ def test_defeat_page_and_open_tab_are_recognized():
         assert event_quests.tab_selected(b'', 'challenge') and not event_quests.tab_selected(b'', 'quest')
     finally:
         event_quests.decode_frame = original
+
+
+def test_a_won_battle_is_confirmed_from_a_fresh_frame(tmp_path, monkeypatch):
+    # Live, saving the native result image before tapping let the frame's input
+    # window lapse; the tap was refused and the won battle was left pending.
+    from ba_automator import event_quests
+    c = Config(serial='localhost:5695', package='com.nexon.bluearchive',
+               state_dir=tmp_path/'state', run_dir=tmp_path/'runs')
+    r = event_quests.EventClearRunner(c, None, None, vision=object(), wall_clock=lambda: CALM_NOW)
+    now = [100.0]
+    r.clock = lambda: now[0]
+    frames = iter([0.5, 4.0])            # seconds of input window left on each capture
+
+    def capture():
+        left = next(frames)
+        return SimpleNamespace(screen=SimpleNamespace(kind='event_complete', target=(1170, 661)),
+                               capture=SimpleNamespace(png=b'', deadline=now[0] + left))
+    r.capture = capture
+    taps, saved = [], []
+    r.tap = lambda frame, target, detail: taps.append(
+        getattr(frame.capture, 'deadline', now[0]) - now[0])
+    r.journal.save_image = lambda name, png: saved.append(name)
+    receipt = SimpleNamespace(screen=SimpleNamespace(kind='receipt', target=(775, 660)),
+                              capture=SimpleNamespace(png=b''))
+    r.wait = lambda kinds, **kw: receipt if 'receipt' in kinds else SimpleNamespace(
+        screen=SimpleNamespace(kind='event_list'))
+    monkeypatch.setattr(event_quests, 'itemize_or_keep', lambda runner, frame, path, label: frame)
+    monkeypatch.setattr(event_quests, 'quest_detail', lambda runner, stage, **kw: 'detail')
+    try:
+        assert r.finish_battle(10) == 'detail'
+        assert taps[0] == 4.0 and saved[0] == 'quest-10-result.png'
+    finally:
+        r.journal.close()

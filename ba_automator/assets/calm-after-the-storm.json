@@ -27,9 +27,36 @@
     },
     "shop": {
       "tabs": [
-        {},
-        {},
-        {}
+        {
+          "currency": "Audit Plans",
+          "priority": [
+            "superior tactical training",
+            "advanced tactical training",
+            "aether essence",
+            "intact istanbul rocket",
+            "aether shard",
+            "repaired istanbul rocket"
+          ]
+        },
+        {
+          "currency": "Facility Admission Tickets",
+          "priority": [
+            "superior tech notes",
+            "advanced tech notes",
+            "intact okiku doll",
+            "intact rohonc codex",
+            "repaired okiku doll",
+            "annotated rohonc codex"
+          ]
+        },
+        {
+          "currency": "Specialty Osmanthus Cakes",
+          "priority": [
+            "pyroxenes",
+            "eligma",
+            "secret tech notes"
+          ]
+        }
       ]
     }
   },

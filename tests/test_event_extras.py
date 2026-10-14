@@ -209,9 +209,10 @@ class Game(EventExtrasRunner):
         capture = SimpleNamespace(png=b'', deadline=self.time + 5, is_fresh=lambda now: True)
         return SimpleNamespace(screen=screen, capture=capture)
 
-    def collect(self, receipt, name, label):
+    def collect(self, receipt, name, label, *, itemize=True):
         assert self.where == 'receipt'
         self.where = self.behind
+        self.itemized = getattr(self, 'itemized', []) + [(label, itemize)]
         return Path(name)
 
     def swipe(self, start, end, **kwargs):
@@ -283,6 +284,8 @@ def test_cards_are_drawn_while_affordable_and_a_used_set_is_shuffled(entered):
     game = run(Game(cards=1150), {'cards': {'cost': 200}})
     assert game.card_balance == 150 and game.notes.count('event_card_drawn') == 5
     assert [detail for detail in game.log if 'Shuffle' in detail] == ['Shuffle to a new card set (free)']
+    # Each draw's long random reward list is kept as an image, not itemized.
+    assert set(game.itemized) == {('Event card', False)}
 
 
 def test_a_high_grade_card_ends_its_set(entered):

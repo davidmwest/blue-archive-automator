@@ -102,7 +102,9 @@ def card_settled(frame, profile):
             and float(np.abs(title.astype(float) - reference).mean()) < 5)
 
 
-CAMPAIGN_ENTRIES = 5
+# Live, one visit missed this season five times in a row while eight later
+# trials all succeeded; a missed entry costs only a page load and a return.
+CAMPAIGN_ENTRIES = 10
 
 
 def enter_from_campaign(runner, startup, profile):

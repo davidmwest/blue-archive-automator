@@ -16,6 +16,8 @@ from .vision import decode_frame, read_game_words
 
 PAGE_BUTTONS = {'shop': (277, 673), 'tasks': (398, 673), 'cards': (520, 671)}
 SHOP_TABS = ((90, 140), (90, 218), (90, 296))
+# OCR does not find a lone "1" here, even enlarged; such a balance stays None.
+BALANCES = {'event_shop': (1060, 60, 1250, 110), 'event_cards': (680, 160, 820, 215)}
 CARD_SLOTS = ((666, 304, 800, 493), (808, 304, 942, 493), (951, 304, 1085, 493), (1094, 304, 1228, 493))
 CARD_BACK = '山海'
 
@@ -26,6 +28,11 @@ class ShopItem:
     price: int
     stock: int | None      # None when the stock line is unreadable or unlimited
     target: tuple          # centre of this card's Purchase button
+
+    @property
+    def key(self):
+        """One card: a shop can list the same reward at several prices and stocks."""
+        return normalized(self.name), self.price, self.stock is None
 
 
 @dataclass(frozen=True)
@@ -130,7 +137,7 @@ def classify_extras(frame, words):
             and bright(frame, (300, 5, 460, 30))):
         tabs = [index for index, (x, y) in enumerate(SHOP_TABS)
                 if not bright(frame, (x - 60, y - 22, x - 30, y + 22))]
-        return ExtrasScreen('event_shop', ap=ap, balance=_number(words, (1060, 60, 1250, 110)),
+        return ExtrasScreen('event_shop', ap=ap, balance=_number(words, BALANCES['event_shop']),
                             items=shop_items(frame, words), tab=tabs[0] if len(tabs) == 1 else None)
     if (has(words, 'draw a card', (80, 0, 300, 60))
             and has(words, 'draw a card', (720, 555, 930, 610))
@@ -140,7 +147,7 @@ def classify_extras(frame, words):
                       if any(w.text.strip().startswith(CARD_BACK) for w in within(words, (x1, y1, x2, y2))))
         revealed = [index for index in range(len(CARD_SLOTS)) if index not in backs]
         return ExtrasScreen(
-            'event_cards', ap=ap, balance=_number(words, (680, 160, 820, 215)),
+            'event_cards', ap=ap, balance=_number(words, BALANCES['event_cards']),
             draw_one=(828, 582) if cyan(frame, (740, 560, 920, 605)) else None,
             shuffle=(1150, 186), face_down=backs,
             premium=tuple(index for index in revealed if premium_border(frame, CARD_SLOTS[index])))

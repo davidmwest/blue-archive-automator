@@ -147,16 +147,21 @@ class EventClearRunner(APRunner):
         deadline = self.clock()+360
         while self.clock() < deadline:
             frame = self.capture()
+            if (frame.screen.kind in {'event_complete','event_defeat'}
+                    and frame.capture.deadline - self.clock() < 1):
+                # Live, writing the native result image first used up a frame's
+                # input window and failed a won battle. Read the page again.
+                continue
             if frame.screen.kind == 'event_complete':
-                self.journal.save_image(f'{tab}-{stage}-result.png',frame.capture.png)
                 self.tap(frame,frame.screen.target,'Confirm completed event battle')
+                self.journal.save_image(f'{tab}-{stage}-result.png',frame.capture.png)
                 break
             if frame.screen.kind == 'event_defeat':
                 # A loss is a known result, not an unresolved one: it awards
                 # nothing, so the stage's own stars are read back as usual.
+                self.tap(frame,frame.screen.target,'Confirm lost event battle')
                 self.journal.save_image(f'{tab}-{stage}-defeat.png',frame.capture.png)
                 self.important('event_battle_lost',f'Event {name} {stage}: lost with default Auto Formation',stage=str(stage))
-                self.tap(frame,frame.screen.target,'Confirm lost event battle')
                 return self.stage_detail(stage,tab)
             if frame.screen.kind == 'event_battle' and frame.screen.auto is False:
                 self.tap(frame,(1213,677),'Enable Auto for event battle')
