@@ -163,3 +163,28 @@ def test_every_student_is_read_once_and_the_job_returns_home(config, monkeypatch
     # Read only: Students, All, each card, back, and finally home. Nothing else.
     allowed = {inventory.STUDENTS_BUTTON, inventory.ALL_TAB, inventory.BACK, inventory.HOME}
     assert all(target in allowed or target[1] == 300 for target in game.taps)
+
+
+def test_manager_exports_the_inventory_as_a_json_download(tmp_path):
+    from ba_automator.server import ApiError, DashboardController
+    from test_server import ProcessFactory
+    path = tmp_path / "config" / "local.toml"
+    path.parent.mkdir()
+    path.write_text('[device]\nserial="127.0.0.1:5695"\npackage="com.nexon.bluearchive"\n'
+                    'adb_path="../tools/adb"\n[checkin]\nschedule_enabled=false\n'
+                    '[storage]\nrun_dir="../data/runs"\nlock_dir="../data/locks"\n', encoding="utf-8")
+    controller = DashboardController(path, process_factory=ProcessFactory(), wall_clock=lambda: NOW)
+    try:
+        with pytest.raises(ApiError, match="No student inventory yet"):
+            controller.students_export()
+        inventory.write_inventory(Config.from_file(path), [
+            {"name": "Aris (Maid)", "identity": "aris maid", "level": 85, "stars": 3,
+             "profile": "C:/private/aris.png", "text": ["Basic Info"]}], captured_at=NOW, complete=True)
+        payload, filename = controller.students_export()
+    finally:
+        controller.close()
+    export = json.loads(payload)
+    assert filename == "students-2026-10-14.json"
+    assert (export["count"], export["complete"], export["captured_at"]) == (1, True, NOW.isoformat())
+    # The download carries each student's data, never private paths or raw OCR.
+    assert export["students"] == [{"name": "Aris (Maid)", "level": 85, "stars": 3}]

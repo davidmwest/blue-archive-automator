@@ -5,7 +5,9 @@ example when the player picks up their phone. Logging straight back in would
 end that session in turn, so after the game shows that notice no job starts the
 game again for two hours. The manager keeps queued jobs waiting until then.
 
-Delete the hold file in the state directory to end a hold early.
+End a hold early with ``end_early`` (or the dashboard API), not by deleting its
+record: the notice is usually still on screen, and the record is what marks it
+as already handled. A successful login clears the record.
 """
 from __future__ import annotations
 
@@ -41,18 +43,62 @@ def signed_in_elsewhere(text: str) -> bool:
     return any(phrase in text for phrase in PHRASES)
 
 
-def held_until(config, now: datetime | None = None) -> datetime | None:
-    """When the current hold ends, or None. An unreadable record holds nothing."""
+def recorded(config) -> dict | None:
+    """The last hold, ended or not, until a login proves the session is ours again."""
     try:
         value = json.loads(state_path(config).read_text(encoding="utf-8"))
-        until = datetime.fromisoformat(value["until"])
+        datetime.fromisoformat(value["until"])
+        return value
     except FileNotFoundError:
         return None
     except (OSError, ValueError, KeyError, TypeError) as exc:
         LOGGER.warning("login hold: ignoring an unreadable record: %s", exc)
         return None
+
+
+def held_until(config, now: datetime | None = None) -> datetime | None:
+    """When the current hold ends, or None. An unreadable record holds nothing."""
+    value = recorded(config)
+    if value is None:
+        return None
+    until = datetime.fromisoformat(value["until"])
     now = now or datetime.now(timezone.utc)
     return until if until > now else None
+
+
+def end_early(config, now: datetime | None = None) -> bool:
+    """End the current hold now, keeping its record.
+
+    The notice that started it is usually still on screen. Keeping the record
+    tells the next start that this notice was already handled, so it relaunches
+    the game instead of starting another hold over the same notice.
+    """
+    value = recorded(config)
+    if value is None:
+        return False
+    now = now or datetime.now(timezone.utc)
+    if datetime.fromisoformat(value["until"]) > now:
+        _write(config, {**value, "until": now.isoformat(), "ended_early": True})
+    return True
+
+
+def clear(config) -> None:
+    """The game logged in again: a notice seen from now on is a new takeover."""
+    state_path(config).unlink(missing_ok=True)
+
+
+def _write(config, value: dict) -> None:
+    path = state_path(config)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+    try:
+        with temp.open("w", encoding="utf-8") as stream:
+            json.dump(value, stream, indent=2)
+            stream.flush()
+            os.fsync(stream.fileno())
+        replace_file(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
 
 
 def message(until: datetime) -> str:
@@ -65,18 +111,8 @@ def begin(config, *, detail: str, evidence: str | None = None,
     """Record a two-hour hold from now; no input is sent to the game."""
     now = now or datetime.now(timezone.utc)
     until = now + HOLD
-    path = state_path(config)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
-    try:
-        with temp.open("w", encoding="utf-8") as stream:
-            json.dump({"version": 1, "started_at": now.isoformat(), "until": until.isoformat(),
-                       "detail": detail[:300], "evidence": evidence}, stream, indent=2)
-            stream.flush()
-            os.fsync(stream.fileno())
-        replace_file(temp, path)
-    finally:
-        temp.unlink(missing_ok=True)
+    _write(config, {"version": 1, "started_at": now.isoformat(), "until": until.isoformat(),
+                    "detail": detail[:300], "evidence": evidence})
     from .actions import record_action
     record_action(config, "login_hold_started",
                   f"Signed out because the account was used on another device; "
@@ -94,7 +130,8 @@ def inspect_after_failure(config, device, vision, run_dir=None) -> datetime | No
     Never raises: the original failure is what the caller reports.
     """
     try:
-        if held_until(config) is not None or device.foreground_package() != config.package:
+        # A recorded hold covers the notice already: one notice, one hold.
+        if recorded(config) is not None or device.foreground_package() != config.package:
             return None
         png = device.screenshot()
         observation = vision.analyze(png)

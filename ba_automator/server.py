@@ -1695,6 +1695,29 @@ class DashboardController:
                     "schedule": {"checkin": self._checkin_status(), "daily": self._daily_status(), "ap": self._ap_status(), "packs": self._packs_status(), "crafting": self._crafting_status(), "cafe": {**self._schedule["cafe"],
                                           "enabled": getattr(self.config, "cafe_schedule_enabled", False)}}}
 
+    def students_export(self) -> tuple[bytes, str]:
+        """The latest student inventory as a JSON download.
+
+        Each student's own data only: screenshot paths, raw OCR text and the
+        matching key stay in the private inventory file.
+        """
+        from .student_inventory import state_path as inventory_path
+        with self._condition:
+            config = self.config
+        try:
+            document = json.loads(inventory_path(config).read_text(encoding="utf-8"))
+        except FileNotFoundError as exc:
+            raise ApiError(404, "No student inventory yet; run Inventory students first") from exc
+        except (OSError, ValueError) as exc:
+            raise ApiError(500, f"The student inventory could not be read: {exc}") from exc
+        private = {"identity", "profile", "text", "error"}
+        students = [{key: value for key, value in student.items() if key not in private}
+                    for student in document.get("students", []) if isinstance(student, dict)]
+        export = {"exported_at": self._wall_clock().isoformat(), "captured_at": document.get("captured_at"),
+                  "complete": document.get("complete"), "count": len(students), "students": students}
+        day = str(document.get("captured_at") or self._wall_clock().isoformat())[:10]
+        return (json.dumps(export, indent=2, ensure_ascii=False) + "\n").encode("utf-8"), f"students-{day}.json"
+
     def actions(self) -> dict:
         """Read persistent important actions; filesystem evidence paths remain private."""
         with self._condition:
@@ -2088,12 +2111,14 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
         def log_message(self, format, *args):
             LOGGER.debug("dashboard HTTP: " + format, *args)
 
-        def _send(self, status: int, payload: bytes, content_type: str, *, filename=None, frame_token=None) -> None:
+        def _send(self, status: int, payload: bytes, content_type: str, *, filename=None, frame_token=None,
+                  download=False) -> None:
             self.send_response(status)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(payload)))
             if filename:
-                self.send_header("Content-Disposition", f'inline; filename="{filename}"')
+                disposition = "attachment" if download else "inline"
+                self.send_header("Content-Disposition", f'{disposition}; filename="{filename}"')
             if frame_token:
                 self.send_header("X-Game-Frame", frame_token)
             self.send_header("Cache-Control", "no-store")
@@ -2195,6 +2220,11 @@ def create_server(controller: DashboardController, host: str = "127.0.0.1", port
                     self._send(200, controller.relationship_portrait(match[1]), "image/png")
                 elif target.path == "/api/actions":
                     self._json(200, controller.actions())
+                elif target.path == "/api/students.json":
+                    if target.query:
+                        raise ApiError(400, "The student export does not accept query parameters")
+                    payload, filename = controller.students_export()
+                    self._send(200, payload, "application/json; charset=utf-8", filename=filename, download=True)
                 elif match := re.fullmatch(r"/api/popups/([a-f0-9]{32})/(before|after)", target.path):
                     if parse_qs(target.query).keys() - {"v"}:
                         raise ApiError(400, "Popup images accept only a version parameter")

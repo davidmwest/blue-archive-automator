@@ -213,3 +213,36 @@ def test_manager_waits_out_a_hold_then_runs_an_interrupted_daily_again(tmp_path)
         factory.processes[1].finish()
     finally:
         controller.close()
+
+
+def test_ending_a_hold_early_keeps_its_record_and_a_login_clears_it(config):
+    assert login_hold.end_early(config) is False
+    login_hold.begin(config, detail="notice", now=NOW)
+    assert login_hold.end_early(config, now=NOW + timedelta(minutes=30)) is True
+    assert login_hold.held_until(config, NOW + timedelta(minutes=31)) is None
+    assert login_hold.recorded(config)["ended_early"] is True
+    login_hold.clear(config)
+    assert login_hold.recorded(config) is None
+
+
+def test_after_a_hold_ends_the_old_notice_is_relaunched_over(config, monkeypatch):
+    # Live, the notice from 06:18 was still on screen when the hold was ended;
+    # treating it as a new takeover started a second hold instead of the job.
+    login_hold.begin(config, detail="notice")
+    login_hold.end_early(config)
+    monkeypatch.setattr("ba_automator.restart.read_game_words", lambda png, vision: [
+        Word("Duplicate login detected.", .99, (492, 300, 785, 340))])
+    device = StartupDevice()
+    vision = SimpleNamespace(read=lambda image: [], analyze=lambda png: Observation("home", "home"))
+    monkeypatch.setattr("ba_automator.restart.HOME_STABLE_SECONDS", 0)
+    result = restart(config.__class__(**{**config.__dict__, "home_confirmations": 1}), device, vision)
+    assert result.status == "success" and "force_stop" in device.calls
+    assert login_hold.recorded(config) is None          # the session is ours again
+
+
+def test_a_failed_task_does_not_start_a_second_hold_over_a_handled_notice(config):
+    login_hold.begin(config, detail="notice")
+    login_hold.end_early(config)
+    vision = SimpleNamespace(analyze=lambda png: notice())
+    assert login_hold.inspect_after_failure(config, Device(), vision) is None
+    assert login_hold.held_until(config) is None

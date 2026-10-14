@@ -157,8 +157,11 @@ def run_restart(
         assert journal is not None
         check_deadlines()
         # Relaunching would hide a sign-out notice left on screen and log straight
-        # back in, ending the other device's session. Offline doubles have no OCR.
-        if hasattr(vision, "read") and device.foreground_package() == config.package:
+        # back in, ending the other device's session. A notice already covered by
+        # a recorded hold was handled; once that hold ends, relaunch over it.
+        # Offline doubles have no OCR.
+        if (hasattr(vision, "read") and login_hold.recorded(config) is None
+                and device.foreground_package() == config.package):
             png = device.screenshot()
             if login_hold.signed_in_elsewhere(" ".join(word.text for word in read_game_words(png, vision))):
                 hold_login("The account was signed in on another device", png)
@@ -368,6 +371,8 @@ def run_restart(
                         record_action(config, "startup_recovered",
                                       "force restart worked. home screen is ready; continuing the job.",
                                       task="restart", run_dir=str(run_dir))
+                    # The session is ours again: a later notice is a new takeover.
+                    login_hold.clear(config)
                     journal.record("finished", status="success", actions=actions, frame="home.png")
                     return result
     except KeyboardInterrupt:
