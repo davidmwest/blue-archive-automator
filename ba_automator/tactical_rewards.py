@@ -8,7 +8,7 @@ from .ap_vision import classify_ap
 from .crafting_vision import has, bright, yellow, within
 from .locking import InstanceLock
 from .shop_runtime import ShopRunner
-from .shop_vision import classify_shop, text_in
+from .shop_vision import classify_shop, repair_receipt_prompt, text_in
 from .vision import classify, decode_frame, read_game_words
 
 
@@ -78,7 +78,9 @@ class TacticalVision:
 
     def analyze(self, png, *, billing=False):
         frame = decode_frame(png)
-        words = read_game_words(png, self.startup)
+        # The reward animation can put an accent on the continue prompt; without
+        # this repair a claimed receipt stays unrecognized until the wait expires.
+        words = repair_receipt_prompt(frame, read_game_words(png, self.startup), self.startup)
         home = (
             not billing and classify(words, self.startup.matches(frame)).state == "home"
         )
