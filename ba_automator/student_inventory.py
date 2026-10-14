@@ -28,6 +28,7 @@ from .invitation_roster import (_all_selected, _home, _name_parts, _scroll, _sta
                                 profile_identity, profile_rarity, roster_screen)
 from .locking import InstanceLock
 from .runtime import FRAME_MAX_AGE, HOME_STABLE_SECONDS, Journal, RunResult, TaskError
+from .student_profile import parse_basic_info
 from .vision import decode_frame, read_game_words
 
 LOGGER = logging.getLogger(__name__)
@@ -77,6 +78,36 @@ def page_text(words):
     return [word.text.strip() for word in sorted(body, key=lambda w: (round(w.center[1] / 12), w.center[0]))]
 
 
+def profile_settled(words):
+    """Basic Info slides and zooms in; read it only once its tab is at rest.
+
+    Live, three of 29 profiles were captured mid-animation, every field offset.
+    """
+    return any(word.normalized == "basic info" and abs(word.center[0] - 755) <= 4
+               and abs(word.center[1] - 141) <= 4 for word in words)
+
+
+COLUMNS = ("name", "level", "stars", "bond", "role", "class", "attack", "position", "armor",
+           "ex", "basic", "enhanced", "sub", "weapon_type", "weapon_level", "weapon_stars",
+           "gear1_tier", "gear1_level", "gear2_tier", "gear2_level", "gear3_tier", "gear3_level",
+           "exclusive_gear_tier", "hp", "atk", "def", "healing", "exp", "profile")
+
+
+def flat(student):
+    row = {key: student.get(key) for key in ("name", "level", "stars", "bond", "role", "class",
+                                              "attack", "position", "armor", "exclusive_gear_tier",
+                                              "profile")}
+    row.update((student.get("skills") or {}))
+    row.update((student.get("stats") or {}))
+    weapon = student.get("weapon") or {}
+    row.update(weapon_type=weapon.get("type"), weapon_level=weapon.get("level"), weapon_stars=weapon.get("stars"))
+    for slot, gear in enumerate(student.get("gear") or [], 1):
+        row[f"gear{slot}_tier"], row[f"gear{slot}_level"] = gear.get("tier"), gear.get("level")
+    exp = student.get("exp")
+    row["exp"] = f"{exp[0]}/{exp[1]}" if exp else None
+    return ["" if row.get(column) is None else row[column] for column in COLUMNS]
+
+
 def write_inventory(config, students, *, captured_at, complete):
     path = state_path(config)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -84,10 +115,9 @@ def write_inventory(config, students, *, captured_at, complete):
                 "count": len(students), "students": students}
     stream = io.StringIO()
     table = csv.writer(stream, lineterminator="\n")
-    table.writerow(["name", "level", "stars", "profile"])
+    table.writerow(COLUMNS)
     for student in students:
-        table.writerow([student["name"], student["level"], student.get("stars") or "",
-                        student.get("profile") or ""])
+        table.writerow(flat(student))
     for target, content in ((path, json.dumps(document, indent=2, ensure_ascii=False) + "\n"),
                             (path.with_suffix(".csv"), stream.getvalue())):
         temp = target.with_name(f".{target.name}.{uuid4().hex}.tmp")
@@ -180,12 +210,17 @@ class StudentInventoryRunner:
                   "stars": None, "profile": None, "text": []}
         self.tap(cap, entry["target"], f"Open {entry['name']}'s Basic Info")
         try:
-            profile = _wait(self, lambda value: profile_identity(value[3]) == entry["identity"],
+            profile = _wait(self, lambda value: (profile_identity(value[3]) == entry["identity"]
+                                                 and profile_settled(value[3])),
                             f"{entry['name']}'s Basic Info did not open", 20)
         except TaskError as error:
             record["error"] = str(error)
         else:
-            record["stars"] = profile_rarity(profile[2], profile[3], entry["identity"])
+            fields = parse_basic_info(profile[1], self.startup, profile[3])
+            record.update({key: value for key, value in fields.items() if key != "name"})
+            record["level"] = fields["level"] or entry["level"]
+            if record["stars"] is None:
+                record["stars"] = profile_rarity(profile[2], profile[3], entry["identity"])
             name = f"students/{index:03d}-{re.sub(r'[^a-z0-9]+', '-', entry['identity']).strip('-')}.png"
             self.journal.save_image(name, profile[1])
             record["profile"] = str(self.run_dir / name)

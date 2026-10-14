@@ -53,9 +53,9 @@ def test_inventory_is_saved_as_json_and_csv(config):
     path = inventory.write_inventory(config, students, captured_at=NOW, complete=True)
     document = json.loads(path.read_text(encoding="utf-8"))
     assert (document["count"], document["complete"], document["students"][0]["name"]) == (2, True, "Aris (Maid)")
-    rows = list(csv.reader(path.with_suffix(".csv").read_text(encoding="utf-8").splitlines()))
-    assert rows == [["name", "level", "stars", "profile"], ["Aris (Maid)", "85", "3", "p.png"],
-                    ["Hoshino", "90", "", ""]]
+    rows = list(csv.DictReader(path.with_suffix(".csv").read_text(encoding="utf-8").splitlines()))
+    assert [(row["name"], row["level"], row["stars"], row["profile"]) for row in rows] == [
+        ("Aris (Maid)", "85", "3", "p.png"), ("Hoshino", "90", "", "")]
 
 
 class Game:
@@ -125,6 +125,9 @@ def runner_for(game, config, monkeypatch):
     monkeypatch.setattr(inventory, "profile_identity", lambda words: game.profile)
     monkeypatch.setattr(inventory, "profile_rarity", lambda frame, words, student: 3)
     monkeypatch.setattr(inventory, "page_text", lambda words: ["Basic Info"])
+    monkeypatch.setattr(inventory, "profile_settled", lambda words: True)
+    monkeypatch.setattr(inventory, "parse_basic_info", lambda png, startup, words: {
+        "name": game.profile, "stars": 3, "level": None, "bond": 20, "skills": {"ex": "MAX"}})
     monkeypatch.setattr(inventory, "_stationary", lambda before, after: before[2]["page"] == after[2]["page"])
 
     def scroll(runner, cap, *, down):
