@@ -236,16 +236,16 @@ def challenge_runner(tmp_path, monkeypatch, details, battles, *, challenge_count
     return r, c
 
 
-def test_challenges_follow_three_star_quests_and_stop_at_the_first_shortfall(tmp_path, monkeypatch):
+def test_each_challenge_gets_one_attempt_even_after_a_shortfall(tmp_path, monkeypatch):
     r, c = challenge_runner(tmp_path, monkeypatch, details=[0, 0, 0], battles=[3, 1, 3], challenge_count=3)
     try:
         assert r.run() == 'finished'
-        assert r.fought == [('challenge', 1), ('challenge', 2)]
-        assert r.inputs.count('Use default Auto Formation') == 2
+        assert r.fought == [('challenge', 1), ('challenge', 2), ('challenge', 3)]
+        assert r.inputs.count('Use default Auto Formation') == 3
         assert 'Mobilize event Challenge 2' in r.inputs
         saved = event_state.read_state(c)
-        assert saved['challenges'] == {'1': 3, '2': 1} and saved['pending'] is None
-        assert saved['summary'] == 'Stopped at event Challenge 2: 1/3 stars'
+        assert saved['challenges'] == {'1': 3, '2': 1, '3': 3} and saved['pending'] is None
+        assert saved['summary'] == 'Event Challenges below three stars: 2 (1/3); replay them by hand'
     finally:
         r.journal.close()
 
@@ -260,7 +260,7 @@ def test_cleared_challenges_are_not_replayed_and_a_recorded_shortfall_is_left_to
         assert r.fought == [] and not any(d.startswith('Mobilize') for d in r.inputs)
         saved = event_state.read_state(c)
         assert saved['challenges'] == {'1': 3, '2': 1}
-        assert 'Challenge 2 stays at 1/3 stars' in saved['summary']
+        assert saved['summary'] == 'Event Challenges below three stars: 2 (1/3); replay them by hand'
     finally:
         r.journal.close()
 
@@ -275,7 +275,7 @@ def test_all_challenges_cleared_and_locked_challenge_summaries(tmp_path, monkeyp
     r, c = challenge_runner(tmp_path / 'locked', monkeypatch, details=[3, None], battles=[3, 3])
     try:
         r.run()
-        assert r.fought == [] and event_state.read_state(c)['summary'] == 'Event Challenge 2 is not open yet'
+        assert r.fought == [] and event_state.read_state(c)['summary'] == 'Event Challenges not open yet: 2'
     finally:
         r.journal.close()
 
@@ -298,6 +298,10 @@ def test_lost_battle_is_confirmed_and_read_back_from_the_stage(tmp_path, monkeyp
     lost = SimpleNamespace(screen=SimpleNamespace(kind='event_defeat', target=(640, 659)),
                            capture=SimpleNamespace(png=b'', deadline=float('inf')))
     r.capture = lambda: lost
+    # Live, a lost Challenge showed a strengthening tip before the event page.
+    tip = SimpleNamespace(screen=SimpleNamespace(kind='event_tip', target=(772, 656)),
+                          capture=SimpleNamespace(png=b''))
+    r.wait = lambda kinds, **kw: tip
     r.journal.save_image = lambda *args: None
     taps, notes, read_back = [], [], []
     r.tap = lambda frame, target, detail: taps.append((target, detail))
@@ -306,7 +310,8 @@ def test_lost_battle_is_confirmed_and_read_back_from_the_stage(tmp_path, monkeyp
                         lambda runner, stage, **kw: read_back.append((stage, kw)) or 'detail')
     try:
         assert r.finish_battle(2, 'challenge') == 'detail'
-        assert taps == [((640, 659), 'Confirm lost event battle')]
+        assert taps == [((640, 659), 'Confirm lost event battle'),
+                        ((772, 656), 'Close the tip shown after a loss')]
         assert notes == ['event_battle_lost'] and read_back == [(2, {'tab': 'challenge'})]
     finally:
         r.journal.close()
@@ -451,3 +456,15 @@ def test_a_refused_mobilize_leaves_no_pending_battle(tmp_path, monkeypatch):
         assert event_state.read_state(c)['pending'] is None
     finally:
         r.journal.close()
+
+
+def test_tip_after_a_loss_is_recognized():
+    import numpy as np
+    frame = np.full((720, 1280, 3), 60, np.uint8)
+    words = [Word('Tip!', .94, (289, 81, 407, 157)), Word('Go to Lobby', .98, (414, 637, 601, 682)),
+             Word('Confirm', 1.0, (707, 636, 837, 676))]
+    assert classify_quest(frame, words) is None             # Confirm is not lit
+    frame[640:675, 700:840] = (40, 200, 250)
+    screen = classify_quest(frame, words)
+    assert (screen.kind, screen.target) == ('event_tip', (772, 656))
+    assert classify_quest(frame, words[1:]) is None

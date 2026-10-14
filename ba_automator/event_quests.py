@@ -164,7 +164,10 @@ class EventClearRunner(APRunner):
                 # nothing, so the stage's own stars are read back as usual.
                 self.tap(frame,frame.screen.target,'Confirm lost event battle')
                 self.journal.save_image(f'{tab}-{stage}-defeat.png',frame.capture.png)
-                self.important('event_battle_lost',f'Event {name} {stage}: lost with default Auto Formation',stage=str(stage))
+                self.important('event_battle_lost',f'Event {name} {stage}: battle lost',stage=str(stage))
+                after = self.wait(LISTS | {'event_tip'},timeout=60)
+                if after.screen.kind == 'event_tip':
+                    self.tap(after,after.screen.target,'Close the tip shown after a loss')
                 return self.stage_detail(stage,tab)
             if frame.screen.kind == 'event_battle' and frame.screen.auto is False:
                 self.tap(frame,(1213,677),'Enable Auto for event battle')
@@ -257,38 +260,38 @@ class EventClearRunner(APRunner):
     def clear_challenges(self, profile, state):
         """One Auto Formation attempt per unfinished Challenge; stop at the first shortfall.
 
-        Challenges award their clear rewards once and cannot be swept. A stage
-        that default Auto Formation cannot three-star is left for the player
-        rather than retried, and later, harder stages are not attempted.
+        Challenges award their clear rewards once and cannot be swept. Each is
+        its own stage, so a loss on one does not hold back the next. A stage
+        left below three stars is recorded and left for the player.
+        Returns the frame, a reason for stopping early, the shortfalls and
+        the Challenges that are not open yet.
         """
         results = state.setdefault('challenges', {})
-        frame, summary = self.wait(LISTS), None
+        frame, stopped, short, closed = self.wait(LISTS), None, [], []
         for stage in range(1,profile.get('challenge_count',0)+1):
             frame = quest_detail(self,stage,allow_unavailable=True,tab='challenge')
             if frame is None:
-                frame, summary = self.wait(LISTS), f'Event Challenge {stage} is not open yet'
-                break
-            if frame.screen.stars != 3:
-                if str(stage) in results:
-                    summary = f'Event Challenge {stage} stays at {results[str(stage)]}/3 stars; play it by hand'
-                    break
+                frame = self.wait(LISTS)
+                closed.append(str(stage))
+                continue
+            stars = frame.screen.stars
+            if stars != 3 and str(stage) not in results:
                 cost = battle_cost(frame,self.startup)
                 if cost is None:
                     self.fail('Could not verify event Challenge AP cost; no battle started')
                 if frame.screen.ap-cost < self.config.ap_floor:
-                    summary = f'Event clear stopped before Challenge {stage}: keeping {self.config.ap_floor} AP'
+                    stopped = f'Event clear stopped before Challenge {stage}: keeping {self.config.ap_floor} AP'
                     break
                 frame = self.fight(state,frame,stage,cost,'challenge')
                 state['pending'] = None
-            stars = frame.screen.stars
+                stars = frame.screen.stars
+                self.important('event_challenge_attempted',f'Event Challenge {stage}: {stars}/3 stars',stage=str(stage),stars=stars)
             results[str(stage)] = stars
             event_state.write_state(self.config,state)
             if stars != 3:
-                self.important('event_challenge_attempted',f'Event Challenge {stage}: {stars}/3 stars',stage=str(stage),stars=stars)
-                summary = f'Stopped at event Challenge {stage}: {stars}/3 stars'
-                break
+                short.append(f'{stage} ({stars}/3)')
             frame = close_detail(self,frame)
-        return frame, summary
+        return frame, stopped, short, closed
 
     def run(self):
         event_state.ensure_safe(self.config)
@@ -327,16 +330,20 @@ class EventClearRunner(APRunner):
             if stars != 3:
                 short.append(f'{stage} ({stars}/3)')
             close_detail(self,frame)
-        else:
+        challenge_short, closed = [], []
+        if stopped is None:
             frame = self.wait(LISTS)
             if profile.get('challenge_count'):
-                frame, stopped = self.clear_challenges(profile,state)
-        if stopped is None and not short:
+                frame, stopped, challenge_short, closed = self.clear_challenges(profile,state)
+        parts = [stopped,
+                 short and f"Event Quests below three stars: {', '.join(short)}",
+                 challenge_short and f"Event Challenges below three stars: {', '.join(challenge_short)}",
+                 closed and f"Event Challenges not open yet: {', '.join(closed)}"]
+        if not any(parts):
             summary = ('All event quests and challenges have three-star clears'
                        if profile.get('challenge_count') else 'All event quests have three-star clears')
         else:
-            summary = '; '.join(filter(None, (
-                stopped, short and f"Event Quests below three stars: {', '.join(short)}; replay them by hand")))
+            summary = '; '.join(filter(None, parts)) + ('; replay them by hand' if short or challenge_short else '')
         state['summary'] = summary
         state['declined'] = True  # one prompt per detected event; manual run can continue
         event_state.write_state(self.config,state)

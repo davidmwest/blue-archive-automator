@@ -38,8 +38,14 @@ def classify_quest(frame, words):
     if (has(words,'defeat',(350,100,950,310))
             and has(words,'confirm',(550,625,730,695))
             and yellow(frame,(540,635,735,680))):
-        # The loss page shared with other battle modes; not yet seen in an event.
+        # The loss page shared with other battle modes.
         return BattleScreen('event_defeat',target=(640,659))
+    if (has(words,'tip',(250,60,450,180))
+            and has(words,'go to lobby',(390,620,630,700))
+            and has(words,'confirm',(690,620,860,700))
+            and yellow(frame,(700,640,840,675))):
+        # Live, a lost event Challenge was followed by this strengthening tip.
+        return BattleScreen('event_tip',target=(772,656))
     if (has(words, 'mission info' , (430,110,870,170))
             and has(words, 'start mission', (760,495,1120,570))
             and bright(frame,(500,180,600,200))):
