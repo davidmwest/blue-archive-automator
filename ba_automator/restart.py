@@ -47,6 +47,10 @@ class _GameExited(RestartError):
 
 
 LAUNCHERS = frozenset({"com.uncube.launcher3", "com.android.launcher3", "com.bluestacks.launcher"})
+# The game opens some notices in the browser. Live, the first title tap after a
+# daily reset opened a page in Chrome, twice, and that failed the whole Daily.
+BROWSERS = frozenset({"com.android.chrome"})
+BROWSER_RETURNS = 3
 
 
 def _is_blank_black(png: bytes) -> bool:
@@ -177,6 +181,7 @@ def run_restart(
         black_since: float | None = None
         next_action_at = started
         pending_popup: dict | None = None
+        browser_returns = 0
 
         while True:
             captured_at = check_deadlines()
@@ -193,6 +198,13 @@ def run_restart(
                     # A native crash during loading drops to the launcher. Nothing
                     # was tapped, so one relaunch is as safe as the timeout recovery.
                     raise _GameExited(message, run_dir)
+                if foreground in BROWSERS and browser_returns < BROWSER_RETURNS:
+                    # Starting the game's launcher activity again brings its
+                    # running task back to the front; the browser gets no input.
+                    browser_returns += 1
+                    journal.record("browser_left", package=foreground, attempt=browser_returns)
+                    operation("launch", device.launch)
+                    continue
                 fail(message)
 
             hold_login_reward = startup_loot.observe(png, observation, captured_at)

@@ -654,3 +654,22 @@ def test_another_app_in_front_still_stops_at_once(tmp_path):
         run_restart(config, device, FakeVision([Observation("loading")], clock),
                     monotonic=clock.monotonic, sleep=clock.sleep)
     assert device.calls.count("launch") == 1
+
+
+def test_game_brought_back_from_a_browser_page_without_input(tmp_path):
+    # Live, the first title tap after a daily reset opened a notice page in
+    # Chrome; the restart stopped there and the whole Daily failed.
+    clock, device, config = _crash_harness(tmp_path, ["com.android.chrome"])
+    result = run_restart(config, device, FakeVision([Observation("loading"), Observation("home")], clock),
+                         monotonic=clock.monotonic, sleep=clock.sleep)
+    assert result.status == "success"
+    assert device.calls.count("force_stop") == 1 and device.calls.count("launch") == 2
+    assert device.taps == []
+
+
+def test_a_browser_that_keeps_returning_still_stops(tmp_path):
+    clock, device, config = _crash_harness(tmp_path, ["com.android.chrome"] * 50)
+    with pytest.raises(RestartError, match="found com.android.chrome"):
+        run_restart(config, device, FakeVision([Observation("loading")], clock),
+                    monotonic=clock.monotonic, sleep=clock.sleep)
+    assert device.calls.count("launch") == 4 and device.taps == []
