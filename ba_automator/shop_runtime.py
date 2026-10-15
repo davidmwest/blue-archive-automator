@@ -6,7 +6,7 @@ import time
 from uuid import uuid4
 
 from .runtime import Capture, Journal, RunResult, TaskError
-from .shop_vision import ShopVision, faq_close
+from .shop_vision import ShopVision, faq_close, network_reconnect
 from .vision import VisionError, decode_frame, read_game_words
 
 LOGGER = logging.getLogger(__name__)
@@ -89,7 +89,7 @@ class ShopRunner:
         kinds = {kinds} if isinstance(kinds, str) else kinds
         end = self.clock() + timeout
         billing_settle_until = self.clock() + billing_grace
-        help_dismissals = 0
+        help_dismissals = reconnects = 0
         while self.clock() < end:
             frame = self.capture()
             if frame.screen.kind in kinds and predicate(frame.screen) and frame.capture.deadline - self.clock() >= 1:
@@ -98,6 +98,10 @@ class ShopRunner:
                 self.fail('Google Play needs attention. Set up payment in this emulator and complete any verification manually')
             if frame.screen.kind not in kinds and help_dismissals < 3 and self.dismiss_help(frame):
                 help_dismissals += 1
+                continue
+            if frame.screen.kind not in kinds and reconnects < 3 and self.reconnect(frame):
+                reconnects += 1
+                self.sleep(3)
                 continue
             self.sleep(.7)
         self.fail(f'{self.task} did not reach {", ".join(sorted(kinds))}; inspect the local trace')
@@ -117,6 +121,21 @@ class ShopRunner:
             return False
         self.phase('Closing the first-visit FAQ overlay')
         self.tap(frame, target, 'Close first-visit FAQ overlay')
+        return True
+
+    def reconnect(self, frame):
+        """Press Reconnect on the game's unstable-network notice."""
+        startup = getattr(self, 'startup', None)
+        if frame.capture.foreground != self.config.package or not hasattr(startup, 'read'):
+            return False
+        try:
+            target = network_reconnect(read_game_words(frame.capture.png, startup))
+        except VisionError:
+            return False
+        if target is None or frame.capture.deadline - self.clock() < 1:
+            return False
+        self.phase('The game reported an unstable network; reconnecting')
+        self.tap(frame, target, 'Reconnect after the unstable-network notice')
         return True
 
     def tap(self, frame, target, detail):
