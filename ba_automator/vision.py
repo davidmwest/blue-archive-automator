@@ -497,6 +497,13 @@ def classify(words: list[Word], matches: dict[str, tuple[int, int]]) -> Observat
     if {"news_close", "news_sidebar"} <= matches.keys():
         return result("popup", "Close the in-game announcements overlay", matches["news_close"])
 
+    # The account signed in on another device ended this session. Logging back
+    # in would end that one in turn; restart starts a two-hour login hold.
+    from .login_hold import DETECTOR, signed_in_elsewhere
+    if signed_in_elsewhere(text):
+        return Observation("blocked", "The account was signed in on another device", None,
+                           visible, detector=DETECTOR)
+
     # Block before checking background home labels or affirmative controls.
     if any(phrase in text for phrase in ("under maintenance", "maintenance in progress", "maintenance is underway")):
         return result("blocked", "The game is under maintenance")

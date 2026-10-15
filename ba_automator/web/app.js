@@ -43,7 +43,7 @@
   let actionsLimit = 15;
   let noticeTimer = null;
 
-  const taskName = (task) => ({ event_treasure: "Event treasure", clear_event: "Clear event quests", joint_firing_drill: "Joint Firing Drill", tactical_battles: "Tactical Challenge battles", total_assault: "Total Assault", assault_rewards: "Total Assault rewards", tactical_rewards: "Tactical rewards", red_dots: "Collect red dots", free_pack: "Free pack + mail", tasks: "Collect Tasks", bounties: "Bounties", scrimmages: "Scrimmages", spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons" }[task] || task || "—");
+  const taskName = (task) => ({ event_treasure: "Event treasure", clear_event: "Clear event quests", joint_firing_drill: "Joint Firing Drill", tactical_battles: "Tactical Challenge battles", total_assault: "Total Assault", assault_rewards: "Total Assault rewards", tactical_rewards: "Tactical rewards", red_dots: "Collect red dots", free_pack: "Free pack + mail", tasks: "Collect Tasks", bounties: "Bounties", scrimmages: "Scrimmages", spend_ap: "Spend AP", scan_ap: "Scan stages", packs: "Packs + mail", mail: "Collect mail", restart: "Restart", daily: "Daily", club: "Club", crafting: "Crafting", cafe: "Café", lessons: "Lessons", students: "Student inventory" }[task] || task || "—");
   const jobName = (job) => job?.source === "checkin" && job?.task === "red_dots" ? "Check-in" : taskName(job?.task);
   const isRunning = () => Boolean(status && (status.state === "running" || status.current_job));
   const queue = () => (Array.isArray(status?.queue) ? status.queue : []);
@@ -221,6 +221,7 @@
     $("run-club").disabled = unavailable;
     $("run-crafting").disabled = unavailable;
     $("run-mail").disabled = unavailable;
+  $("run-students").disabled = unavailable;
     $("run-tasks").disabled = unavailable;
     $("run-red-dots").disabled = unavailable;
     $("run-tactical").disabled = unavailable;
@@ -1119,6 +1120,7 @@
   $("run-free-pack").addEventListener("click", () => void post("/api/run", { task: "free_pack" }, "free pack + mail are in the queue."));
   $("run-tasks").addEventListener("click", () => void post("/api/run", { task: "tasks" }, "task rewards are in the queue."));
   $("run-mail").addEventListener("click", () => void post("/api/run", { task: "mail" }, "mail’s in the queue."));
+$("run-students").addEventListener("click", () => void post("/api/run", { task: "students" }, "the student inventory is in the queue. it only reads."));
   $("run-packs").addEventListener("click", () => void post("/api/run", { task: "packs" }, "pack check and mail are in the queue."));
   $("run-crafting").addEventListener("click", () => void post("/api/run", { task: "crafting" }, "crafting’s in the queue."));
   $("run-bounties").addEventListener("click", () => void post("/api/run", { task: "bounties" }, "bounties are in the queue."));

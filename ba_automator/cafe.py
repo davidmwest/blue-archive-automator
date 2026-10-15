@@ -14,6 +14,7 @@ from .relationship import (is_relationship_rank_up, read_relationship_rank_up,
                            record_relationship_increase, same_relationship_screen,
                            wait_relationship_details)
 from .runtime import Journal, RunResult, TaskError, FRAME_MAX_AGE, HOME_STABLE_SECONDS
+from .shop_vision import network_reconnect
 from .vision import decode_frame
 
 LOGGER = logging.getLogger(__name__)
@@ -266,16 +267,28 @@ class CafeRunner:
         notice_attempts = 0
         notice_retry_at = 0
         pending_notice = None
+        reconnects = 0
         while self.clock() < end:
             cap = self.capture()
             if self.vision.is_cafe(cap[2]):
                 if pending_notice is not None:
                     self.visitor_notice_after(pending_notice, cap, "cafe", "changed")
                 return cap
+            words = self.vision.words(cap[1])
+            # Live, a dropped request covered Cafe 2 with the game's network
+            # notice; Reconnect is the game's own retry of that request.
+            reconnect = network_reconnect(words)
+            if reconnect is not None and reconnects < 3 and self.clock() - cap[0] < FRAME_MAX_AGE - 1:
+                self.journal.save_image(f"network-notice-{reconnects + 1}.png", cap[1])
+                self.tap(cap, reconnect, "Reconnect after the unstable-network notice")
+                reconnects += 1
+                end = max(end, self.clock() + 15)
+                self.sleep(3)
+                continue
             # The new floor can appear before its visitor list arrives. The
             # same exact notice handled during navigation also needs handling
             # here, without treating other overlays as permission to tap.
-            notice = self.vision.visitor_notice(cap[2], self.vision.words(cap[1]))
+            notice = self.vision.visitor_notice(cap[2], words)
             now = self.clock()
             if notice is not None and now >= notice_retry_at:
                 if notice_attempts >= NAVIGATION_ATTEMPTS:

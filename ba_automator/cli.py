@@ -61,6 +61,7 @@ def main(argv=None) -> int:
         "spend_ap": "Sweep selected Hard missions or commissions down to the AP floor",
         "scan_ap": "Survey three-star Hard missions and commissions without spending AP",
         "lessons": "Restart and use lesson tickets with the configured strategy",
+        "students": "Inventory every owned student's Basic Info without upgrading anything",
         "daily": "Run restart, free package, Club, enabled packs, mail, cafe, enabled ticket sweeps, enabled Tactical Challenge battles and rewards, lessons, optional Total Assault, raid rewards, AP spending and task rewards",
     }
     for name, description in descriptions.items():
@@ -179,6 +180,10 @@ def main(argv=None) -> int:
                     from .crafting import run_crafting
 
                     runner = run_crafting
+                elif task == "students":
+                    from .student_inventory import run_student_inventory
+
+                    runner = run_student_inventory
                 elif task == "lessons":
                     from .lessons import run_lessons
 
@@ -195,7 +200,14 @@ def main(argv=None) -> int:
                 append_event(
                     config.state_dir, "task_dispatched", task=task, command=args.command
                 )
-                result = runner(config, device, vision, **options)
+                try:
+                    result = runner(config, device, vision, **options)
+                except Exception as exc:
+                    # Another device taking the account over usually surfaces as
+                    # a failed step; look before anything relaunches the game.
+                    from .login_hold import inspect_after_failure
+                    inspect_after_failure(config, device, vision, getattr(exc, "run_dir", None))
+                    raise
                 append_event(
                     config.state_dir,
                     "task_result",
