@@ -1,6 +1,6 @@
 # engineering notes
 
-the project automates a small, repetitive part of Blue Archive through its visible interface. the useful engineering problem is knowing when an action is justified, whether it worked, and when to stop. these notes cover the core routines and failures found during live validation; the [high-level design](design.md) sets the forward plan. development uses AI assistance; runtime decisions use the rules described below.
+the project automates a small, repetitive part of Blue Archive through its visible interface. the useful engineering problem is knowing when an action is justified, whether it worked, and when to stop. these notes cover the core routines and failures found during live validation; the [high-level design](design.md) sets the forward plan. runtime decisions use the rules described below.
 
 ## constraints that shaped the design
 
