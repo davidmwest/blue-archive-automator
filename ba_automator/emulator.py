@@ -34,6 +34,7 @@ BOOT_SECONDS = 300
 BOOTING_SECONDS = 240
 READ_ONLY = "Android storage is read-only"
 BOOTING = "Android has not finished booting"
+ADB_SERVER = "shared ADB server is not responding"
 
 
 def configured_instance() -> str | None:
@@ -100,6 +101,8 @@ def _problem(device) -> str | None:
     try:
         device.connect()
     except DeviceError as exc:
+        if "shared ADB server" in str(exc):
+            return f"{ADB_SERVER}: {str(exc)[:200]}"
         return f"emulator is unreachable: {str(exc)[:200]}"
     writable = getattr(device, "storage_writable", None)
     if writable is not None and not writable():
@@ -124,6 +127,11 @@ def ensure_ready(device, record=lambda *args, **fields: None, *, restart=restart
     problem = _ready(device) if name else _problem(device)
     if problem is None:
         return False
+    if problem.startswith(ADB_SERVER):
+        # Live, the shared server stopped answering for two hours and each job
+        # restarted this instance in vain. The server serves every emulator
+        # worker; it is never restarted from here, so wait for the next job.
+        raise DeviceError(f"The {problem}. Blue Archive was left running; the next job will try again")
     if name is None:
         raise DeviceError(f"The {problem}. Restart the emulator instance and run the task again")
     if problem != READ_ONLY and running(name):

@@ -158,6 +158,20 @@ def faq_close(frame, words):
     return (1017, 133)
 
 
+def network_reconnect(words):
+    """Reconnect on the game's dropped-request notice, its own retry of the request.
+
+    Live in the Cafe: "The network connection is unstable. Tap the Confirm button
+    to return to the title screen." with Confirm and Reconnect buttons.
+    """
+    text = ' '.join(w.normalized for w in within(words, (330, 260, 950, 400)) if w.confidence >= .9)
+    if 'network connection is unstable' not in text:
+        return None
+    buttons = [w for w in within(words, (650, 470, 900, 545))
+               if w.confidence >= .9 and w.normalized == 'reconnect']
+    return buttons[0].center if len(buttons) == 1 else None
+
+
 def classify_shop(frame, words, *, home=False, billing=False):
     height, width = frame.shape[:2]
     if billing:

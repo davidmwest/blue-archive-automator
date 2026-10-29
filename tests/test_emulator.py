@@ -146,3 +146,19 @@ def test_a_stopped_instance_is_started_without_waiting(monkeypatch):
     assert ensure_ready(device, restart=restarts.append, running=lambda name: [],
                         monotonic=clock.monotonic, sleep=clock.sleep) is True
     assert restarts == ['Pie64_4'] and clock.now == 6
+
+
+def test_an_unresponsive_shared_adb_server_never_restarts_the_instance(monkeypatch):
+    # Live, the shared ADB server stopped answering for two hours; every job
+    # restarted this instance, which could not help.
+    monkeypatch.setenv('BA_BLUESTACKS_INSTANCE', 'Pie64_4')
+
+    class Hung(Device):
+        def connect(self):
+            raise DeviceError('Cannot inspect shared ADB server without changing it: timed out')
+
+    clock, restarts = Clock(), []
+    with pytest.raises(DeviceError, match='shared ADB server is not responding'):
+        ensure_ready(Hung(), restart=restarts.append, running=lambda name: [4242],
+                     monotonic=clock.monotonic, sleep=clock.sleep)
+    assert restarts == [] and clock.now == 0
